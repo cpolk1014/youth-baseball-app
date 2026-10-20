@@ -43,3 +43,6 @@ next-env.d.ts
 
 # script build output
 /.tmp
+
+# local dev launcher (machine-specific node path)
+/.claude/launch.json
