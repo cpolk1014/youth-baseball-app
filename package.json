@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "sample:lineup": "rolldown scripts/sample-lineup.ts --platform node --format esm --file .tmp/sample-lineup.mjs --log-level warn && node .tmp/sample-lineup.mjs"
+    "sample:lineup": "rolldown scripts/sample-lineup.ts --platform node --format esm --file .tmp/sample-lineup.mjs --log-level warn && node .tmp/sample-lineup.mjs",
+    "test:db": "supabase/tests/run.sh"
   },
   "dependencies": {
     "next": "16.4.2",
