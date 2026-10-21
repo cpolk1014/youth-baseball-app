@@ -140,4 +140,60 @@ do $$ begin
 exception when insufficient_privilege then raise notice 'ok: cannot add games to another team''s season';
 end $$;
 reset role;
+
+-- ── save_lineup ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+update public.game set status = 'scheduled' where id = '00000000-0000-4000-8000-000000010001';
+select public.save_lineup(
+  '00000000-0000-4000-8000-000000010001',
+  array['00000000-0000-4000-8000-000000001001', '00000000-0000-4000-8000-000000001002']::uuid[],
+  '[{"inning": 1, "player_id": "00000000-0000-4000-8000-000000001001", "position": "P"},
+    {"inning": 1, "player_id": "00000000-0000-4000-8000-000000001002", "position": "BENCH"}]'
+) is not null as saved \gset
+select pg_temp.expect(
+  (select count(*) from public.lineup where game_id = '00000000-0000-4000-8000-000000010001') = 1
+  and (select count(*) from public.lineup_slot ls join public.lineup l on l.id = ls.lineup_id
+       where l.game_id = '00000000-0000-4000-8000-000000010001') = 2,
+  'coach saves a new lineup with slots in one call');
+select public.save_lineup(
+  '00000000-0000-4000-8000-000000010001',
+  array['00000000-0000-4000-8000-000000001002']::uuid[],
+  '[{"inning": 2, "player_id": "00000000-0000-4000-8000-000000001002", "position": "SS"}]'
+) is not null as saved \gset
+select pg_temp.expect(
+  (select count(*) from public.lineup where game_id = '00000000-0000-4000-8000-000000010001') = 1
+  and (select array_agg(position::text) from public.lineup_slot ls join public.lineup l on l.id = ls.lineup_id
+       where l.game_id = '00000000-0000-4000-8000-000000010001') = '{SS}'
+  and (select batting_order from public.lineup where game_id = '00000000-0000-4000-8000-000000010001')
+      = '{00000000-0000-4000-8000-000000001002}',
+  'saving again replaces the lineup in place');
+do $$ begin
+  perform public.save_lineup('00000000-0000-4000-8000-000000010001', '{}',
+    '[{"inning": 1, "player_id": "cccccccc-0000-4000-8000-000000000999", "position": "P"}]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when foreign_key_violation or raise_exception then raise notice 'ok: save_lineup rejects players from elsewhere';
+end $$;
+select pg_temp.expect(
+  (select count(*) from public.lineup_slot ls join public.lineup l on l.id = ls.lineup_id
+   where l.game_id = '00000000-0000-4000-8000-000000010001') = 1,
+  'a failed save leaves the previous lineup untouched');
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+do $$ begin
+  perform public.save_lineup('00000000-0000-4000-8000-000000010001', '{}', '[]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parent cannot save lineups';
+end $$;
+reset role;
+
+set role anon;
+do $$ begin
+  perform public.save_lineup('00000000-0000-4000-8000-000000010001', '{}', '[]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: signed-out users cannot call save_lineup';
+end $$;
+reset role;
 \echo ALL RLS TESTS PASSED

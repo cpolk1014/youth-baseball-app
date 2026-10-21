@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { DataStatus } from "./DataStatus";
 
 type Tab = "games" | "season" | "roster";
 
@@ -47,7 +48,9 @@ export function AppShell({
         {action}
       </header>
 
-      <main className="flex-1 px-4 pt-4 pb-24 print:p-0">{children}</main>
+      <main className="flex-1 px-4 pt-4 pb-24 print:p-0">
+        <DataStatus>{children}</DataStatus>
+      </main>
 
       <nav
         aria-label="Main"
