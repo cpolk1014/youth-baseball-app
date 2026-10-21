@@ -17,10 +17,12 @@ export function BattingOrder({
   order,
   players,
   onChange,
+  readOnly = false,
 }: {
   order: string[];
   players: Map<string, Player>;
   onChange: (order: string[]) => void;
+  readOnly?: boolean;
 }) {
   const [drag, setDrag] = useState<{ from: number; dy: number } | null>(null);
   const startY = useRef(0);
@@ -60,7 +62,9 @@ export function BattingOrder({
 
   return (
     <div>
-      <p className="mb-3 text-base text-slate-700">Drag ☰ to change the order. Everyone bats.</p>
+      <p className="mb-3 text-base text-slate-700">
+        {readOnly ? "Final batting order." : "Drag ☰ to change the order. Everyone bats."}
+      </p>
       <ol className="flex flex-col gap-2">
         {order.map((id, i) => {
           const p = players.get(id);
@@ -80,18 +84,20 @@ export function BattingOrder({
                 {p?.name ?? id}{" "}
                 <span className="font-normal text-slate-600">#{p?.jerseyNumber ?? "–"}</span>
               </span>
-              <button
-                data-handle={i}
-                aria-label={`Move ${p?.name ?? id}, batting ${ordinal(i + 1)}. Use arrow keys.`}
-                onPointerDown={(e) => onPointerDown(e, i)}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onPointerCancel={() => setDrag(null)}
-                onKeyDown={(e) => onKeyDown(e, i)}
-                className="flex h-full w-14 shrink-0 cursor-grab touch-none items-center justify-center rounded-r-xl text-2xl text-slate-500 select-none active:cursor-grabbing active:bg-slate-100"
-              >
-                ☰
-              </button>
+              {!readOnly && (
+                <button
+                  data-handle={i}
+                  aria-label={`Move ${p?.name ?? id}, batting ${ordinal(i + 1)}. Use arrow keys.`}
+                  onPointerDown={(e) => onPointerDown(e, i)}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerCancel={() => setDrag(null)}
+                  onKeyDown={(e) => onKeyDown(e, i)}
+                  className="flex h-full w-14 shrink-0 cursor-grab touch-none items-center justify-center rounded-r-xl text-2xl text-slate-500 select-none active:cursor-grabbing active:bg-slate-100"
+                >
+                  ☰
+                </button>
+              )}
             </li>
           );
         })}

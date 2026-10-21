@@ -25,7 +25,8 @@ export function LineupGrid({
   players: Map<string, Player>;
   positions: FieldPosition[];
   violations: Violation[];
-  onCellTap: (playerId: string, inning: number) => void;
+  /** Omit for a read-only grid (e.g. a final game). */
+  onCellTap?: (playerId: string, inning: number) => void;
 }) {
   const innings = Array.from({ length: lineup.innings }, (_, i) => i + 1);
   const cellIssue = new Map<string, Severity>();
@@ -80,7 +81,8 @@ export function LineupGrid({
                   return (
                     <td key={inning} className="p-0">
                       <button
-                        onClick={() => onCellTap(id, inning)}
+                        onClick={onCellTap ? () => onCellTap(id, inning) : undefined}
+                        disabled={!onCellTap}
                         aria-label={`${p?.name ?? id}, inning ${inning}: ${pos ?? "not set"}`}
                         className={`flex h-11 w-full min-w-[38px] items-center justify-center rounded-md text-[15px] font-bold ${positionClass(pos)} ${sev ? RING[sev] : ""}`}
                       >

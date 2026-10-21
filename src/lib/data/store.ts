@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import type { Lineup, Player } from "@/lib/rules/types";
 import { SEED_DATA } from "./seed";
-import type { AppData, GameLineup } from "./types";
+import type { AppData, Game, GameLineup, GameStatus } from "./types";
 
 // Local stand-in for Supabase until the project is connected: one team's data, kept in
 // localStorage. Screens only use the hooks and actions below, so swapping this module
@@ -43,6 +43,11 @@ function update(fn: (current: AppData) => AppData): void {
   for (const listener of listeners) listener();
 }
 
+/** Current app data outside React (e.g. in tests). */
+export function getAppData(): AppData {
+  return getSnapshot();
+}
+
 /** App data, or null while rendering on the server / before hydration. */
 export function useAppData(): AppData | null {
   return useSyncExternalStore(subscribe, getSnapshot, () => null);
@@ -58,6 +63,33 @@ export function savePlayer(player: Player): void {
         : [...d.players, player],
     };
   });
+}
+
+export function saveGame(game: Game): void {
+  update((d) => {
+    const exists = d.games.some((g) => g.id === game.id);
+    // Keep the saved lineup's length in step with the game (it feeds season totals).
+    const lineup = d.lineups[game.id];
+    const lineups = lineup
+      ? {
+          ...d.lineups,
+          [game.id]: {
+            ...lineup,
+            innings: game.innings,
+            slots: lineup.slots.filter((s) => s.inning <= game.innings),
+          },
+        }
+      : d.lineups;
+    return {
+      ...d,
+      games: exists ? d.games.map((g) => (g.id === game.id ? game : g)) : [...d.games, game],
+      lineups,
+    };
+  });
+}
+
+export function setGameStatus(gameId: string, status: GameStatus): void {
+  update((d) => ({ ...d, games: d.games.map((g) => (g.id === gameId ? { ...g, status } : g)) }));
 }
 
 export function saveLineup(gameId: string, lineup: Lineup, autoFillSeed?: number): void {

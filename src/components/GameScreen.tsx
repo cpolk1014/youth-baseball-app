@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { formatGameDate, gameContext } from "@/lib/data/game";
-import { saveLineup, useAppData } from "@/lib/data/store";
+import { formatGameDate, gameContext, lastFilledInning } from "@/lib/data/game";
+import { saveGame, saveLineup, setGameStatus, useAppData } from "@/lib/data/store";
 import { assignPosition, positionAt } from "@/lib/lineup/edit";
 import { generateLineup } from "@/lib/rules/generate";
 import type { Lineup } from "@/lib/rules/types";
 import { validateLineup } from "@/lib/rules/validate";
 import { AppShell, Loading } from "./AppShell";
 import { BattingOrder } from "./BattingOrder";
+import { GameForm } from "./GameForm";
 import { LineupGrid } from "./LineupGrid";
 import { PositionPicker } from "./PositionPicker";
 import { Sheet } from "./Sheet";
@@ -22,6 +23,8 @@ export function GameScreen({ gameId }: { gameId: string }) {
   const [view, setView] = useState<View>("field");
   const [cell, setCell] = useState<{ playerId: string; inning: number } | null>(null);
   const [undo, setUndo] = useState<Lineup | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [confirmFinal, setConfirmFinal] = useState(false);
 
   if (!data) {
     return (
@@ -65,6 +68,12 @@ export function GameScreen({ gameId }: { gameId: string }) {
     change({ ...generated, battingOrder: lineup.battingOrder }, seed);
   };
   const picked = cell ? players.get(cell.playerId) : undefined;
+  const isFinal = game.status === "final";
+  const blocks = shown.filter((v) => v.severity === "block").length;
+  const markFinal = () => {
+    if (lineup.slots.length === 0 || blocks > 0 || emptyCells > 0) setConfirmFinal(true);
+    else setGameStatus(game.id, "final");
+  };
 
   return (
     <AppShell
@@ -81,6 +90,35 @@ export function GameScreen({ gameId }: { gameId: string }) {
         </Link>
       }
     >
+      {isFinal ? (
+        <div className="mb-4 flex items-center gap-3 rounded-xl bg-slate-700 p-3 text-white">
+          <p className="flex-1 text-base leading-snug font-semibold">
+            Final. This lineup counts toward season playing time.
+          </p>
+          <button
+            onClick={() => setGameStatus(game.id, "scheduled")}
+            className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-slate-900 active:bg-slate-200"
+          >
+            Reopen
+          </button>
+        </div>
+      ) : (
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setEditing(true)}
+            className="h-12 rounded-xl border-2 border-slate-400 bg-white text-base font-bold active:bg-slate-100"
+          >
+            Edit game
+          </button>
+          <button
+            onClick={markFinal}
+            className="h-12 rounded-xl border-2 border-slate-700 bg-white text-base font-bold active:bg-slate-100"
+          >
+            Mark final
+          </button>
+        </div>
+      )}
+
       <div
         role="tablist"
         className="mb-4 grid grid-cols-2 rounded-xl border-2 border-[#0b1f3a] p-1"
@@ -100,7 +138,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
 
       {view === "field" ? (
         <>
-          <div className="mb-3 flex gap-2">
+          <div className={`mb-3 flex gap-2 ${isFinal ? "hidden" : ""}`}>
             <button
               onClick={autoFill}
               className="h-14 flex-1 rounded-xl bg-green-700 text-lg font-bold text-white active:bg-green-800"
@@ -131,7 +169,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
             players={players}
             positions={config.fieldPositions}
             violations={shown}
-            onCellTap={(playerId, inning) => setCell({ playerId, inning })}
+            onCellTap={isFinal ? undefined : (playerId, inning) => setCell({ playerId, inning })}
           />
 
           <div className="mt-4">
@@ -149,6 +187,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
           order={lineup.battingOrder}
           players={players}
           onChange={(battingOrder) => change({ ...lineup, battingOrder })}
+          readOnly={isFinal}
         />
       )}
 
@@ -170,6 +209,51 @@ export function GameScreen({ gameId }: { gameId: string }) {
             }}
           />
         )}
+      </Sheet>
+
+      <Sheet open={editing} title="Edit game" onClose={() => setEditing(false)}>
+        {editing && (
+          <GameForm
+            game={game}
+            filledInnings={lastFilledInning(data.lineups[game.id])}
+            onCancel={() => setEditing(false)}
+            onSave={(g) => {
+              saveGame(g);
+              setUndo(null);
+              setEditing(false);
+            }}
+          />
+        )}
+      </Sheet>
+
+      <Sheet open={confirmFinal} title="Mark game final?" onClose={() => setConfirmFinal(false)}>
+        <p className="mb-4 text-lg leading-snug">
+          {lineup.slots.length === 0
+            ? "There's no lineup for this game, so it won't add any innings to season playing time."
+            : `This lineup still has ${[
+                emptyCells > 0 ? `${emptyCells} empty spot${emptyCells === 1 ? "" : "s"}` : "",
+                blocks > 0 ? `${blocks} fair-play problem${blocks === 1 ? "" : "s"}` : "",
+              ]
+                .filter(Boolean)
+                .join(" and ")}. Season playing time will count it as it is.`}
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setConfirmFinal(false)}
+            className="h-14 flex-1 rounded-xl border-2 border-slate-400 text-lg font-bold active:bg-slate-100"
+          >
+            Keep editing
+          </button>
+          <button
+            onClick={() => {
+              setGameStatus(game.id, "final");
+              setConfirmFinal(false);
+            }}
+            className="h-14 flex-1 rounded-xl bg-slate-700 text-lg font-bold text-white active:bg-slate-800"
+          >
+            Mark final
+          </button>
+        </div>
       </Sheet>
     </AppShell>
   );

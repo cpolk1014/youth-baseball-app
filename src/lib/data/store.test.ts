@@ -1,0 +1,34 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { lineupFromGrid } from "@/lib/rules/test-utils";
+import { SEED_DATA } from "./seed";
+import { getAppData, resetLocalData, saveGame, saveLineup, setGameStatus } from "./store";
+
+// There's no localStorage under Vitest, so the store runs in memory.
+const game = SEED_DATA.games[0]!;
+const findGame = (id: string) => getAppData().games.find((g) => g.id === id);
+
+describe("store game actions", () => {
+  beforeEach(() => resetLocalData());
+
+  it("adds a new game", () => {
+    saveGame({ ...game, id: "new-game", opponent: "Eastside" });
+    expect(findGame("new-game")?.opponent).toBe("Eastside");
+    expect(getAppData().games).toHaveLength(SEED_DATA.games.length + 1);
+  });
+
+  it("trims the saved lineup when a game gets shorter", () => {
+    saveLineup(game.id, lineupFromGrid({ a: ["P", "P", "C", "C", "SS", "SS"] }));
+    saveGame({ ...game, innings: 4 });
+    const lineup = getAppData().lineups[game.id];
+    expect(findGame(game.id)?.innings).toBe(4);
+    expect(lineup?.innings).toBe(4);
+    expect(lineup?.slots.map((s) => s.inning)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("marks a game final and reopens it", () => {
+    setGameStatus(game.id, "final");
+    expect(findGame(game.id)?.status).toBe("final");
+    setGameStatus(game.id, "scheduled");
+    expect(findGame(game.id)?.status).toBe("scheduled");
+  });
+});
