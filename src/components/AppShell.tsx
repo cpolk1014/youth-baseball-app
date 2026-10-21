@@ -3,10 +3,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-type Tab = "games" | "roster";
+type Tab = "games" | "season" | "roster";
 
 const TABS: { id: Tab; href: string; label: string }[] = [
   { id: "games", href: "/games", label: "Games" },
+  { id: "season", href: "/season", label: "Season" },
   { id: "roster", href: "/roster", label: "Roster" },
 ];
 

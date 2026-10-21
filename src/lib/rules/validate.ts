@@ -1,4 +1,4 @@
-import { computeParticipation, emptyParticipation } from "./participation";
+import { balanceOutliers, computeParticipation, emptyParticipation } from "./participation";
 import type {
   Lineup,
   LineupSlot,
@@ -265,25 +265,28 @@ function checkSeasonBalance(
   const threshold = config.seasonBalanceThreshold;
   if (threshold === null || players.length === 0) return [];
   const totals = computeParticipation([...history, lineup], config.infieldPositions);
-  const stats = players.map((p) => ({ player: p, ...(totals[p.id] ?? emptyParticipation()) }));
-  const avgInfield = stats.reduce((sum, s) => sum + s.infield, 0) / stats.length;
-  const avgBench = stats.reduce((sum, s) => sum + s.bench, 0) / stats.length;
+  const stats = players.map((p) => ({
+    player: p,
+    id: p.id,
+    ...(totals[p.id] ?? emptyParticipation()),
+  }));
+  const { avgInfield, avgBench, lowInfield, highBench } = balanceOutliers(stats, threshold);
 
   const out: Violation[] = [];
   for (const s of stats) {
-    if (s.infield < avgInfield - threshold) {
+    if (lowInfield.has(s.id)) {
       out.push({
         rule: "season-balance",
         severity: "warn",
-        playerId: s.player.id,
+        playerId: s.id,
         message: `${s.player.name} has ${s.infield} infield innings this season (team average ${avgInfield.toFixed(1)}).`,
       });
     }
-    if (s.bench > avgBench + threshold) {
+    if (highBench.has(s.id)) {
       out.push({
         rule: "season-balance",
         severity: "warn",
-        playerId: s.player.id,
+        playerId: s.id,
         message: `${s.player.name} has ${s.bench} bench innings this season (team average ${avgBench.toFixed(1)}).`,
       });
     }

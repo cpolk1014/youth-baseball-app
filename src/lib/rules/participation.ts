@@ -37,3 +37,28 @@ export function computeParticipation(
   }
   return totals;
 }
+
+export interface BalanceOutliers {
+  avgInfield: number;
+  avgBench: number;
+  /** Player ids more than `threshold` infield innings below the team average. */
+  lowInfield: Set<string>;
+  /** Player ids more than `threshold` bench innings above the team average. */
+  highBench: Set<string>;
+}
+
+/** Season-balance outliers among the given players' totals (team average over all of them). */
+export function balanceOutliers(
+  stats: { id: string; infield: number; bench: number }[],
+  threshold: number,
+): BalanceOutliers {
+  const n = Math.max(stats.length, 1);
+  const avgInfield = stats.reduce((sum, s) => sum + s.infield, 0) / n;
+  const avgBench = stats.reduce((sum, s) => sum + s.bench, 0) / n;
+  return {
+    avgInfield,
+    avgBench,
+    lowInfield: new Set(stats.filter((s) => s.infield < avgInfield - threshold).map((s) => s.id)),
+    highBench: new Set(stats.filter((s) => s.bench > avgBench + threshold).map((s) => s.id)),
+  };
+}

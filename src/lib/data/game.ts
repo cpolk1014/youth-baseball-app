@@ -100,3 +100,17 @@ export function localDateString(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
+
+/** Saved lineups of the season's final games, trimmed to each game's length. */
+export function finalLineups(data: AppData, seasonId: string): Lineup[] {
+  return data.games
+    .filter((g) => g.seasonId === seasonId && g.status === "final" && data.lineups[g.id])
+    .map((g) => {
+      const lineup = data.lineups[g.id]!;
+      return {
+        innings: g.innings,
+        battingOrder: lineup.battingOrder,
+        slots: lineup.slots.filter((s) => s.inning <= g.innings),
+      };
+    });
+}
