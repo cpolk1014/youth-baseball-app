@@ -22,3 +22,14 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
+
+/* Printing: only the lineup card, at true size, on white. */
+@media print {
+  html,
+  body {
+    background: white;
+  }
+  .print-page {
+    transform: none !important;
+  }
+}

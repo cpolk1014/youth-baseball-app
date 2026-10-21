@@ -26,8 +26,8 @@ export function AppShell({
   children: ReactNode;
 }) {
   return (
-    <div className="mx-auto flex min-h-dvh max-w-xl flex-col">
-      <header className="sticky top-0 z-20 flex min-h-14 items-center gap-2 bg-[#0b1f3a] px-2 text-white shadow">
+    <div className="mx-auto flex min-h-dvh max-w-xl flex-col print:block print:min-h-0 print:max-w-none">
+      <header className="sticky top-0 z-20 print:hidden flex min-h-14 items-center gap-2 bg-[#0b1f3a] px-2 text-white shadow">
         {backHref ? (
           <Link
             href={backHref}
@@ -46,11 +46,11 @@ export function AppShell({
         {action}
       </header>
 
-      <main className="flex-1 px-4 pt-4 pb-24">{children}</main>
+      <main className="flex-1 px-4 pt-4 pb-24 print:p-0">{children}</main>
 
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-20 border-t-2 border-slate-300 bg-white pb-[env(safe-area-inset-bottom)]"
+        className="fixed inset-x-0 bottom-0 z-20 border-t-2 print:hidden border-slate-300 bg-white pb-[env(safe-area-inset-bottom)]"
       >
         <div className="mx-auto flex max-w-xl">
           {TABS.map((t) => (

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { formatGameDate, gameContext } from "@/lib/data/game";
 import { saveLineup, useAppData } from "@/lib/data/store";
@@ -71,6 +72,14 @@ export function GameScreen({ gameId }: { gameId: string }) {
       subtitle={`${formatGameDate(game)} · ${game.innings} inn`}
       backHref="/games"
       tab="games"
+      action={
+        <Link
+          href={`/games/${game.id}/card`}
+          className="flex h-11 shrink-0 items-center rounded-lg bg-white px-3 text-base font-bold text-[#0b1f3a] active:bg-slate-200"
+        >
+          Print card
+        </Link>
+      }
     >
       <div
         role="tablist"
