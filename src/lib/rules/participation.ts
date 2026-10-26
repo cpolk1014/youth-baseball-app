@@ -1,6 +1,8 @@
 import type { FieldPosition, Lineup, Position } from "./types";
 
 export interface PlayerParticipation {
+  /** Games the player has at least one slot in. */
+  games: number;
   /** Innings in the field (not on the bench). */
   field: number;
   bench: number;
@@ -9,7 +11,7 @@ export interface PlayerParticipation {
 }
 
 export function emptyParticipation(): PlayerParticipation {
-  return { field: 0, bench: 0, infield: 0, byPosition: {} };
+  return { games: 0, field: 0, bench: 0, infield: 0, byPosition: {} };
 }
 
 /**
@@ -23,9 +25,14 @@ export function computeParticipation(
   const infield = new Set<Position>(infieldPositions);
   const totals: Record<string, PlayerParticipation> = {};
   for (const lineup of lineups) {
+    const played = new Set<string>();
     for (const slot of lineup.slots) {
       if (slot.inning < 1 || slot.inning > lineup.innings) continue;
       const p = (totals[slot.playerId] ??= emptyParticipation());
+      if (!played.has(slot.playerId)) {
+        played.add(slot.playerId);
+        p.games++;
+      }
       p.byPosition[slot.position] = (p.byPosition[slot.position] ?? 0) + 1;
       if (slot.position === "BENCH") {
         p.bench++;
@@ -39,26 +46,44 @@ export function computeParticipation(
 }
 
 export interface BalanceOutliers {
+  /** Plain per-player averages, for display. */
   avgInfield: number;
   avgBench: number;
-  /** Player ids more than `threshold` infield innings below the team average. */
+  /** What each player would have at the team's per-game rate, for the games they played. */
+  expectedInfield: Map<string, number>;
+  expectedBench: Map<string, number>;
+  /** Player ids more than `threshold` infield innings below their expected total. */
   lowInfield: Set<string>;
-  /** Player ids more than `threshold` bench innings above the team average. */
+  /** Player ids more than `threshold` bench innings above their expected total. */
   highBench: Set<string>;
 }
 
-/** Season-balance outliers among the given players' totals (team average over all of them). */
+/**
+ * Season-balance outliers. Each player is compared with the team's per-game rate over the
+ * games they actually played, so missing games (absent, joined late) doesn't count against
+ * them. When everyone played every game this is the same as comparing to the team average.
+ */
 export function balanceOutliers(
-  stats: { id: string; infield: number; bench: number }[],
+  stats: { id: string; infield: number; bench: number; games: number }[],
   threshold: number,
 ): BalanceOutliers {
+  const sum = (key: "infield" | "bench" | "games") => stats.reduce((t, s) => t + s[key], 0);
+  const games = sum("games");
+  const infieldRate = games ? sum("infield") / games : 0;
+  const benchRate = games ? sum("bench") / games : 0;
+  const expectedInfield = new Map(stats.map((s) => [s.id, infieldRate * s.games]));
+  const expectedBench = new Map(stats.map((s) => [s.id, benchRate * s.games]));
   const n = Math.max(stats.length, 1);
-  const avgInfield = stats.reduce((sum, s) => sum + s.infield, 0) / n;
-  const avgBench = stats.reduce((sum, s) => sum + s.bench, 0) / n;
   return {
-    avgInfield,
-    avgBench,
-    lowInfield: new Set(stats.filter((s) => s.infield < avgInfield - threshold).map((s) => s.id)),
-    highBench: new Set(stats.filter((s) => s.bench > avgBench + threshold).map((s) => s.id)),
+    avgInfield: sum("infield") / n,
+    avgBench: sum("bench") / n,
+    expectedInfield,
+    expectedBench,
+    lowInfield: new Set(
+      stats.filter((s) => expectedInfield.get(s.id)! - s.infield > threshold).map((s) => s.id),
+    ),
+    highBench: new Set(
+      stats.filter((s) => s.bench - expectedBench.get(s.id)! > threshold).map((s) => s.id),
+    ),
   };
 }

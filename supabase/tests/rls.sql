@@ -239,4 +239,42 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002
 update public.team set coach_pitch = false where id = '00000000-0000-4000-8000-000000000001';
 reset role;
 select pg_temp.expect((select coach_pitch from public.team where id = '00000000-0000-4000-8000-000000000001'), 'parent cannot change coach''s pitch');
+
+-- ── absent players ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.save_lineup(
+  '00000000-0000-4000-8000-000000010001',
+  array['00000000-0000-4000-8000-000000001001']::uuid[],
+  '[{"inning": 1, "player_id": "00000000-0000-4000-8000-000000001001", "position": "P"}]',
+  '{}',
+  array['00000000-0000-4000-8000-000000001003']::uuid[]
+) is not null as saved \gset
+select pg_temp.expect(
+  (select absent from public.lineup where game_id = '00000000-0000-4000-8000-000000010001')
+    = '{00000000-0000-4000-8000-000000001003}',
+  'save_lineup stores absent players');
+do $$ begin
+  perform public.save_lineup('00000000-0000-4000-8000-000000010001',
+    array['00000000-0000-4000-8000-000000001003']::uuid[], '[]', '{}',
+    array['00000000-0000-4000-8000-000000001003']::uuid[]);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when raise_exception then raise notice 'ok: an absent player cannot bat';
+end $$;
+do $$ begin
+  perform public.save_lineup('00000000-0000-4000-8000-000000010001', '{}',
+    '[{"inning": 1, "player_id": "00000000-0000-4000-8000-000000001003", "position": "C"}]', '{}',
+    array['00000000-0000-4000-8000-000000001003']::uuid[]);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when raise_exception then raise notice 'ok: an absent player cannot have a position';
+end $$;
+select public.save_lineup(
+  '00000000-0000-4000-8000-000000010001',
+  array['00000000-0000-4000-8000-000000001003']::uuid[],
+  '[{"inning": 1, "player_id": "00000000-0000-4000-8000-000000001003", "position": "C"}]'
+) is not null as saved \gset
+select pg_temp.expect(
+  (select absent from public.lineup where game_id = '00000000-0000-4000-8000-000000010001') = '{}',
+  'marking a player present again lets them bat and field');
+reset role;
 \echo ALL RLS TESTS PASSED

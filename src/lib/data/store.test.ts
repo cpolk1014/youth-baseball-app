@@ -50,4 +50,9 @@ describe("store game actions", () => {
     saveLineup(game.id, { ...lineupFromGrid({ a: ["P"] }), notBatting: ["b"] });
     expect(getAppData().lineups[game.id]?.notBatting).toEqual(["b"]);
   });
+
+  it("keeps absent players when saving a lineup", () => {
+    saveLineup(game.id, { ...lineupFromGrid({ a: ["P"] }), absent: ["c"] });
+    expect(getAppData().lineups[game.id]?.absent).toEqual(["c"]);
+  });
 });

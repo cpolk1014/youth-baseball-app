@@ -418,3 +418,35 @@ describe("players sitting out of the batting order", () => {
     expect(v.map((x) => x.playerId).sort()).toEqual(["ghost", "p9"]);
   });
 });
+
+describe("absent players", () => {
+  const roster = [...ROSTER_9, makePlayer("away")];
+
+  it("aren't expected in the field or the batting order", () => {
+    const lineup: Lineup = { ...lineupFromGrid(GRID_9x4), absent: ["away"] };
+    expect(validateLineup(roster, lineup, config, [])).toEqual([]);
+  });
+
+  it("can't be given a position or a batting spot", () => {
+    const lineup: Lineup = {
+      ...lineupFromGrid({ ...GRID_9x4, away: ["BENCH", "BENCH", "BENCH", "BENCH"] }),
+      absent: ["away"],
+    };
+    const v = validateLineup(roster, lineup, config, []);
+    expect(only(v, "invalid-slot")[0]?.message).toContain("absent");
+    expect(only(v, "batting-order")[0]?.message).toContain("absent");
+  });
+
+  it("don't fall behind on season balance for games they missed", () => {
+    // "away" missed five games, then plays a normal game: no catching up owed.
+    const history = Array.from({ length: 5 }, () => ({
+      ...lineupFromGrid(GRID_9x4),
+      absent: ["away"],
+    }));
+    const grid = { ...GRID_9x4, away: ["BENCH", "LF", "1B", "BENCH"] as Position[] };
+    const today = lineupFromGrid({ ...grid, p7: ["LF", "BENCH", "BENCH", "1B"] });
+    // Default threshold (3): the old raw-innings rule flagged "away" here (1 vs a 14.4 average).
+    const v = validateLineup(roster, today, config, history);
+    expect(only(v, "season-balance").map((x) => x.playerId)).not.toContain("away");
+  });
+});

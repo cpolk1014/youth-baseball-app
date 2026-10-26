@@ -42,12 +42,14 @@ describe("supabase mappers", () => {
       innings: 4,
       battingOrder: ["a"],
       notBatting: ["b"],
+      absent: ["c"],
       slots: [{ inning: 1, playerId: "a", position: "P" }],
     });
     expect(args).toEqual({
       p_game_id: "g1",
       p_batting_order: ["a"],
       p_not_batting: ["b"],
+      p_absent: ["c"],
       p_slots: [{ inning: 1, player_id: "a", position: "P" }],
     });
   });
@@ -59,8 +61,22 @@ describe("supabase mappers", () => {
       players: [playerToRow(SEED_DATA.players[0]!, "t1")],
       games: [gameRow, { ...gameRow, id: "g2" }],
       lineups: [
-        { id: "l1", game_id: "g1", batting_order: ["old"], not_batting: [], version: 1 },
-        { id: "l2", game_id: "g1", batting_order: ["p"], not_batting: ["x"], version: 2 },
+        {
+          id: "l1",
+          game_id: "g1",
+          batting_order: ["old"],
+          not_batting: [],
+          absent: [],
+          version: 1,
+        },
+        {
+          id: "l2",
+          game_id: "g1",
+          batting_order: ["p"],
+          not_batting: ["x"],
+          absent: ["y"],
+          version: 2,
+        },
       ],
       slots: [
         { lineup_id: "l1", inning: 1, player_id: "old", position: "C" },
@@ -75,6 +91,7 @@ describe("supabase mappers", () => {
       innings: 4,
       battingOrder: ["p"],
       notBatting: ["x"],
+      absent: ["y"],
       slots: [{ inning: 1, playerId: "p", position: "P" }],
       autoFillSeed: 3,
     });

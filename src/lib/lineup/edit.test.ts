@@ -8,6 +8,7 @@ import {
   moveBatter,
   normalizeLineup,
   positionAt,
+  setAbsent,
   setBatting,
 } from "./edit";
 
@@ -25,6 +26,7 @@ describe("lineup editing", () => {
       innings: 4,
       battingOrder: ["b", "a", "d"],
       notBatting: [],
+      absent: [],
       slots: [],
     });
   });
@@ -92,5 +94,24 @@ describe("lineup editing", () => {
     const l = normalizeLineup({ ...emptyLineup(players, 2), notBatting: ["a", "c"] }, players, 2);
     expect(l.battingOrder).toEqual(["b", "d"]);
     expect(l.notBatting).toEqual(["a"]); // c is inactive
+  });
+
+  it("marks a player absent for the game and back again", () => {
+    let l = lineupFromGrid({ a: ["P", "C"], b: ["C", "P"], d: ["SS", "SS"] }, ["b", "a", "d"]);
+    l = setBatting(l, "d", false);
+    const away = setAbsent(setAbsent(l, "a", true), "d", true);
+    expect(away.absent).toEqual(["a", "d"]);
+    expect(away.battingOrder).toEqual(["b"]);
+    expect(away.notBatting).toEqual([]);
+    expect(away.slots.map((s) => s.playerId)).toEqual(["b", "b"]);
+    const back = setAbsent(away, "a", false);
+    expect(back.absent).toEqual(["d"]);
+    expect(back.battingOrder).toEqual(["b", "a"]);
+  });
+
+  it("keeps absent players out when normalizing", () => {
+    const l = normalizeLineup({ ...emptyLineup(players, 2), absent: ["a", "c"] }, players, 2);
+    expect(l.battingOrder).toEqual(["b", "d"]);
+    expect(l.absent).toEqual(["a"]); // c is inactive anyway
   });
 });

@@ -230,6 +230,7 @@ export function saveLineup(gameId: string, lineup: Lineup, autoFillSeed?: number
         innings: lineup.innings,
         battingOrder: lineup.battingOrder,
         notBatting: lineup.notBatting ?? [],
+        absent: lineup.absent ?? [],
         slots: lineup.slots,
         autoFillSeed: seed,
       };

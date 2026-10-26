@@ -118,6 +118,7 @@ export function finalLineups(data: AppData, seasonId: string): Lineup[] {
         innings: g.innings,
         battingOrder: lineup.battingOrder,
         notBatting: lineup.notBatting ?? [],
+        absent: lineup.absent ?? [],
         slots: lineup.slots.filter((s) => s.inning <= g.innings),
       };
     });

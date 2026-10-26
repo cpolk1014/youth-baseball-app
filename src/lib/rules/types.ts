@@ -40,6 +40,8 @@ export interface Lineup {
   battingOrder: string[];
   /** Players left out of the batting order for this game (they can still field). */
   notBatting?: string[];
+  /** Players missing this game: no position, no batting spot. */
+  absent?: string[];
   slots: LineupSlot[];
 }
 

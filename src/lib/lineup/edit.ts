@@ -14,6 +14,7 @@ export function emptyLineup(players: Player[], innings: number): Lineup {
     innings,
     battingOrder: activePlayers(players).map((p) => p.id),
     notBatting: [],
+    absent: [],
     slots: [],
   };
 }
@@ -23,7 +24,11 @@ export function emptyLineup(players: Player[], innings: number): Lineup {
  * removed players and out-of-range innings, and add new players to the end of the order.
  */
 export function normalizeLineup(lineup: Lineup, players: Player[], innings: number): Lineup {
-  const active = activePlayers(players);
+  const absent = (lineup.absent ?? []).filter((id) =>
+    players.some((p) => p.id === id && p.active !== false),
+  );
+  const away = new Set(absent);
+  const active = activePlayers(players).filter((p) => !away.has(p.id));
   const ids = new Set(active.map((p) => p.id));
   const notBatting = (lineup.notBatting ?? []).filter((id) => ids.has(id));
   const sittingOut = new Set(notBatting);
@@ -33,6 +38,7 @@ export function normalizeLineup(lineup: Lineup, players: Player[], innings: numb
     innings,
     battingOrder: [...kept, ...added],
     notBatting,
+    absent,
     slots: lineup.slots.filter((s) => ids.has(s.playerId) && s.inning >= 1 && s.inning <= innings),
   };
 }
@@ -105,4 +111,28 @@ export function lineupRows(lineup: Lineup): { playerId: string; order: number | 
     ...lineup.battingOrder.map((playerId, i) => ({ playerId, order: i + 1 })),
     ...(lineup.notBatting ?? []).map((playerId) => ({ playerId, order: null })),
   ];
+}
+
+/**
+ * Mark a player absent for this game (drops their positions and batting spot) or present
+ * again (they bat last and need positions).
+ */
+export function setAbsent(lineup: Lineup, playerId: string, isAbsent: boolean): Lineup {
+  const absent = lineup.absent ?? [];
+  if (!isAbsent) {
+    return {
+      ...lineup,
+      absent: absent.filter((id) => id !== playerId),
+      battingOrder: lineup.battingOrder.includes(playerId)
+        ? lineup.battingOrder
+        : [...lineup.battingOrder, playerId],
+    };
+  }
+  return {
+    ...lineup,
+    absent: absent.includes(playerId) ? absent : [...absent, playerId],
+    battingOrder: lineup.battingOrder.filter((id) => id !== playerId),
+    notBatting: (lineup.notBatting ?? []).filter((id) => id !== playerId),
+    slots: lineup.slots.filter((s) => s.playerId !== playerId),
+  };
 }

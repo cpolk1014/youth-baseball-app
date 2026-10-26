@@ -46,16 +46,6 @@ export function seasonSummary(
   config: RuleConfig,
 ): SeasonSummary {
   const totals = computeParticipation(finalLineups, config.infieldPositions);
-  const gamesPlayed = new Map<string, number>();
-  for (const lineup of finalLineups) {
-    const ids = new Set(
-      lineup.slots
-        .filter((s) => s.inning >= 1 && s.inning <= lineup.innings)
-        .map((s) => s.playerId),
-    );
-    for (const id of ids) gamesPlayed.set(id, (gamesPlayed.get(id) ?? 0) + 1);
-  }
-
   const active = activePlayers(players);
   const stats = active.map((p) => ({ id: p.id, ...(totals[p.id] ?? emptyParticipation()) }));
   const threshold = config.seasonBalanceThreshold;
@@ -65,7 +55,7 @@ export function seasonSummary(
     const t = totals[p.id] ?? emptyParticipation();
     return {
       player: p,
-      games: gamesPlayed.get(p.id) ?? 0,
+      games: t.games,
       field: t.field,
       infield: t.infield,
       bench: t.bench,

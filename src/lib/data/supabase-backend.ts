@@ -62,7 +62,7 @@ export async function loadFromSupabase(autoFillSeeds: Record<string, number>): P
     ? check<LineupRow[]>(
         await sb
           .from("lineup")
-          .select("id,game_id,batting_order,not_batting,version")
+          .select("id,game_id,batting_order,not_batting,absent,version")
           .in(
             "game_id",
             games.map((g) => g.id),

@@ -71,6 +71,7 @@ export function lineupToRpcArgs(gameId: string, lineup: Lineup) {
     p_game_id: gameId,
     p_batting_order: lineup.battingOrder,
     p_not_batting: lineup.notBatting ?? [],
+    p_absent: lineup.absent ?? [],
     p_slots: lineup.slots.map((s) => ({
       inning: s.inning,
       player_id: s.playerId,
@@ -98,6 +99,7 @@ export function appDataFromRows(
       innings: game.innings,
       battingOrder: l.batting_order,
       notBatting: l.not_batting,
+      absent: l.absent,
       slots: rows.slots
         .filter((s) => s.lineup_id === l.id)
         .map((s) => ({ inning: s.inning, playerId: s.player_id, position: s.position })),

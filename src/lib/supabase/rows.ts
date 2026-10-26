@@ -45,6 +45,7 @@ export interface LineupRow {
   game_id: string;
   batting_order: string[];
   not_batting: string[];
+  absent: string[];
   version: number;
 }
 

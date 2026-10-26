@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatGameDate, gameContext, lastFilledInning } from "@/lib/data/game";
 import { saveGame, saveLineup, setGameStatus, useAppData } from "@/lib/data/store";
-import { assignPosition, positionAt, setBatting } from "@/lib/lineup/edit";
+import { assignPosition, positionAt, setAbsent, setBatting } from "@/lib/lineup/edit";
 import { generateLineup } from "@/lib/rules/generate";
 import type { Lineup } from "@/lib/rules/types";
 import { validateLineup } from "@/lib/rules/validate";
 import { AppShell, Loading } from "./AppShell";
+import { Attendance } from "./Attendance";
 import { BattingOrder } from "./BattingOrder";
 import { GameForm } from "./GameForm";
 import { LineupGrid } from "./LineupGrid";
@@ -16,7 +17,7 @@ import { PositionPicker } from "./PositionPicker";
 import { Sheet } from "./Sheet";
 import { ViolationList } from "./ViolationList";
 
-type View = "field" | "batting";
+type View = "field" | "batting" | "attendance";
 
 export function GameScreen({ gameId }: { gameId: string }) {
   const data = useAppData();
@@ -60,18 +61,27 @@ export function GameScreen({ gameId }: { gameId: string }) {
   };
   const autoFill = () => {
     const seed = ctx.autoFillSeed + 1;
-    const active = data.players.filter((p) => p.active !== false);
+    const absent = new Set(lineup.absent ?? []);
+    const active = data.players.filter((p) => p.active !== false && !absent.has(p.id));
     const { lineup: generated } = generateLineup(active, config, history, seed, {
       innings: game.innings,
     });
     // Keep the coach's batting order; auto-fill only sets the field.
     change(
-      { ...generated, battingOrder: lineup.battingOrder, notBatting: lineup.notBatting ?? [] },
+      {
+        ...generated,
+        battingOrder: lineup.battingOrder,
+        notBatting: lineup.notBatting ?? [],
+        absent: lineup.absent ?? [],
+      },
       seed,
     );
   };
   const picked = cell ? players.get(cell.playerId) : undefined;
   const isFinal = game.status === "final";
+  const absentNames = (lineup.absent ?? []).map((id) => players.get(id)?.name ?? id);
+  const rosterCount = data.players.filter((p) => p.active !== false).length;
+  const hereCount = rosterCount - absentNames.length;
   const blocks = shown.filter((v) => v.severity === "block").length;
   const markFinal = () => {
     if (lineup.slots.length === 0 || blocks > 0 || emptyCells > 0) setConfirmFinal(true);
@@ -124,9 +134,9 @@ export function GameScreen({ gameId }: { gameId: string }) {
 
       <div
         role="tablist"
-        className="mb-4 grid grid-cols-2 rounded-xl border-2 border-[#0b1f3a] p-1"
+        className="mb-4 grid grid-cols-3 rounded-xl border-2 border-[#0b1f3a] p-1"
       >
-        {(["field", "batting"] as const).map((v) => (
+        {(["field", "batting", "attendance"] as const).map((v) => (
           <button
             key={v}
             role="tab"
@@ -134,7 +144,11 @@ export function GameScreen({ gameId }: { gameId: string }) {
             onClick={() => setView(v)}
             className={`h-11 rounded-lg text-base font-bold ${view === v ? "bg-[#0b1f3a] text-white" : "text-[#0b1f3a]"}`}
           >
-            {v === "field" ? "Field" : "Batting order"}
+            {v === "field"
+              ? "Field"
+              : v === "batting"
+                ? "Batting"
+                : `Here ${hereCount}/${rosterCount}`}
           </button>
         ))}
       </div>
@@ -167,6 +181,18 @@ export function GameScreen({ gameId }: { gameId: string }) {
             </button>
           </div>
 
+          {absentNames.length > 0 && (
+            <p className="mb-3 rounded-xl bg-slate-200 px-3 py-2 text-base">
+              <b>Absent:</b> {absentNames.join(", ")}
+              {!isFinal && lineup.slots.length > 0 && emptyCells > 0 && (
+                <>
+                  {" "}
+                  · Their spots are open. Tap <b>Auto-fill again</b> or fill them in.
+                </>
+              )}
+            </p>
+          )}
+
           <LineupGrid
             lineup={lineup}
             players={players}
@@ -185,6 +211,13 @@ export function GameScreen({ gameId }: { gameId: string }) {
             )}
           </div>
         </>
+      ) : view === "attendance" ? (
+        <Attendance
+          players={data.players}
+          absent={lineup.absent ?? []}
+          onSetAbsent={(playerId, isAbsent) => change(setAbsent(lineup, playerId, isAbsent))}
+          readOnly={isFinal}
+        />
       ) : (
         <BattingOrder
           order={lineup.battingOrder}

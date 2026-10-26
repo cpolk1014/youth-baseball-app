@@ -18,6 +18,8 @@ type Emit = (
 interface Context {
   players: Player[];
   byId: Map<string, Player>;
+  /** Name of a player marked absent for this game, else null. */
+  absentName: (id: string) => string | null;
   lineup: Lineup;
   config: RuleConfig;
   /** Valid slots only, indexed [inning][playerId] → positions. */
@@ -38,15 +40,21 @@ export function validateLineup(
   const violations: Violation[] = [];
   const emit: Emit = (rule, v) => violations.push({ rule, severity: config.severity[rule], ...v });
 
-  const players = roster.filter((p) => p.active !== false);
+  const absent = new Set(lineup.absent ?? []);
+  const players = roster.filter((p) => p.active !== false && !absent.has(p.id));
   const byId = new Map(players.map((p) => [p.id, p]));
+  const absentName = (id: string) =>
+    absent.has(id) ? (roster.find((p) => p.id === id)?.name ?? id) : null;
   const allowed = new Set<Position>([...config.fieldPositions, "BENCH"]);
 
   const grid = new Map<number, Map<string, Position[]>>();
   for (let inning = 1; inning <= lineup.innings; inning++) grid.set(inning, new Map());
 
   for (const slot of lineup.slots) {
-    const problem = slotProblem(slot, byId, lineup.innings, allowed);
+    const away = absentName(slot.playerId);
+    const problem = away
+      ? `${away} is marked absent for this game.`
+      : slotProblem(slot, byId, lineup.innings, allowed);
     if (problem) {
       emit("invalid-slot", { playerId: slot.playerId, inning: slot.inning, message: problem });
       continue;
@@ -55,7 +63,7 @@ export function validateLineup(
     row.set(slot.playerId, [...(row.get(slot.playerId) ?? []), slot.position]);
   }
 
-  const ctx: Context = { players, byId, lineup, config, grid, emit };
+  const ctx: Context = { players, byId, absentName, lineup, config, grid, emit };
   checkPositionCoverage(ctx);
   checkPlayerAssignment(ctx);
   checkBattingOrder(ctx);
@@ -135,7 +143,13 @@ function checkPlayerAssignment(ctx: Context): void {
 function checkBattingOrder(ctx: Context): void {
   const seen = new Set<string>();
   for (const id of ctx.lineup.battingOrder) {
-    if (!ctx.byId.has(id)) {
+    const away = ctx.absentName(id);
+    if (away) {
+      ctx.emit("batting-order", {
+        playerId: id,
+        message: `${away} is marked absent but in the batting order.`,
+      });
+    } else if (!ctx.byId.has(id)) {
       ctx.emit("batting-order", {
         playerId: id,
         message: `Batter ${id} isn't on the active roster.`,
@@ -290,7 +304,11 @@ function checkSeasonBalance(
     id: p.id,
     ...(totals[p.id] ?? emptyParticipation()),
   }));
-  const { avgInfield, avgBench, lowInfield, highBench } = balanceOutliers(stats, threshold);
+  const { expectedInfield, expectedBench, lowInfield, highBench } = balanceOutliers(
+    stats,
+    threshold,
+  );
+  const games = (n: number) => `${n} game${n === 1 ? "" : "s"}`;
 
   const out: Violation[] = [];
   for (const s of stats) {
@@ -299,7 +317,7 @@ function checkSeasonBalance(
         rule: "season-balance",
         severity: "warn",
         playerId: s.id,
-        message: `${s.player.name} has ${s.infield} infield innings this season (team average ${avgInfield.toFixed(1)}).`,
+        message: `${s.player.name} has ${s.infield} infield innings in ${games(s.games)} (team pace: ${expectedInfield.get(s.id)!.toFixed(1)}).`,
       });
     }
     if (highBench.has(s.id)) {
@@ -307,7 +325,7 @@ function checkSeasonBalance(
         rule: "season-balance",
         severity: "warn",
         playerId: s.id,
-        message: `${s.player.name} has ${s.bench} bench innings this season (team average ${avgBench.toFixed(1)}).`,
+        message: `${s.player.name} has ${s.bench} bench innings in ${games(s.games)} (team pace: ${expectedBench.get(s.id)!.toFixed(1)}).`,
       });
     }
   }
