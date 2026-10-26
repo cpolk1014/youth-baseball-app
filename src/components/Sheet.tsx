@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useRef, type ReactNode } from "react";
 
 /** Bottom sheet dialog: easy to reach one-handed. */
 export function Sheet({
@@ -15,14 +15,18 @@ export function Sheet({
   children: ReactNode;
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  const close = useEffectEvent(() => onClose());
 
+  // Runs only when the sheet opens. Callers pass a new onClose on every render, so
+  // depending on it would re-focus the panel on each keystroke in a field inside the
+  // sheet, closing the phone's keyboard.
   useEffect(() => {
     if (!open) return;
     panel.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return (
