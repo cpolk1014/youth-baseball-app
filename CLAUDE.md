@@ -1,8 +1,8 @@
-# CLAUDE.md — Youth Baseball Team App
+# CLAUDE.md — RallyCap (youth baseball team app)
 
 ## What this is
 
-A mobile-first web app (PWA) that helps youth travel/select baseball teams (7U–14U) run their season: fair inning-by-inning lineups, playing-time tracking, printable umpire lineup cards, and team communication through GroupMe. Later: team finances, AI practice plans, stats import, tournament finder.
+**RallyCap** (rallycap.team). A mobile-first web app (PWA) that helps youth travel/select baseball teams (7U–14U) run their season: fair inning-by-inning lineups, playing-time tracking, printable umpire lineup cards, and team communication through GroupMe. Later: team finances, AI practice plans, stats import, tournament finder.
 
 Positioning: "Run your travel team," not "another lineup app." Lineups are the hook; GroupMe integration, team finances and fair-play rules are the paid core. GameChanger is a data source, not a competitor to fight.
 

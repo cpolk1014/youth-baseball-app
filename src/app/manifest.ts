@@ -3,9 +3,10 @@ import type { MetadataRoute } from "next";
 // Lets coaches add the app to their home screen; it opens full screen like an app.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Dugout Lineups",
-    short_name: "Dugout",
-    description: "Fair inning-by-inning lineups for youth travel baseball.",
+    name: "RallyCap",
+    short_name: "RallyCap",
+    description:
+      "Run your travel baseball team: fair lineups, lineup cards, and season playing time.",
     start_url: "/games",
     display: "standalone",
     orientation: "portrait",

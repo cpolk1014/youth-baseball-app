@@ -46,7 +46,7 @@ Authentication → Emails → **Magic Link** template. Add the code so people ca
 when the link opens in a different browser (common on iPhone):
 
 ```html
-<h2>Sign in to Dugout Lineups</h2>
+<h2>Sign in to RallyCap</h2>
 <p><a href="{{ .ConfirmationURL }}">Tap here to sign in</a></p>
 <p>Or enter this code: <strong>{{ .Token }}</strong></p>
 ```

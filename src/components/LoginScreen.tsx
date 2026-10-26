@@ -58,8 +58,10 @@ export function LoginScreen() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-8">
-      <h1 className="text-3xl font-bold">Dugout Lineups</h1>
-      <p className="mt-1 mb-6 text-lg text-slate-700">Fair lineups for your travel team.</p>
+      <h1 className="text-3xl font-bold">RallyCap</h1>
+      <p className="mt-1 mb-6 text-lg text-slate-700">
+        Run your travel team. Fair lineups, every game.
+      </p>
 
       {!isSupabaseConfigured ? (
         <p className="rounded-xl border-2 border-amber-500 bg-amber-50 p-4 text-base">
