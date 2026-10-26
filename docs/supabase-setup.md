@@ -74,3 +74,20 @@ Start the app (`npm run dev`), sign in with your email, and then either:
   provider (Authentication → SMTP Settings) before inviting the team.
 - Without the two env vars the app falls back to local mode, which is handy for
   development and is what the unit tests use.
+
+## Production setup (live)
+
+- **App:** https://www.rallycap.team (Vercel project `youth-baseball-app`; `rallycap.team`
+  redirects to `www`). Pushing to `main` deploys.
+- **Vercel env vars:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- **Supabase URL Configuration:** Site URL `https://www.rallycap.team`; Redirect URLs
+  `https://www.rallycap.team/**`, `https://rallycap.team/**`,
+  `https://youth-baseball-app-lime.vercel.app/**`, `http://localhost:3000/**`.
+- **Email:** Resend, domain `rallycap.team` verified (DNS records in Vercel). Supabase custom
+  SMTP: host `smtp.resend.com`, port `465`, username `resend`, password = a Resend API key
+  with sending access, sender `RallyCap <signin@rallycap.team>`.
+- **Email templates** (Magic Link and Confirm signup) include both the link and the code
+  (`{{ .Token }}`), so sign-in works inside the home-screen app too.
+
+If sign-in emails fail and nothing shows in Resend's logs, re-enter the SMTP password in
+Supabase (it can be cleared when other SMTP fields are saved).
