@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from "@/lib/supabase/config";
 
-const PUBLIC_PATHS = ["/login", "/auth"];
+const PUBLIC_PATHS = ["/login", "/auth", "/icon", "/apple-icon", "/manifest.webmanifest"];
 
 /** Refresh the Supabase session cookie and send signed-out users to /login. */
 export async function proxy(request: NextRequest) {

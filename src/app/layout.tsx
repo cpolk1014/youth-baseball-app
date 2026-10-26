@@ -10,6 +10,7 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "Dugout Lineups",
   description: "Fair inning-by-inning lineups for youth travel baseball.",
+  appleWebApp: { capable: true, title: "Dugout", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
