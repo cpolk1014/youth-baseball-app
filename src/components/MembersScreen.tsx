@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ROLE_LABEL, permissionsFor, type MemberRole } from "@/lib/data/permissions";
 import {
   createInvite,
+  deleteTeam,
   inviteUrl,
   removeMember,
   revokeInvite,
@@ -44,6 +45,8 @@ export function MembersScreen() {
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ role: MemberRole; url: string } | null>(null);
   const [removing, setRemoving] = useState<Member | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmName, setConfirmName] = useState("");
 
   if (!data) {
     return (
@@ -204,6 +207,57 @@ export function MembersScreen() {
       >
         Leave this team
       </button>
+
+      {perms.manageMembers && (
+        <button
+          onClick={() => {
+            setConfirmName("");
+            setDeleting(true);
+          }}
+          className="mt-2 h-12 w-full text-base font-semibold text-red-700 underline"
+        >
+          Delete this team
+        </button>
+      )}
+
+      <Sheet open={deleting} title="Delete this team?" onClose={() => setDeleting(false)}>
+        <div className="flex flex-col gap-4">
+          <p className="text-lg leading-snug">
+            This permanently deletes <b>{data.team.name}</b>: its roster, games, lineups, season
+            playing time, members and invite links. It can&apos;t be undone.
+          </p>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-slate-700">
+              Type the team name to confirm
+            </span>
+            <input
+              value={confirmName}
+              onChange={(e) => setConfirmName(e.target.value)}
+              autoComplete="off"
+              placeholder={data.team.name}
+              className="h-12 rounded-lg border-2 border-slate-400 bg-white px-3 text-lg focus:border-red-700 focus:outline-none"
+            />
+          </label>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setDeleting(false)}
+              className="h-14 flex-1 rounded-xl border-2 border-slate-400 text-lg font-bold active:bg-slate-100"
+            >
+              Cancel
+            </button>
+            <button
+              disabled={busy || confirmName.trim() !== data.team.name.trim()}
+              onClick={() => {
+                setDeleting(false);
+                void run(deleteTeam);
+              }}
+              className="h-14 flex-1 rounded-xl bg-red-700 text-lg font-bold text-white active:bg-red-800 disabled:opacity-40"
+            >
+              Delete team
+            </button>
+          </div>
+        </div>
+      </Sheet>
 
       <Sheet open={created !== null} title="Share this link" onClose={() => setCreated(null)}>
         {created && <ShareLink role={created.role} url={created.url} />}

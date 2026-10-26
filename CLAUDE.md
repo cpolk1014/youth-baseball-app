@@ -17,26 +17,43 @@ Primary users: head coach (lineups), team manager (comms), treasurer (money). Th
 - Vitest for unit tests; Playwright for a few end-to-end flows
 - Later: Stripe (billing), Claude API (structured JSON output) for AI features
 
-## MVP scope (build only this until told otherwise)
+## Features
 
-1. Teams, seasons, roster (players: name, jersey #, preferred positions, can_pitch, can_catch)
-2. Games (date, opponent, location, number of innings)
-3. Inning-by-inning lineup builder: batting order + defensive position per player per inning, with live fair-play warnings
-4. Participation tracking: season grid of innings per position (incl. bench), computed from saved lineups
-5. Printable lineup card (umpire-ready PDF/print view; letter + half-sheet)
-6. Post lineup / messages to the team's GroupMe group (OAuth per coach)
+The MVP gate is lifted: keep shipping features. Update this list as things ship.
 
-Out of scope for MVP: native chat, finances, stats import, AI features, tournament finder, branding, payments.
+**Shipped** (live at rallycap.team)
 
-## Data model (initial)
+- Teams, seasons, roster (name, jersey #, preferred positions, can pitch/catch, active); coach's pitch teams
+- Games (date, time, opponent, location, innings, 9 or 10 fielders); mark final / reopen
+- Inning-by-inning lineup builder with live fair-play warnings, Auto-fill, batting order with sit-outs, per-game attendance
+- Season participation grid (summary and by position), fair to players who miss games
+- Printable lineup card (half sheet ×2, full letter)
+- Magic-link + code sign-in, invite links, roles (coach / manager / parent read-only), multiple teams with a switcher
+- Installable on a phone's home screen
+
+**Next up** (roughly in order; the user picks)
+
+- Delete a team
+- Practice schedule builder: season practices (date, time, field) with a focus and drills per session; parents can view
+- Post lineups / messages to the team's GroupMe group (OAuth per coach)
+- Team finances: dues per family, who's paid, expenses (no in-app payments at first)
+- Tournament finder
+- Offline use in the dugout (local copy, sync when back online)
+
+**Later:** in-app payments (Stripe), AI practice plans, stats import (GameChanger), native chat.
+
+## Data model
+
+Source of truth: `supabase/migrations/`. Summary:
 
 - organization (optional parent of teams)
-- team: name, age_group, colors, groupme_group_id
-- season: team_id, name, start/end, fair_play_rules (JSONB)
-- member: team_id, user_id, role (coach | manager | treasurer | parent)
+- team: name, age_group, colors, groupme_group_id, coach_pitch
+- season: team_id, name, start/end, fair_play_rules (JSONB, RuleConfig overrides)
+- member: team_id, user_id, role (coach | manager | treasurer | parent), display_name (no emails stored)
+- invite: team_id, role, token, expires_at, max_uses, uses, revoked_at (coach-only; joined via `accept_invite`)
 - player: team_id, name, jersey_number, preferred_positions[], can_pitch, can_catch, active
-- game: season_id, date, opponent, location, innings, status (scheduled | final)
-- lineup: game_id, batting_order (player_id[]), version
+- game: season_id, date, start_time, opponent, location, innings, field_players (9 | 10), status (scheduled | final)
+- lineup: game_id, batting_order (player_id[]), not_batting[], absent[], version (saved via `save_lineup`)
 - lineup_slot: lineup_id, inning, player_id, position (P, C, 1B, 2B, 3B, SS, LF, CF, RF, LCF, RCF, BENCH)
 
 Participation is **derived** from lineup_slot rows on final games, never stored separately.

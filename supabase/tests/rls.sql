@@ -379,4 +379,28 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003
 delete from public.team where id = 'cccccccc-0000-4000-8000-000000000001';
 select pg_temp.expect((select count(*) from public.team) = 0, 'a coach can still delete their own team');
 reset role;
+
+-- ── delete team (as the app does: delete ... returning id) ──
+insert into public.team (id, name, age_group, created_by) values ('dddddddd-0000-4000-8000-000000000001', 'Delete Me', '9U', null);
+insert into public.member (team_id, user_id, role) values ('dddddddd-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000005', 'coach'),
+                                                          ('dddddddd-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000004', 'parent');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000004', false);
+do $$ declare n int; begin
+  with d as (delete from public.team where id = 'dddddddd-0000-4000-8000-000000000001' returning id)
+  select count(*) into n from d;
+  perform pg_temp.expect(n = 0, 'a parent cannot delete the team');
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000005', false);
+do $$ declare n int; begin
+  with d as (delete from public.team where id = 'dddddddd-0000-4000-8000-000000000001' returning id)
+  select count(*) into n from d;
+  perform pg_temp.expect(n = 1, 'a coach (not the creator) deletes the team and gets its id back');
+end $$;
+reset role;
+select pg_temp.expect(
+  (select count(*) from public.member where team_id = 'dddddddd-0000-4000-8000-000000000001') = 0,
+  'deleting a team removes its members');
 \echo ALL RLS TESTS PASSED

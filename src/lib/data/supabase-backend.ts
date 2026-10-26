@@ -288,3 +288,12 @@ export async function acceptInvite(token: string, displayName: string): Promise<
     }),
   );
 }
+
+/** Coach: permanently delete a team and everything in it (seasons, games, lineups, roster). */
+export async function deleteTeamRow(teamId: string): Promise<void> {
+  const sb = getBrowserSupabase();
+  const deleted = check<{ id: string }[]>(
+    await sb.from("team").delete().eq("id", teamId).select("id"),
+  );
+  if (deleted.length === 0) throw new Error("Only a coach can delete this team.");
+}

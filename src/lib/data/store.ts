@@ -304,6 +304,15 @@ export async function createTeam(input: {
   reloadData();
 }
 
+/** Coach: permanently delete the current team, then open another (or the setup screen). */
+export async function deleteTeam(): Promise<void> {
+  await (await remote()).deleteTeamRow(data!.team.id);
+  writeJson(TEAM_KEY, null);
+  // Full load so nothing from the deleted team lingers on screen.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+  window.location.assign("/games");
+}
+
 /** Open another of the user's teams. */
 export function switchTeam(teamId: string): void {
   if (teamId === data?.team.id) return;
