@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveRuleConfig } from "./config";
+import { fieldPositionsFor, resolveRuleConfig } from "./config";
 import { generateLineup } from "./generate";
 import { computeParticipation } from "./participation";
 import { lineupFromGrid, makePlayer, makeRoster } from "./test-utils";
@@ -143,5 +143,32 @@ describe("generateLineup across many seeds", () => {
         }
       }
     }
+  });
+});
+
+describe("generateLineup for coach's pitch and 10 fielders", () => {
+  const coachPitch10 = resolveRuleConfig({
+    coachPitch: true,
+    fieldPositions: fieldPositionsFor(10),
+  });
+
+  it("fills LF, LCF, RCF, RF and puts anyone at P, with zero violations", () => {
+    for (const n of [10, 11, 12, 13]) {
+      for (const innings of [4, 6]) {
+        const roster = makeRoster(n, { pitchers: 0, catchers: 3 });
+        const { lineup, violations } = generateLineup(roster, coachPitch10, [], 4, { innings });
+        expect(violations, `n=${n} innings=${innings}`).toEqual([]);
+        const used = new Set(lineup.slots.map((s) => s.position));
+        for (const pos of ["LF", "LCF", "RCF", "RF", "P"] as const) expect(used).toContain(pos);
+        expect(used).not.toContain("CF");
+      }
+    }
+  });
+
+  it("spreads P around like any other position", () => {
+    const roster = makeRoster(12, { pitchers: 0, catchers: 2 });
+    const { lineup } = generateLineup(roster, coachPitch10, [], 8, { innings: 6 });
+    const pitchers = new Set(lineup.slots.filter((s) => s.position === "P").map((s) => s.playerId));
+    expect(pitchers.size).toBeGreaterThanOrEqual(3);
   });
 });

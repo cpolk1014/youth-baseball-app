@@ -1,5 +1,5 @@
 import { emptyLineup, normalizeLineup } from "@/lib/lineup/edit";
-import { resolveRuleConfig } from "@/lib/rules/config";
+import { gameRuleConfig } from "@/lib/rules/config";
 import type { Lineup, RuleConfig } from "@/lib/rules/types";
 import type { AppData, Game } from "./types";
 
@@ -22,7 +22,10 @@ export function gameContext(data: AppData, gameId: string): GameContext | null {
     .flatMap((g) => (data.lineups[g.id] ? [data.lineups[g.id]!] : []));
   return {
     game,
-    config: resolveRuleConfig(data.season.fairPlayRules),
+    config: gameRuleConfig(data.season.fairPlayRules, {
+      coachPitch: data.team.coachPitch,
+      fieldPlayers: game.fieldPlayers,
+    }),
     lineup: normalizeLineup(
       saved ?? emptyLineup(data.players, game.innings),
       data.players,
@@ -52,6 +55,7 @@ export interface GameInput {
   startTime: string;
   location: string;
   innings: number;
+  fieldPlayers: number;
 }
 
 export type GameInputErrors = Partial<Record<keyof GameInput, string>>;
@@ -75,6 +79,9 @@ export function validateGameInput(input: GameInput): GameInputErrors {
   }
   if (!Number.isInteger(input.innings) || input.innings < 1 || input.innings > 9) {
     errors.innings = "Innings must be 1 to 9.";
+  }
+  if (input.fieldPlayers !== 9 && input.fieldPlayers !== 10) {
+    errors.fieldPlayers = "Choose 9 or 10 field players.";
   }
   return errors;
 }
@@ -110,7 +117,13 @@ export function finalLineups(data: AppData, seasonId: string): Lineup[] {
       return {
         innings: g.innings,
         battingOrder: lineup.battingOrder,
+        notBatting: lineup.notBatting ?? [],
         slots: lineup.slots.filter((s) => s.inning <= g.innings),
       };
     });
+}
+
+/** New games default to 10 fielders for coach's pitch teams, otherwise 9. */
+export function defaultFieldPlayers(coachPitch: boolean): 9 | 10 {
+  return coachPitch ? 10 : 9;
 }

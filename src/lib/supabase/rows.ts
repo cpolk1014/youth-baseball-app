@@ -6,6 +6,7 @@ export interface TeamRow {
   id: string;
   name: string;
   age_group: string;
+  coach_pitch: boolean;
 }
 
 export interface SeasonRow {
@@ -35,6 +36,7 @@ export interface GameRow {
   opponent: string;
   location: string | null;
   innings: number;
+  field_players: 9 | 10;
   status: "scheduled" | "final";
 }
 
@@ -42,6 +44,7 @@ export interface LineupRow {
   id: string;
   game_id: string;
   batting_order: string[];
+  not_batting: string[];
   version: number;
 }
 

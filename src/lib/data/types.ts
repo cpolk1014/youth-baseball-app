@@ -7,6 +7,8 @@ export interface Team {
   id: string;
   name: string;
   ageGroup: string;
+  /** Coach's pitch: P is a fielding spot and new games default to 10 fielders. */
+  coachPitch: boolean;
 }
 
 export interface Season {
@@ -24,6 +26,8 @@ export interface Game {
   opponent: string;
   location: string | null;
   innings: number;
+  /** 9 fielders (LF CF RF) or 10 (LF LCF RCF RF). */
+  fieldPlayers: 9 | 10;
   status: GameStatus;
 }
 

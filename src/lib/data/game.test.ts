@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { lineupFromGrid } from "@/lib/rules/test-utils";
 import { SEED_DATA } from "./seed";
 import {
+  defaultFieldPlayers,
   gameContext,
   lastFilledInning,
   splitGames,
@@ -16,6 +17,7 @@ const valid: GameInput = {
   startTime: "09:00",
   location: "",
   innings: 6,
+  fieldPlayers: 9,
 };
 
 describe("validateGameInput", () => {
@@ -34,6 +36,8 @@ describe("validateGameInput", () => {
     expect(validateGameInput({ ...valid, startTime: "25:00" }).startTime).toBeDefined();
     expect(validateGameInput({ ...valid, innings: 0 }).innings).toBeDefined();
     expect(validateGameInput({ ...valid, innings: 10 }).innings).toBeDefined();
+    expect(validateGameInput({ ...valid, fieldPlayers: 8 }).fieldPlayers).toBeDefined();
+    expect(validateGameInput({ ...valid, fieldPlayers: 10 })).toEqual({});
   });
 });
 
@@ -51,6 +55,7 @@ describe("game helpers", () => {
     opponent: id,
     location: null,
     innings: 6,
+    fieldPlayers: 9,
     status,
   });
 
@@ -81,5 +86,23 @@ describe("game helpers", () => {
     };
     expect(gameContext(data, g2!.id)?.history).toHaveLength(1);
     expect(gameContext(data, g1!.id)?.history).toHaveLength(0);
+  });
+
+  it("defaults to 10 fielders for coach's pitch and 9 otherwise", () => {
+    expect(defaultFieldPlayers(true)).toBe(10);
+    expect(defaultFieldPlayers(false)).toBe(9);
+  });
+
+  it("uses the game's field players and the team's coach's pitch for its rules", () => {
+    const [g1] = SEED_DATA.games;
+    const data: AppData = {
+      ...SEED_DATA,
+      team: { ...SEED_DATA.team, coachPitch: true },
+      games: [{ ...g1!, fieldPlayers: 10 }],
+    };
+    const config = gameContext(data, g1!.id)!.config;
+    expect(config.coachPitch).toBe(true);
+    expect(config.fieldPositions).toContain("LCF");
+    expect(config.fieldPositions).not.toContain("CF");
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { holdersByPosition, positionAt } from "@/lib/lineup/edit";
+import { holdersByPosition, lineupRows, positionAt } from "@/lib/lineup/edit";
 import type { FieldPosition, Lineup, Player, Severity, Violation } from "@/lib/rules/types";
 import { positionClass, positionLabel } from "./positionStyle";
 
@@ -61,7 +61,7 @@ export function LineupGrid({
           </tr>
         </thead>
         <tbody>
-          {lineup.battingOrder.map((id, i) => {
+          {lineupRows(lineup).map(({ playerId: id, order }) => {
             const p = players.get(id);
             const issue = playerIssue.get(id);
             return (
@@ -71,9 +71,13 @@ export function LineupGrid({
                   className={`sticky left-0 z-10 w-[104px] max-w-[104px] rounded-md bg-white px-1.5 text-left ${issue ? RING[issue] : ""}`}
                 >
                   <span className="block w-[92px] truncate text-[15px] leading-tight font-semibold">
-                    <span className="text-slate-500">{i + 1}.</span> {p?.name ?? "?"}
+                    <span className="text-slate-500">{order === null ? "–" : `${order}.`}</span>{" "}
+                    {p?.name ?? "?"}
                   </span>
-                  <span className="block text-xs text-slate-600">#{p?.jerseyNumber ?? "–"}</span>
+                  <span className="block text-xs text-slate-600">
+                    #{p?.jerseyNumber ?? "–"}
+                    {order === null && " · not batting"}
+                  </span>
                 </th>
                 {innings.map((inning) => {
                   const pos = positionAt(lineup, inning, id);

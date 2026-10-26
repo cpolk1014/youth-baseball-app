@@ -36,8 +36,10 @@ export interface LineupSlot {
 
 export interface Lineup {
   innings: number;
-  /** Continuous batting order: every active player bats, once. */
+  /** Continuous batting order: every active player bats once, unless sitting out. */
   battingOrder: string[];
+  /** Players left out of the batting order for this game (they can still field). */
+  notBatting?: string[];
   slots: LineupSlot[];
 }
 
@@ -62,6 +64,8 @@ export type RuleId =
   | "season-balance";
 
 export interface RuleConfig {
+  /** Coach's pitch: P is a fielding spot, so pitching rules don't apply. */
+  coachPitch: boolean;
   /** Positions that must be filled exactly once every inning. */
   fieldPositions: FieldPosition[];
   /** Positions that count as "infield" for the min-infield and season-balance rules. */

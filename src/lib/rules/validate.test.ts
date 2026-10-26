@@ -375,3 +375,46 @@ describe("game length", () => {
     expect([...new Set(only(v, "position-coverage").map((x) => x.inning))]).toEqual([5, 6]);
   });
 });
+
+describe("coach's pitch", () => {
+  // p1 "pitches" three innings, nobody can pitch, and p2 both catches and pitches.
+  const roster = ROSTER_9.map((p) => ({ ...p, canPitch: false }));
+  const grid = {
+    ...withCell(withCell(GRID_9x4, "p1", 3, "P"), "p3", 3, "SS"),
+    p2: ["C", "C", "LF", "P"] as Position[],
+    p1: ["P", "P", "P", "SS"] as Position[],
+    p3: ["1B", "1B", "SS", "LF"] as Position[],
+  };
+  const pitching: RuleId[] = ["pitcher-eligibility", "max-innings-pitched", "catcher-cannot-pitch"];
+
+  it("applies pitching rules normally", () => {
+    const v = rules(validateLineup(roster, lineupFromGrid(grid), config, []));
+    for (const rule of pitching) expect(v).toContain(rule);
+  });
+
+  it("treats P as a fielding spot when coachPitch is on", () => {
+    const v = validateLineup(
+      roster,
+      lineupFromGrid(grid),
+      resolveRuleConfig({ coachPitch: true }),
+      [],
+    );
+    for (const rule of pitching) expect(only(v, rule)).toEqual([]);
+  });
+});
+
+describe("players sitting out of the batting order", () => {
+  const base = lineupFromGrid(GRID_9x4);
+  const order = base.battingOrder.filter((id) => id !== "p9");
+
+  it("are not reported missing", () => {
+    const lineup: Lineup = { ...base, battingOrder: order, notBatting: ["p9"] };
+    expect(only(validateLineup(ROSTER_9, lineup, config, []), "batting-order")).toEqual([]);
+  });
+
+  it("can't also be in the batting order, and must be on the roster", () => {
+    const both: Lineup = { ...base, notBatting: ["p9", "ghost"] };
+    const v = only(validateLineup(ROSTER_9, both, config, []), "batting-order");
+    expect(v.map((x) => x.playerId).sort()).toEqual(["ghost", "p9"]);
+  });
+});

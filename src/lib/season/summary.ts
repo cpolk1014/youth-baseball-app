@@ -4,7 +4,13 @@ import {
   computeParticipation,
   emptyParticipation,
 } from "@/lib/rules/participation";
-import type { Lineup, Player, Position, RuleConfig } from "@/lib/rules/types";
+import {
+  FIELD_POSITIONS,
+  type Lineup,
+  type Player,
+  type Position,
+  type RuleConfig,
+} from "@/lib/rules/types";
 
 export interface SeasonRow {
   player: Player;
@@ -26,7 +32,7 @@ export interface SeasonSummary {
   inactiveRows: SeasonRow[];
   avgInfield: number;
   avgBench: number;
-  /** Grid columns: the season's field positions, then the bench. */
+  /** Grid columns: field positions used in final games (or the defaults), then the bench. */
   positions: Position[];
 }
 
@@ -79,6 +85,13 @@ export function seasonSummary(
     inactiveRows: inactive.map(row),
     avgInfield: outliers.avgInfield,
     avgBench: outliers.avgBench,
-    positions: [...config.fieldPositions, "BENCH"],
+    positions: [...seasonPositions(finalLineups, config), "BENCH"],
   };
+}
+
+/** Positions used in final games, in standard order; mixes 9- and 10-fielder games. */
+function seasonPositions(finalLineups: Lineup[], config: RuleConfig): Position[] {
+  const used = new Set(finalLineups.flatMap((l) => l.slots.map((s) => s.position)));
+  const positions = FIELD_POSITIONS.filter((p) => used.has(p));
+  return positions.length > 0 ? positions : config.fieldPositions;
 }

@@ -25,6 +25,7 @@ export function GameForm({
     startTime: game.startTime ?? "",
     location: game.location ?? "",
     innings: game.innings,
+    fieldPlayers: game.fieldPlayers,
   });
   const [submitted, setSubmitted] = useState(false);
   const errors = validateGameInput(input);
@@ -46,6 +47,7 @@ export function GameForm({
           startTime: input.startTime || null,
           location: input.location.trim() || null,
           innings: input.innings,
+          fieldPlayers: input.fieldPlayers === 10 ? 10 : 9,
         });
       }}
       className="flex flex-col gap-4"
@@ -108,6 +110,30 @@ export function GameForm({
           >
             +
           </StepButton>
+        </div>
+      </Field>
+      <Field label="Field players" error={shown.fieldPlayers} group>
+        <div className="grid grid-cols-2 gap-2">
+          {([9, 10] as const).map((n) => (
+            <button
+              key={n}
+              type="button"
+              aria-pressed={input.fieldPlayers === n}
+              onClick={() => set("fieldPlayers", n)}
+              className={`flex h-14 flex-col items-center justify-center rounded-xl border-2 ${
+                input.fieldPlayers === n
+                  ? "border-[#0b1f3a] bg-[#0b1f3a] text-white"
+                  : "border-slate-300 bg-white active:bg-slate-100"
+              }`}
+            >
+              <span className="text-xl leading-tight font-bold">{n}</span>
+              <span
+                className={`text-xs ${input.fieldPlayers === n ? "text-white/80" : "text-slate-600"}`}
+              >
+                {n === 9 ? "LF · CF · RF" : "LF · LCF · RCF · RF"}
+              </span>
+            </button>
+          ))}
         </div>
       </Field>
       {input.innings < filledInnings && (

@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { formatGameDate, gameContext, localDateString, splitGames } from "@/lib/data/game";
+import {
+  defaultFieldPlayers,
+  formatGameDate,
+  gameContext,
+  localDateString,
+  splitGames,
+} from "@/lib/data/game";
 import { newId, saveGame, signOut, useAppData, useStoreState } from "@/lib/data/store";
 import type { AppData, Game } from "@/lib/data/types";
 import { validateLineup } from "@/lib/rules/validate";
@@ -33,6 +39,7 @@ export function GamesScreen() {
       opponent: "",
       location: null,
       innings: 6,
+      fieldPlayers: defaultFieldPlayers(data.team.coachPitch),
       status: "scheduled",
     });
 

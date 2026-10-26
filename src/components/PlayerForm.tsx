@@ -131,7 +131,7 @@ export function PlayerForm({
   );
 }
 
-function Toggle({
+export function Toggle({
   label,
   hint,
   checked,

@@ -24,7 +24,7 @@ const player = (
 });
 
 export const SEED_DATA: AppData = {
-  team: { id: TEAM_ID, name: "Riverside Rattlers", ageGroup: "10U" },
+  team: { id: TEAM_ID, name: "Riverside Rattlers", ageGroup: "10U", coachPitch: false },
   season: { id: SEASON_ID, teamId: TEAM_ID, name: "Fall 2026", fairPlayRules: DEFAULT_RULE_CONFIG },
   players: [
     player(1, "Mason R.", 2, ["SS", "P"], true, false),
@@ -49,6 +49,7 @@ export const SEED_DATA: AppData = {
       opponent: "Lakeside Lightning",
       location: "Memorial Park Field 2",
       innings: 6,
+      fieldPlayers: 9,
       status: "scheduled",
     },
     {
@@ -59,6 +60,7 @@ export const SEED_DATA: AppData = {
       opponent: "Northside Nationals",
       location: "Northside Complex Field 4",
       innings: 4,
+      fieldPlayers: 9,
       status: "scheduled",
     },
   ],

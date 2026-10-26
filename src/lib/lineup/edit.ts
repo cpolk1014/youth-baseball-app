@@ -10,7 +10,12 @@ export function activePlayers(players: Player[]): Player[] {
 }
 
 export function emptyLineup(players: Player[], innings: number): Lineup {
-  return { innings, battingOrder: activePlayers(players).map((p) => p.id), slots: [] };
+  return {
+    innings,
+    battingOrder: activePlayers(players).map((p) => p.id),
+    notBatting: [],
+    slots: [],
+  };
 }
 
 /**
@@ -20,11 +25,14 @@ export function emptyLineup(players: Player[], innings: number): Lineup {
 export function normalizeLineup(lineup: Lineup, players: Player[], innings: number): Lineup {
   const active = activePlayers(players);
   const ids = new Set(active.map((p) => p.id));
-  const kept = lineup.battingOrder.filter((id) => ids.has(id));
-  const added = active.map((p) => p.id).filter((id) => !kept.includes(id));
+  const notBatting = (lineup.notBatting ?? []).filter((id) => ids.has(id));
+  const sittingOut = new Set(notBatting);
+  const kept = lineup.battingOrder.filter((id) => ids.has(id) && !sittingOut.has(id));
+  const added = active.map((p) => p.id).filter((id) => !kept.includes(id) && !sittingOut.has(id));
   return {
     innings,
     battingOrder: [...kept, ...added],
+    notBatting,
     slots: lineup.slots.filter((s) => ids.has(s.playerId) && s.inning >= 1 && s.inning <= innings),
   };
 }
@@ -70,4 +78,31 @@ export function moveBatter(order: string[], from: number, to: number): string[] 
   const [moved] = next.splice(from, 1);
   next.splice(Math.max(0, Math.min(to, next.length)), 0, moved!);
   return next;
+}
+
+/** Take a player out of the batting order (they can still field) or put them back at the end. */
+export function setBatting(lineup: Lineup, playerId: string, bats: boolean): Lineup {
+  const notBatting = lineup.notBatting ?? [];
+  if (bats) {
+    return {
+      ...lineup,
+      notBatting: notBatting.filter((id) => id !== playerId),
+      battingOrder: lineup.battingOrder.includes(playerId)
+        ? lineup.battingOrder
+        : [...lineup.battingOrder, playerId],
+    };
+  }
+  return {
+    ...lineup,
+    battingOrder: lineup.battingOrder.filter((id) => id !== playerId),
+    notBatting: notBatting.includes(playerId) ? notBatting : [...notBatting, playerId],
+  };
+}
+
+/** Row order for grids and cards: batters in order, then players sitting out of batting. */
+export function lineupRows(lineup: Lineup): { playerId: string; order: number | null }[] {
+  return [
+    ...lineup.battingOrder.map((playerId, i) => ({ playerId, order: i + 1 })),
+    ...(lineup.notBatting ?? []).map((playerId) => ({ playerId, order: null })),
+  ];
 }

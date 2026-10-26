@@ -34,4 +34,14 @@ describe("buildLineupCard", () => {
     expect(card.rows[1]?.positions).toEqual([""]);
     expect(card.complete).toBe(false);
   });
+
+  it("lists players sitting out of batting last, without a batting slot", () => {
+    const lineup = { ...lineupFromGrid({ a: ["P"], b: ["C"] }, ["b"]), notBatting: ["a"] };
+    lineup.innings = 1;
+    const card = buildLineupCard(players, lineup, ["P", "C"]);
+    expect(card.rows.map((r) => [r.order, r.name])).toEqual([
+      [1, "Ben K."],
+      [null, "Ava J."],
+    ]);
+  });
 });

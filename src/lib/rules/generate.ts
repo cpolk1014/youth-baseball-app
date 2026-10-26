@@ -165,9 +165,11 @@ function buildLineup(
   if (pitchers.length === 0) pitchers = shuffle(players, rng);
   const pitchStint = stintLength(innings, pitchers.length, maxSame, config.maxInningsPitched);
   pitchers = pitchers.slice(0, Math.ceil(innings / pitchStint));
-  const pitchPlan = positions.includes("P") ? planStints(pitchers, innings, pitchStint) : [];
+  // Coach's pitch: P is filled like any other fielding spot below.
+  const pitchPlan =
+    positions.includes("P") && !config.coachPitch ? planStints(pitchers, innings, pitchStint) : [];
 
-  const pitcherIds = new Set(pitchers.map((p) => p.id));
+  const pitcherIds = new Set(config.coachPitch ? [] : pitchers.map((p) => p.id));
   let catchers = byPreference(
     canCatch.filter((p) => !pitcherIds.has(p.id)),
     "C",

@@ -145,8 +145,19 @@ function checkBattingOrder(ctx: Context): void {
     }
     seen.add(id);
   }
+  const notBatting = new Set(ctx.lineup.notBatting ?? []);
+  for (const id of notBatting) {
+    if (!ctx.byId.has(id)) {
+      ctx.emit("batting-order", { playerId: id, message: `${id} isn't on the active roster.` });
+    } else if (seen.has(id)) {
+      ctx.emit("batting-order", {
+        playerId: id,
+        message: `${name(ctx, id)} is both batting and sitting out of the batting order.`,
+      });
+    }
+  }
   for (const player of ctx.players) {
-    if (!seen.has(player.id)) {
+    if (!seen.has(player.id) && !notBatting.has(player.id)) {
       ctx.emit("batting-order", {
         playerId: player.id,
         message: `${player.name} is missing from the batting order.`,
@@ -204,7 +215,7 @@ function checkPerGameCounts(ctx: Context): void {
       for (const position of ctx.grid.get(inning)?.get(player.id) ?? []) {
         counts.set(position, (counts.get(position) ?? 0) + 1);
         if (infield.has(position)) infieldInnings++;
-        if (position === "P" && !player.canPitch) {
+        if (position === "P" && !player.canPitch && !config.coachPitch) {
           ctx.emit("pitcher-eligibility", {
             playerId: player.id,
             inning,
@@ -241,13 +252,22 @@ function checkPerGameCounts(ctx: Context): void {
     }
 
     const pitched = counts.get("P") ?? 0;
-    if (config.maxInningsPitched !== null && pitched > config.maxInningsPitched) {
+    if (
+      !config.coachPitch &&
+      config.maxInningsPitched !== null &&
+      pitched > config.maxInningsPitched
+    ) {
       ctx.emit("max-innings-pitched", {
         playerId: player.id,
         message: `${player.name} pitches ${pitched} innings (max ${config.maxInningsPitched}).`,
       });
     }
-    if (config.catcherCannotPitch && pitched > 0 && (counts.get("C") ?? 0) > 0) {
+    if (
+      !config.coachPitch &&
+      config.catcherCannotPitch &&
+      pitched > 0 &&
+      (counts.get("C") ?? 0) > 0
+    ) {
       ctx.emit("catcher-cannot-pitch", {
         playerId: player.id,
         message: `${player.name} both catches and pitches in this game.`,

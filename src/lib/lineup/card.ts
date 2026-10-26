@@ -1,8 +1,9 @@
 import type { FieldPosition, Lineup, Player } from "@/lib/rules/types";
-import { positionAt } from "./edit";
+import { lineupRows, positionAt } from "./edit";
 
 export interface LineupCardRow {
-  order: number;
+  /** Batting slot, or null for a player sitting out of the batting order. */
+  order: number | null;
   playerId: string;
   name: string;
   jersey: string;
@@ -29,10 +30,10 @@ export function buildLineupCard(
   const innings = Array.from({ length: lineup.innings }, (_, i) => i + 1);
   const jersey = (p: Player | undefined) => (p?.jerseyNumber != null ? String(p.jerseyNumber) : "");
 
-  const rows = lineup.battingOrder.map((playerId, i) => {
+  const rows = lineupRows(lineup).map(({ playerId, order }) => {
     const p = byId.get(playerId);
     return {
-      order: i + 1,
+      order,
       playerId,
       name: p?.name ?? "Unknown player",
       jersey: jersey(p),

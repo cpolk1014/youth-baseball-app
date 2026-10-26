@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatGameDate, gameContext, lastFilledInning } from "@/lib/data/game";
 import { saveGame, saveLineup, setGameStatus, useAppData } from "@/lib/data/store";
-import { assignPosition, positionAt } from "@/lib/lineup/edit";
+import { assignPosition, positionAt, setBatting } from "@/lib/lineup/edit";
 import { generateLineup } from "@/lib/rules/generate";
 import type { Lineup } from "@/lib/rules/types";
 import { validateLineup } from "@/lib/rules/validate";
@@ -65,7 +65,10 @@ export function GameScreen({ gameId }: { gameId: string }) {
       innings: game.innings,
     });
     // Keep the coach's batting order; auto-fill only sets the field.
-    change({ ...generated, battingOrder: lineup.battingOrder }, seed);
+    change(
+      { ...generated, battingOrder: lineup.battingOrder, notBatting: lineup.notBatting ?? [] },
+      seed,
+    );
   };
   const picked = cell ? players.get(cell.playerId) : undefined;
   const isFinal = game.status === "final";
@@ -185,8 +188,10 @@ export function GameScreen({ gameId }: { gameId: string }) {
       ) : (
         <BattingOrder
           order={lineup.battingOrder}
+          notBatting={lineup.notBatting ?? []}
           players={players}
           onChange={(battingOrder) => change({ ...lineup, battingOrder })}
+          onSetBatting={(playerId, bats) => change(setBatting(lineup, playerId, bats))}
           readOnly={isFinal}
         />
       )}

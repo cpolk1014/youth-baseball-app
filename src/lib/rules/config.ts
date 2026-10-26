@@ -1,7 +1,16 @@
-import type { RuleConfig } from "./types";
+import type { FieldPosition, RuleConfig } from "./types";
+
+const NINE_FIELDERS: FieldPosition[] = ["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF"];
+const TEN_FIELDERS: FieldPosition[] = ["P", "C", "1B", "2B", "3B", "SS", "LF", "LCF", "RCF", "RF"];
+
+/** Positions for a 9-fielder game (LF CF RF) or a 10-fielder game (LF LCF RCF RF). */
+export function fieldPositionsFor(fieldPlayers: 9 | 10): FieldPosition[] {
+  return [...(fieldPlayers === 10 ? TEN_FIELDERS : NINE_FIELDERS)];
+}
 
 export const DEFAULT_RULE_CONFIG: RuleConfig = {
-  fieldPositions: ["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF"],
+  coachPitch: false,
+  fieldPositions: NINE_FIELDERS,
   infieldPositions: ["P", "C", "1B", "2B", "3B", "SS"],
   maxConsecutiveBench: 1,
   benchRotation: true,
@@ -39,5 +48,17 @@ export function resolveRuleConfig(input: RuleConfigInput = {}): RuleConfig {
     ...DEFAULT_RULE_CONFIG,
     ...input,
     severity: { ...DEFAULT_RULE_CONFIG.severity, ...input.severity },
+  };
+}
+
+/** A game's rules: the season's rules, with the team's coach's pitch and the game's size. */
+export function gameRuleConfig(
+  seasonRules: RuleConfigInput,
+  { coachPitch, fieldPlayers }: { coachPitch: boolean; fieldPlayers: 9 | 10 },
+): RuleConfig {
+  return {
+    ...resolveRuleConfig(seasonRules),
+    coachPitch,
+    fieldPositions: fieldPositionsFor(fieldPlayers),
   };
 }

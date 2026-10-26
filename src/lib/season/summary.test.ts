@@ -63,4 +63,11 @@ describe("seasonSummary", () => {
     expect(empty.finalGames).toBe(0);
     expect(empty.rows.every((r) => r.field === 0 && !r.lowInfield)).toBe(true);
   });
+
+  it("shows columns for positions used across 9- and 10-fielder games", () => {
+    const nine = lineupFromGrid({ a: ["CF"], b: ["P"] });
+    const ten = lineupFromGrid({ a: ["LCF"], b: ["RCF"] });
+    const cols = seasonSummary(players, [nine, ten], config).positions;
+    expect(cols).toEqual(["P", "CF", "LCF", "RCF", "BENCH"]);
+  });
 });

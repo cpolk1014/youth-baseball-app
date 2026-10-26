@@ -96,7 +96,7 @@ function Card({
         <tbody>
           {data.rows.map((r) => (
             <tr key={r.playerId} style={{ height: rowH }}>
-              <td className={`${cell} font-bold`}>{r.order}</td>
+              <td className={`${cell} font-bold`}>{r.order ?? "–"}</td>
               <td className={`${cell} font-bold`}>{r.jersey}</td>
               <td className={`${cell} truncate text-left font-semibold`}>{r.name}</td>
               {r.positions.map((pos, i) => (

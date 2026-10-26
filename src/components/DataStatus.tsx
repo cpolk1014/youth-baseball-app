@@ -63,6 +63,7 @@ export function DataStatus({ children }: { children: ReactNode }) {
 function TeamSetup({ hasTeam }: { hasTeam: boolean }) {
   const [teamName, setTeamName] = useState("");
   const [ageGroup, setAgeGroup] = useState("10U");
+  const [coachPitch, setCoachPitch] = useState(false);
   const [seasonName, setSeasonName] = useState(() => defaultSeasonName(new Date()));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +80,12 @@ function TeamSetup({ hasTeam }: { hasTeam: boolean }) {
         setBusy(true);
         setError(null);
         try {
-          await createTeam({ teamName: teamName.trim(), ageGroup, seasonName: seasonName.trim() });
+          await createTeam({
+            teamName: teamName.trim(),
+            ageGroup,
+            coachPitch,
+            seasonName: seasonName.trim(),
+          });
         } catch (err) {
           setError(err instanceof Error ? err.message : String(err));
           setBusy(false);
@@ -120,6 +126,23 @@ function TeamSetup({ hasTeam }: { hasTeam: boolean }) {
             </select>
           </label>
         </div>
+      )}
+
+      {!hasTeam && (
+        <label className="flex min-h-14 items-center gap-3 rounded-xl border-2 border-slate-300 bg-white px-4">
+          <input
+            type="checkbox"
+            checked={coachPitch}
+            onChange={(e) => setCoachPitch(e.target.checked)}
+            className="size-6 accent-[#0b1f3a]"
+          />
+          <span>
+            <span className="block text-lg font-semibold">Coach&apos;s pitch</span>
+            <span className="block text-sm text-slate-600">
+              A coach pitches. Games default to 10 fielders.
+            </span>
+          </span>
+        </label>
       )}
 
       <label className="flex flex-col gap-1">

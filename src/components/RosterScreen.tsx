@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { newId, savePlayer, useAppData } from "@/lib/data/store";
+import { newId, savePlayer, setCoachPitch, useAppData } from "@/lib/data/store";
 import { activePlayers } from "@/lib/lineup/edit";
-import { resolveRuleConfig } from "@/lib/rules/config";
+import { fieldPositionsFor } from "@/lib/rules/config";
+import { FIELD_POSITIONS } from "@/lib/rules/types";
 import type { Player } from "@/lib/rules/types";
 import { AppShell, Loading } from "./AppShell";
-import { PlayerForm } from "./PlayerForm";
+import { PlayerForm, Toggle } from "./PlayerForm";
 import { Sheet } from "./Sheet";
 
 export function RosterScreen() {
@@ -21,7 +22,12 @@ export function RosterScreen() {
     );
   }
 
-  const positions = resolveRuleConfig(data.season.fairPlayRules).fieldPositions;
+  // Coach's pitch games can use either outfield, so offer LCF/RCF as preferences too.
+  const positions = data.team.coachPitch
+    ? FIELD_POSITIONS.filter(
+        (p) => fieldPositionsFor(9).includes(p) || fieldPositionsFor(10).includes(p),
+      )
+    : fieldPositionsFor(9);
   const active = activePlayers(data.players);
   const inactive = data.players.filter((p) => p.active === false);
   const isNew = editing !== null && !data.players.some((p) => p.id === editing.id);
@@ -49,6 +55,19 @@ export function RosterScreen() {
         </button>
       }
     >
+      <div className="mb-4">
+        <Toggle
+          label="Coach's pitch"
+          hint={
+            data.team.coachPitch
+              ? "P is a fielding spot. New games default to 10 fielders."
+              : "Kids pitch. New games default to 9 fielders."
+          }
+          checked={data.team.coachPitch}
+          onChange={setCoachPitch}
+        />
+      </div>
+
       <ul className="flex flex-col gap-2">
         {active.map((p) => (
           <PlayerRow key={p.id} player={p} onClick={() => setEditing(p)} />

@@ -88,8 +88,19 @@ async function loadRemote(): Promise<void> {
   }
 }
 
+/** Fill in fields added after data was first saved in this browser. */
+function upgradeLocalData(d: AppData): AppData {
+  return {
+    ...d,
+    team: { ...d.team, coachPitch: d.team.coachPitch ?? false },
+    games: d.games.map((g) => ({ ...g, fieldPlayers: g.fieldPlayers ?? 9 })),
+  };
+}
+
 function getSnapshot(): AppData | null {
-  if (state.mode === "local") data ??= readJson<AppData>(STORAGE_KEY) ?? SEED_DATA;
+  if (state.mode === "local") {
+    data ??= upgradeLocalData(readJson<AppData>(STORAGE_KEY) ?? SEED_DATA);
+  }
   return data;
 }
 
@@ -190,6 +201,13 @@ export function saveGame(game: Game): void {
   );
 }
 
+export function setCoachPitch(coachPitch: boolean): void {
+  update(
+    (d) => ({ ...d, team: { ...d.team, coachPitch } }),
+    async () => (await remote()).saveTeamSettings(data!.team.id, coachPitch),
+  );
+}
+
 export function setGameStatus(gameId: string, status: GameStatus): void {
   update(
     (d) => ({ ...d, games: d.games.map((g) => (g.id === gameId ? { ...g, status } : g)) }),
@@ -211,6 +229,7 @@ export function saveLineup(gameId: string, lineup: Lineup, autoFillSeed?: number
       const next: GameLineup = {
         innings: lineup.innings,
         battingOrder: lineup.battingOrder,
+        notBatting: lineup.notBatting ?? [],
         slots: lineup.slots,
         autoFillSeed: seed,
       };
@@ -224,6 +243,7 @@ export function saveLineup(gameId: string, lineup: Lineup, autoFillSeed?: number
 export async function createTeam(input: {
   teamName: string;
   ageGroup: string;
+  coachPitch: boolean;
   seasonName: string;
 }): Promise<void> {
   const team = state.status.kind === "setup" ? state.status.team : null;

@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { lineupFromGrid } from "@/lib/rules/test-utils";
 import { SEED_DATA } from "./seed";
-import { getAppData, resetLocalData, saveGame, saveLineup, setGameStatus } from "./store";
+import {
+  getAppData,
+  resetLocalData,
+  saveGame,
+  saveLineup,
+  setCoachPitch,
+  setGameStatus,
+} from "./store";
 
 // There's no localStorage under Vitest, so the store runs in memory.
 const game = SEED_DATA.games[0]!;
@@ -30,5 +37,17 @@ describe("store game actions", () => {
     expect(findGame(game.id)?.status).toBe("final");
     setGameStatus(game.id, "scheduled");
     expect(findGame(game.id)?.status).toBe("scheduled");
+  });
+
+  it("turns coach's pitch on and off", () => {
+    setCoachPitch(true);
+    expect(getAppData().team.coachPitch).toBe(true);
+    setCoachPitch(false);
+    expect(getAppData().team.coachPitch).toBe(false);
+  });
+
+  it("keeps players sitting out of batting when saving a lineup", () => {
+    saveLineup(game.id, { ...lineupFromGrid({ a: ["P"] }), notBatting: ["b"] });
+    expect(getAppData().lineups[game.id]?.notBatting).toEqual(["b"]);
   });
 });

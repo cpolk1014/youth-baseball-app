@@ -4,9 +4,11 @@ import {
   activePlayers,
   assignPosition,
   emptyLineup,
+  lineupRows,
   moveBatter,
   normalizeLineup,
   positionAt,
+  setBatting,
 } from "./edit";
 
 const players = [
@@ -22,6 +24,7 @@ describe("lineup editing", () => {
     expect(emptyLineup(players, 4)).toEqual({
       innings: 4,
       battingOrder: ["b", "a", "d"],
+      notBatting: [],
       slots: [],
     });
   });
@@ -67,5 +70,27 @@ describe("lineup editing", () => {
     expect(moveBatter(["a", "b", "c", "d"], 0, 2)).toEqual(["b", "c", "a", "d"]);
     expect(moveBatter(["a", "b", "c", "d"], 3, 0)).toEqual(["d", "a", "b", "c"]);
     expect(moveBatter(["a", "b"], 1, 1)).toEqual(["a", "b"]);
+  });
+
+  it("takes a player out of the batting order and puts them back at the end", () => {
+    const l = emptyLineup(players, 2); // b, a, d
+    const out = setBatting(l, "a", false);
+    expect(out.battingOrder).toEqual(["b", "d"]);
+    expect(out.notBatting).toEqual(["a"]);
+    expect(lineupRows(out)).toEqual([
+      { playerId: "b", order: 1 },
+      { playerId: "d", order: 2 },
+      { playerId: "a", order: null },
+    ]);
+    const back = setBatting(out, "a", true);
+    expect(back.battingOrder).toEqual(["b", "d", "a"]);
+    expect(back.notBatting).toEqual([]);
+    expect(setBatting(back, "a", true)).toEqual(back);
+  });
+
+  it("keeps players sitting out of batting when normalizing", () => {
+    const l = normalizeLineup({ ...emptyLineup(players, 2), notBatting: ["a", "c"] }, players, 2);
+    expect(l.battingOrder).toEqual(["b", "d"]);
+    expect(l.notBatting).toEqual(["a"]); // c is inactive
   });
 });

@@ -46,6 +46,7 @@ export function gameFromRow(r: GameRow): Game {
     opponent: r.opponent,
     location: r.location,
     innings: r.innings,
+    fieldPlayers: r.field_players,
     status: r.status,
   };
 }
@@ -59,6 +60,7 @@ export function gameToRow(g: Game): GameRow {
     opponent: g.opponent,
     location: g.location,
     innings: g.innings,
+    field_players: g.fieldPlayers,
     status: g.status,
   };
 }
@@ -68,6 +70,7 @@ export function lineupToRpcArgs(gameId: string, lineup: Lineup) {
   return {
     p_game_id: gameId,
     p_batting_order: lineup.battingOrder,
+    p_not_batting: lineup.notBatting ?? [],
     p_slots: lineup.slots.map((s) => ({
       inning: s.inning,
       player_id: s.playerId,
@@ -94,6 +97,7 @@ export function appDataFromRows(
     lineups[game.id] = {
       innings: game.innings,
       battingOrder: l.batting_order,
+      notBatting: l.not_batting,
       slots: rows.slots
         .filter((s) => s.lineup_id === l.id)
         .map((s) => ({ inning: s.inning, playerId: s.player_id, position: s.position })),
@@ -101,7 +105,12 @@ export function appDataFromRows(
     };
   }
   return {
-    team: { id: rows.team.id, name: rows.team.name, ageGroup: rows.team.age_group },
+    team: {
+      id: rows.team.id,
+      name: rows.team.name,
+      ageGroup: rows.team.age_group,
+      coachPitch: rows.team.coach_pitch,
+    },
     season: {
       id: rows.season.id,
       teamId: rows.season.team_id,

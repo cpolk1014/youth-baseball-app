@@ -28,7 +28,7 @@ export async function loadFromSupabase(autoFillSeeds: Record<string, number>): P
   const email = (await sb.auth.getUser()).data.user?.email ?? null;
 
   const teams = check<TeamRow[]>(
-    await sb.from("team").select("id,name,age_group").order("created_at").limit(1),
+    await sb.from("team").select("id,name,age_group,coach_pitch").order("created_at").limit(1),
   );
   const team = teams[0];
   if (!team) return { kind: "setup", team: null, email };
@@ -53,7 +53,7 @@ export async function loadFromSupabase(autoFillSeeds: Record<string, number>): P
       .then((r) => check<PlayerRow[]>(r)),
     sb
       .from("game")
-      .select("id,season_id,game_date,start_time,opponent,location,innings,status")
+      .select("id,season_id,game_date,start_time,opponent,location,innings,field_players,status")
       .eq("season_id", season.id)
       .then((r) => check<GameRow[]>(r)),
   ]);
@@ -62,7 +62,7 @@ export async function loadFromSupabase(autoFillSeeds: Record<string, number>): P
     ? check<LineupRow[]>(
         await sb
           .from("lineup")
-          .select("id,game_id,batting_order,version")
+          .select("id,game_id,batting_order,not_batting,version")
           .in(
             "game_id",
             games.map((g) => g.id),
@@ -99,6 +99,12 @@ export async function saveGameRow(game: Game, trimmedLineup: Lineup | null): Pro
   if (trimmedLineup) check(await sb.rpc("save_lineup", lineupToRpcArgs(game.id, trimmedLineup)));
 }
 
+export async function saveTeamSettings(teamId: string, coachPitch: boolean): Promise<void> {
+  check(
+    await getBrowserSupabase().from("team").update({ coach_pitch: coachPitch }).eq("id", teamId),
+  );
+}
+
 export async function saveGameStatus(gameId: string, status: GameStatus): Promise<void> {
   check(await getBrowserSupabase().from("game").update({ status }).eq("id", gameId));
 }
@@ -112,6 +118,7 @@ export async function createTeamAndSeason(input: {
   team: TeamRow | null;
   teamName: string;
   ageGroup: string;
+  coachPitch: boolean;
   seasonName: string;
 }): Promise<void> {
   const sb = getBrowserSupabase();
@@ -121,7 +128,12 @@ export async function createTeamAndSeason(input: {
     const created = check<{ id: string }>(
       await sb
         .from("team")
-        .insert({ name: input.teamName, age_group: input.ageGroup, created_by: user?.id })
+        .insert({
+          name: input.teamName,
+          age_group: input.ageGroup,
+          coach_pitch: input.coachPitch,
+          created_by: user?.id,
+        })
         .select("id")
         .single(),
     );

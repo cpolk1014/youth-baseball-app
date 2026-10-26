@@ -18,4 +18,13 @@ describe("formatLineupGrid", () => {
     const lineup = { innings: 2, battingOrder: ["x"], slots: [] };
     expect(formatLineupGrid([], lineup)).toContain("?   ?");
   });
+
+  it("lists players sitting out of batting after the batters", () => {
+    const lineup = { ...lineupFromGrid({ a: ["P"], b: ["C"] }, ["b"]), notBatting: ["a"] };
+    const text = formatLineupGrid(
+      [makePlayer("a", { name: "Ava" }), makePlayer("b", { name: "Ben" })],
+      lineup,
+    );
+    expect(text.split("\n").slice(1)).toEqual(["1. Ben  C", "-. Ava  P"]);
+  });
 });
