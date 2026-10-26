@@ -2,7 +2,13 @@
 
 import type { Lineup, Player } from "@/lib/rules/types";
 import { getBrowserSupabase } from "@/lib/supabase/client";
-import { appDataFromRows, gameToRow, lineupToRpcArgs, playerToRow } from "@/lib/supabase/mappers";
+import {
+  appDataFromRows,
+  gameToRow,
+  lineupToRpcArgs,
+  playerToRow,
+  summarizeMyTeams,
+} from "@/lib/supabase/mappers";
 import type { MemberRole } from "./permissions";
 import type {
   GameRow,
@@ -34,9 +40,21 @@ export async function loadFromSupabase(
   const user = (await sb.auth.getUser()).data.user;
   const email = user?.email ?? null;
 
-  const teams = check<TeamRow[]>(
-    await sb.from("team").select("id,name,age_group,coach_pitch").order("created_at"),
-  );
+  const [allTeams, myMemberships] = await Promise.all([
+    sb
+      .from("team")
+      .select("id,name,age_group,coach_pitch")
+      .order("created_at")
+      .then((r) => check<TeamRow[]>(r)),
+    sb
+      .from("member")
+      .select("team_id,role")
+      .eq("user_id", user?.id ?? "")
+      .then((r) => check<Pick<MemberRow, "team_id" | "role">[]>(r)),
+  ]);
+  const myTeams = summarizeMyTeams(allTeams, myMemberships);
+  // Only teams the user is a member of (not ones they merely created and then left).
+  const teams = allTeams.filter((t) => myTeams.some((m) => m.id === t.id));
   const team = teams.find((t) => t.id === preferredTeamId) ?? teams[0];
   if (!team) return { kind: "setup", team: null, email };
 
@@ -106,7 +124,18 @@ export async function loadFromSupabase(
     email,
     teamId: team.id,
     data: appDataFromRows(
-      { team, season, players, games, lineups, slots, members, invites, userId: user?.id ?? "" },
+      {
+        team,
+        season,
+        players,
+        games,
+        lineups,
+        slots,
+        members,
+        invites,
+        userId: user?.id ?? "",
+        myTeams,
+      },
       autoFillSeeds,
     ),
   };
@@ -144,7 +173,7 @@ export async function createTeamAndSeason(input: {
   ageGroup: string;
   coachPitch: boolean;
   seasonName: string;
-}): Promise<void> {
+}): Promise<string> {
   const sb = getBrowserSupabase();
   let teamId = input.team?.id;
   if (!teamId) {
@@ -164,6 +193,7 @@ export async function createTeamAndSeason(input: {
     teamId = created.id;
   }
   check(await sb.from("season").insert({ team_id: teamId, name: input.seasonName }));
+  return teamId;
 }
 
 export async function signOut(): Promise<void> {

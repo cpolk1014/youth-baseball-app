@@ -101,6 +101,9 @@ function upgradeLocalData(d: AppData): AppData {
     me: d.me ?? { userId: null, role: "coach" },
     members: d.members ?? [],
     invites: d.invites ?? [],
+    myTeams: d.myTeams ?? [
+      { id: d.team.id, name: d.team.name, ageGroup: d.team.ageGroup, role: d.me?.role ?? "coach" },
+    ],
     team: { ...d.team, coachPitch: d.team.coachPitch ?? false },
     games: d.games.map((g) => ({ ...g, fieldPlayers: g.fieldPlayers ?? 9 })),
   };
@@ -285,7 +288,10 @@ export function preferTeam(teamId: string): void {
   writeJson(TEAM_KEY, teamId);
 }
 
-/** Supabase mode: create the user's team and/or first season, then load it. */
+/**
+ * Supabase mode: create a team (you become its coach) and its first season, then open it.
+ * On the setup screen for a team with no season yet, only the season is created.
+ */
 export async function createTeam(input: {
   teamName: string;
   ageGroup: string;
@@ -293,7 +299,15 @@ export async function createTeam(input: {
   seasonName: string;
 }): Promise<void> {
   const team = state.status.kind === "setup" ? state.status.team : null;
-  await (await remote()).createTeamAndSeason({ ...input, team });
+  const teamId = await (await remote()).createTeamAndSeason({ ...input, team });
+  preferTeam(teamId);
+  reloadData();
+}
+
+/** Open another of the user's teams. */
+export function switchTeam(teamId: string): void {
+  if (teamId === data?.team.id) return;
+  preferTeam(teamId);
   reloadData();
 }
 

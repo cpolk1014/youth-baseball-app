@@ -1,7 +1,7 @@
 import type { RuleConfigInput } from "@/lib/rules/config";
 import type { Lineup, Player } from "@/lib/rules/types";
 import { bestRole } from "@/lib/data/permissions";
-import type { AppData, Game, GameLineup, Invite, Member } from "@/lib/data/types";
+import type { AppData, Game, GameLineup, Invite, Member, TeamSummary } from "@/lib/data/types";
 import type {
   GameRow,
   InviteRow,
@@ -24,6 +24,26 @@ export interface TeamRows {
   invites: InviteRow[];
   /** The signed-in user. */
   userId: string;
+  myTeams: TeamSummary[];
+}
+
+/**
+ * Teams the user is a member of (sorted by name), with their strongest role on each.
+ * Teams they can see only as creator, without a membership, are left out.
+ */
+export function summarizeMyTeams(
+  teams: TeamRow[],
+  myMemberships: { team_id: string; role: MemberRow["role"] }[],
+): TeamSummary[] {
+  return teams
+    .filter((t) => myMemberships.some((m) => m.team_id === t.id))
+    .map((t) => ({
+      id: t.id,
+      name: t.name,
+      ageGroup: t.age_group,
+      role: bestRole(myMemberships.filter((m) => m.team_id === t.id).map((m) => m.role)),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function memberFromRow(r: MemberRow): Member {
@@ -154,6 +174,7 @@ export function appDataFromRows(
     },
     members,
     invites: activeInvites(rows.invites, new Date()).map(inviteFromRow),
+    myTeams: rows.myTeams,
     team: {
       id: rows.team.id,
       name: rows.team.name,

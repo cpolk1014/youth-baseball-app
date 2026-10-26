@@ -56,6 +56,14 @@ export interface Invite {
   uses: number;
 }
 
+/** A team the signed-in user belongs to, for the team switcher. */
+export interface TeamSummary {
+  id: string;
+  name: string;
+  ageGroup: string;
+  role: MemberRole;
+}
+
 /** Everything the screens need. Mirrors the Supabase schema, camelCased. */
 export interface AppData {
   /** The signed-in user (null in local mode) and their role on this team. */
@@ -63,6 +71,8 @@ export interface AppData {
   members: Member[];
   /** Active invite links (coaches only). */
   invites: Invite[];
+  /** Every team the user is on, with their role on each. */
+  myTeams: TeamSummary[];
   team: Team;
   season: Season;
   players: Player[];

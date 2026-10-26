@@ -60,7 +60,20 @@ export function DataStatus({ children }: { children: ReactNode }) {
   );
 }
 
-function TeamSetup({ hasTeam }: { hasTeam: boolean }) {
+/**
+ * Create a team (or, for an existing team with no season, its first season).
+ * `newTeam` is the switcher's "Start a new team" form: no sign-out link, different intro.
+ */
+export function TeamSetup({
+  hasTeam,
+  newTeam = false,
+  onCreated,
+}: {
+  hasTeam: boolean;
+  newTeam?: boolean;
+  /** Called once the team exists (it then loads as the current team). */
+  onCreated?: () => void;
+}) {
   const [teamName, setTeamName] = useState("");
   const [ageGroup, setAgeGroup] = useState("10U");
   const [coachPitch, setCoachPitch] = useState(false);
@@ -86,6 +99,7 @@ function TeamSetup({ hasTeam }: { hasTeam: boolean }) {
             coachPitch,
             seasonName: seasonName.trim(),
           });
+          onCreated?.();
         } catch (err) {
           setError(err instanceof Error ? err.message : String(err));
           setBusy(false);
@@ -93,14 +107,16 @@ function TeamSetup({ hasTeam }: { hasTeam: boolean }) {
       }}
       className="flex flex-col gap-4"
     >
-      <div>
-        <h2 className="text-2xl font-bold">{hasTeam ? "Start a season" : "Set up your team"}</h2>
-        <p className="mt-1 text-base text-slate-700">
-          {hasTeam
-            ? "Your team doesn't have a season yet."
-            : "Coaching a team? Create it here. You'll be its coach. Joining someone else's team? Open the invite link your coach shared."}
-        </p>
-      </div>
+      {!newTeam && (
+        <div>
+          <h2 className="text-2xl font-bold">{hasTeam ? "Start a season" : "Set up your team"}</h2>
+          <p className="mt-1 text-base text-slate-700">
+            {hasTeam
+              ? "Your team doesn't have a season yet."
+              : "Coaching a team? Create it here. You'll be its coach. Joining someone else's team? Open the invite link your coach shared."}
+          </p>
+        </div>
+      )}
 
       {!hasTeam && (
         <div className="flex gap-3">
@@ -163,13 +179,15 @@ function TeamSetup({ hasTeam }: { hasTeam: boolean }) {
         {busy ? "Creating…" : hasTeam ? "Start season" : "Create team"}
       </button>
       {error && <p className="text-base font-semibold text-red-700">{error}</p>}
-      <button
-        type="button"
-        onClick={() => void signOut()}
-        className="h-12 text-base font-semibold underline"
-      >
-        Sign out
-      </button>
+      {!newTeam && (
+        <button
+          type="button"
+          onClick={() => void signOut()}
+          className="h-12 text-base font-semibold underline"
+        >
+          Sign out
+        </button>
+      )}
     </form>
   );
 }

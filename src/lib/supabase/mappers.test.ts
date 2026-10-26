@@ -8,6 +8,7 @@ import {
   lineupToRpcArgs,
   playerFromRow,
   playerToRow,
+  summarizeMyTeams,
   type TeamRows,
 } from "./mappers";
 import type { GameRow, InviteRow } from "./rows";
@@ -90,6 +91,7 @@ describe("supabase mappers", () => {
       ],
       invites: [],
       userId: "me",
+      myTeams: [],
     };
     const data = appDataFromRows(rows, { g1: 3 });
     expect(data.team).toEqual({ id: "t1", name: "Rattlers", ageGroup: "10U", coachPitch: true });
@@ -128,5 +130,19 @@ describe("supabase mappers", () => {
       { ...base, id: "used", max_uses: 1, uses: 1 },
     ];
     expect(activeInvites(rows, now).map((r) => r.id)).toEqual(["i"]);
+  });
+
+  it("lists only teams I'm a member of, with my strongest role on each", () => {
+    const team = (id: string, name: string) => ({ id, name, age_group: "10U", coach_pitch: false });
+    const teams = [team("t1", "Storm"), team("t2", "Rattlers"), team("t3", "Created then left")];
+    const mine = [
+      { team_id: "t1", role: "parent" as const },
+      { team_id: "t2", role: "parent" as const },
+      { team_id: "t2", role: "coach" as const },
+    ];
+    expect(summarizeMyTeams(teams, mine)).toEqual([
+      { id: "t2", name: "Rattlers", ageGroup: "10U", role: "coach" },
+      { id: "t1", name: "Storm", ageGroup: "10U", role: "parent" },
+    ]);
   });
 });

@@ -16,11 +16,13 @@ import { validateLineup } from "@/lib/rules/validate";
 import { AppShell, Loading } from "./AppShell";
 import { GameForm } from "./GameForm";
 import { Sheet } from "./Sheet";
+import { TeamSwitcher } from "./TeamSwitcher";
 
 export function GamesScreen() {
   const data = useAppData();
   const [adding, setAdding] = useState<Game | null>(null);
   const { mode, email } = useStoreState();
+  const [switching, setSwitching] = useState(false);
 
   if (!data) {
     return (
@@ -50,6 +52,7 @@ export function GamesScreen() {
       title={data.team.name}
       subtitle={`${data.team.ageGroup} · ${data.season.name}`}
       tab="games"
+      onTitleTap={mode === "supabase" ? () => setSwitching(true) : undefined}
       action={
         canEdit ? (
           <button
@@ -81,6 +84,13 @@ export function GamesScreen() {
           </button>
         </p>
       )}
+
+      <TeamSwitcher
+        open={switching}
+        onClose={() => setSwitching(false)}
+        teams={data.myTeams}
+        currentTeamId={data.team.id}
+      />
 
       <Sheet open={adding !== null} title="Add game" onClose={() => setAdding(null)}>
         {adding && (

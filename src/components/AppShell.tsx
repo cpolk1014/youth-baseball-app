@@ -15,6 +15,7 @@ const TABS: { id: Tab; href: string; label: string }[] = [
 export function AppShell({
   title,
   subtitle,
+  onTitleTap,
   backHref,
   tab,
   action,
@@ -22,6 +23,8 @@ export function AppShell({
 }: {
   title: string;
   subtitle?: string;
+  /** Makes the title a button (e.g. to switch teams). */
+  onTitleTap?: () => void;
   backHref?: string;
   tab: Tab;
   action?: ReactNode;
@@ -41,10 +44,23 @@ export function AppShell({
         ) : (
           <span className="w-2" />
         )}
-        <div className="min-w-0 flex-1 py-1">
-          <h1 className="truncate text-lg leading-tight font-bold">{title}</h1>
-          {subtitle && <p className="truncate text-sm text-white/80">{subtitle}</p>}
-        </div>
+        {onTitleTap ? (
+          <button
+            onClick={onTitleTap}
+            aria-haspopup="dialog"
+            className="min-w-0 flex-1 rounded-lg py-1 text-left active:bg-white/15"
+          >
+            <h1 className="truncate text-lg leading-tight font-bold">
+              {title} <span aria-hidden="true">▾</span>
+            </h1>
+            {subtitle && <p className="truncate text-sm text-white/80">{subtitle}</p>}
+          </button>
+        ) : (
+          <div className="min-w-0 flex-1 py-1">
+            <h1 className="truncate text-lg leading-tight font-bold">{title}</h1>
+            {subtitle && <p className="truncate text-sm text-white/80">{subtitle}</p>}
+          </div>
+        )}
         {action}
       </header>
 
