@@ -7,6 +7,7 @@ import {
   gameToRow,
   lineupToRpcArgs,
   playerToRow,
+  practiceToRow,
   summarizeMyTeams,
 } from "@/lib/supabase/mappers";
 import type { MemberRole } from "./permissions";
@@ -17,10 +18,11 @@ import type {
   LineupSlotRow,
   MemberRow,
   PlayerRow,
+  PracticeRow,
   SeasonRow,
   TeamRow,
 } from "@/lib/supabase/rows";
-import type { AppData, Game, GameStatus } from "./types";
+import type { AppData, Game, GameStatus, Practice } from "./types";
 
 export type LoadResult =
   | { kind: "ready"; data: AppData; email: string | null; teamId: string }
@@ -110,6 +112,12 @@ export async function loadFromSupabase(
       )
     : [];
 
+  const practices = check<PracticeRow[]>(
+    await sb
+      .from("practice")
+      .select("id,season_id,practice_date,start_time,end_time,location,focus,notes,plan,canceled")
+      .eq("season_id", season.id),
+  );
   const members = check<MemberRow[]>(
     await sb.from("member").select("id,team_id,user_id,role,display_name").eq("team_id", team.id),
   );
@@ -137,6 +145,7 @@ export async function loadFromSupabase(
         slots,
         members,
         invites,
+        practices,
         userId: user?.id ?? "",
         myTeams,
       },
@@ -306,4 +315,12 @@ export async function deleteTeamRow(teamId: string): Promise<void> {
     await sb.from("team").delete().eq("id", teamId).select("id"),
   );
   if (deleted.length === 0) throw new Error("Only a coach can delete this team.");
+}
+
+export async function savePracticeRows(practices: Practice[]): Promise<void> {
+  check(await getBrowserSupabase().from("practice").upsert(practices.map(practiceToRow)));
+}
+
+export async function deletePracticeRow(practiceId: string): Promise<void> {
+  check(await getBrowserSupabase().from("practice").delete().eq("id", practiceId));
 }

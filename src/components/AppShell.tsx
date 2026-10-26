@@ -4,10 +4,11 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { DataStatus } from "./DataStatus";
 
-type Tab = "games" | "season" | "roster";
+type Tab = "games" | "practice" | "season" | "roster";
 
 const TABS: { id: Tab; href: string; label: string }[] = [
   { id: "games", href: "/games", label: "Games" },
+  { id: "practice", href: "/practices", label: "Practice" },
   { id: "season", href: "/season", label: "Season" },
   { id: "roster", href: "/roster", label: "Roster" },
 ];

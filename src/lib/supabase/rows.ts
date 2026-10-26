@@ -30,6 +30,19 @@ export interface InviteRow {
   revoked_at: string | null;
 }
 
+export interface PracticeRow {
+  id: string;
+  season_id: string;
+  practice_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  location: string | null;
+  focus: string | null;
+  notes: string | null;
+  plan: { id: string; title: string; minutes: number; notes?: string }[];
+  canceled: boolean;
+}
+
 export interface SeasonRow {
   id: string;
   team_id: string;

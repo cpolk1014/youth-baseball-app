@@ -6,7 +6,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { TeamRow } from "@/lib/supabase/rows";
 import type { MemberRole } from "./permissions";
 import { SEED_DATA } from "./seed";
-import type { AppData, Game, GameLineup, GameStatus } from "./types";
+import type { AppData, Game, GameLineup, GameStatus, Practice } from "./types";
 
 // One team's data for the screens. Without Supabase env vars it lives in localStorage
 // (local mode). With them, it loads from Supabase after sign-in; changes apply on
@@ -101,6 +101,7 @@ function upgradeLocalData(d: AppData): AppData {
     me: d.me ?? { userId: null, role: "coach" },
     members: d.members ?? [],
     invites: d.invites ?? [],
+    practices: d.practices ?? [],
     myTeams: (
       d.myTeams ?? [
         {
@@ -322,6 +323,38 @@ export async function deleteTeam(): Promise<void> {
   // Full load so nothing from the deleted team lingers on screen.
   // eslint-disable-next-line @next/next/no-location-assign-relative-destination
   window.location.assign("/games");
+}
+
+/** Add or update a practice. */
+export function savePractice(practice: Practice): void {
+  update(
+    (d) => {
+      const exists = d.practices.some((p) => p.id === practice.id);
+      return {
+        ...d,
+        practices: exists
+          ? d.practices.map((p) => (p.id === practice.id ? practice : p))
+          : [...d.practices, practice],
+      };
+    },
+    async () => (await remote()).savePracticeRows([practice]),
+  );
+}
+
+/** Add several practices at once (the season schedule builder). */
+export function addPractices(practices: Practice[]): void {
+  if (practices.length === 0) return;
+  update(
+    (d) => ({ ...d, practices: [...d.practices, ...practices] }),
+    async () => (await remote()).savePracticeRows(practices),
+  );
+}
+
+export function deletePractice(practiceId: string): void {
+  update(
+    (d) => ({ ...d, practices: d.practices.filter((p) => p.id !== practiceId) }),
+    async () => (await remote()).deletePracticeRow(practiceId),
+  );
 }
 
 /** Coach: option the current team (archive it, read-only) or call it back up. */

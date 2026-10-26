@@ -421,4 +421,33 @@ select pg_temp.expect((select count(*) from public.player) = 12, 'an optioned te
 update public.team set optioned_at = null where id = '00000000-0000-4000-8000-000000000001';
 select pg_temp.expect((select optioned_at is null from public.team where id = '00000000-0000-4000-8000-000000000001'), 'coach calls the team back up');
 reset role;
+
+-- ── practices ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+insert into public.practice (id, season_id, practice_date, start_time, end_time, location, focus, plan) values
+  ('eeeeeeee-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000101', '2026-11-03', '18:00', '19:30', 'Field 3', 'Infield',
+   '[{"id": "a", "title": "Dynamic warm-up", "minutes": 10}]');
+select pg_temp.expect((select count(*) from public.practice) = 1, 'coach schedules a practice with a plan');
+do $$ begin
+  insert into public.practice (season_id, practice_date, start_time, end_time) values ('00000000-0000-4000-8000-000000000101', '2026-11-04', '19:00', '18:00');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: a practice cannot end before it starts';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000004', false);
+select pg_temp.expect((select focus from public.practice) = 'Infield', 'parents can see practices');
+update public.practice set focus = 'Nap time';
+select pg_temp.expect((select focus from public.practice) = 'Infield', 'parents cannot edit practices');
+do $$ begin
+  insert into public.practice (season_id, practice_date) values ('00000000-0000-4000-8000-000000000101', '2026-11-05');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot add practices';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.practice) = 0, 'outsiders cannot see practices');
+reset role;
 \echo ALL RLS TESTS PASSED

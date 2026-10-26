@@ -31,10 +31,10 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Magic-link + code sign-in, invite links, roles (coach / manager / parent read-only), multiple teams with a switcher
 - Option a team (archive, read-only, "Call Up" to restore); delete only optioned teams
 - Installable on a phone's home screen
+- Practice schedule: build a season of practices (days × dates), each with a focus, a drill plan (starter library or custom, minutes vs. scheduled length), notes, cancel; parents view
 
 **Next up** (roughly in order; the user picks)
 
-- Practice schedule builder: season practices (date, time, field) with a focus and drills per session; parents can view
 - Post lineups / messages to the team's GroupMe group (OAuth per coach)
 - Team finances: dues per family, who's paid, expenses (no in-app payments at first)
 - Tournament finder
@@ -54,6 +54,7 @@ Source of truth: `supabase/migrations/`. Summary:
 - player: team_id, name, jersey_number, preferred_positions[], can_pitch, can_catch, active
 - game: season_id, date, start_time, opponent, location, innings, field_players (9 | 10), status (scheduled | final)
 - lineup: game_id, batting_order (player_id[]), not_batting[], absent[], version (saved via `save_lineup`)
+- practice: season_id, practice_date, start_time, end_time, location, focus, notes, plan (JSONB drills), canceled
 - lineup_slot: lineup_id, inning, player_id, position (P, C, 1B, 2B, 3B, SS, LF, CF, RF, LCF, RCF, BENCH)
 
 Participation is **derived** from lineup_slot rows on final games, never stored separately.

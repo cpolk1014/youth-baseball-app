@@ -77,4 +77,5 @@ export const SEED_DATA: AppData = {
     },
   ],
   lineups: {},
+  practices: [],
 };

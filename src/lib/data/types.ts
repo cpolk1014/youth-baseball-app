@@ -1,5 +1,6 @@
 import type { RuleConfigInput } from "@/lib/rules/config";
 import type { Lineup, Player } from "@/lib/rules/types";
+import type { PlanItem } from "@/lib/practice/schedule";
 import type { MemberRole } from "./permissions";
 
 export type GameStatus = "scheduled" | "final";
@@ -32,6 +33,19 @@ export interface Game {
   /** 9 fielders (LF CF RF) or 10 (LF LCF RCF RF). */
   fieldPlayers: 9 | 10;
   status: GameStatus;
+}
+
+export interface Practice {
+  id: string;
+  seasonId: string;
+  date: string; // YYYY-MM-DD
+  startTime: string | null; // HH:MM
+  endTime: string | null; // HH:MM
+  location: string | null;
+  focus: string | null;
+  notes: string | null;
+  plan: PlanItem[];
+  canceled: boolean;
 }
 
 export interface GameLineup extends Lineup {
@@ -81,4 +95,5 @@ export interface AppData {
   players: Player[];
   games: Game[];
   lineups: Record<string, GameLineup>;
+  practices: Practice[];
 }

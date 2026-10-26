@@ -8,6 +8,7 @@ import {
   lineupToRpcArgs,
   playerFromRow,
   playerToRow,
+  practiceToRow,
   summarizeMyTeams,
   type TeamRows,
 } from "./mappers";
@@ -90,6 +91,20 @@ describe("supabase mappers", () => {
         { id: "m3", team_id: "t1", user_id: "other", role: "parent", display_name: "Leo's dad" },
       ],
       invites: [],
+      practices: [
+        {
+          id: "pr1",
+          season_id: "s1",
+          practice_date: "2026-11-03",
+          start_time: "18:00:00",
+          end_time: null,
+          location: "Field 3",
+          focus: "Infield",
+          notes: null,
+          plan: [{ id: "x", title: "Warm-up", minutes: 10 }],
+          canceled: false,
+        },
+      ],
       userId: "me",
       myTeams: [],
     };
@@ -113,6 +128,12 @@ describe("supabase mappers", () => {
     });
     expect(data.lineups.g2).toBeUndefined();
     expect(data.me).toEqual({ userId: "me", role: "coach" });
+    expect(data.practices[0]).toMatchObject({
+      date: "2026-11-03",
+      startTime: "18:00",
+      focus: "Infield",
+    });
+    expect(practiceToRow(data.practices[0]!).start_time).toBe("18:00");
     expect(data.members.map((m) => m.displayName)).toEqual(["Sam's mom", null, "Leo's dad"]);
   });
 

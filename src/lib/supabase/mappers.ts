@@ -1,7 +1,15 @@
 import type { RuleConfigInput } from "@/lib/rules/config";
 import type { Lineup, Player } from "@/lib/rules/types";
 import { bestRole } from "@/lib/data/permissions";
-import type { AppData, Game, GameLineup, Invite, Member, TeamSummary } from "@/lib/data/types";
+import type {
+  AppData,
+  Game,
+  GameLineup,
+  Invite,
+  Member,
+  Practice,
+  TeamSummary,
+} from "@/lib/data/types";
 import type {
   GameRow,
   InviteRow,
@@ -9,6 +17,7 @@ import type {
   LineupSlotRow,
   MemberRow,
   PlayerRow,
+  PracticeRow,
   SeasonRow,
   TeamRow,
 } from "./rows";
@@ -22,6 +31,7 @@ export interface TeamRows {
   slots: LineupSlotRow[];
   members: MemberRow[];
   invites: InviteRow[];
+  practices: PracticeRow[];
   /** The signed-in user. */
   userId: string;
   myTeams: TeamSummary[];
@@ -45,6 +55,38 @@ export function summarizeMyTeams(
       optioned: t.optioned_at !== null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+const hhmm = (t: string | null) => (t ? t.slice(0, 5) : null);
+
+export function practiceFromRow(r: PracticeRow): Practice {
+  return {
+    id: r.id,
+    seasonId: r.season_id,
+    date: r.practice_date,
+    startTime: hhmm(r.start_time),
+    endTime: hhmm(r.end_time),
+    location: r.location,
+    focus: r.focus,
+    notes: r.notes,
+    plan: r.plan,
+    canceled: r.canceled,
+  };
+}
+
+export function practiceToRow(p: Practice): PracticeRow {
+  return {
+    id: p.id,
+    season_id: p.seasonId,
+    practice_date: p.date,
+    start_time: p.startTime,
+    end_time: p.endTime,
+    location: p.location,
+    focus: p.focus,
+    notes: p.notes,
+    plan: p.plan,
+    canceled: p.canceled,
+  };
 }
 
 export function memberFromRow(r: MemberRow): Member {
@@ -176,6 +218,7 @@ export function appDataFromRows(
     members,
     invites: activeInvites(rows.invites, new Date()).map(inviteFromRow),
     myTeams: rows.myTeams,
+    practices: rows.practices.map(practiceFromRow),
     team: {
       id: rows.team.id,
       name: rows.team.name,
