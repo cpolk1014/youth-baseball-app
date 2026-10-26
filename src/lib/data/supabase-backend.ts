@@ -3,10 +3,13 @@
 import type { Lineup, Player } from "@/lib/rules/types";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { appDataFromRows, gameToRow, lineupToRpcArgs, playerToRow } from "@/lib/supabase/mappers";
+import type { MemberRole } from "./permissions";
 import type {
   GameRow,
+  InviteRow,
   LineupRow,
   LineupSlotRow,
+  MemberRow,
   PlayerRow,
   SeasonRow,
   TeamRow,
@@ -14,7 +17,7 @@ import type {
 import type { AppData, Game, GameStatus } from "./types";
 
 export type LoadResult =
-  | { kind: "ready"; data: AppData; email: string | null }
+  | { kind: "ready"; data: AppData; email: string | null; teamId: string }
   | { kind: "setup"; team: TeamRow | null; email: string | null };
 
 function check<T>(result: { data: T | null; error: { message: string } | null }): T {
@@ -22,15 +25,19 @@ function check<T>(result: { data: T | null; error: { message: string } | null })
   return result.data as T;
 }
 
-/** Load the signed-in user's team (first one, for now) and its latest season. */
-export async function loadFromSupabase(autoFillSeeds: Record<string, number>): Promise<LoadResult> {
+/** Load the signed-in user's team (the preferred one, else their first) and latest season. */
+export async function loadFromSupabase(
+  autoFillSeeds: Record<string, number>,
+  preferredTeamId: string | null,
+): Promise<LoadResult> {
   const sb = getBrowserSupabase();
-  const email = (await sb.auth.getUser()).data.user?.email ?? null;
+  const user = (await sb.auth.getUser()).data.user;
+  const email = user?.email ?? null;
 
   const teams = check<TeamRow[]>(
-    await sb.from("team").select("id,name,age_group,coach_pitch").order("created_at").limit(1),
+    await sb.from("team").select("id,name,age_group,coach_pitch").order("created_at"),
   );
-  const team = teams[0];
+  const team = teams.find((t) => t.id === preferredTeamId) ?? teams[0];
   if (!team) return { kind: "setup", team: null, email };
 
   const seasons = check<SeasonRow[]>(
@@ -81,10 +88,27 @@ export async function loadFromSupabase(autoFillSeeds: Record<string, number>): P
       )
     : [];
 
+  const members = check<MemberRow[]>(
+    await sb.from("member").select("id,team_id,user_id,role,display_name").eq("team_id", team.id),
+  );
+  // Only coaches can read invites; for everyone else RLS returns none.
+  const invites = check<InviteRow[]>(
+    await sb
+      .from("invite")
+      .select("id,team_id,role,token,created_at,expires_at,max_uses,uses,revoked_at")
+      .eq("team_id", team.id)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false }),
+  );
+
   return {
     kind: "ready",
     email,
-    data: appDataFromRows({ team, season, players, games, lineups, slots }, autoFillSeeds),
+    teamId: team.id,
+    data: appDataFromRows(
+      { team, season, players, games, lineups, slots, members, invites, userId: user?.id ?? "" },
+      autoFillSeeds,
+    ),
   };
 }
 
@@ -144,4 +168,93 @@ export async function createTeamAndSeason(input: {
 
 export async function signOut(): Promise<void> {
   await getBrowserSupabase().auth.signOut();
+}
+
+/** Random URL-safe token for an invite link (256 bits). */
+function newInviteToken(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+/**
+ * Create an invite link. Parent links work for anyone for 14 days; coach and manager links
+ * work once, for 7 days.
+ */
+export async function createInviteRow(teamId: string, role: MemberRole): Promise<string> {
+  const sb = getBrowserSupabase();
+  const user = (await sb.auth.getUser()).data.user;
+  const single = role !== "parent";
+  const token = newInviteToken();
+  check(
+    await sb.from("invite").insert({
+      team_id: teamId,
+      role,
+      token,
+      created_by: user?.id,
+      max_uses: single ? 1 : null,
+      expires_at: new Date(Date.now() + (single ? 7 : 14) * 86_400_000).toISOString(),
+    }),
+  );
+  return token;
+}
+
+export async function revokeInviteRow(inviteId: string): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("invite")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("id", inviteId),
+  );
+}
+
+export async function setMemberRoleRow(memberId: string, role: MemberRole): Promise<void> {
+  check(await getBrowserSupabase().from("member").update({ role }).eq("id", memberId));
+}
+
+export async function removeMemberRow(memberId: string): Promise<void> {
+  check(await getBrowserSupabase().from("member").delete().eq("id", memberId));
+}
+
+export interface InvitePreview {
+  teamId: string;
+  teamName: string;
+  role: MemberRole;
+  valid: boolean;
+  alreadyMember: boolean;
+}
+
+/** What an invite link is for; null if the token doesn't exist. */
+export async function previewInvite(token: string): Promise<InvitePreview | null> {
+  const rows = check<
+    {
+      team_id: string;
+      team_name: string;
+      role: MemberRole;
+      valid: boolean;
+      already_member: boolean;
+    }[]
+  >(await getBrowserSupabase().rpc("invite_preview", { p_token: token }));
+  const r = rows[0];
+  return r
+    ? {
+        teamId: r.team_id,
+        teamName: r.team_name,
+        role: r.role,
+        valid: r.valid,
+        alreadyMember: r.already_member,
+      }
+    : null;
+}
+
+/** Join the invite's team. Returns the team id. */
+export async function acceptInvite(token: string, displayName: string): Promise<string> {
+  return check<string>(
+    await getBrowserSupabase().rpc("accept_invite", {
+      p_token: token,
+      p_display_name: displayName,
+    }),
+  );
 }

@@ -1,5 +1,6 @@
 import type { RuleConfigInput } from "@/lib/rules/config";
 import type { Lineup, Player } from "@/lib/rules/types";
+import type { MemberRole } from "./permissions";
 
 export type GameStatus = "scheduled" | "final";
 
@@ -36,8 +37,32 @@ export interface GameLineup extends Lineup {
   autoFillSeed: number;
 }
 
+export interface Member {
+  id: string;
+  userId: string;
+  role: MemberRole;
+  /** Name they gave when joining; null for the team's creator until set. */
+  displayName: string | null;
+}
+
+export interface Invite {
+  id: string;
+  role: MemberRole;
+  token: string;
+  createdAt: string;
+  expiresAt: string;
+  /** null = any number of people can use it. */
+  maxUses: number | null;
+  uses: number;
+}
+
 /** Everything the screens need. Mirrors the Supabase schema, camelCased. */
 export interface AppData {
+  /** The signed-in user (null in local mode) and their role on this team. */
+  me: { userId: string | null; role: MemberRole };
+  members: Member[];
+  /** Active invite links (coaches only). */
+  invites: Invite[];
   team: Team;
   season: Season;
   players: Player[];

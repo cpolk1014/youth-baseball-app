@@ -1,7 +1,17 @@
 import type { RuleConfigInput } from "@/lib/rules/config";
 import type { Lineup, Player } from "@/lib/rules/types";
-import type { AppData, Game, GameLineup } from "@/lib/data/types";
-import type { GameRow, LineupRow, LineupSlotRow, PlayerRow, SeasonRow, TeamRow } from "./rows";
+import { bestRole } from "@/lib/data/permissions";
+import type { AppData, Game, GameLineup, Invite, Member } from "@/lib/data/types";
+import type {
+  GameRow,
+  InviteRow,
+  LineupRow,
+  LineupSlotRow,
+  MemberRow,
+  PlayerRow,
+  SeasonRow,
+  TeamRow,
+} from "./rows";
 
 export interface TeamRows {
   team: TeamRow;
@@ -10,6 +20,36 @@ export interface TeamRows {
   games: GameRow[];
   lineups: LineupRow[];
   slots: LineupSlotRow[];
+  members: MemberRow[];
+  invites: InviteRow[];
+  /** The signed-in user. */
+  userId: string;
+}
+
+export function memberFromRow(r: MemberRow): Member {
+  return { id: r.id, userId: r.user_id, role: r.role, displayName: r.display_name };
+}
+
+export function inviteFromRow(r: InviteRow): Invite {
+  return {
+    id: r.id,
+    role: r.role,
+    token: r.token,
+    createdAt: r.created_at,
+    expiresAt: r.expires_at,
+    maxUses: r.max_uses,
+    uses: r.uses,
+  };
+}
+
+/** Invites that can still be used (not revoked, not expired, not used up). */
+export function activeInvites(rows: InviteRow[], now: Date): InviteRow[] {
+  return rows.filter(
+    (r) =>
+      r.revoked_at === null &&
+      new Date(r.expires_at) > now &&
+      (r.max_uses === null || r.uses < r.max_uses),
+  );
 }
 
 export function playerFromRow(r: PlayerRow): Player {
@@ -106,7 +146,14 @@ export function appDataFromRows(
       autoFillSeed: autoFillSeeds[game.id] ?? 0,
     };
   }
+  const members = rows.members.map(memberFromRow);
   return {
+    me: {
+      userId: rows.userId,
+      role: bestRole(members.filter((m) => m.userId === rows.userId).map((m) => m.role)),
+    },
+    members,
+    invites: activeInvites(rows.invites, new Date()).map(inviteFromRow),
     team: {
       id: rows.team.id,
       name: rows.team.name,

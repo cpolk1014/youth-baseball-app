@@ -277,4 +277,106 @@ select pg_temp.expect(
   (select absent from public.lineup where game_id = '00000000-0000-4000-8000-000000010001') = '{}',
   'marking a player present again lets them bat and field');
 reset role;
+
+-- ── invites ──
+insert into auth.users values ('aaaaaaaa-0000-4000-8000-000000000004', 'newparent@example.test'),
+                              ('aaaaaaaa-0000-4000-8000-000000000005', 'newcoach@example.test');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+insert into public.invite (team_id, role, token) values
+  ('00000000-0000-4000-8000-000000000001', 'parent', 'parent-token-0123456789abcdef0123456789'),
+  ('00000000-0000-4000-8000-000000000001', 'coach', 'coach-token-0123456789abcdef01234567890');
+update public.invite set max_uses = 1 where token like 'coach-token%';
+select pg_temp.expect((select count(*) from public.invite) = 2, 'coach creates invite links');
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from public.invite) = 0, 'parents cannot see invite links');
+do $$ begin
+  insert into public.invite (team_id, role, token) values ('00000000-0000-4000-8000-000000000001', 'coach', 'sneaky-token-0123456789abcdef012345678');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot create invites';
+end $$;
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000004', false);
+select pg_temp.expect((select count(*) from public.team) = 0, 'before joining, the team is hidden');
+select pg_temp.expect(
+  (select team_name = 'Riverside Rattlers' and role = 'parent' and valid and not already_member
+   from public.invite_preview('parent-token-0123456789abcdef0123456789')),
+  'invite preview shows team name and role');
+select pg_temp.expect((select count(*) from public.invite_preview('wrong-token')) = 0, 'unknown tokens reveal nothing');
+select public.accept_invite('parent-token-0123456789abcdef0123456789', '  Sam''s mom ') is not null as joined \gset
+select pg_temp.expect((select count(*) from public.player) = 12, 'after joining, the parent sees the roster');
+select pg_temp.expect(
+  (select role = 'parent' and display_name = 'Sam''s mom' from public.member where user_id = 'aaaaaaaa-0000-4000-8000-000000000004'),
+  'joined as parent with their name');
+select public.accept_invite('parent-token-0123456789abcdef0123456789', 'again') is not null as joined \gset
+select pg_temp.expect((select count(*) from public.member where user_id = 'aaaaaaaa-0000-4000-8000-000000000004') = 1, 'accepting twice does not duplicate');
+do $$ begin
+  insert into public.player (team_id, name) values ('00000000-0000-4000-8000-000000000001', 'Nope');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a joined parent still cannot edit';
+end $$;
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000005', false);
+select public.accept_invite('coach-token-0123456789abcdef01234567890', 'Coach Dave') is not null as joined \gset
+select pg_temp.expect((select role from public.member where user_id = 'aaaaaaaa-0000-4000-8000-000000000005') = 'coach', 'coach link makes a coach');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+do $$ begin
+  perform public.accept_invite('coach-token-0123456789abcdef01234567890', 'Sneaky');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when no_data_found then raise notice 'ok: a single-use coach link cannot be reused';
+end $$;
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+update public.invite set revoked_at = now() where token like 'parent-token%';
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect(not (select valid from public.invite_preview('parent-token-0123456789abcdef0123456789')), 'revoked links show as invalid');
+do $$ begin
+  perform public.accept_invite('parent-token-0123456789abcdef0123456789', 'Late');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when no_data_found then raise notice 'ok: revoked links cannot be used';
+end $$;
+reset role;
+
+set role anon;
+do $$ begin
+  perform public.accept_invite('parent-token-0123456789abcdef0123456789', 'x');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: signed-out users cannot accept invites';
+end $$;
+reset role;
+
+-- ── keep a coach ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+delete from public.member where user_id = 'aaaaaaaa-0000-4000-8000-000000000005';
+select pg_temp.expect((select count(*) from public.member where role = 'coach' and team_id = '00000000-0000-4000-8000-000000000001') = 1, 'coach removes the other coach');
+do $$ begin
+  update public.member set role = 'parent' where user_id = 'aaaaaaaa-0000-4000-8000-000000000001' and team_id = '00000000-0000-4000-8000-000000000001';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when raise_exception then raise notice 'ok: the last coach cannot demote themself';
+end $$;
+do $$ begin
+  delete from public.member where user_id = 'aaaaaaaa-0000-4000-8000-000000000001' and team_id = '00000000-0000-4000-8000-000000000001';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when raise_exception then raise notice 'ok: the last coach cannot leave';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+delete from public.team where id = 'cccccccc-0000-4000-8000-000000000001';
+select pg_temp.expect((select count(*) from public.team) = 0, 'a coach can still delete their own team');
+reset role;
 \echo ALL RLS TESTS PASSED

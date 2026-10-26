@@ -98,7 +98,7 @@ function TeamSetup({ hasTeam }: { hasTeam: boolean }) {
         <p className="mt-1 text-base text-slate-700">
           {hasTeam
             ? "Your team doesn't have a season yet."
-            : "Coaching a team? Create it here. You'll be its coach. Joining someone else's team? Ask the coach to add you."}
+            : "Coaching a team? Create it here. You'll be its coach. Joining someone else's team? Open the invite link your coach shared."}
         </p>
       </div>
 

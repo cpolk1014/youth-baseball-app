@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SEED_DATA } from "@/lib/data/seed";
 import {
+  activeInvites,
   appDataFromRows,
   gameFromRow,
   gameToRow,
@@ -9,7 +10,7 @@ import {
   playerToRow,
   type TeamRows,
 } from "./mappers";
-import type { GameRow } from "./rows";
+import type { GameRow, InviteRow } from "./rows";
 
 const gameRow: GameRow = {
   id: "g1",
@@ -82,6 +83,13 @@ describe("supabase mappers", () => {
         { lineup_id: "l1", inning: 1, player_id: "old", position: "C" },
         { lineup_id: "l2", inning: 1, player_id: "p", position: "P" },
       ],
+      members: [
+        { id: "m1", team_id: "t1", user_id: "me", role: "parent", display_name: "Sam's mom" },
+        { id: "m2", team_id: "t1", user_id: "me", role: "coach", display_name: null },
+        { id: "m3", team_id: "t1", user_id: "other", role: "parent", display_name: "Leo's dad" },
+      ],
+      invites: [],
+      userId: "me",
     };
     const data = appDataFromRows(rows, { g1: 3 });
     expect(data.team).toEqual({ id: "t1", name: "Rattlers", ageGroup: "10U", coachPitch: true });
@@ -96,5 +104,29 @@ describe("supabase mappers", () => {
       autoFillSeed: 3,
     });
     expect(data.lineups.g2).toBeUndefined();
+    expect(data.me).toEqual({ userId: "me", role: "coach" });
+    expect(data.members.map((m) => m.displayName)).toEqual(["Sam's mom", null, "Leo's dad"]);
+  });
+
+  it("keeps only invites that can still be used", () => {
+    const base: InviteRow = {
+      id: "i",
+      team_id: "t1",
+      role: "parent",
+      token: "x".repeat(40),
+      created_at: "2026-10-01T00:00:00Z",
+      expires_at: "2026-11-01T00:00:00Z",
+      max_uses: null,
+      uses: 3,
+      revoked_at: null,
+    };
+    const now = new Date("2026-10-20T00:00:00Z");
+    const rows = [
+      base,
+      { ...base, id: "revoked", revoked_at: "2026-10-02T00:00:00Z" },
+      { ...base, id: "expired", expires_at: "2026-10-10T00:00:00Z" },
+      { ...base, id: "used", max_uses: 1, uses: 1 },
+    ];
+    expect(activeInvites(rows, now).map((r) => r.id)).toEqual(["i"]);
   });
 });

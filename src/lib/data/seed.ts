@@ -24,6 +24,9 @@ const player = (
 });
 
 export const SEED_DATA: AppData = {
+  me: { userId: null, role: "coach" },
+  members: [],
+  invites: [],
   team: { id: TEAM_ID, name: "Riverside Rattlers", ageGroup: "10U", coachPitch: false },
   season: { id: SEASON_ID, teamId: TEAM_ID, name: "Fall 2026", fairPlayRules: DEFAULT_RULE_CONFIG },
   players: [

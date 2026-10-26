@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import type { Lineup, Player } from "@/lib/rules/types";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { TeamRow } from "@/lib/supabase/rows";
+import type { MemberRole } from "./permissions";
 import { SEED_DATA } from "./seed";
 import type { AppData, Game, GameLineup, GameStatus } from "./types";
 
@@ -29,6 +30,7 @@ export interface StoreState {
 
 const STORAGE_KEY = "lineup-app:v1";
 const SEEDS_KEY = "lineup-app:autofill-seeds";
+const TEAM_KEY = "lineup-app:team-id";
 const SERVER_STATE: StoreState = {
   status: { kind: "loading" },
   saveError: null,
@@ -75,9 +77,13 @@ function writeJson(key: string, value: unknown): void {
 async function loadRemote(): Promise<void> {
   const { loadFromSupabase } = await import("./supabase-backend");
   try {
-    const result = await loadFromSupabase(readJson<Record<string, number>>(SEEDS_KEY) ?? {});
+    const result = await loadFromSupabase(
+      readJson<Record<string, number>>(SEEDS_KEY) ?? {},
+      readJson<string>(TEAM_KEY),
+    );
     if (result.kind === "ready") {
       data = result.data;
+      writeJson(TEAM_KEY, result.teamId);
       setState({ status: { kind: "ready" }, email: result.email });
     } else {
       data = null;
@@ -92,6 +98,9 @@ async function loadRemote(): Promise<void> {
 function upgradeLocalData(d: AppData): AppData {
   return {
     ...d,
+    me: d.me ?? { userId: null, role: "coach" },
+    members: d.members ?? [],
+    invites: d.invites ?? [],
     team: { ...d.team, coachPitch: d.team.coachPitch ?? false },
     games: d.games.map((g) => ({ ...g, fieldPlayers: g.fieldPlayers ?? 9 })),
   };
@@ -238,6 +247,42 @@ export function saveLineup(gameId: string, lineup: Lineup, autoFillSeed?: number
     },
     async () => (await remote()).saveLineupRpc(gameId, lineup),
   );
+}
+
+/** Reload team data in the background (no loading screen), e.g. after managing members. */
+export async function refreshData(): Promise<void> {
+  await loadRemote();
+}
+
+/** Coach: create an invite link; returns its full URL. */
+export async function createInvite(role: MemberRole): Promise<string> {
+  const token = await (await remote()).createInviteRow(data!.team.id, role);
+  await refreshData();
+  return inviteUrl(token);
+}
+
+export function inviteUrl(token: string): string {
+  return `${window.location.origin}/join/${token}`;
+}
+
+export async function revokeInvite(inviteId: string): Promise<void> {
+  await (await remote()).revokeInviteRow(inviteId);
+  await refreshData();
+}
+
+export async function setMemberRole(memberId: string, role: MemberRole): Promise<void> {
+  await (await remote()).setMemberRoleRow(memberId, role);
+  await refreshData();
+}
+
+export async function removeMember(memberId: string): Promise<void> {
+  await (await remote()).removeMemberRow(memberId);
+  await refreshData();
+}
+
+/** After joining a team from an invite, open that team next time the app loads. */
+export function preferTeam(teamId: string): void {
+  writeJson(TEAM_KEY, teamId);
 }
 
 /** Supabase mode: create the user's team and/or first season, then load it. */

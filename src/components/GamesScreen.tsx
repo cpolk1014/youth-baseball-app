@@ -9,6 +9,7 @@ import {
   localDateString,
   splitGames,
 } from "@/lib/data/game";
+import { permissionsFor } from "@/lib/data/permissions";
 import { newId, saveGame, signOut, useAppData, useStoreState } from "@/lib/data/store";
 import type { AppData, Game } from "@/lib/data/types";
 import { validateLineup } from "@/lib/rules/validate";
@@ -30,6 +31,7 @@ export function GamesScreen() {
   }
 
   const { upcoming, final } = splitGames(data.games);
+  const canEdit = permissionsFor(data.me.role).editTeam;
   const startAdd = () =>
     setAdding({
       id: newId(),
@@ -49,23 +51,27 @@ export function GamesScreen() {
       subtitle={`${data.team.ageGroup} · ${data.season.name}`}
       tab="games"
       action={
-        <button
-          onClick={startAdd}
-          className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[#0b1f3a] active:bg-slate-200"
-        >
-          + Game
-        </button>
+        canEdit ? (
+          <button
+            onClick={startAdd}
+            className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[#0b1f3a] active:bg-slate-200"
+          >
+            + Game
+          </button>
+        ) : undefined
       }
     >
       <Section title="Upcoming" games={upcoming} data={data} empty="No upcoming games." />
       {final.length > 0 && <Section title="Final" games={final} data={data} />}
 
-      <button
-        onClick={startAdd}
-        className="mt-4 h-14 w-full rounded-xl border-2 border-dashed border-slate-400 text-lg font-bold text-slate-700 active:bg-slate-100"
-      >
-        + Add game
-      </button>
+      {canEdit && (
+        <button
+          onClick={startAdd}
+          className="mt-4 h-14 w-full rounded-xl border-2 border-dashed border-slate-400 text-lg font-bold text-slate-700 active:bg-slate-100"
+        >
+          + Add game
+        </button>
+      )}
 
       {mode === "supabase" && (
         <p className="mt-8 text-center text-sm text-slate-600">

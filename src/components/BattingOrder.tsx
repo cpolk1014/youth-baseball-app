@@ -71,7 +71,7 @@ export function BattingOrder({
     <div>
       <p className="mb-3 text-base text-slate-700">
         {readOnly
-          ? "Final batting order."
+          ? "Batting order."
           : "Drag ☰ to change the order. Tap Sit out to leave a player out of the batting order."}
       </p>
       <ol className="flex flex-col gap-2">

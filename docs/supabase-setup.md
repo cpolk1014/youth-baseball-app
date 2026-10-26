@@ -28,7 +28,8 @@ SQL Editor → New query. Paste and run each file, in order:
 2. `supabase/migrations/20261021000000_save_lineup.sql`
 3. `supabase/migrations/20261026000000_coach_pitch_field_players.sql`
 4. `supabase/migrations/20261026120000_absent_players.sql`
-5. `supabase/seed.sql` (optional: the sample Riverside Rattlers team)
+5. `supabase/migrations/20261026180000_invites.sql`
+6. `supabase/seed.sql` (optional: the sample Riverside Rattlers team)
 
 When a new file appears in `supabase/migrations/` later, run just that file.
 

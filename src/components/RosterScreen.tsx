@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { newId, savePlayer, setCoachPitch, useAppData } from "@/lib/data/store";
+import Link from "next/link";
+import { permissionsFor } from "@/lib/data/permissions";
+import { newId, savePlayer, setCoachPitch, useAppData, useStoreState } from "@/lib/data/store";
 import { activePlayers } from "@/lib/lineup/edit";
 import { fieldPositionsFor } from "@/lib/rules/config";
 import { FIELD_POSITIONS } from "@/lib/rules/types";
@@ -13,6 +15,7 @@ import { Sheet } from "./Sheet";
 export function RosterScreen() {
   const data = useAppData();
   const [editing, setEditing] = useState<Player | null>(null);
+  const { mode } = useStoreState();
 
   if (!data) {
     return (
@@ -28,6 +31,8 @@ export function RosterScreen() {
         (p) => fieldPositionsFor(9).includes(p) || fieldPositionsFor(10).includes(p),
       )
     : fieldPositionsFor(9);
+  const canEdit = permissionsFor(data.me.role).editTeam;
+  const others = data.members.length;
   const active = activePlayers(data.players);
   const inactive = data.players.filter((p) => p.active === false);
   const isNew = editing !== null && !data.players.some((p) => p.id === editing.id);
@@ -47,15 +52,35 @@ export function RosterScreen() {
       subtitle={`${data.team.name} · ${active.length} active`}
       tab="roster"
       action={
-        <button
-          onClick={startAdd}
-          className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[#0b1f3a] active:bg-slate-200"
-        >
-          + Add
-        </button>
+        canEdit ? (
+          <button
+            onClick={startAdd}
+            className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[#0b1f3a] active:bg-slate-200"
+          >
+            + Add
+          </button>
+        ) : undefined
       }
     >
-      <div className="mb-4">
+      {mode === "supabase" && (
+        <Link
+          href="/members"
+          className="mb-3 flex min-h-14 items-center justify-between rounded-xl border-2 border-slate-300 bg-white px-4 active:bg-slate-50"
+        >
+          <span>
+            <span className="block text-lg font-semibold">Coaches &amp; parents</span>
+            <span className="block text-sm text-slate-600">
+              {others} on the team
+              {permissionsFor(data.me.role).manageMembers ? " · invite people" : ""}
+            </span>
+          </span>
+          <span aria-hidden="true" className="text-2xl text-slate-500">
+            ›
+          </span>
+        </Link>
+      )}
+
+      <div className={`mb-4 ${canEdit ? "" : "pointer-events-none"}`} aria-disabled={!canEdit}>
         <Toggle
           label="Coach's pitch"
           hint={
@@ -70,7 +95,7 @@ export function RosterScreen() {
 
       <ul className="flex flex-col gap-2">
         {active.map((p) => (
-          <PlayerRow key={p.id} player={p} onClick={() => setEditing(p)} />
+          <PlayerRow key={p.id} player={p} onClick={canEdit ? () => setEditing(p) : undefined} />
         ))}
       </ul>
 
@@ -81,18 +106,24 @@ export function RosterScreen() {
           </h2>
           <ul className="flex flex-col gap-2 opacity-60">
             {inactive.map((p) => (
-              <PlayerRow key={p.id} player={p} onClick={() => setEditing(p)} />
+              <PlayerRow
+                key={p.id}
+                player={p}
+                onClick={canEdit ? () => setEditing(p) : undefined}
+              />
             ))}
           </ul>
         </>
       )}
 
-      <button
-        onClick={startAdd}
-        className="mt-4 h-14 w-full rounded-xl border-2 border-dashed border-slate-400 text-lg font-bold text-slate-700 active:bg-slate-100"
-      >
-        + Add player
-      </button>
+      {canEdit && (
+        <button
+          onClick={startAdd}
+          className="mt-4 h-14 w-full rounded-xl border-2 border-dashed border-slate-400 text-lg font-bold text-slate-700 active:bg-slate-100"
+        >
+          + Add player
+        </button>
+      )}
 
       <Sheet
         open={editing !== null}
@@ -116,12 +147,14 @@ export function RosterScreen() {
   );
 }
 
-function PlayerRow({ player, onClick }: { player: Player; onClick: () => void }) {
+/** A player card; tappable to edit when `onClick` is given, otherwise view-only. */
+function PlayerRow({ player, onClick }: { player: Player; onClick?: () => void }) {
+  const Tag = onClick ? "button" : "div";
   return (
     <li>
-      <button
+      <Tag
         onClick={onClick}
-        className="flex min-h-16 w-full items-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-left active:bg-slate-50"
+        className={`flex min-h-16 w-full items-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-left ${onClick ? "active:bg-slate-50" : ""}`}
       >
         <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#0b1f3a] text-lg font-bold text-white">
           {player.jerseyNumber ?? "–"}
@@ -138,7 +171,7 @@ function PlayerRow({ player, onClick }: { player: Player; onClick: () => void })
           {player.canPitch && <Badge>P</Badge>}
           {player.canCatch && <Badge>C</Badge>}
         </span>
-      </button>
+      </Tag>
     </li>
   );
 }

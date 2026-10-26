@@ -8,6 +8,7 @@ import { assignPosition, positionAt, setAbsent, setBatting } from "@/lib/lineup/
 import { generateLineup } from "@/lib/rules/generate";
 import type { Lineup } from "@/lib/rules/types";
 import { validateLineup } from "@/lib/rules/validate";
+import { ROLE_LABEL, permissionsFor } from "@/lib/data/permissions";
 import { AppShell, Loading } from "./AppShell";
 import { Attendance } from "./Attendance";
 import { BattingOrder } from "./BattingOrder";
@@ -79,6 +80,9 @@ export function GameScreen({ gameId }: { gameId: string }) {
   };
   const picked = cell ? players.get(cell.playerId) : undefined;
   const isFinal = game.status === "final";
+  const perms = permissionsFor(data.me.role);
+  // Lineups are editable by coaches, and only until the game is final.
+  const lineupLocked = isFinal || !perms.editLineups;
   const absentNames = (lineup.absent ?? []).map((id) => players.get(id)?.name ?? id);
   const rosterCount = data.players.filter((p) => p.active !== false).length;
   const hereCount = rosterCount - absentNames.length;
@@ -108,13 +112,19 @@ export function GameScreen({ gameId }: { gameId: string }) {
           <p className="flex-1 text-base leading-snug font-semibold">
             Final. This lineup counts toward season playing time.
           </p>
-          <button
-            onClick={() => setGameStatus(game.id, "scheduled")}
-            className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-slate-900 active:bg-slate-200"
-          >
-            Reopen
-          </button>
+          {perms.editTeam && (
+            <button
+              onClick={() => setGameStatus(game.id, "scheduled")}
+              className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-slate-900 active:bg-slate-200"
+            >
+              Reopen
+            </button>
+          )}
         </div>
+      ) : !perms.editTeam ? (
+        <p className="mb-4 rounded-xl bg-slate-200 px-3 py-2 text-base">
+          View only · you&apos;re on this team as a {ROLE_LABEL[data.me.role].toLowerCase()}.
+        </p>
       ) : (
         <div className="mb-4 grid grid-cols-2 gap-2">
           <button
@@ -155,7 +165,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
 
       {view === "field" ? (
         <>
-          <div className={`mb-3 flex gap-2 ${isFinal ? "hidden" : ""}`}>
+          <div className={`mb-3 flex gap-2 ${lineupLocked ? "hidden" : ""}`}>
             <button
               onClick={autoFill}
               className="h-14 flex-1 rounded-xl bg-green-700 text-lg font-bold text-white active:bg-green-800"
@@ -184,7 +194,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
           {absentNames.length > 0 && (
             <p className="mb-3 rounded-xl bg-slate-200 px-3 py-2 text-base">
               <b>Absent:</b> {absentNames.join(", ")}
-              {!isFinal && lineup.slots.length > 0 && emptyCells > 0 && (
+              {!lineupLocked && lineup.slots.length > 0 && emptyCells > 0 && (
                 <>
                   {" "}
                   · Their spots are open. Tap <b>Auto-fill again</b> or fill them in.
@@ -198,7 +208,9 @@ export function GameScreen({ gameId }: { gameId: string }) {
             players={players}
             positions={config.fieldPositions}
             violations={shown}
-            onCellTap={isFinal ? undefined : (playerId, inning) => setCell({ playerId, inning })}
+            onCellTap={
+              lineupLocked ? undefined : (playerId, inning) => setCell({ playerId, inning })
+            }
           />
 
           <div className="mt-4">
@@ -216,7 +228,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
           players={data.players}
           absent={lineup.absent ?? []}
           onSetAbsent={(playerId, isAbsent) => change(setAbsent(lineup, playerId, isAbsent))}
-          readOnly={isFinal}
+          readOnly={lineupLocked}
         />
       ) : (
         <BattingOrder
@@ -225,7 +237,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
           players={players}
           onChange={(battingOrder) => change({ ...lineup, battingOrder })}
           onSetBatting={(playerId, bats) => change(setBatting(lineup, playerId, bats))}
-          readOnly={isFinal}
+          readOnly={lineupLocked}
         />
       )}
 
