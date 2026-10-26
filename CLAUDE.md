@@ -15,7 +15,8 @@ Primary users: head coach (lineups), team manager (comms), treasurer (money). Th
 - Supabase: Postgres, Auth, Row Level Security, Storage, Realtime
 - Vercel hosting (preview deploys per branch)
 - Vitest for unit tests; Playwright for a few end-to-end flows
-- Later: Stripe (billing), Claude API (structured JSON output) for AI features
+- Claude API (`@anthropic-ai/sdk`, structured JSON output) for AI features, server-side only (`ANTHROPIC_API_KEY`); schedule import uses it
+- Later: Stripe (billing)
 
 ## Features
 
@@ -32,6 +33,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Option a team (archive, read-only, "Call Up" to restore); delete only optioned teams
 - Installable on a phone's home screen
 - Practice schedule: build a season of practices (days × dates), each with a focus, a drill plan (starter library or custom, minutes vs. scheduled length), notes, cancel; parents view
+- Import a schedule from a photo, PDF or CSV (Claude reads it; coach reviews before adding practices and games)
 
 **Next up** (roughly in order; the user picks)
 

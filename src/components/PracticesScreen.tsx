@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { localDateString } from "@/lib/data/game";
 import { permissionsFor } from "@/lib/data/permissions";
-import { addPractices, newId, savePractice, useAppData } from "@/lib/data/store";
+import { addPractices, newId, savePractice, useAppData, useStoreState } from "@/lib/data/store";
 import type { Practice } from "@/lib/data/types";
 import { formatPracticeWhen } from "@/lib/practice/format";
 import { planMinutes } from "@/lib/practice/schedule";
 import { AppShell, Loading } from "./AppShell";
+import { ImportSchedule } from "./ImportSchedule";
 import { PracticeForm, ScheduleBuilder } from "./PracticeForms";
 import { Sheet } from "./Sheet";
 
@@ -17,6 +18,8 @@ export function PracticesScreen() {
   const [adding, setAdding] = useState<Practice | null>(null);
   const [building, setBuilding] = useState(false);
   const [showPast, setShowPast] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const { mode } = useStoreState();
 
   if (!data) {
     return (
@@ -74,6 +77,17 @@ export function PracticesScreen() {
           </span>
         </button>
       )}
+      {canEdit && mode === "supabase" && (
+        <button
+          onClick={() => setImporting(true)}
+          className="mb-4 flex min-h-14 w-full flex-col items-start justify-center rounded-xl border-2 border-[#0b1f3a] bg-white px-4 py-2 text-left active:bg-slate-50"
+        >
+          <span className="text-lg font-bold text-[#0b1f3a]">Import from a file</span>
+          <span className="text-sm text-slate-600">
+            Photo, PDF or CSV of your schedule: practices and games.
+          </span>
+        </button>
+      )}
 
       {upcoming.length === 0 ? (
         <p className="rounded-xl border-2 border-slate-200 bg-white p-4 text-base text-slate-700">
@@ -120,6 +134,10 @@ export function PracticesScreen() {
             }}
           />
         )}
+      </Sheet>
+
+      <Sheet open={importing} title="Import a schedule" onClose={() => setImporting(false)}>
+        {importing && <ImportSchedule data={data} onClose={() => setImporting(false)} />}
       </Sheet>
 
       <Sheet open={building} title="Build season schedule" onClose={() => setBuilding(false)}>
