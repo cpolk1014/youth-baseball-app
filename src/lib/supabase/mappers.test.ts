@@ -58,7 +58,7 @@ describe("supabase mappers", () => {
 
   it("builds app data from rows using each game's highest lineup version", () => {
     const rows: TeamRows = {
-      team: { id: "t1", name: "Rattlers", age_group: "10U", coach_pitch: true },
+      team: { id: "t1", name: "Rattlers", age_group: "10U", coach_pitch: true, optioned_at: null },
       season: { id: "s1", team_id: "t1", name: "Fall", fair_play_rules: { maxInningsPitched: 3 } },
       players: [playerToRow(SEED_DATA.players[0]!, "t1")],
       games: [gameRow, { ...gameRow, id: "g2" }],
@@ -94,7 +94,13 @@ describe("supabase mappers", () => {
       myTeams: [],
     };
     const data = appDataFromRows(rows, { g1: 3 });
-    expect(data.team).toEqual({ id: "t1", name: "Rattlers", ageGroup: "10U", coachPitch: true });
+    expect(data.team).toEqual({
+      id: "t1",
+      name: "Rattlers",
+      ageGroup: "10U",
+      coachPitch: true,
+      optionedAt: null,
+    });
     expect(data.games[0]?.fieldPlayers).toBe(10);
     expect(data.season.fairPlayRules).toEqual({ maxInningsPitched: 3 });
     expect(data.lineups.g1).toEqual({
@@ -133,16 +139,26 @@ describe("supabase mappers", () => {
   });
 
   it("lists only teams I'm a member of, with my strongest role on each", () => {
-    const team = (id: string, name: string) => ({ id, name, age_group: "10U", coach_pitch: false });
-    const teams = [team("t1", "Storm"), team("t2", "Rattlers"), team("t3", "Created then left")];
+    const team = (id: string, name: string, optioned_at: string | null = null) => ({
+      id,
+      name,
+      age_group: "10U",
+      coach_pitch: false,
+      optioned_at,
+    });
+    const teams = [
+      team("t1", "Storm", "2026-09-01T00:00:00Z"),
+      team("t2", "Rattlers"),
+      team("t3", "Created then left"),
+    ];
     const mine = [
       { team_id: "t1", role: "parent" as const },
       { team_id: "t2", role: "parent" as const },
       { team_id: "t2", role: "coach" as const },
     ];
     expect(summarizeMyTeams(teams, mine)).toEqual([
-      { id: "t2", name: "Rattlers", ageGroup: "10U", role: "coach" },
-      { id: "t1", name: "Storm", ageGroup: "10U", role: "parent" },
+      { id: "t2", name: "Rattlers", ageGroup: "10U", role: "coach", optioned: false },
+      { id: "t1", name: "Storm", ageGroup: "10U", role: "parent", optioned: true },
     ]);
   });
 });

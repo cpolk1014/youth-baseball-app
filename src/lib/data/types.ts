@@ -10,6 +10,8 @@ export interface Team {
   ageGroup: string;
   /** Coach's pitch: P is a fielding spot and new games default to 10 fielders. */
   coachPitch: boolean;
+  /** When the team was optioned (archived); null while active. */
+  optionedAt: string | null;
 }
 
 export interface Season {
@@ -62,6 +64,7 @@ export interface TeamSummary {
   name: string;
   ageGroup: string;
   role: MemberRole;
+  optioned: boolean;
 }
 
 /** Everything the screens need. Mirrors the Supabase schema, camelCased. */

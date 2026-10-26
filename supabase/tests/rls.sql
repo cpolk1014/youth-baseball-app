@@ -377,11 +377,15 @@ reset role;
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 delete from public.team where id = 'cccccccc-0000-4000-8000-000000000001';
-select pg_temp.expect((select count(*) from public.team) = 0, 'a coach can still delete their own team');
+select pg_temp.expect((select count(*) from public.team) = 1, 'an active team cannot be deleted');
+update public.team set optioned_at = now() where id = 'cccccccc-0000-4000-8000-000000000001';
+select pg_temp.expect((select optioned_at is not null from public.team), 'coach options their team');
+delete from public.team where id = 'cccccccc-0000-4000-8000-000000000001';
+select pg_temp.expect((select count(*) from public.team) = 0, 'a coach can delete an optioned team');
 reset role;
 
 -- ── delete team (as the app does: delete ... returning id) ──
-insert into public.team (id, name, age_group, created_by) values ('dddddddd-0000-4000-8000-000000000001', 'Delete Me', '9U', null);
+insert into public.team (id, name, age_group, created_by, optioned_at) values ('dddddddd-0000-4000-8000-000000000001', 'Delete Me', '9U', null, now());
 insert into public.member (team_id, user_id, role) values ('dddddddd-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000005', 'coach'),
                                                           ('dddddddd-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000004', 'parent');
 set role authenticated;
@@ -403,4 +407,18 @@ reset role;
 select pg_temp.expect(
   (select count(*) from public.member where team_id = 'dddddddd-0000-4000-8000-000000000001') = 0,
   'deleting a team removes its members');
+
+-- ── option / call up ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+update public.team set optioned_at = now() where id = '00000000-0000-4000-8000-000000000001';
+reset role;
+select pg_temp.expect((select optioned_at is null from public.team where id = '00000000-0000-4000-8000-000000000001'), 'a parent cannot option the team');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+update public.team set optioned_at = now() where id = '00000000-0000-4000-8000-000000000001';
+select pg_temp.expect((select count(*) from public.player) = 12, 'an optioned team is still readable');
+update public.team set optioned_at = null where id = '00000000-0000-4000-8000-000000000001';
+select pg_temp.expect((select optioned_at is null from public.team where id = '00000000-0000-4000-8000-000000000001'), 'coach calls the team back up');
+reset role;
 \echo ALL RLS TESTS PASSED

@@ -101,10 +101,21 @@ function upgradeLocalData(d: AppData): AppData {
     me: d.me ?? { userId: null, role: "coach" },
     members: d.members ?? [],
     invites: d.invites ?? [],
-    myTeams: d.myTeams ?? [
-      { id: d.team.id, name: d.team.name, ageGroup: d.team.ageGroup, role: d.me?.role ?? "coach" },
-    ],
-    team: { ...d.team, coachPitch: d.team.coachPitch ?? false },
+    myTeams: (
+      d.myTeams ?? [
+        {
+          id: d.team.id,
+          name: d.team.name,
+          ageGroup: d.team.ageGroup,
+          role: d.me?.role ?? "coach",
+        },
+      ]
+    ).map((t) => ({ ...t, optioned: t.optioned ?? false })),
+    team: {
+      ...d.team,
+      coachPitch: d.team.coachPitch ?? false,
+      optionedAt: d.team.optionedAt ?? null,
+    },
     games: d.games.map((g) => ({ ...g, fieldPlayers: g.fieldPlayers ?? 9 })),
   };
 }
@@ -311,6 +322,19 @@ export async function deleteTeam(): Promise<void> {
   // Full load so nothing from the deleted team lingers on screen.
   // eslint-disable-next-line @next/next/no-location-assign-relative-destination
   window.location.assign("/games");
+}
+
+/** Coach: option the current team (archive it, read-only) or call it back up. */
+export function setOptioned(optioned: boolean): void {
+  const optionedAt = optioned ? new Date().toISOString() : null;
+  update(
+    (d) => ({
+      ...d,
+      team: { ...d.team, optionedAt },
+      myTeams: d.myTeams.map((t) => (t.id === d.team.id ? { ...t, optioned } : t)),
+    }),
+    async () => (await remote()).saveTeamOptioned(data!.team.id, optionedAt),
+  );
 }
 
 /** Open another of the user's teams. */

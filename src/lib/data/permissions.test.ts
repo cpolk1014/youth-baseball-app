@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bestRole, permissionsFor } from "./permissions";
+import { bestRole, canCallUp, permissionsFor } from "./permissions";
 
 describe("permissions", () => {
   it("lets coaches do everything", () => {
@@ -32,5 +32,16 @@ describe("permissions", () => {
     expect(bestRole(["parent", "coach"])).toBe("coach");
     expect(bestRole(["treasurer", "manager"])).toBe("manager");
     expect(bestRole([])).toBe("parent");
+  });
+
+  it("makes optioned teams read-only for everyone, but coaches can call up or delete", () => {
+    expect(permissionsFor("coach", true)).toEqual({
+      editLineups: false,
+      editTeam: false,
+      manageMembers: false,
+    });
+    expect(canCallUp("coach")).toBe(true);
+    expect(canCallUp("manager")).toBe(false);
+    expect(canCallUp("parent")).toBe(false);
   });
 });

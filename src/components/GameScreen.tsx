@@ -80,7 +80,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
   };
   const picked = cell ? players.get(cell.playerId) : undefined;
   const isFinal = game.status === "final";
-  const perms = permissionsFor(data.me.role);
+  const perms = permissionsFor(data.me.role, data.team.optionedAt !== null);
   // Lineups are editable by coaches, and only until the game is final.
   const lineupLocked = isFinal || !perms.editLineups;
   const absentNames = (lineup.absent ?? []).map((id) => players.get(id)?.name ?? id);

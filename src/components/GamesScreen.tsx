@@ -33,7 +33,7 @@ export function GamesScreen() {
   }
 
   const { upcoming, final } = splitGames(data.games);
-  const canEdit = permissionsFor(data.me.role).editTeam;
+  const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
   const startAdd = () =>
     setAdding({
       id: newId(),

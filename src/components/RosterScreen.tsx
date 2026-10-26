@@ -31,7 +31,7 @@ export function RosterScreen() {
         (p) => fieldPositionsFor(9).includes(p) || fieldPositionsFor(10).includes(p),
       )
     : fieldPositionsFor(9);
-  const canEdit = permissionsFor(data.me.role).editTeam;
+  const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
   const others = data.members.length;
   const active = activePlayers(data.players);
   const inactive = data.players.filter((p) => p.active === false);
@@ -71,7 +71,9 @@ export function RosterScreen() {
             <span className="block text-lg font-semibold">Coaches &amp; parents</span>
             <span className="block text-sm text-slate-600">
               {others} on the team
-              {permissionsFor(data.me.role).manageMembers ? " · invite people" : ""}
+              {permissionsFor(data.me.role, data.team.optionedAt !== null).manageMembers
+                ? " · invite people"
+                : ""}
             </span>
           </span>
           <span aria-hidden="true" className="text-2xl text-slate-500">

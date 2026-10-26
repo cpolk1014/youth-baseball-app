@@ -43,7 +43,7 @@ export async function loadFromSupabase(
   const [allTeams, myMemberships] = await Promise.all([
     sb
       .from("team")
-      .select("id,name,age_group,coach_pitch")
+      .select("id,name,age_group,coach_pitch,optioned_at")
       .order("created_at")
       .then((r) => check<TeamRow[]>(r)),
     sb
@@ -55,7 +55,11 @@ export async function loadFromSupabase(
   const myTeams = summarizeMyTeams(allTeams, myMemberships);
   // Only teams the user is a member of (not ones they merely created and then left).
   const teams = allTeams.filter((t) => myTeams.some((m) => m.id === t.id));
-  const team = teams.find((t) => t.id === preferredTeamId) ?? teams[0];
+  // The team the user last opened; otherwise their first active (not optioned) team.
+  const team =
+    teams.find((t) => t.id === preferredTeamId) ??
+    teams.find((t) => t.optioned_at === null) ??
+    teams[0];
   if (!team) return { kind: "setup", team: null, email };
 
   const seasons = check<SeasonRow[]>(
@@ -155,6 +159,12 @@ export async function saveGameRow(game: Game, trimmedLineup: Lineup | null): Pro
 export async function saveTeamSettings(teamId: string, coachPitch: boolean): Promise<void> {
   check(
     await getBrowserSupabase().from("team").update({ coach_pitch: coachPitch }).eq("id", teamId),
+  );
+}
+
+export async function saveTeamOptioned(teamId: string, optionedAt: string | null): Promise<void> {
+  check(
+    await getBrowserSupabase().from("team").update({ optioned_at: optionedAt }).eq("id", teamId),
   );
 }
 

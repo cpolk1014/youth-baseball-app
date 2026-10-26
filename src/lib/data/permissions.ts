@@ -14,12 +14,19 @@ export interface Permissions {
 
 const RANK: MemberRole[] = ["coach", "manager", "treasurer", "parent"];
 
-export function permissionsFor(role: MemberRole): Permissions {
+/** What a role can do; an optioned (archived) team is read-only for everyone. */
+export function permissionsFor(role: MemberRole, optioned = false): Permissions {
+  if (optioned) return { editLineups: false, editTeam: false, manageMembers: false };
   return {
     editLineups: role === "coach",
     editTeam: role === "coach" || role === "manager",
     manageMembers: role === "coach",
   };
+}
+
+/** Coaches option a team, call it back up, and delete it (only once optioned). */
+export function canCallUp(role: MemberRole): boolean {
+  return role === "coach";
 }
 
 /** A person can hold several roles on a team; the strongest one wins. */

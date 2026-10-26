@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ROLE_LABEL, permissionsFor, type MemberRole } from "@/lib/data/permissions";
+import { ROLE_LABEL, canCallUp, permissionsFor, type MemberRole } from "@/lib/data/permissions";
 import {
   createInvite,
   deleteTeam,
@@ -9,6 +9,7 @@ import {
   removeMember,
   revokeInvite,
   setMemberRole,
+  setOptioned,
   signOut,
   useAppData,
   useStoreState,
@@ -46,6 +47,7 @@ export function MembersScreen() {
   const [created, setCreated] = useState<{ role: MemberRole; url: string } | null>(null);
   const [removing, setRemoving] = useState<Member | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [optioning, setOptioning] = useState(false);
   const [confirmName, setConfirmName] = useState("");
 
   if (!data) {
@@ -66,7 +68,7 @@ export function MembersScreen() {
     );
   }
 
-  const perms = permissionsFor(data.me.role);
+  const perms = permissionsFor(data.me.role, data.team.optionedAt !== null);
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
     setError(null);
@@ -208,7 +210,24 @@ export function MembersScreen() {
         Leave this team
       </button>
 
-      {perms.manageMembers && (
+      {canCallUp(data.me.role) && !data.team.optionedAt && (
+        <section className="mt-4 rounded-xl border-2 border-slate-300 bg-white p-4">
+          <h2 className="text-lg font-bold">Option this team</h2>
+          <p className="mt-1 text-base text-slate-700">
+            Season over? Send the team down: it&apos;s archived and read-only for everyone, and the
+            app opens your other teams first. Call it back up any time.
+          </p>
+          <button
+            onClick={() => setOptioning(true)}
+            className="mt-3 h-12 w-full rounded-xl border-2 border-[#0b1f3a] text-base font-bold text-[#0b1f3a] active:bg-slate-100"
+          >
+            Option team
+          </button>
+          <p className="mt-2 text-sm text-slate-600">To delete a team, option it first.</p>
+        </section>
+      )}
+
+      {canCallUp(data.me.role) && data.team.optionedAt && (
         <button
           onClick={() => {
             setConfirmName("");
@@ -219,6 +238,32 @@ export function MembersScreen() {
           Delete this team
         </button>
       )}
+
+      <Sheet open={optioning} title="Option this team?" onClose={() => setOptioning(false)}>
+        <div className="flex flex-col gap-4">
+          <p className="text-lg leading-snug">
+            <b>{data.team.name}</b> moves to your Optioned teams. Everyone keeps view-only access to
+            its lineups and playing time; nothing can be changed until a coach calls it back up.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setOptioning(false)}
+              className="h-14 flex-1 rounded-xl border-2 border-slate-400 text-lg font-bold active:bg-slate-100"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                setOptioning(false);
+                setOptioned(true);
+              }}
+              className="h-14 flex-1 rounded-xl bg-[#0b1f3a] text-lg font-bold text-white active:bg-[#16325a]"
+            >
+              Option team
+            </button>
+          </div>
+        </div>
+      </Sheet>
 
       <Sheet open={deleting} title="Delete this team?" onClose={() => setDeleting(false)}>
         <div className="flex flex-col gap-4">

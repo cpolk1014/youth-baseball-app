@@ -42,6 +42,7 @@ export function summarizeMyTeams(
       name: t.name,
       ageGroup: t.age_group,
       role: bestRole(myMemberships.filter((m) => m.team_id === t.id).map((m) => m.role)),
+      optioned: t.optioned_at !== null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -180,6 +181,7 @@ export function appDataFromRows(
       name: rows.team.name,
       ageGroup: rows.team.age_group,
       coachPitch: rows.team.coach_pitch,
+      optionedAt: rows.team.optioned_at,
     },
     season: {
       id: rows.season.id,

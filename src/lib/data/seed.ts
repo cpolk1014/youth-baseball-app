@@ -27,8 +27,16 @@ export const SEED_DATA: AppData = {
   me: { userId: null, role: "coach" },
   members: [],
   invites: [],
-  myTeams: [{ id: TEAM_ID, name: "Riverside Rattlers", ageGroup: "10U", role: "coach" }],
-  team: { id: TEAM_ID, name: "Riverside Rattlers", ageGroup: "10U", coachPitch: false },
+  myTeams: [
+    { id: TEAM_ID, name: "Riverside Rattlers", ageGroup: "10U", role: "coach", optioned: false },
+  ],
+  team: {
+    id: TEAM_ID,
+    name: "Riverside Rattlers",
+    ageGroup: "10U",
+    coachPitch: false,
+    optionedAt: null,
+  },
   season: { id: SEASON_ID, teamId: TEAM_ID, name: "Fall 2026", fairPlayRules: DEFAULT_RULE_CONFIG },
   players: [
     player(1, "Mason R.", 2, ["SS", "P"], true, false),

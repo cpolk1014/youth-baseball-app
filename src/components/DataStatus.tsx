@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { createTeam, dismissSaveError, reloadData, signOut, useStoreState } from "@/lib/data/store";
+import { canCallUp } from "@/lib/data/permissions";
+import {
+  createTeam,
+  dismissSaveError,
+  reloadData,
+  setOptioned,
+  signOut,
+  useAppData,
+  useStoreState,
+} from "@/lib/data/store";
 
 const AGE_GROUPS = ["7U", "8U", "9U", "10U", "11U", "12U", "13U", "14U"];
 
@@ -14,6 +23,7 @@ function defaultSeasonName(today: Date): string {
 /** Wraps screen content: first-time setup, load errors, and failed-save notices. */
 export function DataStatus({ children }: { children: ReactNode }) {
   const { status, saveError } = useStoreState();
+  const data = useAppData();
 
   if (status.kind === "setup") return <TeamSetup hasTeam={status.team !== null} />;
   if (status.kind === "error") {
@@ -53,6 +63,22 @@ export function DataStatus({ children }: { children: ReactNode }) {
           >
             OK
           </button>
+        </div>
+      )}
+      {data?.team.optionedAt && (
+        <div className="mb-3 flex items-center gap-3 rounded-xl border-2 border-amber-500 bg-amber-50 p-3 text-amber-950">
+          <p className="flex-1 text-base leading-snug">
+            <b>Optioned.</b> This team is archived and read-only.
+            {canCallUp(data.me.role) ? "" : " A coach can call it back up."}
+          </p>
+          {canCallUp(data.me.role) && (
+            <button
+              onClick={() => setOptioned(false)}
+              className="h-11 shrink-0 rounded-lg bg-[#0b1f3a] px-4 text-base font-bold text-white active:bg-[#16325a]"
+            >
+              Call Up
+            </button>
+          )}
         </div>
       )}
       {children}
