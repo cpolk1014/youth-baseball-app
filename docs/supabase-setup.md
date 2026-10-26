@@ -40,7 +40,7 @@ Authentication → URL Configuration:
 - **Redirect URLs:** add `http://localhost:3000/auth/callback`
   (add the Vercel URL's `/auth/callback` too when the app is deployed)
 
-## 5. Put the 6-digit code in the sign-in email
+## 5. Put the sign-in code in the email
 
 Authentication → Emails → **Magic Link** template. Add the code so people can type it
 when the link opens in a different browser (common on iPhone):

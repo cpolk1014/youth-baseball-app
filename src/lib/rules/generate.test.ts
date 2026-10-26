@@ -143,7 +143,8 @@ describe("generateLineup across many seeds", () => {
         }
       }
     }
-  });
+    // 150 full generations: a few seconds normally, longer on a busy machine.
+  }, 60_000);
 });
 
 describe("generateLineup for coach's pitch and 10 fielders", () => {

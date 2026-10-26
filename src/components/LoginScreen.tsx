@@ -108,7 +108,7 @@ export function LoginScreen() {
           className="flex flex-col gap-4"
         >
           <p className="rounded-xl bg-green-50 p-4 text-lg leading-snug text-green-950">
-            Check <b>{step.email}</b>. Tap the link in the email, or type the 6-digit code here.
+            Check <b>{step.email}</b>. Tap the link in the email, or type the code from it here.
           </p>
           <label className="flex flex-col gap-1">
             <span className="text-sm font-semibold text-slate-700">Code from the email</span>
@@ -116,11 +116,11 @@ export function LoginScreen() {
               inputMode="numeric"
               autoComplete="one-time-code"
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
               className={`${field} text-center text-2xl tracking-[0.4em]`}
             />
           </label>
-          <button type="submit" disabled={busy || code.length !== 6} className={primary}>
+          <button type="submit" disabled={busy || code.length < 6} className={primary}>
             {busy ? "Checking…" : "Sign in"}
           </button>
           <button
