@@ -41,6 +41,26 @@ export interface PracticeRow {
   notes: string | null;
   plan: { id: string; title: string; minutes: number; notes?: string }[];
   canceled: boolean;
+  plays: string[];
+}
+
+export interface PlayAssignmentRow {
+  id: string;
+  team_id: string;
+  title: string;
+  play_ids: string[];
+  due_date: string | null;
+  created_at: string;
+}
+
+export interface QuizResultRow {
+  id: string;
+  assignment_id: string;
+  user_id: string;
+  player_id: string | null;
+  correct: number;
+  total: number;
+  completed_at: string;
 }
 
 export interface SeasonRow {

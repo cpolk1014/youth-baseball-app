@@ -6,7 +6,15 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { TeamRow } from "@/lib/supabase/rows";
 import type { MemberRole } from "./permissions";
 import { SEED_DATA } from "./seed";
-import type { AppData, Game, GameLineup, GameStatus, Practice } from "./types";
+import type {
+  AppData,
+  Game,
+  GameLineup,
+  GameStatus,
+  PlayAssignment,
+  Practice,
+  QuizResult,
+} from "./types";
 
 // One team's data for the screens. Without Supabase env vars it lives in localStorage
 // (local mode). With them, it loads from Supabase after sign-in; changes apply on
@@ -121,7 +129,9 @@ function upgradeLocalData(d: AppData): AppData {
     me: d.me ?? { userId: null, role: "coach" },
     members: d.members ?? [],
     invites: d.invites ?? [],
-    practices: d.practices ?? [],
+    practices: (d.practices ?? []).map((p) => ({ ...p, plays: p.plays ?? [] })),
+    assignments: d.assignments ?? [],
+    quizResults: d.quizResults ?? [],
     myTeams: (
       d.myTeams ?? [
         {
@@ -399,6 +409,42 @@ export async function importSchedule(practices: Practice[], games: Game[]): Prom
     await loadRemote();
     throw e;
   }
+}
+
+/** Add or update a homework assignment of plays. */
+export function saveAssignment(assignment: PlayAssignment): void {
+  update(
+    (d) => ({
+      ...d,
+      assignments: [assignment, ...d.assignments.filter((a) => a.id !== assignment.id)],
+    }),
+    async () => (await remote()).saveAssignmentRow(assignment, data!.team.id),
+  );
+}
+
+export function deleteAssignment(assignmentId: string): void {
+  update(
+    (d) => ({
+      ...d,
+      assignments: d.assignments.filter((a) => a.id !== assignmentId),
+      quizResults: d.quizResults.filter((q) => q.assignmentId !== assignmentId),
+    }),
+    async () => (await remote()).deleteAssignmentRow(assignmentId),
+  );
+}
+
+/** Record a finished quiz on an assignment for the signed-in family member. */
+export function recordQuizResult(result: Omit<QuizResult, "id" | "userId" | "completedAt">): void {
+  const full: QuizResult = {
+    ...result,
+    id: newId(),
+    userId: data?.me.userId ?? "local",
+    completedAt: new Date().toISOString(),
+  };
+  update(
+    (d) => ({ ...d, quizResults: [...d.quizResults, full] }),
+    async () => (await remote()).saveQuizResultRow(full),
+  );
 }
 
 /** Coach: option the current team (archive it, read-only) or call it back up. */

@@ -3,10 +3,13 @@ import { lineupFromGrid } from "@/lib/rules/test-utils";
 import { SEED_DATA } from "./seed";
 import {
   addPractices,
+  deleteAssignment,
   deletePractice,
   getAppData,
   importSchedule,
+  recordQuizResult,
   resetLocalData,
+  saveAssignment,
   saveGame,
   saveLineup,
   savePractice,
@@ -72,6 +75,7 @@ describe("store game actions", () => {
       notes: null,
       plan: [],
       canceled: false,
+      plays: [],
     };
     addPractices([practice, { ...practice, id: "pr2", date: "2026-11-05" }]);
     expect(getAppData().practices).toHaveLength(2);
@@ -93,6 +97,7 @@ describe("store game actions", () => {
       notes: null,
       plan: [],
       canceled: false,
+      plays: [],
     };
     const imported = { ...game, id: "imp-g1", date: "2027-02-22", opponent: "TBD" };
     await importSchedule([practice], [imported]);
@@ -100,5 +105,23 @@ describe("store game actions", () => {
     expect(getAppData().practices.filter((p) => p.id === "imp-p1")).toHaveLength(1);
     expect(getAppData().games.filter((g) => g.id === "imp-g1")).toHaveLength(1);
     expect(getAppData().games).toHaveLength(SEED_DATA.games.length + 1);
+  });
+
+  it("assigns plays, records quiz results, and removes both with the assignment", () => {
+    const assignment = {
+      id: "as1",
+      title: "Bunt defense",
+      playIds: ["bunt-pitcher", "bunt-catcher"],
+      dueDate: "2026-11-10",
+      createdAt: "2026-11-01T00:00:00Z",
+    };
+    saveAssignment(assignment);
+    saveAssignment({ ...assignment, title: "Bunts" });
+    expect(getAppData().assignments.map((a) => a.title)).toEqual(["Bunts"]);
+    recordQuizResult({ assignmentId: "as1", playerId: "a", correct: 4, total: 5 });
+    expect(getAppData().quizResults).toMatchObject([{ assignmentId: "as1", correct: 4 }]);
+    deleteAssignment("as1");
+    expect(getAppData().assignments).toEqual([]);
+    expect(getAppData().quizResults).toEqual([]);
   });
 });

@@ -103,6 +103,28 @@ describe("supabase mappers", () => {
           notes: null,
           plan: [{ id: "x", title: "Warm-up", minutes: 10 }],
           canceled: false,
+          plays: ["rundown"],
+        },
+      ],
+      assignments: [
+        {
+          id: "a1",
+          team_id: "t1",
+          title: "Bunts",
+          play_ids: ["bunt-pitcher"],
+          due_date: null,
+          created_at: "2026-11-01T00:00:00Z",
+        },
+      ],
+      quizResults: [
+        {
+          id: "q1",
+          assignment_id: "a1",
+          user_id: "other",
+          player_id: null,
+          correct: 3,
+          total: 5,
+          completed_at: "2026-11-02T00:00:00Z",
         },
       ],
       userId: "me",
@@ -134,6 +156,9 @@ describe("supabase mappers", () => {
       focus: "Infield",
     });
     expect(practiceToRow(data.practices[0]!).start_time).toBe("18:00");
+    expect(data.practices[0]?.plays).toEqual(["rundown"]);
+    expect(data.assignments[0]).toMatchObject({ title: "Bunts", playIds: ["bunt-pitcher"] });
+    expect(data.quizResults[0]).toMatchObject({ assignmentId: "a1", correct: 3, total: 5 });
     expect(data.members.map((m) => m.displayName)).toEqual(["Sam's mom", null, "Leo's dad"]);
   });
 

@@ -4,11 +4,12 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { DataStatus } from "./DataStatus";
 
-type Tab = "games" | "practice" | "season" | "roster";
+type Tab = "games" | "practice" | "plays" | "season" | "roster";
 
 const TABS: { id: Tab; href: string; label: string }[] = [
   { id: "games", href: "/games", label: "Games" },
   { id: "practice", href: "/practices", label: "Practice" },
+  { id: "plays", href: "/plays", label: "Plays" },
   { id: "season", href: "/season", label: "Season" },
   { id: "roster", href: "/roster", label: "Roster" },
 ];
@@ -79,7 +80,7 @@ export function AppShell({
               key={t.id}
               href={t.href}
               aria-current={t.id === tab ? "page" : undefined}
-              className={`flex h-16 flex-1 items-center justify-center text-lg font-bold ${
+              className={`flex h-16 min-w-0 flex-1 items-center justify-center text-base font-bold ${
                 t.id === tab ? "bg-[#0b1f3a] text-white" : "text-slate-700 active:bg-slate-100"
               }`}
             >

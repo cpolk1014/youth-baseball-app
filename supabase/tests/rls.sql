@@ -450,4 +450,58 @@ set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 select pg_temp.expect((select count(*) from public.practice) = 0, 'outsiders cannot see practices');
 reset role;
+-- ── plays: practice situations, assignments, quiz results ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+update public.practice set plays = '{steal-second,rundown}';
+select pg_temp.expect((select plays from public.practice) = '{steal-second,rundown}', 'coach adds plays to a practice');
+insert into public.play_assignment (id, team_id, title, play_ids, due_date) values
+  ('ffffffff-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 'Bunt defense', '{bunt-pitcher,bunt-catcher}', '2026-11-10');
+select pg_temp.expect((select created_by from public.play_assignment) = 'aaaaaaaa-0000-4000-8000-000000000001', 'assignment records who made it');
+do $$ begin
+  insert into public.play_assignment (team_id, title, play_ids) values ('00000000-0000-4000-8000-000000000001', 'Empty', '{}');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: an assignment needs at least one play';
+end $$;
+insert into public.quiz_result (assignment_id, correct, total) values ('ffffffff-0000-4000-8000-000000000001', 4, 5);
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000004', false);
+select pg_temp.expect((select count(*) from public.play_assignment) = 1, 'parents see assignments');
+select pg_temp.expect((select count(*) from public.quiz_result) = 0, 'parents do not see other families'' results');
+insert into public.quiz_result (assignment_id, player_id, correct, total) values
+  ('ffffffff-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000001001', 5, 5);
+select pg_temp.expect((select count(*) from public.quiz_result) = 1, 'parents record and see their own result');
+do $$ begin
+  insert into public.quiz_result (assignment_id, user_id, correct, total) values
+    ('ffffffff-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 5, 5);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot record results as someone else';
+end $$;
+do $$ begin
+  insert into public.quiz_result (assignment_id, correct, total) values ('ffffffff-0000-4000-8000-000000000001', 6, 5);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: score cannot beat the total';
+end $$;
+do $$ begin
+  insert into public.play_assignment (team_id, title, play_ids) values ('00000000-0000-4000-8000-000000000001', 'Mine', '{rundown}');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot assign plays';
+end $$;
+update public.practice set plays = '{}';
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select plays from public.practice) = '{steal-second,rundown}', 'parents cannot change practice plays');
+select pg_temp.expect((select count(*) from public.quiz_result) = 2, 'coach sees every family''s result');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.play_assignment) = 0, 'outsiders cannot see assignments');
+do $$ begin
+  insert into public.quiz_result (assignment_id, correct, total) values ('ffffffff-0000-4000-8000-000000000001', 1, 1);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: outsiders cannot record results';
+end $$;
+reset role;
 \echo ALL RLS TESTS PASSED

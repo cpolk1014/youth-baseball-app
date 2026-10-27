@@ -1,17 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { permissionsFor } from "@/lib/data/permissions";
 import { deletePractice, newId, savePractice, useAppData } from "@/lib/data/store";
 import type { Practice } from "@/lib/data/types";
 import { DRILL_LIBRARY } from "@/lib/practice/drills";
 import { formatPracticeWhen } from "@/lib/practice/format";
 import { movePlanItem, planMinutes, practiceMinutes, type PlanItem } from "@/lib/practice/schedule";
+import { quizLength } from "@/lib/plays/homework";
+import { playsFor } from "@/lib/plays/library";
 import { AppShell, Loading } from "./AppShell";
+import { PlayPicker } from "./PlayPicker";
 import { PracticeForm } from "./PracticeForms";
+import { QuizButton, firstNames } from "./QuizButton";
 import { Sheet } from "./Sheet";
 
-type Panel = "edit" | "drills" | "copy" | "delete" | null;
+type Panel = "edit" | "drills" | "copy" | "plays" | "delete" | null;
 
 const small =
   "flex size-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-300 bg-white text-lg font-bold active:bg-slate-100 disabled:opacity-30";
@@ -41,6 +46,7 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
   const setPlan = (plan: PlanItem[]) => save({ plan });
   const planned = planMinutes(practice.plan);
   const scheduled = practiceMinutes(practice.startTime, practice.endTime);
+  const situations = playsFor(practice.plays);
   const others = data.practices
     .filter((p) => p.id !== practice.id && p.plan.length > 0)
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -196,6 +202,59 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
       </section>
 
       <section className="mb-4">
+        <h2 className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">
+          Situations to work on
+        </h2>
+        {situations.length === 0 ? (
+          <p className="rounded-xl border-2 border-slate-200 bg-white p-4 text-base text-slate-700">
+            {canEdit
+              ? "Pick plays from the library to walk through, like bunt defense or cutoffs."
+              : "None picked."}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {situations.map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={`/plays/${p.id}`}
+                  className="flex min-h-14 items-center justify-between gap-2 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 active:bg-slate-50"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-base leading-snug font-semibold">{p.name}</span>
+                    <span className="block text-sm text-slate-600">{p.situation}</span>
+                  </span>
+                  <span aria-hidden="true" className="text-2xl text-slate-400">
+                    ›
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className={`mt-3 grid gap-2 ${canEdit && situations.length ? "grid-cols-2" : ""}`}>
+          {canEdit && (
+            <button
+              onClick={() => setPanel("plays")}
+              className="h-12 rounded-xl bg-green-700 text-base font-bold text-white active:bg-green-800"
+            >
+              {situations.length ? "Change plays" : "+ Add plays"}
+            </button>
+          )}
+          {situations.length > 0 && (
+            <QuizButton
+              plays={situations}
+              count={quizLength(situations.length)}
+              playerNames={firstNames(data.players)}
+              title="Team quiz"
+              className="h-12 rounded-xl bg-[#c8352e] text-base font-bold text-white active:bg-[#a92a24]"
+            >
+              Team quiz
+            </QuizButton>
+          )}
+        </div>
+      </section>
+
+      <section className="mb-4">
         <h2 className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">Notes</h2>
         {canEdit ? (
           <textarea
@@ -283,6 +342,20 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
             </li>
           ))}
         </ul>
+      </Sheet>
+
+      <Sheet open={panel === "plays"} title="Situations to work on" onClose={() => setPanel(null)}>
+        {panel === "plays" && (
+          <>
+            <PlayPicker selected={practice.plays} onChange={(plays) => save({ plays })} />
+            <button
+              onClick={() => setPanel(null)}
+              className="sticky bottom-0 mt-4 h-14 w-full rounded-xl bg-[#0b1f3a] text-lg font-bold text-white active:bg-[#152f55]"
+            >
+              Done
+            </button>
+          </>
+        )}
       </Sheet>
 
       <Sheet open={panel === "delete"} title="Delete this practice?" onClose={() => setPanel(null)}>

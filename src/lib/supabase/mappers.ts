@@ -7,7 +7,9 @@ import type {
   GameLineup,
   Invite,
   Member,
+  PlayAssignment,
   Practice,
+  QuizResult,
   TeamSummary,
 } from "@/lib/data/types";
 import type {
@@ -16,8 +18,10 @@ import type {
   LineupRow,
   LineupSlotRow,
   MemberRow,
+  PlayAssignmentRow,
   PlayerRow,
   PracticeRow,
+  QuizResultRow,
   SeasonRow,
   TeamRow,
 } from "./rows";
@@ -32,6 +36,8 @@ export interface TeamRows {
   members: MemberRow[];
   invites: InviteRow[];
   practices: PracticeRow[];
+  assignments: PlayAssignmentRow[];
+  quizResults: QuizResultRow[];
   /** The signed-in user. */
   userId: string;
   myTeams: TeamSummary[];
@@ -71,6 +77,7 @@ export function practiceFromRow(r: PracticeRow): Practice {
     notes: r.notes,
     plan: r.plan,
     canceled: r.canceled,
+    plays: r.plays ?? [],
   };
 }
 
@@ -86,6 +93,52 @@ export function practiceToRow(p: Practice): PracticeRow {
     notes: p.notes,
     plan: p.plan,
     canceled: p.canceled,
+    plays: p.plays,
+  };
+}
+
+export function assignmentFromRow(r: PlayAssignmentRow): PlayAssignment {
+  return {
+    id: r.id,
+    title: r.title,
+    playIds: r.play_ids,
+    dueDate: r.due_date,
+    createdAt: r.created_at,
+  };
+}
+
+export function assignmentToRow(a: PlayAssignment, teamId: string): PlayAssignmentRow {
+  return {
+    id: a.id,
+    team_id: teamId,
+    title: a.title,
+    play_ids: a.playIds,
+    due_date: a.dueDate,
+    created_at: a.createdAt,
+  };
+}
+
+export function quizResultFromRow(r: QuizResultRow): QuizResult {
+  return {
+    id: r.id,
+    assignmentId: r.assignment_id,
+    userId: r.user_id,
+    playerId: r.player_id,
+    correct: r.correct,
+    total: r.total,
+    completedAt: r.completed_at,
+  };
+}
+
+export function quizResultToRow(q: QuizResult): QuizResultRow {
+  return {
+    id: q.id,
+    assignment_id: q.assignmentId,
+    user_id: q.userId,
+    player_id: q.playerId,
+    correct: q.correct,
+    total: q.total,
+    completed_at: q.completedAt,
   };
 }
 
@@ -219,6 +272,8 @@ export function appDataFromRows(
     invites: activeInvites(rows.invites, new Date()).map(inviteFromRow),
     myTeams: rows.myTeams,
     practices: rows.practices.map(practiceFromRow),
+    assignments: rows.assignments.map(assignmentFromRow),
+    quizResults: rows.quizResults.map(quizResultFromRow),
     team: {
       id: rows.team.id,
       name: rows.team.name,

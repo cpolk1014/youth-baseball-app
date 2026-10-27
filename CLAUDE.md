@@ -34,6 +34,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Installable on a phone's home screen
 - Practice schedule: build a season of practices (days × dates), each with a focus, a drill plan (starter library or custom, minutes vs. scheduled length), notes, cancel; parents view
 - Import a schedule from a photo, PDF or CSV (Claude reads it; coach reviews before adding practices and games)
+- Plays tab ("Where do I go?"): 57 animated situational plays with every position's job; random quizzes; coaches assign plays as homework to families and see who finished; plays can be added to a practice as situations to work on
 
 **Next up** (roughly in order; the user picks)
 
@@ -56,7 +57,9 @@ Source of truth: `supabase/migrations/`. Summary:
 - player: team_id, name, jersey_number, preferred_positions[], can_pitch, can_catch, active
 - game: season_id, date, start_time, opponent, location, innings, field_players (9 | 10), status (scheduled | final)
 - lineup: game_id, batting_order (player_id[]), not_batting[], absent[], version (saved via `save_lineup`)
-- practice: season_id, practice_date, start_time, end_time, location, focus, notes, plan (JSONB drills), canceled
+- practice: season_id, practice_date, start_time, end_time, location, focus, notes, plan (JSONB drills), canceled, plays (library play ids)
+- play_assignment: team_id, title, play_ids[], due_date (homework; plays live in code, `src/lib/plays/`)
+- quiz_result: assignment_id, user_id, player_id?, correct, total (families see their own; coaches/managers see all)
 - lineup_slot: lineup_id, inning, player_id, position (P, C, 1B, 2B, 3B, SS, LF, CF, RF, LCF, RCF, BENCH)
 
 Participation is **derived** from lineup_slot rows on final games, never stored separately.

@@ -231,6 +231,7 @@ export function ScheduleBuilder({
             notes: null,
             plan: [],
             canceled: false,
+            plays: [],
           })),
         );
       }}

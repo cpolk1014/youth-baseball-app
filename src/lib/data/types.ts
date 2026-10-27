@@ -46,6 +46,30 @@ export interface Practice {
   notes: string | null;
   plan: PlanItem[];
   canceled: boolean;
+  /** Ids of library plays ("situations") to work on at this practice. */
+  plays: string[];
+}
+
+/** Plays a coach assigns to the team's families to watch and quiz on. */
+export interface PlayAssignment {
+  id: string;
+  title: string;
+  playIds: string[];
+  dueDate: string | null; // YYYY-MM-DD
+  createdAt: string;
+}
+
+/** A finished quiz on an assignment. */
+export interface QuizResult {
+  id: string;
+  assignmentId: string;
+  /** The family member who took it. */
+  userId: string;
+  /** Which kid it was for, if they picked one. */
+  playerId: string | null;
+  correct: number;
+  total: number;
+  completedAt: string;
 }
 
 export interface GameLineup extends Lineup {
@@ -96,4 +120,7 @@ export interface AppData {
   games: Game[];
   lineups: Record<string, GameLineup>;
   practices: Practice[];
+  assignments: PlayAssignment[];
+  /** Coaches and managers see everyone's; families see their own. */
+  quizResults: QuizResult[];
 }

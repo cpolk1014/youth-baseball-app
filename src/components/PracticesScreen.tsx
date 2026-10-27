@@ -48,6 +48,7 @@ export function PracticesScreen() {
       notes: null,
       plan: [],
       canceled: false,
+      plays: [],
     });
 
   return (

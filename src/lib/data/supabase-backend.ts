@@ -4,10 +4,12 @@ import type { Lineup, Player } from "@/lib/rules/types";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import {
   appDataFromRows,
+  assignmentToRow,
   gameToRow,
   lineupToRpcArgs,
   playerToRow,
   practiceToRow,
+  quizResultToRow,
   summarizeMyTeams,
 } from "@/lib/supabase/mappers";
 import type { MemberRole } from "./permissions";
@@ -17,12 +19,14 @@ import type {
   LineupRow,
   LineupSlotRow,
   MemberRow,
+  PlayAssignmentRow,
   PlayerRow,
   PracticeRow,
+  QuizResultRow,
   SeasonRow,
   TeamRow,
 } from "@/lib/supabase/rows";
-import type { AppData, Game, GameStatus, Practice } from "./types";
+import type { AppData, Game, GameStatus, PlayAssignment, Practice, QuizResult } from "./types";
 
 export type LoadResult =
   | { kind: "ready"; data: AppData; email: string | null; teamId: string }
@@ -115,9 +119,30 @@ export async function loadFromSupabase(
   const practices = check<PracticeRow[]>(
     await sb
       .from("practice")
-      .select("id,season_id,practice_date,start_time,end_time,location,focus,notes,plan,canceled")
+      .select(
+        "id,season_id,practice_date,start_time,end_time,location,focus,notes,plan,canceled,plays",
+      )
       .eq("season_id", season.id),
   );
+  const assignments = check<PlayAssignmentRow[]>(
+    await sb
+      .from("play_assignment")
+      .select("id,team_id,title,play_ids,due_date,created_at")
+      .eq("team_id", team.id)
+      .order("created_at", { ascending: false }),
+  );
+  // RLS returns everyone's results to coaches and managers, only their own to families.
+  const quizResults = assignments.length
+    ? check<QuizResultRow[]>(
+        await sb
+          .from("quiz_result")
+          .select("id,assignment_id,user_id,player_id,correct,total,completed_at")
+          .in(
+            "assignment_id",
+            assignments.map((a) => a.id),
+          ),
+      )
+    : [];
   const members = check<MemberRow[]>(
     await sb.from("member").select("id,team_id,user_id,role,display_name").eq("team_id", team.id),
   );
@@ -146,6 +171,8 @@ export async function loadFromSupabase(
         members,
         invites,
         practices,
+        assignments,
+        quizResults,
         userId: user?.id ?? "",
         myTeams,
       },
@@ -329,4 +356,16 @@ export async function saveGameRows(games: Game[]): Promise<void> {
 
 export async function deletePracticeRow(practiceId: string): Promise<void> {
   check(await getBrowserSupabase().from("practice").delete().eq("id", practiceId));
+}
+
+export async function saveAssignmentRow(a: PlayAssignment, teamId: string): Promise<void> {
+  check(await getBrowserSupabase().from("play_assignment").upsert(assignmentToRow(a, teamId)));
+}
+
+export async function deleteAssignmentRow(assignmentId: string): Promise<void> {
+  check(await getBrowserSupabase().from("play_assignment").delete().eq("id", assignmentId));
+}
+
+export async function saveQuizResultRow(q: QuizResult): Promise<void> {
+  check(await getBrowserSupabase().from("quiz_result").insert(quizResultToRow(q)));
 }

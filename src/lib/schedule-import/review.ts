@@ -117,6 +117,7 @@ export function toPractice(r: ReviewPractice, seasonId: string): Practice {
     notes: r.note,
     plan: [],
     canceled: false,
+    plays: [],
   };
 }
 
