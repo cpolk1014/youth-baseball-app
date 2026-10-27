@@ -58,7 +58,7 @@ export function PlaysScreen() {
               Assign a few plays for families to watch at home, then quiz on.
             </p>
           )}
-          <ul className="flex flex-col gap-2">
+          <ul className="grid gap-2 md:grid-cols-2">
             {data.assignments.map((a) => {
               const s = homeworkStatus(a, data.quizResults, data.members, data.me.userId);
               const roster = activePlayers(data.players).map((p) => p.id);
@@ -72,7 +72,7 @@ export function PlaysScreen() {
                 <li key={a.id}>
                   <Link
                     href={`/plays/homework/${a.id}`}
-                    className="flex min-h-16 items-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 active:bg-slate-50"
+                    className="flex h-full min-h-16 items-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 active:bg-slate-50"
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-lg font-semibold">{a.title}</span>
@@ -113,12 +113,12 @@ export function PlaysScreen() {
       {PLAY_CATEGORIES.map((c) => (
         <section key={c} className="mb-5">
           <h2 className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">{c}</h2>
-          <ul className="flex flex-col gap-2">
+          <ul className="grid gap-2 md:grid-cols-2">
             {playsIn(c).map((p) => (
               <li key={p.id}>
                 <Link
                   href={`/plays/${p.id}`}
-                  className="flex min-h-14 items-center justify-between gap-2 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 active:bg-slate-50"
+                  className="flex h-full min-h-14 items-center justify-between gap-2 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 active:bg-slate-50"
                 >
                   <span className="min-w-0">
                     <span className="block text-base leading-snug font-semibold">{p.name}</span>

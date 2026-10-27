@@ -97,7 +97,7 @@ export function PracticesScreen() {
             : "No upcoming practices yet."}
         </p>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="grid gap-3 md:grid-cols-2">
           {upcoming.map((p) => (
             <PracticeCard key={p.id} practice={p} />
           ))}
@@ -115,7 +115,7 @@ export function PracticesScreen() {
             <span aria-hidden="true">{showPast ? "Hide" : "Show"}</span>
           </button>
           {showPast && (
-            <ul className="flex flex-col gap-3 opacity-80">
+            <ul className="grid gap-3 opacity-80 md:grid-cols-2">
               {past.map((p) => (
                 <PracticeCard key={p.id} practice={p} />
               ))}
@@ -165,7 +165,7 @@ function PracticeCard({ practice: p }: { practice: Practice }) {
     <li>
       <Link
         href={`/practices/${p.id}`}
-        className={`block rounded-xl border-2 bg-white p-4 active:bg-slate-50 ${
+        className={`block h-full rounded-xl border-2 bg-white p-4 active:bg-slate-50 ${
           p.canceled ? "border-dashed border-slate-300" : "border-slate-200"
         }`}
       >

@@ -129,7 +129,7 @@ function Section({
           {empty}
         </p>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="grid gap-3 md:grid-cols-2">
           {games.map((game) => (
             <GameCard key={game.id} game={game} data={data} />
           ))}
@@ -163,7 +163,7 @@ function GameCard({ game, data }: { game: Game; data: AppData }) {
     <li>
       <Link
         href={`/games/${game.id}`}
-        className="block rounded-xl border-2 border-slate-200 bg-white p-4 active:bg-slate-50"
+        className="block h-full rounded-xl border-2 border-slate-200 bg-white p-4 active:bg-slate-50"
       >
         <p className="text-sm font-semibold text-slate-600">{formatGameDate(game)}</p>
         <p className="mt-0.5 text-xl font-bold">vs {game.opponent}</p>

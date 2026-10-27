@@ -32,7 +32,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Magic-link + code sign-in, invite links, roles (coach / manager / parent read-only), multiple teams with a switcher
 - Parents linked to their kids (parent picks on first open; coaches/managers fix links on Coaches & parents); homework uses the links
 - Option a team (archive, read-only, "Call Up" to restore); delete only optioned teams
-- Installable on a phone's home screen
+- Installable on a phone's home screen; responsive layout (phone: bottom tabs; tablet: two-column lists, centered dialogs; desktop: side menu)
 - Practice schedule: build a season of practices (days × dates), each with a focus, a drill plan (starter library or custom, minutes vs. scheduled length), notes, cancel; parents view
 - Import a schedule from a photo, PDF or CSV (Claude reads it; coach reviews before adding practices and games)
 - Plays tab ("Where do I go?"): 57 animated situational plays with every position's job; random quizzes; coaches assign plays as homework to families and see who finished; plays can be added to a practice as situations to work on
@@ -89,7 +89,7 @@ An auto-generate function proposes a full valid lineup satisfying all `block` ru
 - Server-side data access through Supabase with RLS; never trust the client for team membership.
 - All secrets in env vars; never commit keys. `.env.example` lists every variable.
 - Small, focused commits. Run typecheck, lint and tests before saying a task is done.
-- Mobile-first UI; check every screen at 375px width.
+- Mobile-first UI; check every screen at 375px width, and at tablet (768px) and desktop (1440px) for layout changes.
 - Ask before adding a new dependency that isn't in the stack above.
 
 ## Youth safety (non-negotiable)

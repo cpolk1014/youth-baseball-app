@@ -30,7 +30,8 @@ export function Sheet({
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center">
+    // Phones: a sheet from the bottom. Tablets and up: a centered dialog.
+    <div className="fixed inset-0 z-40 flex items-end justify-center md:items-center md:p-6">
       <button aria-label="Close" className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div
         ref={panel}
@@ -38,9 +39,9 @@ export function Sheet({
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="relative max-h-[88dvh] w-full max-w-xl overflow-y-auto rounded-t-2xl bg-white px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl outline-none"
+        className="relative max-h-[88dvh] w-full max-w-xl overflow-y-auto rounded-t-2xl bg-white px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl outline-none md:max-h-[85dvh] md:max-w-lg md:rounded-2xl md:px-6 md:pt-5 md:pb-6"
       >
-        <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-slate-300" />
+        <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-slate-300 md:hidden" />
         <div className="mb-3 flex items-center justify-between gap-2">
           <h2 className="text-xl font-bold">{title}</h2>
           <button

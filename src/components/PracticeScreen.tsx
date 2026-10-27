@@ -212,12 +212,12 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
               : "None picked."}
           </p>
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="grid gap-2 md:grid-cols-2">
             {situations.map((p) => (
               <li key={p.id}>
                 <Link
                   href={`/plays/${p.id}`}
-                  className="flex min-h-14 items-center justify-between gap-2 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 active:bg-slate-50"
+                  className="flex h-full min-h-14 items-center justify-between gap-2 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 active:bg-slate-50"
                 >
                   <span className="min-w-0">
                     <span className="block text-base leading-snug font-semibold">{p.name}</span>

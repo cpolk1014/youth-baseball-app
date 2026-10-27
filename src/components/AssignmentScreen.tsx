@@ -133,12 +133,12 @@ export function AssignmentScreen({ assignmentId }: { assignmentId: string }) {
         <h2 className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">
           Plays to watch
         </h2>
-        <ol className="flex flex-col gap-2">
+        <ol className="grid gap-2 md:grid-cols-2">
           {plays.map((p, i) => (
             <li key={p.id}>
               <Link
                 href={`/plays/${p.id}`}
-                className="flex min-h-14 items-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 active:bg-slate-50"
+                className="flex h-full min-h-14 items-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 active:bg-slate-50"
               >
                 <span className="w-6 shrink-0 text-base font-bold text-slate-500">{i + 1}</span>
                 <span className="min-w-0 flex-1">

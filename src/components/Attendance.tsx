@@ -29,7 +29,7 @@ export function Attendance({
           ? ""
           : "Absent players are left out of the field and batting order for this game only."}
       </p>
-      <ul className="flex flex-col gap-2">
+      <ul className="grid gap-2 md:grid-cols-2">
         {roster.map((p) => {
           const isAway = away.has(p.id);
           return (

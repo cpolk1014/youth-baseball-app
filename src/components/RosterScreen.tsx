@@ -95,7 +95,7 @@ export function RosterScreen() {
         />
       </div>
 
-      <ul className="flex flex-col gap-2">
+      <ul className="grid gap-2 md:grid-cols-2">
         {active.map((p) => (
           <PlayerRow key={p.id} player={p} onClick={canEdit ? () => setEditing(p) : undefined} />
         ))}
@@ -106,7 +106,7 @@ export function RosterScreen() {
           <h2 className="mt-6 mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">
             Inactive
           </h2>
-          <ul className="flex flex-col gap-2 opacity-60">
+          <ul className="grid gap-2 opacity-60 md:grid-cols-2">
             {inactive.map((p) => (
               <PlayerRow
                 key={p.id}
@@ -156,7 +156,7 @@ function PlayerRow({ player, onClick }: { player: Player; onClick?: () => void }
     <li>
       <Tag
         onClick={onClick}
-        className={`flex min-h-16 w-full items-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-left ${onClick ? "active:bg-slate-50" : ""}`}
+        className={`flex h-full min-h-16 w-full items-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-left ${onClick ? "active:bg-slate-50" : ""}`}
       >
         <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#0b1f3a] text-lg font-bold text-white">
           {player.jerseyNumber ?? "–"}

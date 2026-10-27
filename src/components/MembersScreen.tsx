@@ -133,7 +133,7 @@ export function MembersScreen() {
         <h2 className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">
           On the team ({members.length})
         </h2>
-        <ul className="flex flex-col gap-2">
+        <ul className="grid gap-2 md:grid-cols-2">
           {members.map((m) => {
             const isMe = m.userId === data.me.userId;
             const kids = kidsOf(data, m.userId);
