@@ -30,6 +30,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Season participation grid (summary and by position), fair to players who miss games
 - Printable lineup card (half sheet ×2, full letter)
 - Magic-link + code sign-in, invite links, roles (coach / manager / parent read-only), multiple teams with a switcher
+- Parents linked to their kids (parent picks on first open; coaches/managers fix links on Coaches & parents); homework uses the links
 - Option a team (archive, read-only, "Call Up" to restore); delete only optioned teams
 - Installable on a phone's home screen
 - Practice schedule: build a season of practices (days × dates), each with a focus, a drill plan (starter library or custom, minutes vs. scheduled length), notes, cancel; parents view
@@ -53,6 +54,7 @@ Source of truth: `supabase/migrations/`. Summary:
 - team: name, age_group, colors, groupme_group_id, coach_pitch, optioned_at (archived; delete only when set)
 - season: team_id, name, start/end, fair_play_rules (JSONB, RuleConfig overrides)
 - member: team_id, user_id, role (coach | manager | treasurer | parent), display_name (no emails stored)
+- player_guardian: player_id, user_id (parent ↔ kid links; families see their own, coaches/managers all; dropped when the member leaves)
 - invite: team_id, role, token, expires_at, max_uses, uses, revoked_at (coach-only; joined via `accept_invite`)
 - player: team_id, name, jersey_number, preferred_positions[], can_pitch, can_catch, active
 - game: season_id, date, start_time, opponent, location, innings, field_players (9 | 10), status (scheduled | final)

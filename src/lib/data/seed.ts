@@ -80,4 +80,5 @@ export const SEED_DATA: AppData = {
   practices: [],
   assignments: [],
   quizResults: [],
+  guardians: [],
 };

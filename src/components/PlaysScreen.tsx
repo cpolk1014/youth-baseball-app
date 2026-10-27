@@ -5,7 +5,8 @@ import Link from "next/link";
 import { permissionsFor } from "@/lib/data/permissions";
 import { newId, saveAssignment, useAppData } from "@/lib/data/store";
 import type { PlayAssignment } from "@/lib/data/types";
-import { formatDue, homeworkStatus } from "@/lib/plays/homework";
+import { formatDue, homeworkStatus, playersDone } from "@/lib/plays/homework";
+import { activePlayers } from "@/lib/lineup/edit";
 import { PLAYS, playsIn } from "@/lib/plays/library";
 import { PLAY_CATEGORIES } from "@/lib/plays/types";
 import { AppShell, Loading } from "./AppShell";
@@ -60,6 +61,13 @@ export function PlaysScreen() {
           <ul className="flex flex-col gap-2">
             {data.assignments.map((a) => {
               const s = homeworkStatus(a, data.quizResults, data.members, data.me.userId);
+              const roster = activePlayers(data.players).map((p) => p.id);
+              const progress =
+                data.guardians.length > 0
+                  ? `${playersDone(s, roster, data.guardians).size} of ${roster.length}\nplayers`
+                  : s.families > 0
+                    ? `${s.familiesDone} of ${s.families}\nfamilies`
+                    : `${s.results.length} taken`;
               return (
                 <li key={a.id}>
                   <Link
@@ -75,9 +83,7 @@ export function PlaysScreen() {
                     </span>
                     {coachView ? (
                       <span className="shrink-0 text-right text-sm font-bold whitespace-pre-line text-slate-700">
-                        {s.families > 0
-                          ? `${s.familiesDone} of ${s.families}\nfamilies`
-                          : `${s.results.length} taken`}
+                        {progress}
                       </span>
                     ) : s.myBest ? (
                       <span className="shrink-0 rounded-lg bg-green-700 px-2 py-1 text-sm font-bold text-white">

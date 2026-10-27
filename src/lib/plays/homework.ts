@@ -1,4 +1,4 @@
-import type { Member, PlayAssignment, QuizResult } from "@/lib/data/types";
+import type { Guardian, Member, PlayAssignment, QuizResult } from "@/lib/data/types";
 
 export interface HomeworkStatus {
   /** Parent accounts that have finished at least one quiz on it. */
@@ -33,6 +33,28 @@ export function homeworkStatus(
 export function familiesNotDone(status: HomeworkStatus, members: Member[]): Member[] {
   const done = new Set(status.results.map((r) => r.userId));
   return members.filter((m) => m.role === "parent" && !done.has(m.userId));
+}
+
+/**
+ * Players who have finished it: a result taken for them, or by one of their linked parents
+ * without picking a kid.
+ */
+export function playersDone(
+  status: HomeworkStatus,
+  playerIds: string[],
+  guardians: Guardian[],
+): Set<string> {
+  const done = new Set<string>();
+  for (const r of status.results) {
+    if (r.playerId) done.add(r.playerId);
+    else for (const g of guardians) if (g.userId === r.userId) done.add(g.playerId);
+  }
+  return new Set(playerIds.filter((id) => done.has(id)));
+}
+
+/** The kid a parent's quiz is for by default: their only linked kid, if exactly one. */
+export function defaultKid(myKidIds: string[]): string {
+  return myKidIds.length === 1 ? myKidIds[0]! : "";
 }
 
 /** "Due Tue, Nov 10" (dates are plain YYYY-MM-DD, no time zone). */

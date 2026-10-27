@@ -504,4 +504,50 @@ do $$ begin
 exception when insufficient_privilege then raise notice 'ok: outsiders cannot record results';
 end $$;
 reset role;
+-- ── parent ↔ player links ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000004', false);
+insert into public.player_guardian (player_id, user_id) values
+  ('00000000-0000-4000-8000-000000001001', 'aaaaaaaa-0000-4000-8000-000000000004'),
+  ('00000000-0000-4000-8000-000000001002', 'aaaaaaaa-0000-4000-8000-000000000004');
+select pg_temp.expect((select count(*) from public.player_guardian) = 2, 'a parent links themselves to two kids');
+do $$ begin
+  insert into public.player_guardian (player_id, user_id) values
+    ('00000000-0000-4000-8000-000000001003', 'aaaaaaaa-0000-4000-8000-000000000002');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot link other people';
+end $$;
+delete from public.player_guardian where player_id = '00000000-0000-4000-8000-000000001002';
+select pg_temp.expect((select count(*) from public.player_guardian) = 1, 'a parent unlinks themselves');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+insert into public.player_guardian (player_id, user_id) values
+  ('00000000-0000-4000-8000-000000001003', 'aaaaaaaa-0000-4000-8000-000000000002');
+select pg_temp.expect((select count(*) from public.player_guardian) = 2, 'coach links a parent and sees every link');
+do $$ begin
+  insert into public.player_guardian (player_id, user_id) values
+    ('00000000-0000-4000-8000-000000001003', 'aaaaaaaa-0000-4000-8000-000000000003');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: coach cannot link someone off the team';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from public.player_guardian) = 1, 'parents see only their own links');
+delete from public.player_guardian where user_id = 'aaaaaaaa-0000-4000-8000-000000000004';
+reset role;
+select pg_temp.expect((select count(*) from public.player_guardian where user_id = 'aaaaaaaa-0000-4000-8000-000000000004') = 1, 'parents cannot unlink other families');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.player_guardian) = 0, 'outsiders see no links');
+do $$ begin
+  insert into public.player_guardian (player_id, user_id) values
+    ('00000000-0000-4000-8000-000000001001', 'aaaaaaaa-0000-4000-8000-000000000003');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: outsiders cannot link themselves to a kid';
+end $$;
+reset role;
+delete from public.member where user_id = 'aaaaaaaa-0000-4000-8000-000000000004' and team_id = '00000000-0000-4000-8000-000000000001';
+select pg_temp.expect((select count(*) from public.player_guardian where user_id = 'aaaaaaaa-0000-4000-8000-000000000004') = 0, 'leaving the team drops a parent''s links');
 \echo ALL RLS TESTS PASSED

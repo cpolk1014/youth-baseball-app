@@ -11,6 +11,7 @@ import {
   useAppData,
   useStoreState,
 } from "@/lib/data/store";
+import { KidsPrompt } from "./KidPicker";
 
 const AGE_GROUPS = ["7U", "8U", "9U", "10U", "11U", "12U", "13U", "14U"];
 
@@ -81,6 +82,7 @@ export function DataStatus({ children }: { children: ReactNode }) {
           )}
         </div>
       )}
+      <KidsPrompt />
       {children}
     </>
   );

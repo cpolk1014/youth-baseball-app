@@ -11,6 +11,7 @@ import type {
   Game,
   GameLineup,
   GameStatus,
+  Guardian,
   PlayAssignment,
   Practice,
   QuizResult,
@@ -132,6 +133,7 @@ function upgradeLocalData(d: AppData): AppData {
     practices: (d.practices ?? []).map((p) => ({ ...p, plays: p.plays ?? [] })),
     assignments: d.assignments ?? [],
     quizResults: d.quizResults ?? [],
+    guardians: d.guardians ?? [],
     myTeams: (
       d.myTeams ?? [
         {
@@ -438,13 +440,44 @@ export function recordQuizResult(result: Omit<QuizResult, "id" | "userId" | "com
   const full: QuizResult = {
     ...result,
     id: newId(),
-    userId: data?.me.userId ?? "local",
+    userId: data ? myUserId(data) : "local",
     completedAt: new Date().toISOString(),
   };
   update(
     (d) => ({ ...d, quizResults: [...d.quizResults, full] }),
     async () => (await remote()).saveQuizResultRow(full),
   );
+}
+
+/** The signed-in user's id, or "local" without Supabase. */
+export function myUserId(d: AppData): string {
+  return d.me.userId ?? "local";
+}
+
+/** Set which kids a team member is the parent of (saved and awaited as one batch). */
+export async function setKidsFor(userId: string, playerIds: string[]): Promise<void> {
+  const current = data!.guardians.filter((g) => g.userId === userId);
+  const remove = current.filter((g) => !playerIds.includes(g.playerId));
+  const add: Guardian[] = playerIds
+    .filter((id) => !current.some((g) => g.playerId === id))
+    .map((playerId) => ({ id: newId(), playerId, userId }));
+  if (remove.length === 0 && add.length === 0) return;
+  update((d) => ({
+    ...d,
+    guardians: [...d.guardians.filter((g) => !remove.includes(g)), ...add],
+  }));
+  if (state.mode !== "supabase") return;
+  try {
+    await enqueue(async () =>
+      (await remote()).saveGuardianChanges(
+        remove.map((g) => g.id),
+        add,
+      ),
+    );
+  } catch (e) {
+    await loadRemote();
+    throw e;
+  }
 }
 
 /** Coach: option the current team (archive it, read-only) or call it back up. */

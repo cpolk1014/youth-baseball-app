@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Member, PlayAssignment, QuizResult } from "@/lib/data/types";
-import { familiesNotDone, formatDue, homeworkStatus, quizLength } from "./homework";
+import {
+  defaultKid,
+  familiesNotDone,
+  formatDue,
+  homeworkStatus,
+  playersDone,
+  quizLength,
+} from "./homework";
 
 const assignment: PlayAssignment = {
   id: "a1",
@@ -55,5 +62,26 @@ describe("homework status", () => {
     expect(quizLength(1)).toBe(5);
     expect(quizLength(4)).toBe(8);
     expect(quizLength(30)).toBe(10);
+  });
+
+  it("counts players done, directly or through a linked parent", () => {
+    const withKid = { ...result("p1", 4, "1"), playerId: "leo" };
+    const noKid = result("p2", 4, "2");
+    const s = homeworkStatus(assignment, [withKid, noKid], members, "coach");
+    const guardians = [
+      { id: "g1", playerId: "ava", userId: "p2" },
+      { id: "g2", playerId: "max", userId: "p2" },
+    ];
+    expect([...playersDone(s, ["leo", "ava", "max", "sam"], guardians)]).toEqual([
+      "leo",
+      "ava",
+      "max",
+    ]);
+  });
+
+  it("defaults the quiz to a parent's only kid", () => {
+    expect(defaultKid(["leo"])).toBe("leo");
+    expect(defaultKid(["leo", "ava"])).toBe("");
+    expect(defaultKid([])).toBe("");
   });
 });

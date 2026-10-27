@@ -127,6 +127,7 @@ describe("supabase mappers", () => {
           completed_at: "2026-11-02T00:00:00Z",
         },
       ],
+      guardians: [{ id: "pg1", player_id: "p", user_id: "me" }],
       userId: "me",
       myTeams: [],
     };
@@ -158,6 +159,7 @@ describe("supabase mappers", () => {
     expect(practiceToRow(data.practices[0]!).start_time).toBe("18:00");
     expect(data.practices[0]?.plays).toEqual(["rundown"]);
     expect(data.assignments[0]).toMatchObject({ title: "Bunts", playIds: ["bunt-pitcher"] });
+    expect(data.guardians).toEqual([{ id: "pg1", playerId: "p", userId: "me" }]);
     expect(data.quizResults[0]).toMatchObject({ assignmentId: "a1", correct: 3, total: 5 });
     expect(data.members.map((m) => m.displayName)).toEqual(["Sam's mom", null, "Leo's dad"]);
   });

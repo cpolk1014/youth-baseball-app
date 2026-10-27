@@ -109,3 +109,9 @@ export interface LineupSlotRow {
   player_id: string;
   position: Position;
 }
+
+export interface PlayerGuardianRow {
+  id: string;
+  player_id: string;
+  user_id: string;
+}

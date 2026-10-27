@@ -4,11 +4,26 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { permissionsFor } from "@/lib/data/permissions";
-import { deleteAssignment, recordQuizResult, saveAssignment, useAppData } from "@/lib/data/store";
-import { familiesNotDone, formatDue, homeworkStatus, quizLength } from "@/lib/plays/homework";
+import {
+  deleteAssignment,
+  myUserId,
+  recordQuizResult,
+  saveAssignment,
+  useAppData,
+} from "@/lib/data/store";
+import { activePlayers } from "@/lib/lineup/edit";
+import {
+  defaultKid,
+  familiesNotDone,
+  formatDue,
+  homeworkStatus,
+  playersDone,
+  quizLength,
+} from "@/lib/plays/homework";
 import { playsFor } from "@/lib/plays/library";
 import { AppShell, Loading } from "./AppShell";
 import { AssignForm } from "./AssignForm";
+import { kidsOf } from "./KidPicker";
 import { QuizButton, firstNames } from "./QuizButton";
 import { Sheet } from "./Sheet";
 
@@ -16,7 +31,8 @@ export function AssignmentScreen({ assignmentId }: { assignmentId: string }) {
   const data = useAppData();
   const router = useRouter();
   const [panel, setPanel] = useState<"edit" | "delete" | null>(null);
-  const [kidId, setKidId] = useState("");
+  // null until the parent picks; then the default (their only linked kid) no longer applies.
+  const [pickedKid, setPickedKid] = useState<string | null>(null);
 
   if (!data) {
     return (
@@ -38,8 +54,18 @@ export function AssignmentScreen({ assignmentId }: { assignmentId: string }) {
   const coachView = data.me.role === "coach" || data.me.role === "manager";
   const plays = playsFor(assignment.playIds);
   const status = homeworkStatus(assignment, data.quizResults, data.members, data.me.userId);
-  const kids = data.players.filter((p) => p.active !== false);
+  // A parent picks among their own kids; anyone without links picks from the roster.
+  const myKids = kidsOf(data, myUserId(data));
+  const kids = myKids.length > 0 ? myKids : activePlayers(data.players);
+  const kidId = pickedKid ?? defaultKid(myKids.map((p) => p.id));
   const kid = kids.find((p) => p.id === kidId);
+  const roster = activePlayers(data.players);
+  const linked = data.guardians.length > 0;
+  const done = playersDone(
+    status,
+    roster.map((p) => p.id),
+    data.guardians,
+  );
   const nameOf = (userId: string) =>
     data.members.find((m) => m.userId === userId)?.displayName ?? "A parent";
   const kidName = (playerId: string | null) =>
@@ -62,12 +88,17 @@ export function AssignmentScreen({ assignmentId }: { assignmentId: string }) {
             ✓ Done. Best score: {status.myBest.correct} of {status.myBest.total}
           </p>
         )}
-        {kids.length > 0 && (
+        {kids.length === 1 && kid && (
+          <p className="mt-3 text-base">
+            Quiz is for <strong>{kid.name}</strong>
+          </p>
+        )}
+        {kids.length > 1 && (
           <label className="mt-3 flex flex-col gap-1">
             <span className="text-base font-semibold">Who&apos;s taking the quiz?</span>
             <select
               value={kidId}
-              onChange={(e) => setKidId(e.target.value)}
+              onChange={(e) => setPickedKid(e.target.value)}
               className="h-12 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg"
             >
               <option value="">Pick a player</option>
@@ -127,7 +158,9 @@ export function AssignmentScreen({ assignmentId }: { assignmentId: string }) {
         <section className="mb-5">
           <h2 className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">
             Results
-            {status.families > 0 && ` · ${status.familiesDone} of ${status.families} families`}
+            {linked
+              ? ` · ${done.size} of ${roster.length} players`
+              : status.families > 0 && ` · ${status.familiesDone} of ${status.families} families`}
           </h2>
           {status.results.length === 0 ? (
             <p className="rounded-xl border-2 border-slate-200 bg-white p-4 text-base text-slate-700">
@@ -150,7 +183,16 @@ export function AssignmentScreen({ assignmentId }: { assignmentId: string }) {
               ))}
             </ul>
           )}
-          {status.families > status.familiesDone && (
+          {linked && done.size < roster.length && (
+            <p className="mt-2 text-base text-slate-700">
+              <strong>Not done yet:</strong>{" "}
+              {roster
+                .filter((p) => !done.has(p.id))
+                .map((p) => p.name)
+                .join(", ")}
+            </p>
+          )}
+          {!linked && status.families > status.familiesDone && (
             <p className="mt-2 text-base text-slate-700">
               <strong>Not done yet:</strong>{" "}
               {familiesNotDone(status, data.members)

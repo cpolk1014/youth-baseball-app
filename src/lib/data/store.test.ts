@@ -10,6 +10,7 @@ import {
   recordQuizResult,
   resetLocalData,
   saveAssignment,
+  setKidsFor,
   saveGame,
   saveLineup,
   savePractice,
@@ -123,5 +124,17 @@ describe("store game actions", () => {
     deleteAssignment("as1");
     expect(getAppData().assignments).toEqual([]);
     expect(getAppData().quizResults).toEqual([]);
+  });
+
+  it("links a parent to kids, changing only what changed", async () => {
+    await setKidsFor("mom", ["a", "b"]);
+    const first = getAppData().guardians;
+    expect(first.map((g) => g.playerId)).toEqual(["a", "b"]);
+    await setKidsFor("mom", ["b", "c"]);
+    const next = getAppData().guardians;
+    expect(next.map((g) => g.playerId)).toEqual(["b", "c"]);
+    expect(next[0]?.id).toBe(first[1]?.id);
+    await setKidsFor("dad", ["a"]);
+    expect(getAppData().guardians).toHaveLength(3);
   });
 });

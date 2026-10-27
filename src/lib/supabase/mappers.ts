@@ -19,6 +19,7 @@ import type {
   LineupSlotRow,
   MemberRow,
   PlayAssignmentRow,
+  PlayerGuardianRow,
   PlayerRow,
   PracticeRow,
   QuizResultRow,
@@ -38,6 +39,7 @@ export interface TeamRows {
   practices: PracticeRow[];
   assignments: PlayAssignmentRow[];
   quizResults: QuizResultRow[];
+  guardians: PlayerGuardianRow[];
   /** The signed-in user. */
   userId: string;
   myTeams: TeamSummary[];
@@ -274,6 +276,7 @@ export function appDataFromRows(
     practices: rows.practices.map(practiceFromRow),
     assignments: rows.assignments.map(assignmentFromRow),
     quizResults: rows.quizResults.map(quizResultFromRow),
+    guardians: rows.guardians.map((g) => ({ id: g.id, playerId: g.player_id, userId: g.user_id })),
     team: {
       id: rows.team.id,
       name: rows.team.name,

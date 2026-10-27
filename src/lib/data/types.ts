@@ -50,6 +50,13 @@ export interface Practice {
   plays: string[];
 }
 
+/** A parent (team member) linked to one of the team's kids. */
+export interface Guardian {
+  id: string;
+  playerId: string;
+  userId: string;
+}
+
 /** Plays a coach assigns to the team's families to watch and quiz on. */
 export interface PlayAssignment {
   id: string;
@@ -123,4 +130,6 @@ export interface AppData {
   assignments: PlayAssignment[];
   /** Coaches and managers see everyone's; families see their own. */
   quizResults: QuizResult[];
+  /** Parent ↔ kid links. Coaches and managers see all; families see their own. */
+  guardians: Guardian[];
 }

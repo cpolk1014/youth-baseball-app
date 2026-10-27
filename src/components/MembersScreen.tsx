@@ -16,6 +16,7 @@ import {
 } from "@/lib/data/store";
 import type { Invite, Member } from "@/lib/data/types";
 import { AppShell, Loading } from "./AppShell";
+import { KidsForm, kidsOf } from "./KidPicker";
 import { Sheet } from "./Sheet";
 
 const INVITE_ROLES: { role: MemberRole; label: string; hint: string }[] = [
@@ -49,6 +50,7 @@ export function MembersScreen() {
   const [deleting, setDeleting] = useState(false);
   const [optioning, setOptioning] = useState(false);
   const [confirmName, setConfirmName] = useState("");
+  const [kidsFor, setKidsForMember] = useState<Member | null>(null);
 
   if (!data) {
     return (
@@ -122,7 +124,7 @@ export function MembersScreen() {
           </div>
           <p className="mt-2 text-sm text-slate-600">
             You get a link to share in GroupMe, a text or an email. People open it, sign in with
-            their email and type their name.
+            their email, type their name and pick their player.
           </p>
         </section>
       )}
@@ -134,6 +136,9 @@ export function MembersScreen() {
         <ul className="flex flex-col gap-2">
           {members.map((m) => {
             const isMe = m.userId === data.me.userId;
+            const kids = kidsOf(data, m.userId);
+            // Coaches and managers link anyone; everyone can set their own.
+            const canLink = !data.team.optionedAt && (perms.editTeam || isMe);
             return (
               <li
                 key={m.id}
@@ -147,7 +152,25 @@ export function MembersScreen() {
                     )}
                   </span>
                   {!perms.manageMembers && (
-                    <span className="text-sm text-slate-600">{ROLE_LABEL[m.role]}</span>
+                    <span className="block text-sm text-slate-600">{ROLE_LABEL[m.role]}</span>
+                  )}
+                  {(kids.length > 0 || canLink) && (
+                    <span className="block text-sm text-slate-600">
+                      {kids.length > 0
+                        ? `Parent of ${kids.map((p) => p.name).join(", ")}`
+                        : "No player linked"}
+                      {canLink && (
+                        <>
+                          {" · "}
+                          <button
+                            onClick={() => setKidsForMember(m)}
+                            className="font-semibold text-[#0b1f3a] underline"
+                          >
+                            {kids.length > 0 ? "Change" : "Pick player"}
+                          </button>
+                        </>
+                      )}
+                    </span>
                   )}
                 </span>
                 {perms.manageMembers ? (
@@ -238,6 +261,20 @@ export function MembersScreen() {
           Delete this team
         </button>
       )}
+
+      <Sheet
+        open={kidsFor !== null}
+        title={kidsFor ? `${nameOf(kidsFor)}: parent of` : "Players"}
+        onClose={() => setKidsForMember(null)}
+      >
+        {kidsFor && (
+          <KidsForm
+            key={kidsFor.id}
+            userId={kidsFor.userId}
+            onDone={() => setKidsForMember(null)}
+          />
+        )}
+      </Sheet>
 
       <Sheet open={optioning} title="Option this team?" onClose={() => setOptioning(false)}>
         <div className="flex flex-col gap-4">

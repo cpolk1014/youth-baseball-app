@@ -20,13 +20,22 @@ import type {
   LineupSlotRow,
   MemberRow,
   PlayAssignmentRow,
+  PlayerGuardianRow,
   PlayerRow,
   PracticeRow,
   QuizResultRow,
   SeasonRow,
   TeamRow,
 } from "@/lib/supabase/rows";
-import type { AppData, Game, GameStatus, PlayAssignment, Practice, QuizResult } from "./types";
+import type {
+  AppData,
+  Game,
+  GameStatus,
+  Guardian,
+  PlayAssignment,
+  Practice,
+  QuizResult,
+} from "./types";
 
 export type LoadResult =
   | { kind: "ready"; data: AppData; email: string | null; teamId: string }
@@ -143,6 +152,18 @@ export async function loadFromSupabase(
           ),
       )
     : [];
+  // RLS returns every link to coaches and managers, only their own to families.
+  const guardians = players.length
+    ? check<PlayerGuardianRow[]>(
+        await sb
+          .from("player_guardian")
+          .select("id,player_id,user_id")
+          .in(
+            "player_id",
+            players.map((p) => p.id),
+          ),
+      )
+    : [];
   const members = check<MemberRow[]>(
     await sb.from("member").select("id,team_id,user_id,role,display_name").eq("team_id", team.id),
   );
@@ -173,6 +194,7 @@ export async function loadFromSupabase(
         practices,
         assignments,
         quizResults,
+        guardians,
         userId: user?.id ?? "",
         myTeams,
       },
@@ -368,4 +390,17 @@ export async function deleteAssignmentRow(assignmentId: string): Promise<void> {
 
 export async function saveQuizResultRow(q: QuizResult): Promise<void> {
   check(await getBrowserSupabase().from("quiz_result").insert(quizResultToRow(q)));
+}
+
+/** Remove and add parent ↔ kid links in one go. */
+export async function saveGuardianChanges(remove: string[], add: Guardian[]): Promise<void> {
+  const sb = getBrowserSupabase();
+  if (remove.length) check(await sb.from("player_guardian").delete().in("id", remove));
+  if (add.length) {
+    check(
+      await sb
+        .from("player_guardian")
+        .insert(add.map((g) => ({ id: g.id, player_id: g.playerId, user_id: g.userId }))),
+    );
+  }
 }
