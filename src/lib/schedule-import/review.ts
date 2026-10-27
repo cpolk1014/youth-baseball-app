@@ -5,6 +5,8 @@ import type { ScheduleExtraction } from "./schema";
 
 export interface ReviewPractice {
   key: string;
+  /** Assigned once, so a retried save updates the same row instead of duplicating it. */
+  id: string;
   date: string;
   startTime: string | null;
   endTime: string | null;
@@ -16,6 +18,7 @@ export interface ReviewPractice {
 
 export interface ReviewGame {
   key: string;
+  id: string;
   date: string;
   startTime: string | null;
   opponent: string | null;
@@ -50,6 +53,7 @@ export function buildImportReview(
   extraction: ScheduleExtraction,
   existingPractices: Pick<Practice, "date" | "startTime">[],
   existingGames: Pick<Game, "date">[],
+  makeId: () => string = () => crypto.randomUUID(),
 ): ImportReview {
   let skipped = 0;
   const practiceKeys = new Set(existingPractices.map((p) => `${p.date}|${p.startTime ?? ""}`));
@@ -64,6 +68,7 @@ export function buildImportReview(
       const duplicate = practiceKeys.has(`${p.date}|${startTime ?? ""}`);
       return {
         key: `p${i}`,
+        id: makeId(),
         date: p.date,
         startTime,
         endTime,
@@ -84,6 +89,7 @@ export function buildImportReview(
       const duplicate = gameDates.has(g.date);
       return {
         key: `g${i}`,
+        id: makeId(),
         date: g.date,
         startTime: time(g.start_time),
         opponent: clean(g.opponent),
@@ -99,9 +105,9 @@ export function buildImportReview(
   return { practices, games, warnings: extraction.warnings.filter((w) => w.trim()), skipped };
 }
 
-export function toPractice(r: ReviewPractice, seasonId: string, id: string): Practice {
+export function toPractice(r: ReviewPractice, seasonId: string): Practice {
   return {
-    id,
+    id: r.id,
     seasonId,
     date: r.date,
     startTime: r.startTime,
@@ -116,10 +122,10 @@ export function toPractice(r: ReviewPractice, seasonId: string, id: string): Pra
 
 export function toGame(
   r: ReviewGame,
-  { seasonId, id, fieldPlayers }: { seasonId: string; id: string; fieldPlayers: 9 | 10 },
+  { seasonId, fieldPlayers }: { seasonId: string; fieldPlayers: 9 | 10 },
 ): Game {
   return {
-    id,
+    id: r.id,
     seasonId,
     date: r.date,
     startTime: r.startTime,

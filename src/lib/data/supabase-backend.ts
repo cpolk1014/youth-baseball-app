@@ -318,7 +318,13 @@ export async function deleteTeamRow(teamId: string): Promise<void> {
 }
 
 export async function savePracticeRows(practices: Practice[]): Promise<void> {
+  if (practices.length === 0) return;
   check(await getBrowserSupabase().from("practice").upsert(practices.map(practiceToRow)));
+}
+
+export async function saveGameRows(games: Game[]): Promise<void> {
+  if (games.length === 0) return;
+  check(await getBrowserSupabase().from("game").upsert(games.map(gameToRow)));
 }
 
 export async function deletePracticeRow(practiceId: string): Promise<void> {

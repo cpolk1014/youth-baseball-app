@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { defaultFieldPlayers } from "@/lib/data/game";
-import { addPractices, newId, saveGame } from "@/lib/data/store";
+import { importSchedule } from "@/lib/data/store";
 import type { AppData } from "@/lib/data/types";
 import { formatPracticeWhen } from "@/lib/practice/format";
 import {
@@ -160,12 +160,27 @@ function ReviewList({
   const pickedGames = games.filter((g) => g.selected);
   const total = pickedPractices.length + pickedGames.length;
 
-  const add = () => {
-    addPractices(pickedPractices.map((p) => toPractice(p, data.season.id, newId())));
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Wait until everything is stored before saying it's added; on failure keep the list so
+  // the coach can retry (rows keep their ids, so a retry can't duplicate anything).
+  const add = async () => {
+    setSaving(true);
+    setSaveError(null);
     const fieldPlayers = defaultFieldPlayers(data.team.coachPitch);
-    for (const g of pickedGames)
-      saveGame(toGame(g, { seasonId: data.season.id, id: newId(), fieldPlayers }));
-    onAdded(pickedPractices.length, pickedGames.length);
+    try {
+      await importSchedule(
+        pickedPractices.map((p) => toPractice(p, data.season.id)),
+        pickedGames.map((g) => toGame(g, { seasonId: data.season.id, fieldPlayers })),
+      );
+      onAdded(pickedPractices.length, pickedGames.length);
+    } catch (e) {
+      setSaveError(
+        `Couldn't save everything (${e instanceof Error ? e.message : String(e)}). Check your connection and tap Add again.`,
+      );
+      setSaving(false);
+    }
   };
 
   if (practices.length === 0 && games.length === 0) {
@@ -249,19 +264,26 @@ function ReviewList({
         </ReviewSection>
       )}
 
+      {saveError && (
+        <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">
+          {saveError}
+        </p>
+      )}
+
       <div className="sticky bottom-0 -mx-4 flex gap-3 bg-white px-4 pt-2 pb-1">
         <button
           onClick={onBack}
-          className="h-14 flex-1 rounded-xl border-2 border-slate-400 text-lg font-bold active:bg-slate-100"
+          disabled={saving}
+          className="h-14 flex-1 rounded-xl border-2 border-slate-400 text-lg font-bold active:bg-slate-100 disabled:opacity-40"
         >
           Back
         </button>
         <button
-          onClick={add}
-          disabled={total === 0}
+          onClick={() => void add()}
+          disabled={total === 0 || saving}
           className="h-14 flex-[2] rounded-xl bg-green-700 text-lg font-bold text-white disabled:opacity-40 active:bg-green-800"
         >
-          Add {total} item{total === 1 ? "" : "s"}
+          {saving ? "Saving…" : `Add ${total} item${total === 1 ? "" : "s"}`}
         </button>
       </div>
     </div>

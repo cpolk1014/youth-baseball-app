@@ -47,6 +47,26 @@ let state: StoreState = {
 };
 let loadStarted = false;
 let saveQueue: Promise<void> = Promise.resolve();
+let pendingSaves = 0;
+
+// Closing or reloading the page drops saves that haven't run yet, so ask first.
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", (e) => {
+    if (pendingSaves > 0) e.preventDefault();
+  });
+}
+
+/** Run `save` after earlier saves. Resolves or rejects with this save's own outcome. */
+function enqueue(save: () => Promise<void>): Promise<void> {
+  pendingSaves++;
+  const run = saveQueue.then(save);
+  saveQueue = run
+    .catch(() => {})
+    .finally(() => {
+      pendingSaves--;
+    });
+  return run;
+}
 
 function notify(): void {
   for (const listener of listeners) listener();
@@ -145,7 +165,7 @@ function update(fn: (current: AppData) => AppData, save?: () => Promise<void>): 
   if (state.mode === "local") writeJson(STORAGE_KEY, data);
   notify();
   if (state.mode === "supabase" && save) {
-    saveQueue = saveQueue.then(save).catch(async (e: unknown) => {
+    enqueue(save).catch(async (e: unknown) => {
       setState({
         saveError: `Couldn't save your last change (${e instanceof Error ? e.message : String(e)}). Showing the latest saved data.`,
       });
@@ -355,6 +375,30 @@ export function deletePractice(practiceId: string): void {
     (d) => ({ ...d, practices: d.practices.filter((p) => p.id !== practiceId) }),
     async () => (await remote()).deletePracticeRow(practiceId),
   );
+}
+
+/**
+ * Add imported practices and games, saving them in one batch and waiting until they're
+ * stored. Throws if the save fails (after reloading what was actually saved); retrying
+ * with the same ids updates rather than duplicates.
+ */
+export async function importSchedule(practices: Practice[], games: Game[]): Promise<void> {
+  update((d) => ({
+    ...d,
+    practices: [...d.practices.filter((p) => !practices.some((x) => x.id === p.id)), ...practices],
+    games: [...d.games.filter((g) => !games.some((x) => x.id === g.id)), ...games],
+  }));
+  if (state.mode !== "supabase") return;
+  try {
+    await enqueue(async () => {
+      const r = await remote();
+      await r.savePracticeRows(practices);
+      await r.saveGameRows(games);
+    });
+  } catch (e) {
+    await loadRemote();
+    throw e;
+  }
 }
 
 /** Coach: option the current team (archive it, read-only) or call it back up. */

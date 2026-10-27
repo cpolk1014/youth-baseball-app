@@ -5,6 +5,7 @@ import {
   addPractices,
   deletePractice,
   getAppData,
+  importSchedule,
   resetLocalData,
   saveGame,
   saveLineup,
@@ -78,5 +79,26 @@ describe("store game actions", () => {
     expect(getAppData().practices.find((p) => p.id === "pr1")?.focus).toBe("Hitting");
     deletePractice("pr2");
     expect(getAppData().practices.map((p) => p.id)).toEqual(["pr1"]);
+  });
+
+  it("imports practices and games together, and a retry doesn't duplicate them", async () => {
+    const practice = {
+      id: "imp-p1",
+      seasonId: SEED_DATA.season.id,
+      date: "2026-11-16",
+      startTime: "17:30",
+      endTime: "19:30",
+      location: "Chabill's Field",
+      focus: null,
+      notes: null,
+      plan: [],
+      canceled: false,
+    };
+    const imported = { ...game, id: "imp-g1", date: "2027-02-22", opponent: "TBD" };
+    await importSchedule([practice], [imported]);
+    await importSchedule([practice], [imported]);
+    expect(getAppData().practices.filter((p) => p.id === "imp-p1")).toHaveLength(1);
+    expect(getAppData().games.filter((g) => g.id === "imp-g1")).toHaveLength(1);
+    expect(getAppData().games).toHaveLength(SEED_DATA.games.length + 1);
   });
 });

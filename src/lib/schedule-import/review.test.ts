@@ -61,13 +61,24 @@ const existingPractice = { date: "2026-11-18", startTime: "17:30" } as Practice;
 const existingGame = { date: "2027-02-22" } as Game;
 
 describe("buildImportReview", () => {
-  const review = buildImportReview(extraction, [existingPractice], [existingGame]);
+  let n = 0;
+  const review = buildImportReview(
+    extraction,
+    [existingPractice],
+    [existingGame],
+    () => `id-${++n}`,
+  );
 
   it("drops invalid dates, sorts by date, and keeps warnings", () => {
     expect(review.practices.map((p) => p.date)).toEqual(["2026-11-16", "2026-11-18", "2026-11-30"]);
     expect(review.games.map((g) => g.date)).toEqual(["2027-02-22", "2027-05-05"]);
     expect(review.skipped).toBe(2);
     expect(review.warnings).toEqual(["Year assumed from Monday weekdays."]);
+  });
+
+  it("gives every row its own id", () => {
+    const ids = [...review.practices, ...review.games].map((r) => r.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("unchecks duplicates and tentative games; clears unreadable times", () => {
@@ -102,12 +113,13 @@ describe("buildImportReview", () => {
 });
 
 describe("converters", () => {
-  const review = buildImportReview(extraction, [], []);
+  let n = 0;
+  const review = buildImportReview(extraction, [], [], () => `id-${++n}`);
 
-  it("makes practices with notes carried over", () => {
-    const p = toPractice(review.practices[2]!, "season-1", "id-1");
+  it("makes practices with notes carried over, keeping the review's id", () => {
+    const p = toPractice(review.practices[2]!, "season-1");
     expect(p).toMatchObject({
-      id: "id-1",
+      id: review.practices[2]!.id,
       seasonId: "season-1",
       date: "2026-11-30",
       notes: "Bring gloves",
@@ -117,9 +129,9 @@ describe("converters", () => {
   });
 
   it("makes games with TBD opponents and the team's default field size", () => {
-    const g = toGame(review.games[0]!, { seasonId: "season-1", id: "g-1", fieldPlayers: 10 });
+    const g = toGame(review.games[0]!, { seasonId: "season-1", fieldPlayers: 10 });
     expect(g).toMatchObject({
-      id: "g-1",
+      id: review.games[0]!.id,
       opponent: "TBD",
       innings: 6,
       fieldPlayers: 10,
