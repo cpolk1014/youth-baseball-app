@@ -15,6 +15,7 @@ import type { AppData, Game } from "@/lib/data/types";
 import { validateLineup } from "@/lib/rules/validate";
 import { AppShell, Loading } from "./AppShell";
 import { GameForm } from "./GameForm";
+import { MoneyNudge } from "./MoneyParts";
 import { Sheet } from "./Sheet";
 import { TeamSwitcher } from "./TeamSwitcher";
 
@@ -64,6 +65,7 @@ export function GamesScreen() {
         ) : undefined
       }
     >
+      <MoneyNudge />
       <Section title="Upcoming" games={upcoming} data={data} empty="No upcoming games." />
       {final.length > 0 && <Section title="Final" games={final} data={data} />}
 

@@ -3,6 +3,7 @@ import { SEED_DATA } from "@/lib/data/seed";
 import {
   activeInvites,
   appDataFromRows,
+  financeEntryToRow,
   gameFromRow,
   gameToRow,
   lineupToRpcArgs,
@@ -128,6 +129,25 @@ describe("supabase mappers", () => {
         },
       ],
       guardians: [{ id: "pg1", player_id: "p", user_id: "me" }],
+      financeEntries: [
+        {
+          id: "f1",
+          season_id: "s1",
+          type: "bat_around",
+          title: "Pigeon Forge",
+          amount_cents: 110000,
+          entry_date: "2027-01-01",
+          category: "Tournament",
+          payee: null,
+          method: null,
+          refund: false,
+          estimate: false,
+          due_dates: ["2027-01-15", "2027-02-15"],
+          note: null,
+        },
+      ],
+      financeShares: [{ id: "fs1", entry_id: "f1", player_id: "p", amount_cents: 10000 }],
+      financeSummary: null,
       userId: "me",
       myTeams: [],
     };
@@ -159,6 +179,15 @@ describe("supabase mappers", () => {
     expect(practiceToRow(data.practices[0]!).start_time).toBe("18:00");
     expect(data.practices[0]?.plays).toEqual(["rundown"]);
     expect(data.assignments[0]).toMatchObject({ title: "Bunts", playIds: ["bunt-pitcher"] });
+    expect(data.financeEntries[0]).toMatchObject({
+      type: "bat_around",
+      amountCents: 110000,
+      dueDates: ["2027-01-15", "2027-02-15"],
+    });
+    expect(financeEntryToRow(data.financeEntries[0]!).entry_date).toBe("2027-01-01");
+    expect(data.financeShares).toEqual([
+      { id: "fs1", entryId: "f1", playerId: "p", amountCents: 10000 },
+    ]);
     expect(data.guardians).toEqual([{ id: "pg1", playerId: "p", userId: "me" }]);
     expect(data.quizResults[0]).toMatchObject({ assignmentId: "a1", correct: 3, total: 5 });
     expect(data.members.map((m) => m.displayName)).toEqual(["Sam's mom", null, "Leo's dad"]);

@@ -4,14 +4,17 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { DataStatus } from "./DataStatus";
 
-type Tab = "games" | "practice" | "plays" | "season" | "roster";
+type Tab = "games" | "practice" | "plays" | "season" | "roster" | "money";
 
-const TABS: { id: Tab; href: string; label: string }[] = [
+// Money lives in the desktop side menu; phones reach it from the Roster tab, since six
+// bottom tabs don't fit at 375px.
+const TABS: { id: Tab; href: string; label: string; phone?: false }[] = [
   { id: "games", href: "/games", label: "Games" },
   { id: "practice", href: "/practices", label: "Practice" },
   { id: "plays", href: "/plays", label: "Plays" },
   { id: "season", href: "/season", label: "Season" },
   { id: "roster", href: "/roster", label: "Roster" },
+  { id: "money", href: "/money", label: "Money", phone: false },
 ];
 
 export function AppShell({
@@ -95,7 +98,7 @@ export function AppShell({
           className="fixed inset-x-0 bottom-0 z-20 border-t-2 border-slate-300 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
         >
           <div className="mx-auto flex max-w-xl md:max-w-3xl">
-            {TABS.map((t) => (
+            {TABS.filter((t) => t.phone !== false).map((t) => (
               <Link
                 key={t.id}
                 href={t.href}

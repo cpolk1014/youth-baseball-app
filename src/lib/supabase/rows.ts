@@ -115,3 +115,26 @@ export interface PlayerGuardianRow {
   player_id: string;
   user_id: string;
 }
+
+export interface FinanceEntryRow {
+  id: string;
+  season_id: string;
+  type: "bat_around" | "cleanup" | "walkoff" | "safe_at_home" | "rain_check" | "grand_slam";
+  title: string;
+  amount_cents: number;
+  entry_date: string;
+  category: string | null;
+  payee: string | null;
+  method: string | null;
+  refund: boolean;
+  estimate: boolean;
+  due_dates: string[];
+  note: string | null;
+}
+
+export interface FinanceShareRow {
+  id: string;
+  entry_id: string;
+  player_id: string;
+  amount_cents: number;
+}

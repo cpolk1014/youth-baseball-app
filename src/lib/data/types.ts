@@ -1,5 +1,7 @@
 import type { RuleConfigInput } from "@/lib/rules/config";
 import type { Lineup, Player } from "@/lib/rules/types";
+import type { FinanceEntry, FinanceShare } from "@/lib/finance/types";
+import type { MoneySummary } from "@/lib/finance/ledger";
 import type { PlanItem } from "@/lib/practice/schedule";
 import type { MemberRole } from "./permissions";
 
@@ -132,4 +134,10 @@ export interface AppData {
   quizResults: QuizResult[];
   /** Parent ↔ kid links. Coaches and managers see all; families see their own. */
   guardians: Guardian[];
+  /** Team money this season. Coaches and treasurers see every entry; others see Walkoffs
+   * and entries tagged to their own kids (with only their kids' shares). */
+  financeEntries: FinanceEntry[];
+  financeShares: FinanceShare[];
+  /** Team totals from the server, for people who can't see every entry. */
+  financeSummary: MoneySummary | null;
 }

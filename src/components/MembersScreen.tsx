@@ -27,6 +27,7 @@ const INVITE_ROLES: { role: MemberRole; label: string; hint: string }[] = [
   },
   { role: "coach", label: "Invite a coach", hint: "One person · 7 days · can edit everything" },
   { role: "manager", label: "Invite a manager", hint: "One person · 7 days · roster and games" },
+  { role: "treasurer", label: "Invite a treasurer", hint: "One person · 7 days · team money" },
 ];
 
 function shortDate(iso: string): string {

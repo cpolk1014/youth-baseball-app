@@ -7,6 +7,8 @@ describe("permissions", () => {
       editLineups: true,
       editTeam: true,
       manageMembers: true,
+      editMoney: true,
+      seeAllMoney: true,
     });
   });
 
@@ -15,17 +17,29 @@ describe("permissions", () => {
       editLineups: false,
       editTeam: true,
       manageMembers: false,
+      editMoney: false,
+      seeAllMoney: false,
     });
   });
 
-  it("makes parents and treasurers read-only", () => {
-    for (const role of ["parent", "treasurer"] as const) {
-      expect(permissionsFor(role)).toEqual({
-        editLineups: false,
-        editTeam: false,
-        manageMembers: false,
-      });
-    }
+  it("makes parents read-only", () => {
+    expect(permissionsFor("parent")).toEqual({
+      editLineups: false,
+      editTeam: false,
+      manageMembers: false,
+      editMoney: false,
+      seeAllMoney: false,
+    });
+  });
+
+  it("lets treasurers manage money and nothing else", () => {
+    expect(permissionsFor("treasurer")).toEqual({
+      editLineups: false,
+      editTeam: false,
+      manageMembers: false,
+      editMoney: true,
+      seeAllMoney: true,
+    });
   });
 
   it("uses a person's strongest role on the team", () => {
@@ -39,6 +53,8 @@ describe("permissions", () => {
       editLineups: false,
       editTeam: false,
       manageMembers: false,
+      editMoney: false,
+      seeAllMoney: true,
     });
     expect(canCallUp("coach")).toBe(true);
     expect(canCallUp("manager")).toBe(false);

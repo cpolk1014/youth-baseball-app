@@ -1,6 +1,8 @@
 import type { RuleConfigInput } from "@/lib/rules/config";
 import type { Lineup, Player } from "@/lib/rules/types";
 import { bestRole } from "@/lib/data/permissions";
+import type { MoneySummary } from "@/lib/finance/ledger";
+import type { FinanceEntry } from "@/lib/finance/types";
 import type {
   AppData,
   Game,
@@ -18,6 +20,8 @@ import type {
   LineupRow,
   LineupSlotRow,
   MemberRow,
+  FinanceEntryRow,
+  FinanceShareRow,
   PlayAssignmentRow,
   PlayerGuardianRow,
   PlayerRow,
@@ -40,6 +44,9 @@ export interface TeamRows {
   assignments: PlayAssignmentRow[];
   quizResults: QuizResultRow[];
   guardians: PlayerGuardianRow[];
+  financeEntries: FinanceEntryRow[];
+  financeShares: FinanceShareRow[];
+  financeSummary: MoneySummary | null;
   /** The signed-in user. */
   userId: string;
   myTeams: TeamSummary[];
@@ -141,6 +148,42 @@ export function quizResultToRow(q: QuizResult): QuizResultRow {
     correct: q.correct,
     total: q.total,
     completed_at: q.completedAt,
+  };
+}
+
+export function financeEntryFromRow(r: FinanceEntryRow): FinanceEntry {
+  return {
+    id: r.id,
+    seasonId: r.season_id,
+    type: r.type,
+    title: r.title,
+    amountCents: r.amount_cents,
+    date: r.entry_date,
+    category: r.category,
+    payee: r.payee,
+    method: r.method,
+    refund: r.refund,
+    estimate: r.estimate,
+    dueDates: r.due_dates,
+    note: r.note,
+  };
+}
+
+export function financeEntryToRow(e: FinanceEntry): FinanceEntryRow {
+  return {
+    id: e.id,
+    season_id: e.seasonId,
+    type: e.type,
+    title: e.title,
+    amount_cents: e.amountCents,
+    entry_date: e.date,
+    category: e.category,
+    payee: e.payee,
+    method: e.method,
+    refund: e.refund,
+    estimate: e.estimate,
+    due_dates: e.dueDates,
+    note: e.note,
   };
 }
 
@@ -277,6 +320,14 @@ export function appDataFromRows(
     assignments: rows.assignments.map(assignmentFromRow),
     quizResults: rows.quizResults.map(quizResultFromRow),
     guardians: rows.guardians.map((g) => ({ id: g.id, playerId: g.player_id, userId: g.user_id })),
+    financeEntries: rows.financeEntries.map(financeEntryFromRow),
+    financeShares: rows.financeShares.map((s) => ({
+      id: s.id,
+      entryId: s.entry_id,
+      playerId: s.player_id,
+      amountCents: s.amount_cents,
+    })),
+    financeSummary: rows.financeSummary,
     team: {
       id: rows.team.id,
       name: rows.team.name,

@@ -82,6 +82,23 @@ export function RosterScreen() {
         </Link>
       )}
 
+      <Link
+        href="/money"
+        className="mb-3 flex min-h-14 items-center justify-between rounded-xl border-2 border-slate-300 bg-white px-4 active:bg-slate-50 lg:hidden"
+      >
+        <span>
+          <span className="block text-lg font-semibold">Team money</span>
+          <span className="block text-sm text-slate-600">
+            {permissionsFor(data.me.role, data.team.optionedAt !== null).seeAllMoney
+              ? "Balances, payments and expenses"
+              : "Your balance and team totals"}
+          </span>
+        </span>
+        <span aria-hidden="true" className="text-2xl text-slate-500">
+          ›
+        </span>
+      </Link>
+
       <div className={`mb-4 ${canEdit ? "" : "pointer-events-none"}`} aria-disabled={!canEdit}>
         <Toggle
           label="Coach's pitch"

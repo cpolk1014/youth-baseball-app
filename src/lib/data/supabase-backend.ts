@@ -5,6 +5,7 @@ import { getBrowserSupabase } from "@/lib/supabase/client";
 import {
   appDataFromRows,
   assignmentToRow,
+  financeEntryToRow,
   gameToRow,
   lineupToRpcArgs,
   playerToRow,
@@ -19,6 +20,8 @@ import type {
   LineupRow,
   LineupSlotRow,
   MemberRow,
+  FinanceEntryRow,
+  FinanceShareRow,
   PlayAssignmentRow,
   PlayerGuardianRow,
   PlayerRow,
@@ -27,6 +30,8 @@ import type {
   SeasonRow,
   TeamRow,
 } from "@/lib/supabase/rows";
+import type { MoneySummary } from "@/lib/finance/ledger";
+import type { FinanceEntry, FinanceShare } from "@/lib/finance/types";
 import type {
   AppData,
   Game,
@@ -164,6 +169,30 @@ export async function loadFromSupabase(
           ),
       )
     : [];
+  // RLS trims what non-treasurers see; the summary gives everyone the team totals.
+  const financeEntries = check<FinanceEntryRow[]>(
+    await sb
+      .from("finance_entry")
+      .select(
+        "id,season_id,type,title,amount_cents,entry_date,category,payee,method,refund,estimate,due_dates,note",
+      )
+      .eq("season_id", season.id)
+      .order("entry_date", { ascending: false }),
+  );
+  const financeShares = financeEntries.length
+    ? check<FinanceShareRow[]>(
+        await sb
+          .from("finance_share")
+          .select("id,entry_id,player_id,amount_cents")
+          .in(
+            "entry_id",
+            financeEntries.map((e) => e.id),
+          ),
+      )
+    : [];
+  const financeSummary = check<MoneySummary | null>(
+    await sb.rpc("finance_summary", { p_season_id: season.id }),
+  );
   const members = check<MemberRow[]>(
     await sb.from("member").select("id,team_id,user_id,role,display_name").eq("team_id", team.id),
   );
@@ -195,6 +224,9 @@ export async function loadFromSupabase(
         assignments,
         quizResults,
         guardians,
+        financeEntries,
+        financeShares,
+        financeSummary,
         userId: user?.id ?? "",
         myTeams,
       },
@@ -403,4 +435,21 @@ export async function saveGuardianChanges(remove: string[], add: Guardian[]): Pr
         .insert(add.map((g) => ({ id: g.id, player_id: g.playerId, user_id: g.userId }))),
     );
   }
+}
+
+/** Save an entry and its shares in one database call (all or nothing). */
+export async function saveFinanceEntryRow(
+  entry: FinanceEntry,
+  shares: FinanceShare[],
+): Promise<void> {
+  check(
+    await getBrowserSupabase().rpc("save_finance_entry", {
+      p_entry: financeEntryToRow(entry),
+      p_shares: shares.map((s) => ({ player_id: s.playerId, amount_cents: s.amountCents })),
+    }),
+  );
+}
+
+export async function deleteFinanceEntryRow(entryId: string): Promise<void> {
+  check(await getBrowserSupabase().from("finance_entry").delete().eq("id", entryId));
 }

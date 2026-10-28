@@ -5,6 +5,7 @@ import type { Lineup, Player } from "@/lib/rules/types";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { TeamRow } from "@/lib/supabase/rows";
 import type { MemberRole } from "./permissions";
+import type { FinanceEntry, FinanceShare } from "@/lib/finance/types";
 import { SEED_DATA } from "./seed";
 import type {
   AppData,
@@ -134,6 +135,9 @@ function upgradeLocalData(d: AppData): AppData {
     assignments: d.assignments ?? [],
     quizResults: d.quizResults ?? [],
     guardians: d.guardians ?? [],
+    financeEntries: d.financeEntries ?? [],
+    financeShares: d.financeShares ?? [],
+    financeSummary: null,
     myTeams: (
       d.myTeams ?? [
         {
@@ -474,6 +478,40 @@ export async function setKidsFor(userId: string, playerIds: string[]): Promise<v
         add,
       ),
     );
+  } catch (e) {
+    await loadRemote();
+    throw e;
+  }
+}
+
+/** Add or update a money entry with its shares; waits until it's saved (throws if not). */
+export async function saveFinanceEntry(entry: FinanceEntry, shares: FinanceShare[]): Promise<void> {
+  update((d) => ({
+    ...d,
+    financeEntries: [entry, ...d.financeEntries.filter((e) => e.id !== entry.id)],
+    financeShares: [...d.financeShares.filter((s) => s.entryId !== entry.id), ...shares],
+    // The server total is stale now; screens fall back to adding up what they can see.
+    financeSummary: null,
+  }));
+  if (state.mode !== "supabase") return;
+  try {
+    await enqueue(async () => (await remote()).saveFinanceEntryRow(entry, shares));
+  } catch (e) {
+    await loadRemote();
+    throw e;
+  }
+}
+
+export async function deleteFinanceEntry(entryId: string): Promise<void> {
+  update((d) => ({
+    ...d,
+    financeEntries: d.financeEntries.filter((e) => e.id !== entryId),
+    financeShares: d.financeShares.filter((s) => s.entryId !== entryId),
+    financeSummary: null,
+  }));
+  if (state.mode !== "supabase") return;
+  try {
+    await enqueue(async () => (await remote()).deleteFinanceEntryRow(entryId));
   } catch (e) {
     await loadRemote();
     throw e;

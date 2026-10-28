@@ -550,4 +550,115 @@ end $$;
 reset role;
 delete from public.member where user_id = 'aaaaaaaa-0000-4000-8000-000000000004' and team_id = '00000000-0000-4000-8000-000000000001';
 select pg_temp.expect((select count(*) from public.player_guardian where user_id = 'aaaaaaaa-0000-4000-8000-000000000004') = 0, 'leaving the team drops a parent''s links');
+-- ── team money ──
+insert into auth.users values
+  ('aaaaaaaa-0000-4000-8000-000000000006', 'treasurer@example.test'),
+  ('aaaaaaaa-0000-4000-8000-000000000007', 'manager@example.test');
+insert into public.member (team_id, user_id, role) values
+  ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000006', 'treasurer'),
+  ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000007', 'manager');
+insert into public.team (id, name, age_group) values ('99999999-0000-4000-8000-000000000001', 'Elsewhere', '12U');
+insert into public.player (id, team_id, name) values ('99999999-0000-4000-8000-000000001001', '99999999-0000-4000-8000-000000000001', 'Not ours');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.save_finance_entry(
+  '{"id": "f0000000-0000-4000-8000-000000000001", "season_id": "00000000-0000-4000-8000-000000000101", "type": "bat_around", "title": "Pigeon Forge", "amount_cents": 3001, "entry_date": "2027-01-01", "due_dates": ["2027-01-15", "2027-02-15"]}',
+  '[{"player_id": "00000000-0000-4000-8000-000000001001", "amount_cents": 1000}, {"player_id": "00000000-0000-4000-8000-000000001002", "amount_cents": 1000}, {"player_id": "00000000-0000-4000-8000-000000001003", "amount_cents": 1001}]');
+select pg_temp.expect((select count(*) from public.finance_share) = 3, 'coach saves a Bat Around with a share per player');
+select pg_temp.expect((select due_dates from public.finance_entry) = '{2027-01-15,2027-02-15}', 'installment due dates are saved');
+select public.save_finance_entry(
+  '{"id": "f0000000-0000-4000-8000-000000000001", "season_id": "00000000-0000-4000-8000-000000000101", "type": "bat_around", "title": "Pigeon Forge", "amount_cents": 2000, "entry_date": "2027-01-01"}',
+  '[{"player_id": "00000000-0000-4000-8000-000000001001", "amount_cents": 1000}, {"player_id": "00000000-0000-4000-8000-000000001003", "amount_cents": 1000}]');
+select pg_temp.expect((select count(*) from public.finance_share) = 2 and (select amount_cents from public.finance_entry) = 2000, 'saving again replaces the shares');
+select public.save_finance_entry(
+  '{"id": "f0000000-0000-4000-8000-000000000002", "season_id": "00000000-0000-4000-8000-000000000101", "type": "cleanup", "title": "Late fee", "amount_cents": 500, "entry_date": "2027-01-02"}',
+  '[{"player_id": "00000000-0000-4000-8000-000000001003", "amount_cents": 500}]');
+select public.save_finance_entry(
+  '{"id": "f0000000-0000-4000-8000-000000000003", "season_id": "00000000-0000-4000-8000-000000000101", "type": "safe_at_home", "title": "Venmo", "amount_cents": 1000, "entry_date": "2027-01-03", "method": "Venmo"}',
+  '[{"player_id": "00000000-0000-4000-8000-000000001001", "amount_cents": 1000}]');
+select public.save_finance_entry(
+  '{"id": "f0000000-0000-4000-8000-000000000004", "season_id": "00000000-0000-4000-8000-000000000101", "type": "walkoff", "title": "Umpires", "amount_cents": 1100, "entry_date": "2027-01-04", "payee": "Ump crew"}', '[]');
+select public.save_finance_entry(
+  '{"id": "f0000000-0000-4000-8000-000000000005", "season_id": "00000000-0000-4000-8000-000000000101", "type": "grand_slam", "title": "Fundraiser", "amount_cents": 5000, "entry_date": "2027-01-05"}', '[]');
+select public.save_finance_entry(
+  '{"id": "f0000000-0000-4000-8000-000000000006", "season_id": "00000000-0000-4000-8000-000000000101", "type": "walkoff", "title": "Swag bags", "amount_cents": 800, "entry_date": "2027-03-01", "estimate": true}', '[]');
+do $$ begin
+  perform public.save_finance_entry(
+    '{"id": "f0000000-0000-4000-8000-000000000009", "season_id": "00000000-0000-4000-8000-000000000101", "type": "bat_around", "title": "Bad", "amount_cents": 3000, "entry_date": "2027-01-01"}',
+    '[{"player_id": "00000000-0000-4000-8000-000000001001", "amount_cents": 1000}]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: shares must add up to the amount';
+end $$;
+do $$ begin
+  perform public.save_finance_entry(
+    '{"id": "f0000000-0000-4000-8000-000000000009", "season_id": "00000000-0000-4000-8000-000000000101", "type": "cleanup", "title": "Bad", "amount_cents": 2000, "entry_date": "2027-01-01"}',
+    '[{"player_id": "00000000-0000-4000-8000-000000001001", "amount_cents": 1000}, {"player_id": "00000000-0000-4000-8000-000000001002", "amount_cents": 1000}]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: a Cleanup is for one player';
+end $$;
+do $$ begin
+  perform public.save_finance_entry(
+    '{"id": "f0000000-0000-4000-8000-000000000009", "season_id": "00000000-0000-4000-8000-000000000101", "type": "cleanup", "title": "Bad", "amount_cents": 1000, "entry_date": "2027-01-01"}',
+    '[{"player_id": "99999999-0000-4000-8000-000000001001", "amount_cents": 1000}]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: shares must be for this team''s players';
+end $$;
+select pg_temp.expect((select count(*) from public.finance_entry where id = 'f0000000-0000-4000-8000-000000000009') = 0, 'a rejected entry is not saved');
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000006', false);
+select public.save_finance_entry(
+  '{"id": "f0000000-0000-4000-8000-000000000007", "season_id": "00000000-0000-4000-8000-000000000101", "type": "rain_check", "title": "Credit", "amount_cents": 200, "entry_date": "2027-01-06"}',
+  '[{"player_id": "00000000-0000-4000-8000-000000001001", "amount_cents": 200}]');
+select pg_temp.expect((select count(*) from public.finance_entry) = 7, 'treasurer adds entries and sees them all');
+reset role;
+
+-- Parent of player 1003: sees Walkoffs and their kid's entries, only their kid's shares.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect(
+  (select array_agg(title order by title) from public.finance_entry) = '{"Late fee","Pigeon Forge","Swag bags",Umpires}',
+  'parents see Walkoffs and entries tagged to their kid only');
+select pg_temp.expect(
+  (select array_agg(distinct player_id) from public.finance_share) = '{00000000-0000-4000-8000-000000001003}',
+  'parents see only their kid''s shares');
+select pg_temp.expect((select amount_cents from public.finance_entry where title = 'Pigeon Forge') = 2000, 'parents see a Bat Around''s team total');
+select pg_temp.expect(
+  public.finance_summary('00000000-0000-4000-8000-000000000101') = jsonb_build_object(
+    'batAroundCents', 2000, 'cleanupCents', 500, 'grandSlamCents', 5000, 'totalInCents', 7500,
+    'rainCheckCents', 200, 'walkoffCents', 1100, 'totalOutCents', 1300, 'leftOverCents', 6200,
+    'billedCents', 2300, 'collectedCents', 1000, 'cashOnHandCents', 4900,
+    'plannedOutCents', 800, 'expectedInCents', 0),
+  'parents get team totals from the summary');
+do $$ begin
+  perform public.save_finance_entry(
+    '{"id": "f0000000-0000-4000-8000-000000000008", "season_id": "00000000-0000-4000-8000-000000000101", "type": "walkoff", "title": "Mine", "amount_cents": 100, "entry_date": "2027-01-01"}', '[]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot add money';
+end $$;
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false);
+select pg_temp.expect((select count(*) from public.finance_entry) = 2, 'managers see only Walkoffs (no kids linked)');
+update public.finance_entry set amount_cents = 1;
+select pg_temp.expect((select sum(amount_cents) from public.finance_entry) = 1900, 'managers cannot edit money');
+do $$ begin
+  perform public.save_finance_entry(
+    '{"id": "f0000000-0000-4000-8000-000000000008", "season_id": "00000000-0000-4000-8000-000000000101", "type": "walkoff", "title": "Mine", "amount_cents": 100, "entry_date": "2027-01-01"}', '[]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: managers cannot add money';
+end $$;
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.finance_entry) = 0, 'outsiders see no money');
+do $$ begin
+  perform public.finance_summary('00000000-0000-4000-8000-000000000101');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: outsiders cannot read the team summary';
+end $$;
+reset role;
 \echo ALL RLS TESTS PASSED

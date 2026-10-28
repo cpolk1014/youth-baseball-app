@@ -10,17 +10,32 @@ export interface Permissions {
   editTeam: boolean;
   /** Invite links, roles, removing people. */
   manageMembers: boolean;
+  /** Add, edit and delete team money entries (coaches and treasurers). */
+  editMoney: boolean;
+  /** See every family's money, not just their own (coaches and treasurers). */
+  seeAllMoney: boolean;
 }
 
 const RANK: MemberRole[] = ["coach", "manager", "treasurer", "parent"];
 
 /** What a role can do; an optioned (archived) team is read-only for everyone. */
 export function permissionsFor(role: MemberRole, optioned = false): Permissions {
-  if (optioned) return { editLineups: false, editTeam: false, manageMembers: false };
+  const money = role === "coach" || role === "treasurer";
+  if (optioned) {
+    return {
+      editLineups: false,
+      editTeam: false,
+      manageMembers: false,
+      editMoney: false,
+      seeAllMoney: money,
+    };
+  }
   return {
     editLineups: role === "coach",
     editTeam: role === "coach" || role === "manager",
     manageMembers: role === "coach",
+    editMoney: money,
+    seeAllMoney: money,
   };
 }
 
