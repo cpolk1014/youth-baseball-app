@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { TeamRow } from "@/lib/supabase/rows";
 import type { MemberRole } from "./permissions";
 import { receiptPath } from "@/lib/finance/receipt";
+import type { RuleConfigInput } from "@/lib/rules/config";
 import type { FinanceEntry, FinanceShare } from "@/lib/finance/types";
 import { SEED_DATA } from "./seed";
 import type {
@@ -567,6 +568,15 @@ export async function postToGroupMe(text: string): Promise<void> {
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
     throw new Error(body?.error ?? "Couldn't post to GroupMe. Try again.");
   }
+}
+
+/** Coach: change the season's fair-play rules (only what differs from the defaults). */
+export function saveSeasonRules(rules: RuleConfigInput): void {
+  const seasonId = data!.season.id;
+  update(
+    (d) => ({ ...d, season: { ...d.season, fairPlayRules: rules } }),
+    async () => (await remote()).saveSeasonRulesRow(seasonId, rules),
+  );
 }
 
 /** Coach: option the current team (archive it, read-only) or call it back up. */

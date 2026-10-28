@@ -27,6 +27,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Teams, seasons, roster (name, jersey #, preferred positions, can pitch/catch, active); coach's pitch teams
 - Games (date, time, opponent, location, innings, 9 or 10 fielders); mark final / reopen
 - Inning-by-inning lineup builder with live fair-play warnings, Auto-fill, batting order with sit-outs, per-game attendance
+- Fair play rules screen (Season tab): every rule set to Must / Warn / Off with its number; separate coach pitch and kid pitch sets (pitching rules hidden for coach pitch); new rules: min outfield innings, min share of innings played, pitcher rest after a heavy game; reset to recommended
 - Season participation grid (summary and by position), fair to players who miss games
 - Printable lineup card (half sheet ×2, full letter)
 - Magic-link + code sign-in, invite links, roles (owner / coach / manager / treasurer / parent read-only), multiple teams with a switcher; the team creator is its Owner (coach powers, can never be removed or demoted)
@@ -75,7 +76,7 @@ Participation is **derived** from lineup_slot rows on final games, never stored 
 
 Lives in `src/lib/rules/`. Pure TypeScript functions, no I/O, no React. Input: roster + lineup + rule config + season history. Output: list of violations `{ rule, playerId, inning?, severity: 'warn' | 'block', message }`.
 
-Rules are configurable per season. Defaults:
+Rules are configurable per season (Must = block, Warn, Off; core rules can't be turned off). Defaults:
 
 - Every position filled exactly once per inning; no player in two positions in one inning
 - Max consecutive bench innings: 1

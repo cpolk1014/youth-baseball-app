@@ -49,7 +49,7 @@ export function LineupCardScreen({ gameId }: { gameId: string }) {
 
   const { game, config, lineup, history } = ctx;
   const card = buildLineupCard(data.players, lineup, config.fieldPositions);
-  const blocks = validateLineup(data.players, lineup, config, history).filter(
+  const blocks = validateLineup(data.players, lineup, config, history, ctx.previous).filter(
     (v) => v.severity === "block",
   ).length;
   const header = {

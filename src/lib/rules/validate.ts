@@ -1,3 +1,4 @@
+import { isRuleOn } from "./config";
 import { balanceOutliers, computeParticipation, emptyParticipation } from "./participation";
 import type {
   Lineup,
@@ -17,6 +18,8 @@ type Emit = (
 
 interface Context {
   players: Player[];
+  /** The team's previous game (for rules across games), if there is one. */
+  previous: Lineup | null;
   byId: Map<string, Player>;
   /** Name of a player marked absent for this game, else null. */
   absentName: (id: string) => string | null;
@@ -36,9 +39,14 @@ export function validateLineup(
   lineup: Lineup,
   config: RuleConfig,
   seasonHistory: SeasonHistory,
+  previous: Lineup | null = null,
 ): Violation[] {
   const violations: Violation[] = [];
-  const emit: Emit = (rule, v) => violations.push({ rule, severity: config.severity[rule], ...v });
+  // Rules a coach turned off (or that don't apply to coach's pitch) report nothing.
+  const emit: Emit = (rule, v) => {
+    if (!isRuleOn(config, rule)) return;
+    violations.push({ rule, severity: config.severity[rule] === "warn" ? "warn" : "block", ...v });
+  };
 
   const absent = new Set(lineup.absent ?? []);
   const players = roster.filter((p) => p.active !== false && !absent.has(p.id));
@@ -63,14 +71,17 @@ export function validateLineup(
     row.set(slot.playerId, [...(row.get(slot.playerId) ?? []), slot.position]);
   }
 
-  const ctx: Context = { players, byId, absentName, lineup, config, grid, emit };
+  const ctx: Context = { players, previous, byId, absentName, lineup, config, grid, emit };
   checkPositionCoverage(ctx);
   checkPlayerAssignment(ctx);
   checkBattingOrder(ctx);
   checkConsecutiveBench(ctx);
   checkBenchRotation(ctx);
   checkPerGameCounts(ctx);
-  violations.push(...checkSeasonBalance(players, lineup, config, seasonHistory));
+  checkPitcherRest(ctx);
+  if (isRuleOn(config, "season-balance")) {
+    violations.push(...checkSeasonBalance(players, lineup, config, seasonHistory));
+  }
   return violations;
 }
 
@@ -222,14 +233,21 @@ function checkBenchRotation(ctx: Context): void {
 function checkPerGameCounts(ctx: Context): void {
   const { config } = ctx;
   const infield = new Set<Position>(config.infieldPositions);
+  const outfield = new Set<Position>(
+    config.outfieldPositions.filter((p) => config.fieldPositions.includes(p)),
+  );
+  const innings = ctx.lineup.innings;
+  const mustPlay = Math.ceil((innings * config.minInningsPlayedPercent) / 100);
   for (const player of ctx.players) {
     const counts = new Map<Position, number>();
     let infieldInnings = 0;
-    for (let inning = 1; inning <= ctx.lineup.innings; inning++) {
+    let outfieldInnings = 0;
+    for (let inning = 1; inning <= innings; inning++) {
       for (const position of ctx.grid.get(inning)?.get(player.id) ?? []) {
         counts.set(position, (counts.get(position) ?? 0) + 1);
         if (infield.has(position)) infieldInnings++;
-        if (position === "P" && !player.canPitch && !config.coachPitch) {
+        if (outfield.has(position)) outfieldInnings++;
+        if (position === "P" && !player.canPitch) {
           ctx.emit("pitcher-eligibility", {
             playerId: player.id,
             inning,
@@ -252,6 +270,19 @@ function checkPerGameCounts(ctx: Context): void {
         message: `${player.name} plays ${infieldInnings} infield inning${infieldInnings === 1 ? "" : "s"} (min ${config.minInfieldInnings}).`,
       });
     }
+    if (outfield.size > 0 && outfieldInnings < config.minOutfieldInnings) {
+      ctx.emit("min-outfield", {
+        playerId: player.id,
+        message: `${player.name} plays ${outfieldInnings} outfield inning${outfieldInnings === 1 ? "" : "s"} (min ${config.minOutfieldInnings}).`,
+      });
+    }
+    const played = innings - (counts.get("BENCH") ?? 0);
+    if (played < mustPlay) {
+      ctx.emit("min-innings-played", {
+        playerId: player.id,
+        message: `${player.name} plays ${played} of ${innings} innings (at least ${mustPlay}).`,
+      });
+    }
 
     const maxSame = config.maxInningsSamePosition;
     if (maxSame !== null) {
@@ -266,25 +297,40 @@ function checkPerGameCounts(ctx: Context): void {
     }
 
     const pitched = counts.get("P") ?? 0;
-    if (
-      !config.coachPitch &&
-      config.maxInningsPitched !== null &&
-      pitched > config.maxInningsPitched
-    ) {
+    if (config.maxInningsPitched !== null && pitched > config.maxInningsPitched) {
       ctx.emit("max-innings-pitched", {
         playerId: player.id,
         message: `${player.name} pitches ${pitched} innings (max ${config.maxInningsPitched}).`,
       });
     }
-    if (
-      !config.coachPitch &&
-      config.catcherCannotPitch &&
-      pitched > 0 &&
-      (counts.get("C") ?? 0) > 0
-    ) {
+    if (config.catcherCannotPitch && pitched > 0 && (counts.get("C") ?? 0) > 0) {
       ctx.emit("catcher-cannot-pitch", {
         playerId: player.id,
         message: `${player.name} both catches and pitches in this game.`,
+      });
+    }
+  }
+}
+
+/** Pitchers who threw a lot last game rest from pitching this game. */
+function checkPitcherRest(ctx: Context): void {
+  const { previous, config } = ctx;
+  if (!previous) return;
+  const lastGame = new Map<string, number>();
+  for (const s of previous.slots) {
+    if (s.position === "P" && s.inning <= previous.innings) {
+      lastGame.set(s.playerId, (lastGame.get(s.playerId) ?? 0) + 1);
+    }
+  }
+  for (const player of ctx.players) {
+    const threw = lastGame.get(player.id) ?? 0;
+    if (threw < config.pitcherRestInnings) continue;
+    const inning = [...ctx.grid].find(([, row]) => row.get(player.id)?.includes("P"))?.[0];
+    if (inning !== undefined) {
+      ctx.emit("pitcher-rest", {
+        playerId: player.id,
+        inning,
+        message: `${player.name} pitched ${threw} innings last game and should rest from pitching.`,
       });
     }
   }

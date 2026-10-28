@@ -9,6 +9,8 @@ export interface GameContext {
   lineup: Lineup;
   /** Saved lineups of this season's other final games. */
   history: Lineup[];
+  /** The lineup of this season's latest final game before this one (rules across games). */
+  previous: Lineup | null;
   autoFillSeed: number;
   hasSavedLineup: boolean;
 }
@@ -20,6 +22,17 @@ export function gameContext(data: AppData, gameId: string): GameContext | null {
   const history = data.games
     .filter((g) => g.id !== gameId && g.seasonId === game.seasonId && g.status === "final")
     .flatMap((g) => (data.lineups[g.id] ? [data.lineups[g.id]!] : []));
+  const when = (g: Game) => `${g.date} ${g.startTime ?? "00:00"}`;
+  const before = data.games
+    .filter(
+      (g) =>
+        g.id !== gameId &&
+        g.seasonId === game.seasonId &&
+        g.status === "final" &&
+        data.lineups[g.id] &&
+        when(g) < when(game),
+    )
+    .sort((a, b) => when(b).localeCompare(when(a)))[0];
   return {
     game,
     config: gameRuleConfig(data.season.fairPlayRules, {
@@ -32,6 +45,7 @@ export function gameContext(data: AppData, gameId: string): GameContext | null {
       game.innings,
     ),
     history,
+    previous: before ? data.lineups[before.id]! : null,
     autoFillSeed: saved?.autoFillSeed ?? 0,
     hasSavedLineup: saved !== undefined && saved.slots.length > 0,
   };

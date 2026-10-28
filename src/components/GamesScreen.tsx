@@ -144,7 +144,7 @@ function Section({
 function GameCard({ game, data }: { game: Game; data: AppData }) {
   const ctx = gameContext(data, game.id)!;
   const violations = ctx.hasSavedLineup
-    ? validateLineup(data.players, ctx.lineup, ctx.config, ctx.history)
+    ? validateLineup(data.players, ctx.lineup, ctx.config, ctx.history, ctx.previous)
     : [];
   const blocks = violations.filter((v) => v.severity === "block").length;
   const status =

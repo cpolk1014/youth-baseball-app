@@ -47,9 +47,9 @@ export function GameScreen({ gameId }: { gameId: string }) {
     );
   }
 
-  const { game, config, lineup, history } = ctx;
+  const { game, config, lineup, history, previous } = ctx;
   const players = new Map(data.players.map((p) => [p.id, p]));
-  const violations = validateLineup(data.players, lineup, config, history);
+  const violations = validateLineup(data.players, lineup, config, history, previous);
   // Empty cells are counted separately rather than listed one by one.
   const isEmptyCell = (v: (typeof violations)[number]) =>
     v.rule === "player-assignment" &&
@@ -69,6 +69,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
     const active = data.players.filter((p) => p.active !== false && !absent.has(p.id));
     const { lineup: generated } = generateLineup(active, config, history, seed, {
       innings: game.innings,
+      previous,
     });
     // Keep the coach's batting order; auto-fill only sets the field.
     change(

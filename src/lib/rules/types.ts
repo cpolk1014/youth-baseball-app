@@ -49,6 +49,8 @@ export interface Lineup {
 export type SeasonHistory = Lineup[];
 
 export type Severity = "warn" | "block";
+/** How a coach wants a rule treated: must follow, warn, or ignored. */
+export type RuleSetting = Severity | "off";
 
 export type RuleId =
   | "invalid-slot"
@@ -63,7 +65,19 @@ export type RuleId =
   | "catcher-eligibility"
   | "max-innings-pitched"
   | "catcher-cannot-pitch"
+  | "min-outfield"
+  | "min-innings-played"
+  | "pitcher-rest"
   | "season-balance";
+
+/** Rules every lineup must follow; they can't be turned off or softened. */
+export const CORE_RULES = [
+  "invalid-slot",
+  "position-coverage",
+  "player-assignment",
+  "batting-order",
+] as const satisfies readonly RuleId[];
+export type CoreRuleId = (typeof CORE_RULES)[number];
 
 export interface RuleConfig {
   /** Coach's pitch: P is a fielding spot, so pitching rules don't apply. */
@@ -72,12 +86,20 @@ export interface RuleConfig {
   fieldPositions: FieldPosition[];
   /** Positions that count as "infield" for the min-infield and season-balance rules. */
   infieldPositions: FieldPosition[];
+  /** Positions that count as "outfield" for the min-outfield rule. */
+  outfieldPositions: FieldPosition[];
   /** Max bench innings in a row. null disables the rule. */
   maxConsecutiveBench: number | null;
   /** Nobody sits a second time until everyone has sat once (within a game). */
   benchRotation: boolean;
   /** Min infield innings per player per game. 0 disables the rule. */
   minInfieldInnings: number;
+  /** Min outfield innings per player per game. 0 disables the rule. */
+  minOutfieldInnings: number;
+  /** Each player plays at least this share of the game's innings (percent, rounded up). */
+  minInningsPlayedPercent: number;
+  /** A pitcher who threw at least this many innings last game doesn't pitch this game. */
+  pitcherRestInnings: number;
   /** Max innings at any one position per game. null disables the rule. */
   maxInningsSamePosition: number | null;
   /** Max innings pitched per player per game. null disables the rule. */
@@ -89,8 +111,11 @@ export interface RuleConfig {
    * team average, or bench innings this far above. null disables the rule.
    */
   seasonBalanceThreshold: number | null;
-  /** Severity per rule. season-balance is always "warn". */
-  severity: Record<Exclude<RuleId, "season-balance">, Severity>;
+  /**
+   * How each rule is treated: "block" (must follow), "warn", or "off". Core rules are always
+   * "block"; season-balance is "warn" or "off" (it looks across games, so it never blocks).
+   */
+  severity: Record<RuleId, RuleSetting>;
 }
 
 export interface Violation {

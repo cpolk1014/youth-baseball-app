@@ -21,9 +21,13 @@ insert into public.season (id, team_id, name, start_date, end_date, fair_play_ru
   '{
     "fieldPositions": ["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF"],
     "infieldPositions": ["P", "C", "1B", "2B", "3B", "SS"],
+    "outfieldPositions": ["LF", "CF", "RF", "LCF", "RCF"],
     "maxConsecutiveBench": 1,
     "benchRotation": true,
     "minInfieldInnings": 1,
+    "minOutfieldInnings": 1,
+    "minInningsPlayedPercent": 50,
+    "pitcherRestInnings": 2,
     "maxInningsSamePosition": 2,
     "maxInningsPitched": 2,
     "catcherCannotPitch": true,

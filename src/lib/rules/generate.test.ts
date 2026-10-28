@@ -173,3 +173,38 @@ describe("generateLineup for coach's pitch and 10 fielders", () => {
     expect(pitchers.size).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe("generateLineup follows the coach's rule settings", () => {
+  it("gives everyone outfield time when min outfield is on", () => {
+    const on = resolveRuleConfig({ severity: { "min-outfield": "block" } });
+    for (const n of [10, 12, 13]) {
+      const roster = makeRoster(n);
+      const { violations } = generateLineup(roster, on, [], 7, { innings: 6 });
+      expect(violations.filter((v) => v.rule === "min-outfield")).toEqual([]);
+    }
+  });
+
+  it("rests last game's pitchers when pitcher rest is on", () => {
+    const on = resolveRuleConfig({ severity: { "pitcher-rest": "block" } });
+    const roster = makeRoster(12, { pitchers: 6 });
+    const previous = generateLineup(roster, on, [], 1, { innings: 6 }).lineup;
+    const threw = new Set(previous.slots.filter((s) => s.position === "P").map((s) => s.playerId));
+    const { lineup, violations } = generateLineup(roster, on, [], 2, { innings: 6, previous });
+    const pitchingNow = lineup.slots.filter((s) => s.position === "P").map((s) => s.playerId);
+    expect(pitchingNow.some((id) => threw.has(id))).toBe(false);
+    expect(violations.filter((v) => v.severity === "block")).toEqual([]);
+  });
+
+  it("lets anyone catch when catcher eligibility is off", () => {
+    const off = resolveRuleConfig({ severity: { "catcher-eligibility": "off" } });
+    const roster = makeRoster(11, { pitchers: 4, catchers: 0 });
+    const { violations } = generateLineup(roster, off, [], 3, { innings: 6 });
+    expect(violations.filter((v) => v.severity === "block")).toEqual([]);
+  });
+
+  it("keeps every kid in at least half the game", () => {
+    const roster = makeRoster(14);
+    const { violations } = generateLineup(roster, config, [], 5, { innings: 6 });
+    expect(violations.filter((v) => v.rule === "min-innings-played")).toEqual([]);
+  });
+});

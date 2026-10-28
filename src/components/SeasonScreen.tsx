@@ -37,6 +37,7 @@ export function SeasonScreen() {
   if (summary.finalGames === 0) {
     return (
       <AppShell title="Playing time" subtitle={subtitle} tab="season">
+        <RulesLink />
         <div className="rounded-xl border-2 border-slate-300 bg-white p-4 text-lg leading-snug">
           <p className="font-bold">No final games yet.</p>
           <p className="mt-1">
@@ -56,6 +57,7 @@ export function SeasonScreen() {
 
   return (
     <AppShell title="Playing time" subtitle={subtitle} tab="season">
+      <RulesLink />
       <div
         role="tablist"
         className="mb-3 grid grid-cols-2 rounded-xl border-2 border-[#0b1f3a] p-1"
@@ -252,5 +254,24 @@ function PositionGrid({ summary, rows }: { summary: SeasonSummary; rows: SeasonR
         </tbody>
       </table>
     </div>
+  );
+}
+
+function RulesLink() {
+  return (
+    <Link
+      href="/season/rules"
+      className="mb-4 flex min-h-14 items-center justify-between rounded-xl border-2 border-slate-300 bg-white px-4 active:bg-slate-50"
+    >
+      <span>
+        <span className="block text-lg font-semibold">Fair play rules</span>
+        <span className="block text-sm text-slate-600">
+          What auto-fill follows and what gets flagged
+        </span>
+      </span>
+      <span aria-hidden="true" className="text-2xl text-slate-500">
+        ›
+      </span>
+    </Link>
   );
 }

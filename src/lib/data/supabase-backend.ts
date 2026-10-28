@@ -31,6 +31,7 @@ import type {
   TeamRow,
 } from "@/lib/supabase/rows";
 import type { MoneySummary } from "@/lib/finance/ledger";
+import type { RuleConfigInput } from "@/lib/rules/config";
 import type { FinanceEntry, FinanceShare } from "@/lib/finance/types";
 import type {
   AppData,
@@ -494,4 +495,10 @@ export async function saveGroupMeRow(
 
 export async function deleteGroupMeRow(teamId: string): Promise<void> {
   check(await getBrowserSupabase().from("team_groupme").delete().eq("team_id", teamId));
+}
+
+export async function saveSeasonRulesRow(seasonId: string, rules: RuleConfigInput): Promise<void> {
+  check(
+    await getBrowserSupabase().from("season").update({ fair_play_rules: rules }).eq("id", seasonId),
+  );
 }

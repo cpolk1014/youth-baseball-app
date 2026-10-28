@@ -1,4 +1,5 @@
 import { solveAssignment } from "./assignment";
+import { isRuleOn } from "./config";
 import { computeParticipation, emptyParticipation } from "./participation";
 import { createRng, shuffle } from "./random";
 import type {
@@ -17,6 +18,8 @@ export interface GenerateOptions {
   innings: number;
   /** Candidate lineups to try; the best one wins. */
   attempts?: number;
+  /** The team's previous game, for rules across games (pitcher rest). */
+  previous?: Lineup | null;
 }
 
 export interface GeneratedLineup {
@@ -33,16 +36,26 @@ export function generateLineup(
   config: RuleConfig,
   seasonHistory: SeasonHistory,
   seed: number,
-  { innings, attempts = 60 }: GenerateOptions,
+  { innings, attempts = 60, previous = null }: GenerateOptions,
 ): GeneratedLineup {
-  const players = roster.filter((p) => p.active !== false);
-  const balance = seasonBalance(players, seasonHistory, config);
+  const { config: limits, players } = buildLimits(
+    roster.filter((p) => p.active !== false),
+    config,
+    innings,
+    previous,
+  );
+  const balance = isRuleOn(config, "season-balance")
+    ? seasonBalance(players, seasonHistory, config)
+    : {
+        infieldDeficit: new Map(players.map((p) => [p.id, 0])),
+        benchSurplus: new Map(players.map((p) => [p.id, 0])),
+      };
   const rng = createRng(seed);
 
   let best: { result: GeneratedLineup; score: number[] } | null = null;
   for (let i = 0; i < attempts; i++) {
-    const lineup = buildLineup(players, config, balance, innings, rng);
-    const violations = validateLineup(roster, lineup, config, seasonHistory);
+    const lineup = buildLineup(players, limits, balance, innings, rng);
+    const violations = validateLineup(roster, lineup, config, seasonHistory, previous);
     const score = [
       violations.filter((v) => v.severity === "block").length,
       violations.length,
@@ -51,6 +64,55 @@ export function generateLineup(
     if (!best || isBetter(score, best.score)) best = { result: { lineup, violations }, score };
   }
   return best!.result;
+}
+
+interface Limits extends RuleConfig {
+  /** Most bench innings any player may have this game (from min-innings-played). */
+  maxBenchInnings: number | null;
+  /** Players who should rest from pitching this game. */
+  resting: Set<string>;
+}
+
+/**
+ * What auto-fill aims for: the coach's rules with anything turned off (or not applying)
+ * relaxed, so it doesn't work around a rule nobody asked for.
+ */
+function buildLimits(
+  roster: Player[],
+  config: RuleConfig,
+  innings: number,
+  previous: Lineup | null,
+): { config: Limits; players: Player[] } {
+  const on = (rule: Parameters<typeof isRuleOn>[1]) => isRuleOn(config, rule);
+  // Eligibility turned off means anyone may pitch or catch.
+  const players = roster.map((p) => ({
+    ...p,
+    canPitch: p.canPitch || !on("pitcher-eligibility"),
+    canCatch: p.canCatch || !on("catcher-eligibility"),
+  }));
+  const resting = new Set<string>();
+  if (previous && on("pitcher-rest")) {
+    const threw = new Map<string, number>();
+    for (const s of previous.slots) {
+      if (s.position === "P") threw.set(s.playerId, (threw.get(s.playerId) ?? 0) + 1);
+    }
+    for (const [id, n] of threw) if (n >= config.pitcherRestInnings) resting.add(id);
+  }
+  const mustPlay = Math.ceil((innings * config.minInningsPlayedPercent) / 100);
+  return {
+    players,
+    config: {
+      ...config,
+      maxConsecutiveBench: on("max-consecutive-bench") ? config.maxConsecutiveBench : null,
+      minInfieldInnings: on("min-infield") ? config.minInfieldInnings : 0,
+      minOutfieldInnings: on("min-outfield") ? config.minOutfieldInnings : 0,
+      maxInningsSamePosition: on("max-same-position") ? config.maxInningsSamePosition : null,
+      maxInningsPitched: on("max-innings-pitched") ? config.maxInningsPitched : null,
+      catcherCannotPitch: on("catcher-cannot-pitch") && config.catcherCannotPitch,
+      maxBenchInnings: on("min-innings-played") ? innings - mustPlay : null,
+      resting,
+    },
+  };
 }
 
 function isBetter(a: number[], b: number[]): boolean {
@@ -124,7 +186,7 @@ function planStints(order: Player[], innings: number, stint: number): (string | 
 
 function buildLineup(
   players: Player[],
-  config: RuleConfig,
+  config: Limits,
   balance: Balance,
   innings: number,
   rng: () => number,
@@ -138,14 +200,13 @@ function buildLineup(
   // 1. Pitchers and catchers, in consecutive stints.
   const canCatch = players.filter((p) => p.canCatch);
   const catchersWanted = Math.min(canCatch.length, Math.ceil(innings / (maxSame ?? innings)));
-  const pitchOnly = byPreference(
-    players.filter((p) => p.canPitch && !p.canCatch),
-    "P",
-  );
-  const dual = byPreference(
-    players.filter((p) => p.canPitch && p.canCatch),
-    "C",
-  );
+  // Rested pitchers sit out the rotation, unless nobody else can pitch.
+  const rested = (list: Player[]) => {
+    const fresh = list.filter((p) => !config.resting.has(p.id));
+    return fresh.length > 0 ? fresh : list;
+  };
+  const pitchOnly = byPreference(rested(players.filter((p) => p.canPitch && !p.canCatch)), "P");
+  const dual = byPreference(rested(players.filter((p) => p.canPitch && p.canCatch)), "C");
   const reserved = new Set<string>();
   if (config.catcherCannotPitch) {
     // Keep enough catchers out of the pitching rotation, but never so many that
@@ -184,12 +245,15 @@ function buildLineup(
 
   // 2. Bench and field, inning by inning.
   const infield = new Set<Position>(config.infieldPositions);
+  const outfield = new Set<Position>(config.outfieldPositions);
   const benchPerInning = Math.max(0, players.length - positions.length);
   const counts = new Map(players.map((p) => [p.id, new Map<Position, number>()]));
   const benchRun = new Map(players.map((p) => [p.id, 0]));
   const count = (id: string, pos: Position) => counts.get(id)!.get(pos) ?? 0;
   const infieldCount = (id: string) =>
     [...counts.get(id)!].reduce((s, [pos, n]) => s + (infield.has(pos) ? n : 0), 0);
+  const outfieldCount = (id: string) =>
+    [...counts.get(id)!].reduce((s, [pos, n]) => s + (outfield.has(pos) ? n : 0), 0);
   const slots: LineupSlot[] = [];
 
   for (let inning = 1; inning <= innings; inning++) {
@@ -207,7 +271,8 @@ function buildLineup(
       balance.benchSurplus.get(p.id)! * 10 +
       rng();
     const canSit = (p: Player) =>
-      config.maxConsecutiveBench === null || benchRun.get(p.id)! < config.maxConsecutiveBench;
+      (config.maxConsecutiveBench === null || benchRun.get(p.id)! < config.maxConsecutiveBench) &&
+      (config.maxBenchInnings === null || count(p.id, "BENCH") < config.maxBenchInnings);
     const sorted = [...free].sort((a, b) => benchKey(a) - benchKey(b));
     const bench = [...sorted.filter(canSit), ...sorted.filter((p) => !canSit(p))].slice(
       0,
@@ -226,6 +291,7 @@ function buildLineup(
           if (infieldCount(p.id) < config.minInfieldInnings) c -= 20;
           c -= balance.infieldDeficit.get(p.id)! * 20;
         }
+        if (outfield.has(pos) && outfieldCount(p.id) < config.minOutfieldInnings) c -= 20;
         return c + rng();
       }),
     );
