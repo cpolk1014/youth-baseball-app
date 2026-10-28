@@ -483,6 +483,9 @@ export async function setKidsFor(userId: string, playerIds: string[]): Promise<v
     await loadRemote();
     throw e;
   }
+  // What a parent can see (their kids' charges, payments, quiz results) depends on these
+  // links, and was loaded before they changed. Load again so it shows up right away.
+  if (userId === data?.me.userId) await loadRemote();
 }
 
 /** Add or update a money entry with its shares; waits until it's saved (throws if not). */

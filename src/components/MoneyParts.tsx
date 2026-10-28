@@ -111,6 +111,8 @@ export function FamilyCard({
             : ledger.balanceCents < 0
               ? "Credit on account"
               : "All paid up"}
+          {" · "}
+          <span className="font-semibold text-[#0b1f3a] underline">Charges &amp; payments</span>
         </span>
       </span>
       <span className="shrink-0 text-right">
@@ -128,6 +130,9 @@ export function FamilyCard({
                 ? "credit"
                 : "paid"}
         </span>
+      </span>
+      <span aria-hidden="true" className="text-2xl text-slate-400">
+        ›
       </span>
     </Link>
   );
