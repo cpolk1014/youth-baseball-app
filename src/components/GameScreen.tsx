@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatGameDate, gameContext, lastFilledInning } from "@/lib/data/game";
 import { saveGame, saveLineup, setGameStatus, useAppData } from "@/lib/data/store";
+import { lineupMessage } from "@/lib/groupme/messages";
 import { assignPosition, positionAt, setAbsent, setBatting } from "@/lib/lineup/edit";
 import { generateLineup } from "@/lib/rules/generate";
 import type { Lineup } from "@/lib/rules/types";
@@ -13,6 +14,7 @@ import { AppShell, Loading } from "./AppShell";
 import { Attendance } from "./Attendance";
 import { BattingOrder } from "./BattingOrder";
 import { GameForm } from "./GameForm";
+import { GroupMePost } from "./GroupMePost";
 import { LineupGrid } from "./LineupGrid";
 import { PositionPicker } from "./PositionPicker";
 import { Sheet } from "./Sheet";
@@ -27,6 +29,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
   const [undo, setUndo] = useState<Lineup | null>(null);
   const [editing, setEditing] = useState(false);
   const [confirmFinal, setConfirmFinal] = useState(false);
+  const [posting, setPosting] = useState(false);
 
   if (!data) {
     return (
@@ -139,6 +142,14 @@ export function GameScreen({ gameId }: { gameId: string }) {
           >
             Mark final
           </button>
+          {data.groupme && lineup.slots.length > 0 && (
+            <button
+              onClick={() => setPosting(true)}
+              className="col-span-2 h-12 rounded-xl bg-[#00aff0] text-base font-bold text-white active:bg-[#0096cc]"
+            >
+              Post lineup to GroupMe
+            </button>
+          )}
         </div>
       )}
 
@@ -257,6 +268,22 @@ export function GameScreen({ gameId }: { gameId: string }) {
               change(assignPosition(lineup, cell.inning, cell.playerId, pos));
               setCell(null);
             }}
+          />
+        )}
+      </Sheet>
+
+      <Sheet open={posting} title="Post lineup to GroupMe" onClose={() => setPosting(false)}>
+        {posting && (
+          <GroupMePost
+            rows={12}
+            initialText={lineupMessage({
+              opponent: game.opponent,
+              when: formatGameDate(game),
+              location: game.location,
+              players: data.players,
+              lineup,
+              fieldPositions: config.fieldPositions,
+            })}
           />
         )}
       </Sheet>

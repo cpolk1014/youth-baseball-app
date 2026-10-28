@@ -139,6 +139,7 @@ function upgradeLocalData(d: AppData): AppData {
     financeEntries: d.financeEntries ?? [],
     financeShares: d.financeShares ?? [],
     financeSummary: null,
+    groupme: null,
     myTeams: (
       d.myTeams ?? [
         {
@@ -539,6 +540,32 @@ export async function removeReceipt(path: string): Promise<void> {
     await (await remote()).deleteReceiptFile(path);
   } catch {
     // Not worth bothering the treasurer about.
+  }
+}
+
+/** Connect (or change) the team's GroupMe bot; waits until it's saved. */
+export async function saveGroupMe(botId: string, groupName: string | null): Promise<void> {
+  const teamId = data!.team.id;
+  await enqueue(async () => (await remote()).saveGroupMeRow(teamId, botId, groupName));
+  update((d) => ({ ...d, groupme: { botId, groupName } }));
+}
+
+export async function disconnectGroupMe(): Promise<void> {
+  const teamId = data!.team.id;
+  await enqueue(async () => (await remote()).deleteGroupMeRow(teamId));
+  update((d) => ({ ...d, groupme: null }));
+}
+
+/** Post a message to the team's GroupMe group (through the server). Throws with a reason. */
+export async function postToGroupMe(text: string): Promise<void> {
+  const res = await fetch("/api/groupme/post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ teamId: data!.team.id, text }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? "Couldn't post to GroupMe. Try again.");
   }
 }
 

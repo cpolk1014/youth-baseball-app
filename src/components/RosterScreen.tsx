@@ -82,6 +82,25 @@ export function RosterScreen() {
         </Link>
       )}
 
+      {mode === "supabase" && canEdit && (
+        <Link
+          href="/groupme"
+          className="mb-3 flex min-h-14 items-center justify-between rounded-xl border-2 border-slate-300 bg-white px-4 active:bg-slate-50"
+        >
+          <span>
+            <span className="block text-lg font-semibold">GroupMe</span>
+            <span className="block text-sm text-slate-600">
+              {data.groupme
+                ? `Connected${data.groupme.groupName ? ` · ${data.groupme.groupName}` : ""} · send a message`
+                : "Post lineups and updates to the team's group"}
+            </span>
+          </span>
+          <span aria-hidden="true" className="text-2xl text-slate-500">
+            ›
+          </span>
+        </Link>
+      )}
+
       <Link
         href="/money"
         className="mb-3 flex min-h-14 items-center justify-between rounded-xl border-2 border-slate-300 bg-white px-4 active:bg-slate-50 lg:hidden"

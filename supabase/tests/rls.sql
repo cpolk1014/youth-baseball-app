@@ -761,4 +761,37 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001
 delete from storage.objects where bucket_id = 'receipts';
 select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'receipts') = 0, 'coaches can remove receipts');
 reset role;
+-- ── team GroupMe bot ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false);
+insert into public.team_groupme (team_id, bot_id, group_name) values
+  ('00000000-0000-4000-8000-000000000001', 'abcdef0123456789abcdef0123', 'Rattlers Parents');
+select pg_temp.expect((select count(*) from public.team_groupme) = 1, 'a manager connects the team GroupMe bot');
+do $$ begin
+  update public.team_groupme set bot_id = 'not a bot id!';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: bot IDs must look like bot IDs';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select group_name from public.team_groupme) = 'Rattlers Parents', 'coaches see the bot');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from public.team_groupme) = 0, 'parents never see the bot ID');
+do $$ begin
+  insert into public.team_groupme (team_id, bot_id) values ('00000000-0000-4000-8000-000000000001', 'zzzzzzzzzzzzzzzzzzzz');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege or unique_violation then raise notice 'ok: parents cannot connect GroupMe';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000006', false);
+select pg_temp.expect((select count(*) from public.team_groupme) = 0, 'treasurers do not see the bot ID');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.team_groupme) = 0, 'outsiders do not see the bot ID');
+reset role;
 \echo ALL RLS TESTS PASSED

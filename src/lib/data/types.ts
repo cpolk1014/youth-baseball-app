@@ -140,4 +140,6 @@ export interface AppData {
   financeShares: FinanceShare[];
   /** Team totals from the server, for people who can't see every entry. */
   financeSummary: MoneySummary | null;
+  /** The team's GroupMe bot; only loaded for coaches and managers (null otherwise). */
+  groupme: { botId: string; groupName: string | null } | null;
 }

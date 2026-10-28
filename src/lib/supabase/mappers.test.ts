@@ -149,6 +149,7 @@ describe("supabase mappers", () => {
       ],
       financeShares: [{ id: "fs1", entry_id: "f1", player_id: "p", amount_cents: 10000 }],
       financeSummary: null,
+      groupme: { bot_id: "abcdef0123456789", group_name: "Rattlers" },
       userId: "me",
       myTeams: [],
     };
@@ -189,6 +190,7 @@ describe("supabase mappers", () => {
     expect(data.financeShares).toEqual([
       { id: "fs1", entryId: "f1", playerId: "p", amountCents: 10000 },
     ]);
+    expect(data.groupme).toEqual({ botId: "abcdef0123456789", groupName: "Rattlers" });
     expect(data.guardians).toEqual([{ id: "pg1", playerId: "p", userId: "me" }]);
     expect(data.quizResults[0]).toMatchObject({ assignmentId: "a1", correct: 3, total: 5 });
     expect(data.members.map((m) => m.displayName)).toEqual(["Sam's mom", null, "Leo's dad"]);
