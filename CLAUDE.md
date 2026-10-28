@@ -15,7 +15,7 @@ Primary users: head coach (lineups), team manager (comms), treasurer (money). Th
 - Supabase: Postgres, Auth, Row Level Security, Storage, Realtime
 - Vercel hosting (preview deploys per branch)
 - Vitest for unit tests; Playwright for a few end-to-end flows
-- Claude API (`@anthropic-ai/sdk`, structured JSON output) for AI features, server-side only (`ANTHROPIC_API_KEY`); schedule import uses it
+- Claude API (`@anthropic-ai/sdk`, structured JSON output) for AI features, server-side only (`ANTHROPIC_API_KEY`); schedule import and typed fair-play rules use it
 - Later: Stripe (billing)
 
 ## Features
@@ -29,6 +29,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Inning-by-inning lineup builder with live fair-play warnings, Auto-fill, batting order with sit-outs, per-game attendance
 - Fair play rules screen (Season tab): every rule set to Must / Warn / Off with its number; separate coach pitch and kid pitch sets (pitching rules hidden for coach pitch); new rules: min outfield innings, min share of innings played, pitcher rest after a heavy game; reset to recommended. Coaches add their own rules from rule types (at least / at most N innings at positions, a player never plays a spot, a player locked to a spot in an inning, no one sits the same inning two games in a row, rotate the leadoff hitter); each is checked against the roster before saving, and auto-fill follows them
 - "Why this lineup?" under a game's lineup: rules it follows, trade-offs, and per kid the facts behind their spots (sits today vs. season rate, infield/outfield, pitching/catching, preferences, the coach's own rules); ties are called ties
+- Typed rules: a coach types a rule in plain English; Claude (`/api/rules/interpret`, structured output, roster names only) answers rule / clarify (question + tap answers) / split / unsupported (closest rule); the app maps it to rule types, runs the same roster and auto-fill checks, and the coach confirms before it's added
 - Season participation grid (summary and by position), fair to players who miss games
 - Printable lineup card (half sheet ×2, full letter)
 - Magic-link + code sign-in, invite links, roles (owner / coach / manager / treasurer / parent read-only), multiple teams with a switcher; the team creator is its Owner (coach powers, can never be removed or demoted)

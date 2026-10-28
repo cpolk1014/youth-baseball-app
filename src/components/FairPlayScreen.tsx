@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { permissionsFor } from "@/lib/data/permissions";
-import { saveSeasonRules, useAppData } from "@/lib/data/store";
+import { saveSeasonRules, useAppData, useStoreState } from "@/lib/data/store";
 import {
   CORE_RULE_TEXT,
   isChanged,
@@ -17,6 +17,7 @@ import { describeCustomRule, type TeamShape } from "@/lib/rules/custom";
 import type { CustomRule, RuleConfig, RuleSetting } from "@/lib/rules/types";
 import { activePlayers } from "@/lib/lineup/edit";
 import { CustomRuleForm } from "./CustomRuleForm";
+import { TypedRuleForm } from "./TypedRuleForm";
 import { AppShell, Loading } from "./AppShell";
 import { Sheet } from "./Sheet";
 
@@ -32,6 +33,8 @@ export function FairPlayScreen() {
   const data = useAppData();
   const [confirmReset, setConfirmReset] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [typing, setTyping] = useState(false);
+  const { mode } = useStoreState();
 
   if (!data) {
     return (
@@ -152,12 +155,21 @@ export function FairPlayScreen() {
           </ul>
         )}
         {canEdit && (
-          <button
-            onClick={() => setAdding(true)}
-            className="mt-2 h-14 w-full rounded-xl border-2 border-dashed border-slate-400 text-lg font-bold text-slate-700 active:bg-slate-100"
-          >
-            + Add a rule
-          </button>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setAdding(true)}
+              className="h-14 rounded-xl border-2 border-dashed border-slate-400 text-base font-bold text-slate-700 active:bg-slate-100"
+            >
+              + Build a rule
+            </button>
+            <button
+              onClick={() => setTyping(true)}
+              disabled={mode !== "supabase"}
+              className="h-14 rounded-xl border-2 border-dashed border-slate-400 text-base font-bold text-slate-700 active:bg-slate-100 disabled:opacity-40"
+            >
+              ✎ Type a rule
+            </button>
+          </div>
         )}
       </section>
 
@@ -170,6 +182,20 @@ export function FairPlayScreen() {
         </button>
       )}
       {!canEdit && <p className="text-base text-slate-600">Coaches set these rules.</p>}
+
+      <Sheet open={typing} title="Type a rule" onClose={() => setTyping(false)}>
+        {typing && (
+          <TypedRuleForm
+            config={config}
+            team={team}
+            onCancel={() => setTyping(false)}
+            onAdd={(rules) => {
+              setCustom([...custom, ...rules]);
+              setTyping(false);
+            }}
+          />
+        )}
+      </Sheet>
 
       <Sheet open={adding} title="Add a rule" onClose={() => setAdding(false)}>
         {adding && (

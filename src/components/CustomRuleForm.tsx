@@ -90,19 +90,10 @@ export function CustomRuleForm({
     }
   }, [kind, id, setting, positions, innings, playerId, position, inning]);
 
-  const problems = useMemo(() => {
-    if (!rule) return [];
-    const found = customRuleProblems(rule, team, config.custom);
-    // Try it: can auto-fill follow this with today's roster?
-    if (found.length === 0 && rule.kind !== "leadoff-rotation" && rule.kind !== "no-repeat-bench") {
-      const trial = { ...config, custom: [...config.custom, rule] };
-      const { violations } = generateLineup(team.players, trial, [], 1, { innings: team.innings });
-      if (violations.some((v) => v.customRuleId === rule.id)) {
-        found.push("Auto-fill couldn't follow this in a test lineup with your roster.");
-      }
-    }
-    return found;
-  }, [rule, team, config]);
+  const problems = useMemo(
+    () => (rule ? ruleProblems(rule, config, team) : []),
+    [rule, team, config],
+  );
 
   if (!kind) {
     return (
@@ -285,4 +276,20 @@ export function CustomRuleForm({
       </div>
     </div>
   );
+}
+
+/**
+ * Everything wrong with a new rule before it's saved: roster and clash checks, then a test
+ * auto-fill to see whether it can actually be followed.
+ */
+export function ruleProblems(rule: CustomRule, config: RuleConfig, team: TeamShape): string[] {
+  const found = customRuleProblems(rule, team, config.custom);
+  if (found.length === 0 && rule.kind !== "leadoff-rotation" && rule.kind !== "no-repeat-bench") {
+    const trial = { ...config, custom: [...config.custom, rule] };
+    const { violations } = generateLineup(team.players, trial, [], 1, { innings: team.innings });
+    if (violations.some((v) => v.customRuleId === rule.id)) {
+      found.push("Auto-fill couldn't follow this in a test lineup with your roster.");
+    }
+  }
+  return found;
 }
