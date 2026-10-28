@@ -27,7 +27,8 @@ import {
 import { RECEIPT_ACCEPT, RECEIPT_MAX_BYTES, isPdf } from "@/lib/finance/receipt";
 import { activePlayers } from "@/lib/lineup/edit";
 import { Toggle } from "./PlayerForm";
-import { openReceipt, shrinkReceipt } from "./receiptFile";
+import { ReceiptPreview } from "./ReceiptPreview";
+import { shrinkReceipt } from "./receiptFile";
 
 const field =
   "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[#0b1f3a] focus:outline-none";
@@ -512,6 +513,7 @@ function ReceiptField({
   onError: (message: string | null) => void;
 }) {
   const [reading, setReading] = useState(false);
+  const [showing, setShowing] = useState(false);
   const pick = (
     <label className={`${smallButton} inline-flex cursor-pointer items-center gap-2`}>
       <span aria-hidden="true">📎</span>
@@ -538,12 +540,6 @@ function ReceiptField({
     </label>
   );
 
-  const view = async () => {
-    if (existing && !(await openReceipt(existing))) {
-      onError("Couldn't open the receipt. Check your connection.");
-    }
-  };
-
   return (
     <div className="flex flex-col gap-2">
       <span className={labelText}>Receipt (optional)</span>
@@ -559,10 +555,11 @@ function ReceiptField({
           {state.kind === "remove" && (
             <p className="text-base text-slate-600">The receipt will be removed when you save.</p>
           )}
+          {showing && existing && state.kind === "keep" && <ReceiptPreview path={existing} />}
           <div className="flex flex-wrap gap-2">
             {existing && state.kind === "keep" && (
-              <button type="button" onClick={() => void view()} className={smallButton}>
-                View {isPdf(existing) ? "PDF" : "photo"}
+              <button type="button" onClick={() => setShowing(!showing)} className={smallButton}>
+                {showing ? "Hide" : "View"} {isPdf(existing) ? "PDF" : "photo"}
               </button>
             )}
             {state.kind !== "remove" && pick}

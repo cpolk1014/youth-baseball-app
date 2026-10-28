@@ -1,6 +1,5 @@
 "use client";
 
-import { receiptUrl } from "@/lib/data/store";
 import { RECEIPT_MAX_SIDE, fitWithin } from "@/lib/finance/receipt";
 
 /**
@@ -23,22 +22,5 @@ export async function shrinkReceipt(file: File): Promise<Blob> {
     return blob ?? file;
   } catch {
     return file;
-  }
-}
-
-/**
- * Open a receipt in a new tab. The tab opens right away (inside the tap) so phones don't
- * block it, then goes to a short-lived private link. Returns false if that failed.
- */
-export async function openReceipt(path: string): Promise<boolean> {
-  const tab = window.open("", "_blank");
-  try {
-    const url = await receiptUrl(path);
-    if (tab) tab.location.href = url;
-    else window.location.assign(url);
-    return true;
-  } catch {
-    tab?.close();
-    return false;
   }
 }

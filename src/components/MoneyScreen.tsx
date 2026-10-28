@@ -12,7 +12,7 @@ import { AppShell, Loading } from "./AppShell";
 import { kidsOf } from "./KidPicker";
 import { EntryTypePicker, MoneyEntryForm, newEntry } from "./MoneyEntryForm";
 import { FamilyCard, MoneySummaryCard, moneyPlayers } from "./MoneyParts";
-import { openReceipt } from "./receiptFile";
+import { ReceiptPreview } from "./ReceiptPreview";
 import { Sheet } from "./Sheet";
 import { useToday } from "./useToday";
 
@@ -24,6 +24,7 @@ export function MoneyScreen() {
   const [picking, setPicking] = useState(false);
   const [editing, setEditing] = useState<{ entry: FinanceEntry; isNew: boolean } | null>(null);
   const [filter, setFilter] = useState<EntryType | "all">("all");
+  const [viewing, setViewing] = useState<FinanceEntry | null>(null);
 
   if (!data) {
     return (
@@ -192,7 +193,7 @@ export function MoneyScreen() {
                       <span className="block text-lg font-bold">{formatCents(e.amountCents)}</span>
                       {!perms.editMoney && e.receiptPath && (
                         <button
-                          onClick={() => void openReceipt(e.receiptPath!)}
+                          onClick={() => setViewing(e)}
                           className="mt-1 h-10 rounded-lg border-2 border-slate-300 px-3 text-sm font-semibold active:bg-slate-100"
                         >
                           Receipt
@@ -207,6 +208,13 @@ export function MoneyScreen() {
         )}
       </section>
 
+      <Sheet
+        open={viewing !== null}
+        title={viewing ? `Receipt: ${viewing.title}` : "Receipt"}
+        onClose={() => setViewing(null)}
+      >
+        {viewing?.receiptPath && <ReceiptPreview path={viewing.receiptPath} />}
+      </Sheet>
       <Sheet open={picking} title="Add to team money" onClose={() => setPicking(false)}>
         <EntryTypePicker
           onPick={(t) => {
