@@ -75,9 +75,9 @@ export function MoneySummaryCard({ s }: { s: MoneySummary }) {
       </div>
       {(s.plannedOutCents > 0 || s.expectedInCents > 0) && (
         <div className="mt-2 text-base text-slate-700">
-          {s.plannedOutCents > 0 && <p>Budget not spent yet: {formatCents(s.plannedOutCents)}</p>}
+          {s.plannedOutCents > 0 && <p>Planned, not paid yet: {formatCents(s.plannedOutCents)}</p>}
           {s.expectedInCents > 0 && (
-            <p>Fundraising still expected: {formatCents(s.expectedInCents)}</p>
+            <p>Expected in, not received yet: {formatCents(s.expectedInCents)}</p>
           )}
         </div>
       )}

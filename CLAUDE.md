@@ -35,12 +35,12 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Installable on a phone's home screen; responsive layout (phone: bottom tabs; tablet: two-column lists, centered dialogs; desktop: side menu)
 - Practice schedule: build a season of practices (days × dates), each with a focus, a drill plan (starter library or custom, minutes vs. scheduled length), notes, cancel; parents view
 - Import a schedule from a photo, PDF or CSV (Claude reads it; coach reviews before adding practices and games)
-- Team money (phase 1): one ledger of Bat Arounds (split across players), Cleanups (one player), Walkoffs (team pays out), Safe at Home (family payments and money back), Rain Checks (credits), Grand Slams (fundraisers); installments with a first due date; family balances; team totals for everyone; parents see only their kids' charges plus all Walkoffs; coaches and treasurers edit. Budget view: budget lines (Walkoff/Grand Slam marked as budget) vs. actual entries by category, season outlook (expected spending vs. charged + fundraising)
+- Team money (phase 1): one ledger of Bat Arounds (split across players), Cleanups (one player), Walkoffs (team pays out), Safe at Home (family payments and money back), Rain Checks (credits), Grand Slams (fundraisers); installments with a first due date; family balances; team totals for everyone; parents see only their kids' charges plus all Walkoffs; coaches and treasurers edit
 - Plays tab ("Where do I go?"): 57 animated situational plays with every position's job; random quizzes; coaches assign plays as homework to families and see who finished; plays can be added to a practice as situations to work on
 
 **Next up** (roughly in order; the user picks)
 
-- Team money: re-split a Bat Around when the roster changes (manual, with a nudge)
+- Team money phase 2: re-split a Bat Around when the roster changes, budget vs. actual, umpire-fee estimates from the schedule, pass fundraiser money on to families
 
 - Post lineups / messages to the team's GroupMe group (OAuth per coach)
 - Tournament finder

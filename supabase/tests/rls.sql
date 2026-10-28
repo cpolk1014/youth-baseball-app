@@ -581,7 +581,7 @@ select public.save_finance_entry(
 select public.save_finance_entry(
   '{"id": "f0000000-0000-4000-8000-000000000005", "season_id": "00000000-0000-4000-8000-000000000101", "type": "grand_slam", "title": "Fundraiser", "amount_cents": 5000, "entry_date": "2027-01-05"}', '[]');
 select public.save_finance_entry(
-  '{"id": "f0000000-0000-4000-8000-000000000006", "season_id": "00000000-0000-4000-8000-000000000101", "type": "walkoff", "title": "Swag bags", "amount_cents": 800, "entry_date": "2027-03-01", "estimate": true, "category": "Equipment & swag"}', '[]');
+  '{"id": "f0000000-0000-4000-8000-000000000006", "season_id": "00000000-0000-4000-8000-000000000101", "type": "walkoff", "title": "Swag bags", "amount_cents": 800, "entry_date": "2027-03-01", "estimate": true}', '[]');
 do $$ begin
   perform public.save_finance_entry(
     '{"id": "f0000000-0000-4000-8000-000000000009", "season_id": "00000000-0000-4000-8000-000000000101", "type": "bat_around", "title": "Bad", "amount_cents": 3000, "entry_date": "2027-01-01"}',
@@ -718,15 +718,4 @@ select pg_temp.expect(
   'the owner is still the owner');
 delete from public.team where id = '0e000000-0000-4000-8000-000000000001';
 select pg_temp.expect((select count(*) from public.member where team_id = '0e000000-0000-4000-8000-000000000001') = 0, 'deleting the team still removes the owner');
--- ── budget totals ──
-set role authenticated;
-select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
-select public.save_finance_entry(
-  '{"id": "f0000000-0000-4000-8000-000000000011", "season_id": "00000000-0000-4000-8000-000000000101", "type": "walkoff", "title": "PAP season budget", "amount_cents": 2200, "entry_date": "2027-01-01", "estimate": true, "category": "Umpires"}', '[]');
-select public.save_finance_entry(
-  '{"id": "f0000000-0000-4000-8000-000000000012", "season_id": "00000000-0000-4000-8000-000000000101", "type": "walkoff", "title": "PAP weekend 1", "amount_cents": 500, "entry_date": "2027-02-01", "category": "Umpires"}', '[]');
-select pg_temp.expect(
-  (public.finance_summary('00000000-0000-4000-8000-000000000101') ->> 'plannedOutCents')::int = 800 + 2200 - 500,
-  'planned spending is each category''s budget not yet spent');
-reset role;
 \echo ALL RLS TESTS PASSED

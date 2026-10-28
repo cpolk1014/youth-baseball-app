@@ -1,10 +1,9 @@
--- Budget view: estimates stay as each category's plan while real entries come in, so the
--- "planned" and "expected" totals are now the part of each category's plan not yet used.
--- Everything else in finance_summary is unchanged.
+-- Undo the budget view's change to finance_summary (the budget view was removed): put back
+-- the original team totals, where "planned" and "expected" are simply the sum of estimates.
+-- Same function as in 20261028000000_team_money.sql; safe to run on any database.
 
 -- Team totals for everyone on the team (no family details). Same math as moneySummary()
--- in src/lib/finance/ledger.ts. Planned and expected
--- amounts are each category's budget not yet spent or received.
+-- in src/lib/finance/ledger.ts.
 create or replace function public.finance_summary(p_season_id uuid)
 returns jsonb
 language plpgsql
@@ -18,16 +17,7 @@ begin
   if not public.is_team_member(public.season_team_id(p_season_id)) then
     raise exception 'Not on this team' using errcode = 'insufficient_privilege';
   end if;
-  -- Budget by category: estimates are the plan, real entries what actually happened.
-  with budget as (
-    select type, coalesce(category, '') as category,
-      coalesce(sum(amount_cents) filter (where estimate), 0) as planned,
-      coalesce(sum(amount_cents) filter (where not estimate), 0) as actual
-    from public.finance_entry
-    where season_id = p_season_id and type in ('walkoff', 'grand_slam')
-    group by type, coalesce(category, '')
-  ),
-  t as (
+  with t as (
     select
       coalesce(sum(amount_cents) filter (where type = 'bat_around'), 0) as bat_around,
       coalesce(sum(amount_cents) filter (where type = 'cleanup'), 0) as cleanup,
@@ -36,8 +26,8 @@ begin
       coalesce(sum(amount_cents) filter (where type = 'walkoff' and not estimate), 0) as walkoff,
       coalesce(sum(amount_cents) filter (where type = 'safe_at_home' and not refund), 0)
         - coalesce(sum(amount_cents) filter (where type = 'safe_at_home' and refund), 0) as collected,
-      (select coalesce(sum(greatest(0, b.planned - b.actual)), 0) from budget b where b.type = 'walkoff') as planned_out,
-      (select coalesce(sum(greatest(0, b.planned - b.actual)), 0) from budget b where b.type = 'grand_slam') as expected_in
+      coalesce(sum(amount_cents) filter (where type = 'walkoff' and estimate), 0) as planned_out,
+      coalesce(sum(amount_cents) filter (where type = 'grand_slam' and estimate), 0) as expected_in
     from public.finance_entry where season_id = p_season_id
   )
   select jsonb_build_object(

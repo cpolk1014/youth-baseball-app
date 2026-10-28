@@ -1,4 +1,3 @@
-import { budgetReport, remainingCents } from "./budget";
 import { splitCents } from "./money";
 import { isCharge, type FinanceEntry, type FinanceShare } from "./types";
 
@@ -113,7 +112,7 @@ export interface MoneySummary {
   billedCents: number;
   collectedCents: number;
   cashOnHandCents: number;
-  /** Budget (estimates) not yet spent or received, by category; kept out of the totals above. */
+  /** Estimates, kept out of the totals above. */
   plannedOutCents: number;
   expectedInCents: number;
 }
@@ -130,7 +129,6 @@ export function moneySummary(entries: readonly FinanceEntry[]): MoneySummary {
     sum((e) => e.type === "safe_at_home" && !e.refund) -
     sum((e) => e.type === "safe_at_home" && e.refund);
   const totalInCents = batAroundCents + cleanupCents + grandSlamCents;
-  const budget = budgetReport(entries);
   const totalOutCents = rainCheckCents + walkoffCents;
   return {
     batAroundCents,
@@ -144,9 +142,7 @@ export function moneySummary(entries: readonly FinanceEntry[]): MoneySummary {
     billedCents: batAroundCents + cleanupCents - rainCheckCents,
     collectedCents,
     cashOnHandCents: collectedCents + grandSlamCents - walkoffCents,
-    // Budget still to spend / still to come in: each category's plan minus what's
-    // actually happened in it (never below zero).
-    plannedOutCents: remainingCents(budget.spending),
-    expectedInCents: remainingCents(budget.income),
+    plannedOutCents: sum((e) => e.type === "walkoff" && e.estimate),
+    expectedInCents: sum((e) => e.type === "grand_slam" && e.estimate),
   };
 }
