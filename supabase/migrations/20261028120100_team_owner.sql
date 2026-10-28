@@ -1,5 +1,27 @@
 -- The team's creator is its Owner: a coach who can never be removed or demoted, and whose
--- role nobody else can be given. One Owner per team.
+-- role nobody else can be given. One Owner per team. Safe to run again if it stopped
+-- partway.
+
+-- A team keeps at least one coach; the Owner counts as one.
+create or replace function public.keep_a_coach()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if old.role = 'coach'
+    and (tg_op = 'DELETE' or new.role <> 'coach' or new.team_id <> old.team_id)
+    and exists (select 1 from public.team where id = old.team_id)
+    and not exists (
+      select 1 from public.member
+      where team_id = old.team_id and role in ('coach', 'owner') and id <> old.id
+    ) then
+    raise exception 'a team needs at least one coach';
+  end if;
+  return coalesce(new, old);
+end;
+$$;
 
 -- Owners can do everything coaches can: anywhere a policy asks for 'coach', 'owner' counts.
 create or replace function public.has_team_role(p_team_id uuid, p_roles public.member_role[])
@@ -36,6 +58,9 @@ begin
 end;
 $$;
 
+-- (Re-created below; dropped first so a re-run can do this step.)
+drop trigger if exists member_protect_owner on public.member;
+
 -- Existing teams: the creator's coach membership becomes Owner; if the creator isn't a
 -- coach on the team anymore, the longest-serving coach does.
 with pick as (
@@ -48,14 +73,15 @@ with pick as (
 )
 update public.member set role = 'owner' where id in (select id from pick);
 
-create unique index member_one_owner on public.member (team_id) where role = 'owner';
+create unique index if not exists member_one_owner on public.member (team_id) where role = 'owner';
 
 -- Invite links can't make someone an Owner.
+alter table public.invite drop constraint if exists invite_not_owner;
 alter table public.invite add constraint invite_not_owner check (role <> 'owner');
 
 -- Protect the Owner: can't be removed, demoted, moved, or handed to someone else.
 -- Removing members while the whole team is being deleted is still allowed.
-create function public.protect_team_owner()
+create or replace function public.protect_team_owner()
 returns trigger
 language plpgsql
 security definer
@@ -93,24 +119,3 @@ $$;
 create trigger member_protect_owner
 before insert or update or delete on public.member
 for each row execute function public.protect_team_owner();
-
--- A team keeps at least one coach; the Owner counts as one.
-create or replace function public.keep_a_coach()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  if old.role = 'coach'
-    and (tg_op = 'DELETE' or new.role <> 'coach' or new.team_id <> old.team_id)
-    and exists (select 1 from public.team where id = old.team_id)
-    and not exists (
-      select 1 from public.member
-      where team_id = old.team_id and role in ('coach', 'owner') and id <> old.id
-    ) then
-    raise exception 'a team needs at least one coach';
-  end if;
-  return coalesce(new, old);
-end;
-$$;
