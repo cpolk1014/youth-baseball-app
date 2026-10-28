@@ -162,6 +162,10 @@ export function MoneyEntryForm({
           ? "Add players to the roster first."
           : null;
 
+  // Bat Arounds can be posted to the team's GroupMe (offered after saving a new one, and
+  // from the button on an existing one).
+  const canAnnounce = type === "bat_around" && !!data.groupme && !data.team.optionedAt;
+
   const save = async () => {
     if (problem || cents === null) return;
     const saved: FinanceEntry = {
@@ -188,25 +192,8 @@ export function MoneyEntryForm({
       }
       await saveFinanceEntry(saved, sharesFor(saved, players, newId));
       if (oldReceipt && oldReceipt !== saved.receiptPath) await removeReceipt(oldReceipt);
-      if (isNew && type === "bat_around" && data.groupme && !data.team.optionedAt) {
-        const dates = saved.dueDates.length ? saved.dueDates : [saved.date];
-        const share = splitCents(saved.amountCents, players.length)[0] ?? 0;
-        const thisYear = new Date().getFullYear();
-        setAnnounce(
-          batAroundMessage({
-            title: saved.title,
-            totalCents: saved.amountCents,
-            players: players.length,
-            each: eachLabel(saved.amountCents, players.length, formatCents).replace(" each", ""),
-            installments: splitCents(share, dates.length).map((amountCents, i) => ({
-              dueDate: dates[i]!,
-              amountCents,
-            })),
-            link: `${window.location.origin}/money`,
-            format: formatCents,
-            formatDate: (d) => shortDate(d, thisYear),
-          }),
-        );
+      if (isNew && canAnnounce) {
+        setAnnounce(announcement(saved, players.length));
         return;
       }
       onDone();
@@ -225,7 +212,9 @@ export function MoneyEntryForm({
     return (
       <div className="flex flex-col gap-3">
         <p className="rounded-xl bg-green-50 p-3 text-base font-semibold text-green-900">
-          Saved. Tell the team on GroupMe?
+          {isNew
+            ? "Saved. Tell the team on GroupMe?"
+            : "Post this Bat Around to the team's GroupMe?"}
         </p>
         <GroupMePost initialText={announce} rows={10} />
         <button
@@ -506,6 +495,15 @@ export function MoneyEntryForm({
             {saving ? "Saving…" : "Save"}
           </button>
         </div>
+        {!isNew && canAnnounce && (
+          <button
+            type="button"
+            onClick={() => setAnnounce(announcement(entry, existingShares.length))}
+            className="h-12 rounded-xl bg-[#00aff0] text-base font-bold text-white active:bg-[#0096cc]"
+          >
+            Post to GroupMe
+          </button>
+        )}
         {!isNew &&
           (confirmDelete ? (
             <button
@@ -634,4 +632,24 @@ function ReceiptField({
       )}
     </div>
   );
+}
+
+/** The GroupMe post for a Bat Around split across `players` players. */
+function announcement(entry: FinanceEntry, players: number): string {
+  const dates = entry.dueDates.length ? entry.dueDates : [entry.date];
+  const share = splitCents(entry.amountCents, players)[0] ?? 0;
+  const thisYear = new Date().getFullYear();
+  return batAroundMessage({
+    title: entry.title,
+    totalCents: entry.amountCents,
+    players,
+    each: eachLabel(entry.amountCents, players, formatCents).replace(" each", ""),
+    installments: splitCents(share, dates.length).map((amountCents, i) => ({
+      dueDate: dates[i]!,
+      amountCents,
+    })),
+    link: `${window.location.origin}/money`,
+    format: formatCents,
+    formatDate: (d) => shortDate(d, thisYear),
+  });
 }
