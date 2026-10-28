@@ -24,11 +24,11 @@ const player = (
 });
 
 export const SEED_DATA: AppData = {
-  me: { userId: null, role: "coach" },
+  me: { userId: null, role: "owner" },
   members: [],
   invites: [],
   myTeams: [
-    { id: TEAM_ID, name: "Riverside Rattlers", ageGroup: "10U", role: "coach", optioned: false },
+    { id: TEAM_ID, name: "Riverside Rattlers", ageGroup: "10U", role: "owner", optioned: false },
   ],
   team: {
     id: TEAM_ID,

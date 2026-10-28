@@ -14,14 +14,14 @@ export interface MemberRow {
   id: string;
   team_id: string;
   user_id: string;
-  role: "coach" | "manager" | "treasurer" | "parent";
+  role: "owner" | "coach" | "manager" | "treasurer" | "parent";
   display_name: string | null;
 }
 
 export interface InviteRow {
   id: string;
   team_id: string;
-  role: "coach" | "manager" | "treasurer" | "parent";
+  role: "owner" | "coach" | "manager" | "treasurer" | "parent";
   token: string;
   created_at: string;
   expires_at: string;

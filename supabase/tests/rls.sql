@@ -120,7 +120,7 @@ set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 insert into public.team (id, name, age_group) values ('cccccccc-0000-4000-8000-000000000001', 'Other Team', '12U') returning id;
 select pg_temp.expect((select count(*) from public.team) = 1 and (select name from public.team) = 'Other Team', 'new team creator sees only their own team');
-select pg_temp.expect((select role from public.member where team_id = 'cccccccc-0000-4000-8000-000000000001') = 'coach', 'creator becomes coach');
+select pg_temp.expect((select role from public.member where team_id = 'cccccccc-0000-4000-8000-000000000001') = 'owner', 'creator becomes the owner');
 insert into public.season (id, team_id, name) values ('cccccccc-0000-4000-8000-000000000101', 'cccccccc-0000-4000-8000-000000000001', 'S');
 insert into public.game (id, season_id, game_date, opponent) values ('cccccccc-0000-4000-8000-000000010001', 'cccccccc-0000-4000-8000-000000000101', '2026-11-01', 'X');
 insert into public.lineup (id, game_id) values ('cccccccc-0000-4000-8000-0000000a0001', 'cccccccc-0000-4000-8000-000000010001');
@@ -661,4 +661,61 @@ do $$ begin
 exception when insufficient_privilege then raise notice 'ok: outsiders cannot read the team summary';
 end $$;
 reset role;
+-- ── team owner ──
+-- User 3 creates a team in the app and becomes its Owner. Add user 1 as a coach there.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+insert into public.team (id, name, age_group) values ('0e000000-0000-4000-8000-000000000001', 'Owned', '11U');
+reset role;
+select pg_temp.expect(
+  (select role from public.member where team_id = '0e000000-0000-4000-8000-000000000001') = 'owner',
+  'a team created in the app makes its creator the owner');
+insert into public.member (team_id, user_id, role) values
+  ('0e000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'coach');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+insert into public.invite (team_id, role, token, created_by) values
+  ('0e000000-0000-4000-8000-000000000001', 'parent', 'owner-token-0123456789abcdef0123456789a', 'aaaaaaaa-0000-4000-8000-000000000003');
+select pg_temp.expect((select count(*) from public.invite where team_id = '0e000000-0000-4000-8000-000000000001') = 1, 'the owner can do what coaches do');
+do $$ begin
+  delete from public.member where team_id = '0e000000-0000-4000-8000-000000000001' and user_id = 'aaaaaaaa-0000-4000-8000-000000000003';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: the owner cannot leave';
+end $$;
+do $$ begin
+  insert into public.invite (team_id, role, token, created_by) values
+    ('0e000000-0000-4000-8000-000000000001', 'owner', 'owner-token-ffff456789abcdef0123456789a', 'aaaaaaaa-0000-4000-8000-000000000003');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: invite links cannot make an owner';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+do $$ begin
+  delete from public.member where team_id = '0e000000-0000-4000-8000-000000000001' and user_id = 'aaaaaaaa-0000-4000-8000-000000000003';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: coaches cannot remove the owner';
+end $$;
+do $$ begin
+  update public.member set role = 'parent' where team_id = '0e000000-0000-4000-8000-000000000001' and user_id = 'aaaaaaaa-0000-4000-8000-000000000003';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: coaches cannot demote the owner';
+end $$;
+do $$ begin
+  update public.member set role = 'owner' where team_id = '0e000000-0000-4000-8000-000000000001' and user_id = 'aaaaaaaa-0000-4000-8000-000000000001';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: nobody can be made owner';
+end $$;
+do $$ begin
+  insert into public.member (team_id, user_id, role) values
+    ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'owner');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: only the creator can be added as owner';
+end $$;
+reset role;
+select pg_temp.expect(
+  (select role from public.member where team_id = '0e000000-0000-4000-8000-000000000001' and user_id = 'aaaaaaaa-0000-4000-8000-000000000003') = 'owner',
+  'the owner is still the owner');
+delete from public.team where id = '0e000000-0000-4000-8000-000000000001';
+select pg_temp.expect((select count(*) from public.member where team_id = '0e000000-0000-4000-8000-000000000001') = 0, 'deleting the team still removes the owner');
 \echo ALL RLS TESTS PASSED

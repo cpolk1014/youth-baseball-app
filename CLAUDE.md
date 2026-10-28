@@ -29,7 +29,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Inning-by-inning lineup builder with live fair-play warnings, Auto-fill, batting order with sit-outs, per-game attendance
 - Season participation grid (summary and by position), fair to players who miss games
 - Printable lineup card (half sheet ×2, full letter)
-- Magic-link + code sign-in, invite links, roles (coach / manager / parent read-only), multiple teams with a switcher
+- Magic-link + code sign-in, invite links, roles (owner / coach / manager / treasurer / parent read-only), multiple teams with a switcher; the team creator is its Owner (coach powers, can never be removed or demoted)
 - Parents linked to their kids (parent picks on first open; coaches/managers fix links on Coaches & parents); homework uses the links
 - Option a team (archive, read-only, "Call Up" to restore); delete only optioned teams
 - Installable on a phone's home screen; responsive layout (phone: bottom tabs; tablet: two-column lists, centered dialogs; desktop: side menu)
@@ -55,7 +55,7 @@ Source of truth: `supabase/migrations/`. Summary:
 - organization (optional parent of teams)
 - team: name, age_group, colors, groupme_group_id, coach_pitch, optioned_at (archived; delete only when set)
 - season: team_id, name, start/end, fair_play_rules (JSONB, RuleConfig overrides)
-- member: team_id, user_id, role (coach | manager | treasurer | parent), display_name (no emails stored)
+- member: team_id, user_id, role (owner | coach | manager | treasurer | parent), display_name (no emails stored); one owner per team (the creator), protected by a trigger; `has_team_role` treats owner as coach
 - player_guardian: player_id, user_id (parent ↔ kid links; families see their own, coaches/managers all; dropped when the member leaves)
 - invite: team_id, role, token, expires_at, max_uses, uses, revoked_at (coach-only; joined via `accept_invite`)
 - player: team_id, name, jersey_number, preferred_positions[], can_pitch, can_catch, active

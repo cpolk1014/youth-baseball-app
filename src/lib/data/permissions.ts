@@ -1,7 +1,8 @@
 // What each role can do in the app. Mirrors the database's Row Level Security, which is
 // what actually enforces it; this only decides which buttons to show.
 
-export type MemberRole = "coach" | "manager" | "treasurer" | "parent";
+/** "owner" is whoever created the team: a coach who can never be removed or demoted. */
+export type MemberRole = "owner" | "coach" | "manager" | "treasurer" | "parent";
 
 export interface Permissions {
   /** Field positions, batting order, attendance, auto-fill. */
@@ -16,11 +17,16 @@ export interface Permissions {
   seeAllMoney: boolean;
 }
 
-const RANK: MemberRole[] = ["coach", "manager", "treasurer", "parent"];
+const RANK: MemberRole[] = ["owner", "coach", "manager", "treasurer", "parent"];
+
+/** Owners can do everything coaches can. */
+export function isCoach(role: MemberRole): boolean {
+  return role === "owner" || role === "coach";
+}
 
 /** What a role can do; an optioned (archived) team is read-only for everyone. */
 export function permissionsFor(role: MemberRole, optioned = false): Permissions {
-  const money = role === "coach" || role === "treasurer";
+  const money = isCoach(role) || role === "treasurer";
   if (optioned) {
     return {
       editLineups: false,
@@ -31,9 +37,9 @@ export function permissionsFor(role: MemberRole, optioned = false): Permissions 
     };
   }
   return {
-    editLineups: role === "coach",
-    editTeam: role === "coach" || role === "manager",
-    manageMembers: role === "coach",
+    editLineups: isCoach(role),
+    editTeam: isCoach(role) || role === "manager",
+    manageMembers: isCoach(role),
     editMoney: money,
     seeAllMoney: money,
   };
@@ -41,7 +47,7 @@ export function permissionsFor(role: MemberRole, optioned = false): Permissions 
 
 /** Coaches option a team, call it back up, and delete it (only once optioned). */
 export function canCallUp(role: MemberRole): boolean {
-  return role === "coach";
+  return isCoach(role);
 }
 
 /** A person can hold several roles on a team; the strongest one wins. */
@@ -50,6 +56,7 @@ export function bestRole(roles: MemberRole[]): MemberRole {
 }
 
 export const ROLE_LABEL: Record<MemberRole, string> = {
+  owner: "Owner",
   coach: "Coach",
   manager: "Manager",
   treasurer: "Treasurer",

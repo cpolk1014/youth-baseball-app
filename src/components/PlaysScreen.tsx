@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { permissionsFor } from "@/lib/data/permissions";
+import { isCoach, permissionsFor } from "@/lib/data/permissions";
 import { newId, saveAssignment, useAppData } from "@/lib/data/store";
 import type { PlayAssignment } from "@/lib/data/types";
 import { formatDue, homeworkStatus, playersDone } from "@/lib/plays/homework";
@@ -27,7 +27,7 @@ export function PlaysScreen() {
   }
 
   const canAssign = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
-  const coachView = data.me.role === "coach" || data.me.role === "manager";
+  const coachView = isCoach(data.me.role) || data.me.role === "manager";
   const startAssign = () =>
     setAssigning({
       id: newId(),

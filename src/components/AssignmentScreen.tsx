@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { permissionsFor } from "@/lib/data/permissions";
+import { isCoach, permissionsFor } from "@/lib/data/permissions";
 import {
   deleteAssignment,
   myUserId,
@@ -51,7 +51,7 @@ export function AssignmentScreen({ assignmentId }: { assignmentId: string }) {
   }
 
   const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
-  const coachView = data.me.role === "coach" || data.me.role === "manager";
+  const coachView = isCoach(data.me.role) || data.me.role === "manager";
   const plays = playsFor(assignment.playIds);
   const status = homeworkStatus(assignment, data.quizResults, data.members, data.me.userId);
   // A parent picks among their own kids; anyone without links picks from the roster.

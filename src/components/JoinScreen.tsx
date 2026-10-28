@@ -5,6 +5,7 @@ import { ROLE_LABEL } from "@/lib/data/permissions";
 import { preferTeam } from "@/lib/data/store";
 import type { InvitePreview } from "@/lib/data/supabase-backend";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import type { MemberRole } from "@/lib/data/permissions";
 
 type State =
   | { kind: "loading" }
@@ -12,11 +13,13 @@ type State =
   | { kind: "error"; message: string }
   | { kind: "ready"; invite: InvitePreview };
 
-const ROLE_BLURB = {
+const ROLE_BLURB: Record<MemberRole, string> = {
   parent: "You'll see lineups, the batting order and season playing time.",
   coach: "You'll be able to edit the roster, games and lineups.",
   manager: "You'll be able to edit the roster and games.",
-  treasurer: "You'll see lineups and team info.",
+  treasurer: "You'll manage team money and see lineups and team info.",
+  // Invite links never make an Owner; listed so every role has a line.
+  owner: "You'll run the team.",
 };
 
 function openTeam(teamId: string) {

@@ -60,4 +60,11 @@ describe("permissions", () => {
     expect(canCallUp("manager")).toBe(false);
     expect(canCallUp("parent")).toBe(false);
   });
+
+  it("lets the owner do everything a coach can, and outranks every role", () => {
+    expect(permissionsFor("owner")).toEqual(permissionsFor("coach"));
+    expect(permissionsFor("owner", true)).toEqual(permissionsFor("coach", true));
+    expect(canCallUp("owner")).toBe(true);
+    expect(bestRole(["coach", "owner", "parent"])).toBe("owner");
+  });
 });

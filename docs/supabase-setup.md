@@ -34,7 +34,9 @@ SQL Editor → New query. Paste and run each file, in order:
 8. `supabase/migrations/20261027120000_plays.sql`
 9. `supabase/migrations/20261027180000_player_guardians.sql`
 10. `supabase/migrations/20261028000000_team_money.sql`
-11. `supabase/seed.sql` (optional: the sample Riverside Rattlers team)
+11. `supabase/migrations/20261028120000_owner_role.sql` (run on its own, then the next one)
+12. `supabase/migrations/20261028120100_team_owner.sql`
+13. `supabase/seed.sql` (optional: the sample Riverside Rattlers team)
 
 When a new file appears in `supabase/migrations/` later, run just that file.
 

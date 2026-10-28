@@ -58,7 +58,9 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .maybeSingle(),
   ]);
-  const canImport = (roles ?? []).some((r) => r.role === "coach" || r.role === "manager");
+  const canImport = (roles ?? []).some(
+    (r) => r.role === "owner" || r.role === "coach" || r.role === "manager",
+  );
   if (!canImport || !team)
     return errorResponse(403, "Only coaches and managers can import a schedule.");
   if (team.optioned_at)

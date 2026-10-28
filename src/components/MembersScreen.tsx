@@ -83,7 +83,10 @@ export function MembersScreen() {
       setBusy(false);
     }
   };
-  const order: MemberRole[] = ["coach", "manager", "treasurer", "parent"];
+  const order: MemberRole[] = ["owner", "coach", "manager", "treasurer", "parent"];
+  // The Owner role can't be given to anyone, so it isn't in the role picker.
+  const assignable = order.filter((r) => r !== "owner");
+  const meIsOwner = data.me.role === "owner";
   const members = [...data.members].sort(
     (a, b) =>
       order.indexOf(a.role) - order.indexOf(b.role) ||
@@ -152,8 +155,11 @@ export function MembersScreen() {
                       <span className="font-normal text-slate-500"> (you)</span>
                     )}
                   </span>
-                  {!perms.manageMembers && (
-                    <span className="block text-sm text-slate-600">{ROLE_LABEL[m.role]}</span>
+                  {(!perms.manageMembers || m.role === "owner") && (
+                    <span className="block text-sm text-slate-600">
+                      {ROLE_LABEL[m.role]}
+                      {m.role === "owner" && " · created the team"}
+                    </span>
                   )}
                   {(kids.length > 0 || canLink) && (
                     <span className="block text-sm text-slate-600">
@@ -174,7 +180,7 @@ export function MembersScreen() {
                     </span>
                   )}
                 </span>
-                {perms.manageMembers ? (
+                {perms.manageMembers && m.role !== "owner" ? (
                   <>
                     <select
                       aria-label={`Role for ${nameOf(m)}`}
@@ -183,7 +189,7 @@ export function MembersScreen() {
                       onChange={(e) => run(() => setMemberRole(m.id, e.target.value as MemberRole))}
                       className="h-11 rounded-lg border-2 border-slate-300 bg-white px-2 text-base font-semibold"
                     >
-                      {order.map((r) => (
+                      {assignable.map((r) => (
                         <option key={r} value={r}>
                           {ROLE_LABEL[r]}
                         </option>
@@ -224,15 +230,22 @@ export function MembersScreen() {
         </section>
       )}
 
-      <button
-        onClick={() => {
-          const me = data.members.find((m) => m.userId === data.me.userId);
-          if (me) setRemoving(me);
-        }}
-        className="h-12 w-full text-base font-semibold text-slate-700 underline"
-      >
-        Leave this team
-      </button>
+      {meIsOwner ? (
+        <p className="text-center text-sm text-slate-600">
+          You created this team, so you&apos;re its Owner and can&apos;t be removed. To stop using
+          it, option the team.
+        </p>
+      ) : (
+        <button
+          onClick={() => {
+            const me = data.members.find((m) => m.userId === data.me.userId);
+            if (me) setRemoving(me);
+          }}
+          className="h-12 w-full text-base font-semibold text-slate-700 underline"
+        >
+          Leave this team
+        </button>
+      )}
 
       {canCallUp(data.me.role) && !data.team.optionedAt && (
         <section className="mt-4 rounded-xl border-2 border-slate-300 bg-white p-4">
