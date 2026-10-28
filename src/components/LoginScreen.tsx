@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { signInErrorMessage } from "@/lib/supabase/auth-errors";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { safeNextPath } from "@/lib/supabase/next-path";
@@ -18,6 +19,15 @@ export function LoginScreen() {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  // Seconds until another code can be sent (Supabase allows one email a minute).
+  const [wait, setWait] = useState(0);
+
+  useEffect(() => {
+    if (wait <= 0) return;
+    const t = setTimeout(() => setWait(wait - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
 
   // The query string, read on the client only (empty during server rendering).
   const search = useSyncExternalStore(
@@ -28,18 +38,26 @@ export function LoginScreen() {
   const params = new URLSearchParams(search);
   const next = () => safeNextPath(params.get("next"));
 
-  const sendLink = async () => {
+  const sendLink = async (address = email.trim()) => {
     setBusy(true);
     setError(null);
+    setNotice(null);
     const { error } = await getBrowserSupabase().auth.signInWithOtp({
-      email: email.trim(),
+      email: address,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next())}`,
       },
     });
     setBusy(false);
-    if (error) setError(error.message);
-    else setStep({ kind: "sent", email: email.trim() });
+    if (error) {
+      setError(signInErrorMessage(error));
+      return;
+    }
+    setCode("");
+    setWait(60);
+    if (step.kind === "sent")
+      setNotice("New code sent. Use the newest email; older codes stop working.");
+    setStep({ kind: "sent", email: address });
   };
 
   const verifyCode = async (address: string) => {
@@ -51,7 +69,7 @@ export function LoginScreen() {
       type: "email",
     });
     setBusy(false);
-    if (error) setError("That code didn't work. Check it, or send a new link.");
+    if (error) setError(signInErrorMessage(error));
     // Full load so the app starts fresh with the new session.
     else window.location.assign(next());
   };
@@ -110,8 +128,14 @@ export function LoginScreen() {
           className="flex flex-col gap-4"
         >
           <p className="rounded-xl bg-green-50 p-4 text-lg leading-snug text-green-950">
-            Check <b>{step.email}</b>. Tap the link in the email, or type the code from it here.
+            Check <b>{step.email}</b>. Type the code from the newest email here, or tap its link.
+            Use one or the other: tapping the link uses up the code.
           </p>
+          {notice && (
+            <p role="status" className="text-base font-semibold text-green-900">
+              {notice}
+            </p>
+          )}
           <label className="flex flex-col gap-1">
             <span className="text-sm font-semibold text-slate-700">Code from the email</span>
             <input
@@ -127,9 +151,19 @@ export function LoginScreen() {
           </button>
           <button
             type="button"
+            disabled={busy || wait > 0}
+            onClick={() => void sendLink(step.email)}
+            className="h-12 rounded-xl border-2 border-slate-400 text-base font-bold text-slate-800 active:bg-slate-100 disabled:opacity-50"
+          >
+            {wait > 0 ? `Send a new code (${wait}s)` : "Send a new code"}
+          </button>
+          <button
+            type="button"
             onClick={() => {
               setStep({ kind: "email" });
               setCode("");
+              setError(null);
+              setNotice(null);
             }}
             className="h-12 text-base font-semibold text-slate-700 underline"
           >
