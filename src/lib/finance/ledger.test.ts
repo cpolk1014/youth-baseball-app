@@ -114,10 +114,10 @@ describe("team summary", () => {
       entry("ba", "bat_around", 150000),
       entry("cu", "cleanup", 20000),
       entry("gs", "grand_slam", 150000),
-      entry("gs2", "grand_slam", 478250, { estimate: true }),
+      entry("gs2", "grand_slam", 478250, { estimate: true, category: "Fundraiser" }),
       entry("rc", "rain_check", 50000),
-      entry("w1", "walkoff", 270000),
-      entry("w2", "walkoff", 80000, { estimate: true }),
+      entry("w1", "walkoff", 270000, { category: "Tournament" }),
+      entry("w2", "walkoff", 80000, { estimate: true, category: "Equipment & swag" }),
       entry("pay", "safe_at_home", 150000),
       entry("back", "safe_at_home", 10000, { refund: true }),
     ]);

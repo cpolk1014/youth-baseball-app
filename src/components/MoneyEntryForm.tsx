@@ -374,11 +374,11 @@ export function MoneyEntryForm({
       )}
       {(type === "walkoff" || type === "grand_slam") && (
         <Toggle
-          label="Estimate"
+          label="Budget (planned)"
           hint={
             type === "walkoff"
-              ? "Planned, not paid yet. Left out of totals."
-              : "Expected, not received yet. Left out of totals."
+              ? "Your plan for this category, like PAP for the season. Real payments in the same category count against it. Edit it any time."
+              : "Money you expect to raise. What actually comes in under the same category counts against it."
           }
           checked={estimate}
           onChange={setEstimate}

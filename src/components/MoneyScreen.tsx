@@ -98,6 +98,20 @@ export function MoneyScreen() {
       <section className="mb-5">
         <h2 className={heading}>Team totals</h2>
         <MoneySummaryCard s={summary} />
+        {perms.seeAllMoney && (
+          <Link
+            href="/money/budget"
+            className="mt-2 flex min-h-14 items-center justify-between rounded-xl border-2 border-slate-300 bg-white px-4 active:bg-slate-50"
+          >
+            <span>
+              <span className="block text-lg font-semibold">Budget</span>
+              <span className="block text-sm text-slate-600">Planned vs. actual, by category</span>
+            </span>
+            <span aria-hidden="true" className="text-2xl text-slate-500">
+              ›
+            </span>
+          </Link>
+        )}
       </section>
 
       {perms.seeAllMoney && (
@@ -172,7 +186,7 @@ export function MoneyScreen() {
                     <span className="min-w-0 flex-1">
                       <span className="block text-xs font-bold tracking-wide text-slate-500 uppercase">
                         {ENTRY_LABEL[e.type]}
-                        {e.estimate && " · estimate"}
+                        {e.estimate && " · budget"}
                         {e.refund && " · money back"}
                       </span>
                       <span className="block truncate text-base font-semibold">{e.title}</span>
