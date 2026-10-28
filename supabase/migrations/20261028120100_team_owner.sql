@@ -10,8 +10,9 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- Becoming the Owner keeps the team's coach, so only leaving coaching counts.
   if old.role = 'coach'
-    and (tg_op = 'DELETE' or new.role <> 'coach' or new.team_id <> old.team_id)
+    and (tg_op = 'DELETE' or new.role not in ('coach', 'owner') or new.team_id <> old.team_id)
     and exists (select 1 from public.team where id = old.team_id)
     and not exists (
       select 1 from public.member
