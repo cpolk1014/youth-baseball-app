@@ -174,7 +174,7 @@ export async function loadFromSupabase(
     await sb
       .from("finance_entry")
       .select(
-        "id,season_id,type,title,amount_cents,entry_date,category,payee,method,refund,estimate,due_dates,note",
+        "id,season_id,type,title,amount_cents,entry_date,category,payee,method,refund,estimate,due_dates,note,receipt_path",
       )
       .eq("season_id", season.id)
       .order("entry_date", { ascending: false }),
@@ -452,4 +452,25 @@ export async function saveFinanceEntryRow(
 
 export async function deleteFinanceEntryRow(entryId: string): Promise<void> {
   check(await getBrowserSupabase().from("finance_entry").delete().eq("id", entryId));
+}
+
+/** Upload a receipt file to the private receipts bucket. */
+export async function uploadReceiptFile(path: string, file: Blob): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .storage.from("receipts")
+      .upload(path, file, { contentType: file.type, upsert: false }),
+  );
+}
+
+/** A link to view a receipt, good for an hour. */
+export async function receiptSignedUrl(path: string): Promise<string> {
+  const data = check(
+    await getBrowserSupabase().storage.from("receipts").createSignedUrl(path, 3600),
+  );
+  return data.signedUrl;
+}
+
+export async function deleteReceiptFile(path: string): Promise<void> {
+  check(await getBrowserSupabase().storage.from("receipts").remove([path]));
 }

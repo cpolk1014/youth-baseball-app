@@ -718,4 +718,47 @@ select pg_temp.expect(
   'the owner is still the owner');
 delete from public.team where id = '0e000000-0000-4000-8000-000000000001';
 select pg_temp.expect((select count(*) from public.member where team_id = '0e000000-0000-4000-8000-000000000001') = 0, 'deleting the team still removes the owner');
+-- ── walkoff receipts ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000006', false);
+insert into storage.objects (bucket_id, name) values
+  ('receipts', '00000000-0000-4000-8000-000000000001/f0000000-0000-4000-8000-000000000004/r1.jpg');
+select public.save_finance_entry(
+  '{"id": "f0000000-0000-4000-8000-000000000004", "season_id": "00000000-0000-4000-8000-000000000101", "type": "walkoff", "title": "Umpires", "amount_cents": 1100, "entry_date": "2027-01-04", "payee": "Ump crew", "receipt_path": "00000000-0000-4000-8000-000000000001/f0000000-0000-4000-8000-000000000004/r1.jpg"}', '[]');
+select pg_temp.expect(
+  (select receipt_path from public.finance_entry where id = 'f0000000-0000-4000-8000-000000000004') like '%/r1.jpg',
+  'treasurer uploads a receipt and tags it to a Walkoff');
+do $$ begin
+  perform public.save_finance_entry(
+    '{"id": "f0000000-0000-4000-8000-000000000005", "season_id": "00000000-0000-4000-8000-000000000101", "type": "grand_slam", "title": "Fundraiser", "amount_cents": 5000, "entry_date": "2027-01-05", "receipt_path": "x/y/z.jpg"}', '[]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: only Walkoffs take receipts';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'receipts') = 1, 'parents can view the team''s receipts');
+do $$ begin
+  insert into storage.objects (bucket_id, name) values
+    ('receipts', '00000000-0000-4000-8000-000000000001/f0000000-0000-4000-8000-000000000004/sneaky.jpg');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot upload receipts';
+end $$;
+delete from storage.objects where bucket_id = 'receipts';
+reset role;
+select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'receipts') = 1, 'parents cannot delete receipts');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'receipts') = 0, 'outsiders cannot see receipts');
+do $$ begin
+  insert into storage.objects (bucket_id, name) values ('receipts', 'not-a-team/x.jpg');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: receipts must be filed under a team';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+delete from storage.objects where bucket_id = 'receipts';
+select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'receipts') = 0, 'coaches can remove receipts');
+reset role;
 \echo ALL RLS TESTS PASSED

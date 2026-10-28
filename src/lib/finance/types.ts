@@ -61,6 +61,8 @@ export interface FinanceEntry {
   /** Bat Around / Cleanup installments; empty means one payment due on `date`. */
   dueDates: string[];
   note: string | null;
+  /** Walkoff only: storage path of a receipt photo or PDF. */
+  receiptPath: string | null;
 }
 
 /** Who an entry is tagged to and their part of it. */

@@ -5,6 +5,7 @@ import type { Lineup, Player } from "@/lib/rules/types";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { TeamRow } from "@/lib/supabase/rows";
 import type { MemberRole } from "./permissions";
+import { receiptPath } from "@/lib/finance/receipt";
 import type { FinanceEntry, FinanceShare } from "@/lib/finance/types";
 import { SEED_DATA } from "./seed";
 import type {
@@ -515,6 +516,26 @@ export async function deleteFinanceEntry(entryId: string): Promise<void> {
   } catch (e) {
     await loadRemote();
     throw e;
+  }
+}
+
+/** Upload a receipt for a Walkoff and return its storage path (needs sign-in). */
+export async function uploadReceipt(entryId: string, file: Blob): Promise<string> {
+  const path = receiptPath(data!.team.id, entryId, newId(), file.type);
+  await (await remote()).uploadReceiptFile(path, file);
+  return path;
+}
+
+export async function receiptUrl(path: string): Promise<string> {
+  return (await remote()).receiptSignedUrl(path);
+}
+
+/** Remove a receipt file; a failure only leaves an unused file behind, so it's ignored. */
+export async function removeReceipt(path: string): Promise<void> {
+  try {
+    await (await remote()).deleteReceiptFile(path);
+  } catch {
+    // Not worth bothering the treasurer about.
   }
 }
 

@@ -166,6 +166,7 @@ export function financeEntryFromRow(r: FinanceEntryRow): FinanceEntry {
     estimate: r.estimate,
     dueDates: r.due_dates,
     note: r.note,
+    receiptPath: r.receipt_path ?? null,
   };
 }
 
@@ -184,6 +185,7 @@ export function financeEntryToRow(e: FinanceEntry): FinanceEntryRow {
     estimate: e.estimate,
     due_dates: e.dueDates,
     note: e.note,
+    receipt_path: e.receiptPath,
   };
 }
 

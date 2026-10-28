@@ -21,6 +21,7 @@ const entry = (
   estimate: false,
   dueDates: [],
   note: null,
+  receiptPath: null,
   ...extra,
 });
 const share = (entryId: string, playerId: string, amountCents: number): FinanceShare => ({

@@ -144,6 +144,7 @@ describe("supabase mappers", () => {
           estimate: false,
           due_dates: ["2027-01-15", "2027-02-15"],
           note: null,
+          receipt_path: null,
         },
       ],
       financeShares: [{ id: "fs1", entry_id: "f1", player_id: "p", amount_cents: 10000 }],

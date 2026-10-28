@@ -130,6 +130,7 @@ export interface FinanceEntryRow {
   estimate: boolean;
   due_dates: string[];
   note: string | null;
+  receipt_path: string | null;
 }
 
 export interface FinanceShareRow {

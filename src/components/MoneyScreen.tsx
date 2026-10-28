@@ -12,6 +12,7 @@ import { AppShell, Loading } from "./AppShell";
 import { kidsOf } from "./KidPicker";
 import { EntryTypePicker, MoneyEntryForm, newEntry } from "./MoneyEntryForm";
 import { FamilyCard, MoneySummaryCard, moneyPlayers } from "./MoneyParts";
+import { openReceipt } from "./receiptFile";
 import { Sheet } from "./Sheet";
 import { useToday } from "./useToday";
 
@@ -177,12 +178,27 @@ export function MoneyScreen() {
                       </span>
                       <span className="block truncate text-base font-semibold">{e.title}</span>
                       <span className="block truncate text-sm text-slate-600">
+                        {e.receiptPath && (
+                          <span aria-label="Has a receipt" title="Has a receipt">
+                            📎{" "}
+                          </span>
+                        )}
                         {shortDate(e.date, year)}
                         {tagged(e) && ` · ${tagged(e)}`}
                         {e.dueDates.length > 1 && ` · ${e.dueDates.length} payments`}
                       </span>
                     </span>
-                    <span className="shrink-0 text-lg font-bold">{formatCents(e.amountCents)}</span>
+                    <span className="shrink-0 text-right">
+                      <span className="block text-lg font-bold">{formatCents(e.amountCents)}</span>
+                      {!perms.editMoney && e.receiptPath && (
+                        <button
+                          onClick={() => void openReceipt(e.receiptPath!)}
+                          className="mt-1 h-10 rounded-lg border-2 border-slate-300 px-3 text-sm font-semibold active:bg-slate-100"
+                        >
+                          Receipt
+                        </button>
+                      )}
+                    </span>
                   </Tag>
                 </li>
               );

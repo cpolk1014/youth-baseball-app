@@ -35,7 +35,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Installable on a phone's home screen; responsive layout (phone: bottom tabs; tablet: two-column lists, centered dialogs; desktop: side menu)
 - Practice schedule: build a season of practices (days × dates), each with a focus, a drill plan (starter library or custom, minutes vs. scheduled length), notes, cancel; parents view
 - Import a schedule from a photo, PDF or CSV (Claude reads it; coach reviews before adding practices and games)
-- Team money (phase 1): one ledger of Bat Arounds (split across players), Cleanups (one player), Walkoffs (team pays out), Safe at Home (family payments and money back), Rain Checks (credits), Grand Slams (fundraisers); installments with a first due date; family balances; team totals for everyone; parents see only their kids' charges plus all Walkoffs; coaches and treasurers edit
+- Team money (phase 1): one ledger of Bat Arounds (split across players), Cleanups (one player), Walkoffs (team pays out), Safe at Home (family payments and money back), Rain Checks (credits), Grand Slams (fundraisers); installments with a first due date; family balances; team totals for everyone; parents see only their kids' charges plus all Walkoffs; coaches and treasurers edit. Walkoffs can carry a receipt (photo, shrunk before upload, or PDF) in a private storage bucket; everyone on the team can view it
 - Plays tab ("Where do I go?"): 57 animated situational plays with every position's job; random quizzes; coaches assign plays as homework to families and see who finished; plays can be added to a practice as situations to work on
 
 **Next up** (roughly in order; the user picks)
@@ -64,7 +64,7 @@ Source of truth: `supabase/migrations/`. Summary:
 - practice: season_id, practice_date, start_time, end_time, location, focus, notes, plan (JSONB drills), canceled, plays (library play ids)
 - play_assignment: team_id, title, play_ids[], due_date (homework; plays live in code, `src/lib/plays/`)
 - quiz_result: assignment_id, user_id, player_id?, correct, total (families see their own; coaches/managers see all)
-- finance_entry: season_id, type (bat_around | cleanup | walkoff | safe_at_home | rain_check | grand_slam), title, amount_cents, entry_date, category, payee, method, refund, estimate, due_dates[] (saved with shares via `save_finance_entry`; team totals via `finance_summary`)
+- finance_entry: season_id, type (bat_around | cleanup | walkoff | safe_at_home | rain_check | grand_slam), title, amount_cents, entry_date, category, payee, method, refund, estimate, due_dates[], receipt_path (Walkoffs; file in the private `receipts` bucket at team/entry/file) (saved with shares via `save_finance_entry`; team totals via `finance_summary`)
 - finance_share: entry_id, player_id, amount_cents (who an entry is tagged to; parents see only their kids')
 - lineup_slot: lineup_id, inning, player_id, position (P, C, 1B, 2B, 3B, SS, LF, CF, RF, LCF, RCF, BENCH)
 

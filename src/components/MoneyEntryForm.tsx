@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { deleteFinanceEntry, newId, saveFinanceEntry, useAppData } from "@/lib/data/store";
+import {
+  deleteFinanceEntry,
+  newId,
+  removeReceipt,
+  saveFinanceEntry,
+  uploadReceipt,
+  useAppData,
+  useStoreState,
+} from "@/lib/data/store";
 import { eachLabel, sharesFor } from "@/lib/finance/entry";
 import { formatCents, installmentDates, parseCents, splitCents } from "@/lib/finance/money";
 import {
@@ -16,8 +24,10 @@ import {
   type FinanceEntry,
   type Frequency,
 } from "@/lib/finance/types";
+import { RECEIPT_ACCEPT, RECEIPT_MAX_BYTES, isPdf } from "@/lib/finance/receipt";
 import { activePlayers } from "@/lib/lineup/edit";
 import { Toggle } from "./PlayerForm";
+import { openReceipt, shrinkReceipt } from "./receiptFile";
 
 const field =
   "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[#0b1f3a] focus:outline-none";
@@ -72,6 +82,7 @@ export function newEntry(type: EntryType, seasonId: string, today: string): Fina
     estimate: false,
     dueDates: [],
     note: null,
+    receiptPath: null,
   };
 }
 
@@ -115,6 +126,9 @@ export function MoneyEntryForm({
   const [moved, setMoved] = useState<Record<number, string>>(() =>
     Object.fromEntries(entry.dueDates.map((d, i) => [i, d])),
   );
+  // Receipt (Walkoffs): keep what's there, a newly picked file, or remove it.
+  const [receipt, setReceipt] = useState<ReceiptState>({ kind: "keep" });
+  const { mode } = useStoreState();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -155,7 +169,14 @@ export function MoneyEntryForm({
     setSaving(true);
     setError(null);
     try {
+      const oldReceipt = entry.receiptPath;
+      if (type === "walkoff" && receipt.kind === "new") {
+        saved.receiptPath = await uploadReceipt(entry.id, receipt.blob);
+      } else if (type !== "walkoff" || receipt.kind === "remove") {
+        saved.receiptPath = null;
+      }
       await saveFinanceEntry(saved, sharesFor(saved, players, newId));
+      if (oldReceipt && oldReceipt !== saved.receiptPath) await removeReceipt(oldReceipt);
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't save. Check your connection.");
@@ -340,6 +361,16 @@ export function MoneyEntryForm({
         </label>
       )}
 
+      {type === "walkoff" && (
+        <ReceiptField
+          existing={entry.receiptPath}
+          state={receipt}
+          onChange={setReceipt}
+          signedIn={mode === "supabase"}
+          onError={setError}
+        />
+      )}
+
       {(type === "walkoff" || type === "safe_at_home") && (
         <label className={label}>
           <span className={labelText}>Method</span>
@@ -435,6 +466,7 @@ export function MoneyEntryForm({
                 setSaving(true);
                 try {
                   await deleteFinanceEntry(entry.id);
+                  if (entry.receiptPath) await removeReceipt(entry.receiptPath);
                   onDone();
                 } catch (e) {
                   setError(e instanceof Error ? e.message : "Couldn't delete.");
@@ -456,5 +488,105 @@ export function MoneyEntryForm({
           ))}
       </div>
     </form>
+  );
+}
+
+type ReceiptState =
+  { kind: "keep" } | { kind: "new"; blob: Blob; name: string } | { kind: "remove" };
+
+const smallButton =
+  "h-11 rounded-lg border-2 border-slate-300 bg-white px-3 text-base font-semibold active:bg-slate-100";
+
+/** Add, view, replace or remove a Walkoff's receipt (a photo or PDF). */
+function ReceiptField({
+  existing,
+  state,
+  onChange,
+  signedIn,
+  onError,
+}: {
+  existing: string | null;
+  state: ReceiptState;
+  onChange: (s: ReceiptState) => void;
+  signedIn: boolean;
+  onError: (message: string | null) => void;
+}) {
+  const [reading, setReading] = useState(false);
+  const pick = (
+    <label className={`${smallButton} inline-flex cursor-pointer items-center gap-2`}>
+      <span aria-hidden="true">📎</span>
+      {reading ? "Reading…" : existing || state.kind === "new" ? "Replace" : "Add receipt"}
+      <input
+        type="file"
+        accept={RECEIPT_ACCEPT}
+        className="sr-only"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file) return;
+          setReading(true);
+          const blob = await shrinkReceipt(file);
+          setReading(false);
+          if (blob.size > RECEIPT_MAX_BYTES) {
+            onError("That file is over 10 MB. Try a photo of the receipt instead.");
+            return;
+          }
+          onError(null);
+          onChange({ kind: "new", blob, name: file.name });
+        }}
+      />
+    </label>
+  );
+
+  const view = async () => {
+    if (existing && !(await openReceipt(existing))) {
+      onError("Couldn't open the receipt. Check your connection.");
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className={labelText}>Receipt (optional)</span>
+      {!signedIn ? (
+        <p className="text-base text-slate-600">Receipts need sign-in.</p>
+      ) : (
+        <>
+          {state.kind === "new" && (
+            <p className="text-base">
+              <span aria-hidden="true">📎</span> {state.name} · saves with this Walkoff
+            </p>
+          )}
+          {state.kind === "remove" && (
+            <p className="text-base text-slate-600">The receipt will be removed when you save.</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {existing && state.kind === "keep" && (
+              <button type="button" onClick={() => void view()} className={smallButton}>
+                View {isPdf(existing) ? "PDF" : "photo"}
+              </button>
+            )}
+            {state.kind !== "remove" && pick}
+            {state.kind !== "keep" && (
+              <button
+                type="button"
+                onClick={() => onChange({ kind: "keep" })}
+                className={smallButton}
+              >
+                Undo
+              </button>
+            )}
+            {existing && state.kind === "keep" && (
+              <button
+                type="button"
+                onClick={() => onChange({ kind: "remove" })}
+                className={`${smallButton} text-red-700`}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
