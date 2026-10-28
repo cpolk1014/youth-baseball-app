@@ -35,7 +35,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Magic-link + code sign-in, invite links, roles (owner / coach / manager / treasurer / parent read-only), multiple teams with a switcher; the team creator is its Owner (coach powers, can never be removed or demoted)
 - Parents linked to their kids (parent picks on first open; coaches/managers fix links on Coaches & parents); homework uses the links
 - Option a team (archive, read-only, "Call Up" to restore); delete only optioned teams
-- Installable on a phone's home screen; responsive layout (phone: bottom tabs; tablet: two-column lists, centered dialogs; desktop: side menu)
+- Installable on a phone's home screen; responsive layout (phone and tablet: menu button top left opens a slide-in menu; tablet: two-column lists, centered dialogs; desktop: the menu stays open on the side). The menu has the six sections plus Team links (Coaches & parents, Fair play rules, GroupMe)
 - Practice schedule: build a season of practices (days × dates), each with a focus, a drill plan (starter library or custom, minutes vs. scheduled length), notes, cancel; parents view
 - Import a schedule from a photo, PDF or CSV (Claude reads it; coach reviews before adding practices and games)
 - Team money (phase 1): one ledger of Bat Arounds (split across players), Cleanups (one player), Walkoffs (team pays out), Safe at Home (family payments and money back), Rain Checks (credits), Grand Slams (fundraisers); installments with a first due date; family balances; team totals for everyone; parents see only their kids' charges plus all Walkoffs; coaches and treasurers edit. Walkoffs can carry a receipt (photo, shrunk before upload, or PDF) in a private storage bucket; everyone on the team can view it
