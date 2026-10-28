@@ -139,9 +139,9 @@ export function setRuleNumber(
   return { ...input, [key]: Math.min(max, Math.max(min, value)) };
 }
 
-/** Back to the recommended settings (the defaults). */
-export function recommendedRules(): RuleConfigInput {
-  return {};
+/** Built-in rules back to the recommended settings; the coach's own rules stay. */
+export function recommendedRules(input: RuleConfigInput = {}): RuleConfigInput {
+  return input.custom?.length ? { custom: input.custom } : {};
 }
 
 /** Whether a rule differs from the recommended setting. */

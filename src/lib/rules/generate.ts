@@ -71,6 +71,16 @@ interface Limits extends RuleConfig {
   maxBenchInnings: number | null;
   /** Players who should rest from pitching this game. */
   resting: Set<string>;
+  /** Coach's own rules that are on, ready for auto-fill. */
+  aims: {
+    atLeast: { positions: Set<Position>; innings: number }[];
+    atMost: { positions: Set<Position>; innings: number }[];
+    never: Map<string, Set<Position>>;
+    /** inning → [player, position] that must be placed. */
+    locked: Map<number, [string, FieldPosition][]>;
+    /** inning → players who sat that inning last game (and shouldn't sit it again). */
+    satLastGame: Map<number, Set<string>>;
+  };
 }
 
 /**
@@ -99,8 +109,52 @@ function buildLimits(
     for (const [id, n] of threw) if (n >= config.pitcherRestInnings) resting.add(id);
   }
   const mustPlay = Math.ceil((innings * config.minInningsPlayedPercent) / 100);
+  const ids = new Set(players.map((p) => p.id));
+  const aims: Limits["aims"] = {
+    atLeast: [],
+    atMost: [],
+    never: new Map(),
+    locked: new Map(),
+    satLastGame: new Map(),
+  };
+  for (const rule of config.custom) {
+    if (rule.setting === "off") continue;
+    if (rule.kind === "position-min") {
+      aims.atLeast.push({ positions: new Set(rule.positions), innings: rule.innings });
+    } else if (rule.kind === "position-max") {
+      aims.atMost.push({ positions: new Set(rule.positions), innings: rule.innings });
+    } else if (rule.kind === "never-plays") {
+      const set = aims.never.get(rule.playerId) ?? new Set<Position>();
+      rule.positions.forEach((p) => set.add(p));
+      aims.never.set(rule.playerId, set);
+    } else if (
+      rule.kind === "locked" &&
+      ids.has(rule.playerId) &&
+      rule.inning <= innings &&
+      config.fieldPositions.includes(rule.position)
+    ) {
+      aims.locked.set(rule.inning, [
+        ...(aims.locked.get(rule.inning) ?? []),
+        [rule.playerId, rule.position],
+      ]);
+    } else if (rule.kind === "no-repeat-bench" && previous) {
+      const sat = new Set(
+        previous.slots
+          .filter((s) => s.inning === rule.inning && s.position === "BENCH")
+          .map((s) => s.playerId),
+      );
+      aims.satLastGame.set(rule.inning, sat);
+    }
+  }
+  // A player who never plays P or C isn't put in the pitching or catching rotation.
+  const players2 = players.map((p) => {
+    const never = aims.never.get(p.id);
+    return never
+      ? { ...p, canPitch: p.canPitch && !never.has("P"), canCatch: p.canCatch && !never.has("C") }
+      : p;
+  });
   return {
-    players,
+    players: players2,
     config: {
       ...config,
       maxConsecutiveBench: on("max-consecutive-bench") ? config.maxConsecutiveBench : null,
@@ -111,6 +165,7 @@ function buildLimits(
       catcherCannotPitch: on("catcher-cannot-pitch") && config.catcherCannotPitch,
       maxBenchInnings: on("min-innings-played") ? innings - mustPlay : null,
       resting,
+      aims,
     },
   };
 }
@@ -254,6 +309,8 @@ function buildLineup(
     [...counts.get(id)!].reduce((s, [pos, n]) => s + (infield.has(pos) ? n : 0), 0);
   const outfieldCount = (id: string) =>
     [...counts.get(id)!].reduce((s, [pos, n]) => s + (outfield.has(pos) ? n : 0), 0);
+  const groupCount = (id: string, group: Set<Position>) =>
+    [...counts.get(id)!].reduce((s, [pos, n]) => s + (group.has(pos) ? n : 0), 0);
   const slots: LineupSlot[] = [];
 
   for (let inning = 1; inning <= innings; inning++) {
@@ -262,10 +319,17 @@ function buildLineup(
     const catcher = catchPlan[inning - 1];
     if (pitcher) fixed.set(pitcher, "P");
     if (catcher && catcher !== pitcher) fixed.set(catcher, "C");
+    // A coach's locked spot wins over the pitching/catching plan for that inning.
+    for (const [playerId, position] of config.aims.locked.get(inning) ?? []) {
+      for (const [id, pos] of [...fixed]) if (id === playerId || pos === position) fixed.delete(id);
+      fixed.set(playerId, position);
+    }
     const fixedLater = new Set([...pitchPlan.slice(inning), ...catchPlan.slice(inning)]);
 
     const free = players.filter((p) => !fixed.has(p.id));
+    const satLast = config.aims.satLastGame.get(inning);
     const benchKey = (p: Player) =>
+      (satLast?.has(p.id) ? 500 : 0) +
       count(p.id, "BENCH") * 100 +
       (fixedLater.has(p.id) ? -2 : 0) +
       balance.benchSurplus.get(p.id)! * 10 +
@@ -292,6 +356,14 @@ function buildLineup(
           c -= balance.infieldDeficit.get(p.id)! * 20;
         }
         if (outfield.has(pos) && outfieldCount(p.id) < config.minOutfieldInnings) c -= 20;
+        // Coach's own rules.
+        if (config.aims.never.get(p.id)?.has(pos)) c += 1000;
+        for (const aim of config.aims.atLeast) {
+          if (aim.positions.has(pos) && groupCount(p.id, aim.positions) < aim.innings) c -= 20;
+        }
+        for (const aim of config.aims.atMost) {
+          if (aim.positions.has(pos) && groupCount(p.id, aim.positions) >= aim.innings) c += 50;
+        }
         return c + rng();
       }),
     );

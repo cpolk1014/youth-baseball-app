@@ -44,6 +44,7 @@ export const DEFAULT_RULE_CONFIG: RuleConfig = {
     "pitcher-rest": "off",
     "season-balance": "warn",
   },
+  custom: [],
 };
 
 export type RuleConfigInput = Partial<Omit<RuleConfig, "severity">> & {

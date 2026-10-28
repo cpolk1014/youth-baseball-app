@@ -14,7 +14,7 @@ import { validateLineup } from "./validate";
 
 const config = resolveRuleConfig();
 
-function rules(violations: Violation[]): RuleId[] {
+function rules(violations: Violation[]): Violation["rule"][] {
   return [...new Set(violations.map((v) => v.rule))].sort();
 }
 

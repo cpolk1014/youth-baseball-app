@@ -6,6 +6,7 @@ import { formatGameDate, gameContext, lastFilledInning } from "@/lib/data/game";
 import { saveGame, saveLineup, setGameStatus, useAppData } from "@/lib/data/store";
 import { battingOrderMessage } from "@/lib/groupme/messages";
 import { assignPosition, positionAt, setAbsent, setBatting } from "@/lib/lineup/edit";
+import { rotateLeadoff } from "@/lib/rules/custom";
 import { generateLineup } from "@/lib/rules/generate";
 import type { Lineup } from "@/lib/rules/types";
 import { validateLineup } from "@/lib/rules/validate";
@@ -75,7 +76,13 @@ export function GameScreen({ gameId }: { gameId: string }) {
     change(
       {
         ...generated,
-        battingOrder: lineup.battingOrder,
+        // Keep the coach's order, but if their leadoff-rotation rule is on, don't lead off
+        // with last game's leadoff hitter.
+        battingOrder: config.custom.some(
+          (r) => r.kind === "leadoff-rotation" && r.setting !== "off",
+        )
+          ? rotateLeadoff(lineup.battingOrder, previous?.battingOrder[0])
+          : lineup.battingOrder,
         notBatting: lineup.notBatting ?? [],
         absent: lineup.absent ?? [],
       },

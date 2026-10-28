@@ -1,4 +1,5 @@
 import { isRuleOn } from "./config";
+import { checkCustomRules } from "./custom";
 import { balanceOutliers, computeParticipation, emptyParticipation } from "./participation";
 import type {
   Lineup,
@@ -79,6 +80,7 @@ export function validateLineup(
   checkBenchRotation(ctx);
   checkPerGameCounts(ctx);
   checkPitcherRest(ctx);
+  violations.push(...checkCustomRules(players, lineup, config, previous));
   if (isRuleOn(config, "season-balance")) {
     violations.push(...checkSeasonBalance(players, lineup, config, seasonHistory));
   }

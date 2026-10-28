@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { isRuleOn, resolveRuleConfig } from "./config";
 import { GRID_12x6, ROSTER_12, lineupFromGrid, withCell } from "./test-utils";
-import type { RuleId, Violation } from "./types";
+import type { Violation } from "./types";
 import { validateLineup } from "./validate";
 
-const rulesIn = (vs: Violation[]): RuleId[] => [...new Set(vs.map((v) => v.rule))].sort();
+const rulesIn = (vs: Violation[]): Violation["rule"][] =>
+  [...new Set(vs.map((v) => v.rule))].sort();
 
 describe("rule settings: must follow, warn, off", () => {
   // d sits innings 3 and 5 and plays 4: fine. Make d sit 3 in a row (3, 4, 5).

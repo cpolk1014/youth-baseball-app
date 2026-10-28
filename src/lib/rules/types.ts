@@ -79,6 +79,49 @@ export const CORE_RULES = [
 ] as const satisfies readonly RuleId[];
 export type CoreRuleId = (typeof CORE_RULES)[number];
 
+/**
+ * A rule a coach builds from a rule type. Every type is understood by the validator and by
+ * auto-fill. `setting` is how it's treated, like the built-in rules.
+ */
+export type CustomRule = { id: string; setting: RuleSetting } & (
+  | {
+      /** Every player gets at least `innings` innings at these positions each game. */
+      kind: "position-min";
+      positions: FieldPosition[];
+      innings: number;
+    }
+  | {
+      /** No player gets more than `innings` innings at these positions in a game. */
+      kind: "position-max";
+      positions: FieldPosition[];
+      innings: number;
+    }
+  | {
+      /** This player never plays these positions. */
+      kind: "never-plays";
+      playerId: string;
+      positions: FieldPosition[];
+    }
+  | {
+      /** This player plays this position in this inning. */
+      kind: "locked";
+      playerId: string;
+      position: FieldPosition;
+      inning: number;
+    }
+  | {
+      /** Nobody sits this inning two games in a row. */
+      kind: "no-repeat-bench";
+      inning: number;
+    }
+  | {
+      /** The leadoff hitter isn't the same as last game's. */
+      kind: "leadoff-rotation";
+    }
+);
+
+export type CustomRuleKind = CustomRule["kind"];
+
 export interface RuleConfig {
   /** Coach's pitch: P is a fielding spot, so pitching rules don't apply. */
   coachPitch: boolean;
@@ -116,10 +159,14 @@ export interface RuleConfig {
    * "block"; season-balance is "warn" or "off" (it looks across games, so it never blocks).
    */
   severity: Record<RuleId, RuleSetting>;
+  /** Rules the coach built. */
+  custom: CustomRule[];
 }
 
 export interface Violation {
-  rule: RuleId;
+  /** A built-in rule, or "custom" for a coach's own rule (see customRuleId). */
+  rule: RuleId | "custom";
+  customRuleId?: string;
   severity: Severity;
   message: string;
   playerId?: string;

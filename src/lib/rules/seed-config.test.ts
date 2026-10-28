@@ -8,10 +8,12 @@ describe("supabase seed", () => {
     const sql = readFileSync(join(process.cwd(), "supabase/seed.sql"), "utf8");
     const json = sql.match(/'(\{\s*"fieldPositions"[\s\S]*?\})'/)?.[1];
     expect(json).toBeDefined();
-    // Severities aren't seeded (they come from the defaults); coach's pitch is a team setting.
+    // Severities and custom rules aren't seeded (they come from the defaults); coach's pitch
+    // is a team setting.
     expect({
       ...JSON.parse(json!),
       severity: DEFAULT_RULE_CONFIG.severity,
+      custom: DEFAULT_RULE_CONFIG.custom,
       coachPitch: DEFAULT_RULE_CONFIG.coachPitch,
     }).toEqual(DEFAULT_RULE_CONFIG);
   });

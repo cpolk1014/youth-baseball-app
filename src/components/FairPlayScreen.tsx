@@ -12,8 +12,11 @@ import {
   setRuleSetting,
   type RuleInfo,
 } from "@/lib/rules/catalog";
-import { resolveRuleConfig, type RuleConfigInput } from "@/lib/rules/config";
-import type { RuleConfig, RuleSetting } from "@/lib/rules/types";
+import { fieldPositionsFor, resolveRuleConfig, type RuleConfigInput } from "@/lib/rules/config";
+import { describeCustomRule, type TeamShape } from "@/lib/rules/custom";
+import type { CustomRule, RuleConfig, RuleSetting } from "@/lib/rules/types";
+import { activePlayers } from "@/lib/lineup/edit";
+import { CustomRuleForm } from "./CustomRuleForm";
 import { AppShell, Loading } from "./AppShell";
 import { Sheet } from "./Sheet";
 
@@ -28,6 +31,7 @@ const SETTINGS: { id: RuleSetting; label: string }[] = [
 export function FairPlayScreen() {
   const data = useAppData();
   const [confirmReset, setConfirmReset] = useState(false);
+  const [adding, setAdding] = useState(false);
 
   if (!data) {
     return (
@@ -43,6 +47,22 @@ export function FairPlayScreen() {
   const rules = rulesFor(data.team.coachPitch);
   const changed = rules.some((r) => isChanged(config, r));
   const save = (next: RuleConfigInput) => saveSeasonRules(next);
+  const custom = input.custom ?? [];
+  const setCustom = (next: CustomRule[]) => save({ ...input, custom: next });
+  // A typical game for this team, for checking new rules.
+  const sizes = data.games.map((g) => g.innings);
+  const typicalInnings = sizes.length
+    ? [...sizes].sort(
+        (a, b) => sizes.filter((x) => x === b).length - sizes.filter((x) => x === a).length,
+      )[0]!
+    : 6;
+  const fielders = data.games.some((g) => g.fieldPlayers === 10) || data.team.coachPitch ? 10 : 9;
+  const team: TeamShape = {
+    players: activePlayers(data.players),
+    innings: typicalInnings,
+    fieldPositions: fieldPositionsFor(fielders),
+    coachPitch: data.team.coachPitch,
+  };
 
   return (
     <AppShell
@@ -91,6 +111,56 @@ export function FairPlayScreen() {
         )}
       </section>
 
+      <section className="mb-5">
+        <h2 className={heading}>Your own rules</h2>
+        {custom.length === 0 ? (
+          <p className="rounded-xl border-2 border-slate-200 bg-white p-4 text-base text-slate-700">
+            {canEdit
+              ? "Add rules like “Everyone plays 2 innings in the outfield” or “Mason pitches the 1st”."
+              : "None."}
+          </p>
+        ) : (
+          <ul className="grid gap-2 md:grid-cols-2 md:items-start">
+            {custom.map((r) => (
+              <li
+                key={r.id}
+                className={`rounded-xl border-2 bg-white p-3 ${r.setting === "off" ? "border-slate-200 opacity-70" : "border-slate-300"}`}
+              >
+                <p className="text-base leading-snug font-semibold">
+                  {describeCustomRule(r, data.players)}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <SettingPicker
+                    value={r.setting}
+                    canBlock
+                    disabled={!canEdit}
+                    onChange={(s) =>
+                      setCustom(custom.map((x) => (x.id === r.id ? { ...x, setting: s } : x)))
+                    }
+                  />
+                  {canEdit && (
+                    <button
+                      onClick={() => setCustom(custom.filter((x) => x.id !== r.id))}
+                      className="ml-auto h-10 rounded-lg px-3 text-base font-semibold text-red-700 underline"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {canEdit && (
+          <button
+            onClick={() => setAdding(true)}
+            className="mt-2 h-14 w-full rounded-xl border-2 border-dashed border-slate-400 text-lg font-bold text-slate-700 active:bg-slate-100"
+          >
+            + Add a rule
+          </button>
+        )}
+      </section>
+
       {canEdit && changed && (
         <button
           onClick={() => setConfirmReset(true)}
@@ -101,14 +171,28 @@ export function FairPlayScreen() {
       )}
       {!canEdit && <p className="text-base text-slate-600">Coaches set these rules.</p>}
 
+      <Sheet open={adding} title="Add a rule" onClose={() => setAdding(false)}>
+        {adding && (
+          <CustomRuleForm
+            config={config}
+            team={team}
+            onCancel={() => setAdding(false)}
+            onAdd={(rule) => {
+              setCustom([...custom, rule]);
+              setAdding(false);
+            }}
+          />
+        )}
+      </Sheet>
+
       <Sheet
         open={confirmReset}
         title="Reset to recommended?"
         onClose={() => setConfirmReset(false)}
       >
         <p className="mb-4 text-lg">
-          Every rule goes back to the recommended setting for{" "}
-          {data.team.coachPitch ? "coach pitch" : "kid pitch"}.
+          Every built-in rule goes back to the recommended setting for{" "}
+          {data.team.coachPitch ? "coach pitch" : "kid pitch"}. Your own rules stay.
         </p>
         <div className="grid grid-cols-2 gap-2">
           <button
@@ -119,7 +203,7 @@ export function FairPlayScreen() {
           </button>
           <button
             onClick={() => {
-              save(recommendedRules());
+              save(recommendedRules(input));
               setConfirmReset(false);
             }}
             className="h-14 rounded-xl bg-[#0b1f3a] text-lg font-bold text-white active:bg-[#152f55]"
@@ -146,7 +230,6 @@ function RuleRow({
   onNumber: (n: number) => void;
 }) {
   const setting = config.severity[info.id];
-  const options = SETTINGS.filter((s) => info.canBlock || s.id !== "block");
   const num = info.number ? (config[info.number.key] ?? info.number.min) : null;
   const step = info.number?.step ?? 1;
   const stepper =
@@ -158,32 +241,12 @@ function RuleRow({
     >
       <p className="text-base leading-snug font-semibold">{info.describe(config)}</p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <div
-          role="radiogroup"
-          aria-label="Setting"
-          className="flex rounded-lg border-2 border-slate-300 p-0.5"
-        >
-          {options.map((o) => (
-            <button
-              key={o.id}
-              role="radio"
-              aria-checked={setting === o.id}
-              disabled={!canEdit}
-              onClick={() => onSetting(o.id)}
-              className={`h-10 min-w-14 rounded-md px-3 text-base font-bold ${
-                setting === o.id
-                  ? o.id === "block"
-                    ? "bg-red-700 text-white"
-                    : o.id === "warn"
-                      ? "bg-amber-400 text-slate-900"
-                      : "bg-slate-600 text-white"
-                  : "text-slate-700"
-              } disabled:cursor-default`}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
+        <SettingPicker
+          value={setting}
+          canBlock={info.canBlock}
+          disabled={!canEdit}
+          onChange={onSetting}
+        />
         {info.number && num !== null && setting !== "off" && canEdit && (
           <div className="ml-auto flex items-center gap-1">
             <button
@@ -209,5 +272,47 @@ function RuleRow({
         )}
       </div>
     </li>
+  );
+}
+
+/** Must / Warn / Off. */
+function SettingPicker({
+  value,
+  canBlock,
+  disabled,
+  onChange,
+}: {
+  value: RuleSetting;
+  canBlock: boolean;
+  disabled: boolean;
+  onChange: (s: RuleSetting) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Setting"
+      className="flex rounded-lg border-2 border-slate-300 p-0.5"
+    >
+      {SETTINGS.filter((s) => canBlock || s.id !== "block").map((o) => (
+        <button
+          key={o.id}
+          role="radio"
+          aria-checked={value === o.id}
+          disabled={disabled}
+          onClick={() => onChange(o.id)}
+          className={`h-10 min-w-14 rounded-md px-3 text-base font-bold ${
+            value === o.id
+              ? o.id === "block"
+                ? "bg-red-700 text-white"
+                : o.id === "warn"
+                  ? "bg-amber-400 text-slate-900"
+                  : "bg-slate-600 text-white"
+              : "text-slate-700"
+          } disabled:cursor-default`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
   );
 }
