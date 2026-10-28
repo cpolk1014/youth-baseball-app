@@ -49,26 +49,6 @@ export function AppShell({
       </nav>
       <div className="mx-auto flex min-h-dvh w-full max-w-xl min-w-0 flex-col md:max-w-3xl lg:max-w-5xl print:block print:min-h-0 print:max-w-none">
         <header className="sticky top-0 z-20 print:hidden flex min-h-14 items-center gap-1 bg-[#0b1f3a] px-2 text-white shadow">
-          {/* Phones and tablets: the menu opens from the top left. */}
-          <button
-            onClick={() => setMenuOpen(true)}
-            aria-label="Menu"
-            aria-haspopup="dialog"
-            aria-expanded={menuOpen}
-            className="flex size-12 shrink-0 items-center justify-center rounded-lg active:bg-white/20 lg:hidden"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              className="size-7"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            >
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
           {backHref ? (
             <Link
               href={backHref}
@@ -78,7 +58,7 @@ export function AppShell({
               ‹
             </Link>
           ) : (
-            <span className="hidden w-2 lg:block" />
+            <span className="w-2" />
           )}
           {onTitleTap ? (
             <button
@@ -98,6 +78,26 @@ export function AppShell({
             </div>
           )}
           {action}
+          {/* Phones and tablets: the menu opens from the top right, within thumb reach. */}
+          <button
+            onClick={() => setMenuOpen(true)}
+            aria-label="Menu"
+            aria-haspopup="dialog"
+            aria-expanded={menuOpen}
+            className="flex size-12 shrink-0 items-center justify-center rounded-lg active:bg-white/20 lg:hidden"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              className="size-7"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
         </header>
 
         <main className="flex-1 px-4 pt-4 pb-10 md:px-6 lg:px-8 print:p-0">
@@ -109,7 +109,7 @@ export function AppShell({
   );
 }
 
-/** The menu that slides in from the left on phones and tablets. */
+/** The menu that slides in from the right on phones and tablets. */
 function MenuDrawer({ open, tab, onClose }: { open: boolean; tab: Tab; onClose: () => void }) {
   const panel = useRef<HTMLElement>(null);
   const close = useEffectEvent(() => onClose());
@@ -130,7 +130,7 @@ function MenuDrawer({ open, tab, onClose }: { open: boolean; tab: Tab; onClose: 
         ref={panel}
         aria-label="Main"
         tabIndex={-1}
-        className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-[#0b1f3a] p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] text-white shadow-2xl outline-none"
+        className="absolute inset-y-0 right-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-[#0b1f3a] p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] text-white shadow-2xl outline-none"
       >
         <div className="mb-4 flex items-center justify-between">
           <p className="px-3 text-2xl font-bold tracking-tight">RallyCap</p>
