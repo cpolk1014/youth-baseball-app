@@ -7,6 +7,7 @@ import { saveGame, saveLineup, setGameStatus, useAppData } from "@/lib/data/stor
 import { battingOrderMessage } from "@/lib/groupme/messages";
 import { assignPosition, positionAt, setAbsent, setBatting } from "@/lib/lineup/edit";
 import { rotateLeadoff } from "@/lib/rules/custom";
+import { explainLineup } from "@/lib/rules/explain";
 import { generateLineup } from "@/lib/rules/generate";
 import type { Lineup } from "@/lib/rules/types";
 import { validateLineup } from "@/lib/rules/validate";
@@ -20,6 +21,7 @@ import { LineupGrid } from "./LineupGrid";
 import { PositionPicker } from "./PositionPicker";
 import { Sheet } from "./Sheet";
 import { ViolationList } from "./ViolationList";
+import { WhyLineup } from "./WhyLineup";
 
 type View = "field" | "batting" | "attendance";
 
@@ -238,7 +240,12 @@ export function GameScreen({ gameId }: { gameId: string }) {
                 Tap <b>Auto-fill</b> for a fair lineup, or tap any square to set a position.
               </p>
             ) : (
-              <ViolationList violations={shown} emptyCells={emptyCells} />
+              <>
+                <ViolationList violations={shown} emptyCells={emptyCells} />
+                <WhyLineup
+                  explanation={explainLineup(data.players, lineup, config, history, violations)}
+                />
+              </>
             )}
           </div>
         </>
