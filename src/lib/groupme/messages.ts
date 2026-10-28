@@ -1,5 +1,4 @@
-import { buildLineupCard } from "@/lib/lineup/card";
-import type { FieldPosition, Lineup, Player } from "@/lib/rules/types";
+import type { Lineup, Player } from "@/lib/rules/types";
 
 export const GROUPME_MAX = 1000;
 
@@ -31,41 +30,67 @@ export function splitMessage(text: string, max = GROUPME_MAX): string[] {
   return parts;
 }
 
-export interface LineupMessageInput {
+export interface BattingOrderMessageInput {
   opponent: string;
   /** e.g. "Sat, Oct 24 · 9:00 AM" */
   when: string;
   location: string | null;
   players: Player[];
   lineup: Lineup;
-  fieldPositions: FieldPosition[];
+}
+
+/** The game's batting order as a GroupMe post (no field positions). */
+export function battingOrderMessage(input: BattingOrderMessageInput): string {
+  const { players, lineup } = input;
+  const name = (id: string) => players.find((p) => p.id === id)?.name ?? "Unknown player";
+  const lines = [
+    `⚾ Batting order: ${input.opponent.trim() ? `vs ${input.opponent.trim()}` : "next game"}`,
+    [input.when, input.location].filter(Boolean).join(" · "),
+    "",
+    ...lineup.battingOrder.map((id, i) => `${i + 1}. ${name(id)}`),
+  ];
+  const sitting = (lineup.notBatting ?? []).map(name);
+  if (sitting.length) lines.push("", `Not batting today: ${sitting.join(", ")}`);
+  const absent = (lineup.absent ?? []).map(name);
+  if (absent.length) lines.push("", `Not at this game: ${absent.join(", ")}`);
+  lines.push("", "Sent from RallyCap.");
+  return lines.join("\n");
+}
+
+export interface BatAroundMessageInput {
+  title: string;
+  totalCents: number;
+  /** How many players it's split across. */
+  players: number;
+  /** Each player's share, e.g. "$100.00" or "$730.18–$730.19" when it doesn't split evenly. */
+  each: string;
+  /** A family's installments (due date and amount), or one payment. */
+  installments: { dueDate: string; amountCents: number }[];
+  /** Where families see their balance, e.g. "https://www.rallycap.team/money". */
+  link: string;
+  format: (cents: number) => string;
+  formatDate: (date: string) => string;
 }
 
 /**
- * The game's lineup as a GroupMe post: one line per kid with their spot each inning, in
- * batting order, so every family can find their player fast.
+ * A new Bat Around for the team's GroupMe: the total, each family's share and when it's
+ * due. Every family's share is the same (to the penny), so nobody's balance is shown.
  */
-export function lineupMessage(input: LineupMessageInput): string {
-  const { players, lineup } = input;
-  const card = buildLineupCard(players, lineup, input.fieldPositions);
-  const name = (id: string) => players.find((p) => p.id === id)?.name ?? "Unknown player";
-  const spots = (positions: string[]) => positions.map((p) => p || "—").join(" ");
-
+export function batAroundMessage(input: BatAroundMessageInput): string {
+  const { format, formatDate, installments } = input;
   const lines = [
-    `⚾ Lineup: ${input.opponent.trim() ? `vs ${input.opponent.trim()}` : "next game"}`,
-    [input.when, input.location].filter(Boolean).join(" · "),
-    "",
+    `💵 New team expense: ${input.title.trim()}`,
+    `${format(input.totalCents)} total, split ${input.players} ways: ${input.each} per player.`,
   ];
-  const batting = card.rows.filter((r) => r.order !== null);
-  const sitting = card.rows.filter((r) => r.order === null);
-  if (lineup.innings > 0) lines.push(`Innings 1–${lineup.innings}:`);
-  for (const r of batting) lines.push(`${r.order}. ${r.name} · ${spots(r.positions)}`);
-  if (sitting.length) {
-    lines.push("", "Not batting today:");
-    for (const r of sitting) lines.push(`${r.name} · ${spots(r.positions)}`);
+  if (installments.length > 1) {
+    lines.push(
+      "",
+      `${installments.length} payments:`,
+      ...installments.map((i) => `• ${format(i.amountCents)} due ${formatDate(i.dueDate)}`),
+    );
+  } else if (installments[0]) {
+    lines.push(`Due ${formatDate(installments[0].dueDate)}.`);
   }
-  const absent = (lineup.absent ?? []).map(name);
-  if (absent.length) lines.push("", `Not at this game: ${absent.join(", ")}`);
-  lines.push("", "BN = bench. Sent from RallyCap.");
+  lines.push("", `See your balance in RallyCap: ${input.link}`);
   return lines.join("\n");
 }

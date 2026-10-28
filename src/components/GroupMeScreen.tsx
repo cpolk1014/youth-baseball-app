@@ -71,7 +71,8 @@ export function GroupMeScreen() {
           placeholder="Practice moved to 6:00 tonight, Field 3."
         />
         <p className="mt-2 text-sm text-slate-600">
-          To post a game&apos;s lineup, open the game and tap “Post lineup to GroupMe”.
+          To post a game&apos;s batting order, open the game and tap “Post batting order to
+          GroupMe”. New Bat Arounds offer a post when you save them.
         </p>
       </section>
 

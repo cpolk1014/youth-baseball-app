@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatGameDate, gameContext, lastFilledInning } from "@/lib/data/game";
 import { saveGame, saveLineup, setGameStatus, useAppData } from "@/lib/data/store";
-import { lineupMessage } from "@/lib/groupme/messages";
+import { battingOrderMessage } from "@/lib/groupme/messages";
 import { assignPosition, positionAt, setAbsent, setBatting } from "@/lib/lineup/edit";
 import { generateLineup } from "@/lib/rules/generate";
 import type { Lineup } from "@/lib/rules/types";
@@ -142,12 +142,12 @@ export function GameScreen({ gameId }: { gameId: string }) {
           >
             Mark final
           </button>
-          {data.groupme && lineup.slots.length > 0 && (
+          {data.groupme && lineup.battingOrder.length > 0 && (
             <button
               onClick={() => setPosting(true)}
               className="col-span-2 h-12 rounded-xl bg-[#00aff0] text-base font-bold text-white active:bg-[#0096cc]"
             >
-              Post lineup to GroupMe
+              Post batting order to GroupMe
             </button>
           )}
         </div>
@@ -272,17 +272,16 @@ export function GameScreen({ gameId }: { gameId: string }) {
         )}
       </Sheet>
 
-      <Sheet open={posting} title="Post lineup to GroupMe" onClose={() => setPosting(false)}>
+      <Sheet open={posting} title="Post batting order" onClose={() => setPosting(false)}>
         {posting && (
           <GroupMePost
             rows={12}
-            initialText={lineupMessage({
+            initialText={battingOrderMessage({
               opponent: game.opponent,
               when: formatGameDate(game),
               location: game.location,
               players: data.players,
               lineup,
-              fieldPositions: config.fieldPositions,
             })}
           />
         )}

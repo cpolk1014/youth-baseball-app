@@ -26,15 +26,18 @@ export async function POST(request: NextRequest) {
   if (!teamId || !text) return errorResponse(400, "Write a message first.");
   if (text.length > MAX_TEXT) return errorResponse(413, "That message is too long.");
 
-  // The database only shows the bot to the team's coaches and managers.
+  // The database only shows the bot to the team's coaches, managers and treasurer.
   const [{ data: roles }, { data: team }, { data: bot }] = await Promise.all([
     supabase.from("member").select("role").eq("team_id", teamId).eq("user_id", user.id),
     supabase.from("team").select("optioned_at").eq("id", teamId).maybeSingle(),
     supabase.from("team_groupme").select("bot_id").eq("team_id", teamId).maybeSingle(),
   ]);
-  const canPost = (roles ?? []).some((r) => ["owner", "coach", "manager"].includes(r.role));
-  if (!canPost || !team)
-    return errorResponse(403, "Only coaches and managers can post to GroupMe.");
+  const canPost = (roles ?? []).some((r) =>
+    ["owner", "coach", "manager", "treasurer"].includes(r.role),
+  );
+  if (!canPost || !team) {
+    return errorResponse(403, "Only coaches, managers and the treasurer can post to GroupMe.");
+  }
   if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up to post.");
   if (!bot) return errorResponse(404, "Connect the team's GroupMe first.");
 

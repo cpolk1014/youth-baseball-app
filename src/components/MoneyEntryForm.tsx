@@ -11,7 +11,14 @@ import {
   useStoreState,
 } from "@/lib/data/store";
 import { eachLabel, sharesFor } from "@/lib/finance/entry";
-import { formatCents, installmentDates, parseCents, splitCents } from "@/lib/finance/money";
+import {
+  formatCents,
+  installmentDates,
+  parseCents,
+  shortDate,
+  splitCents,
+} from "@/lib/finance/money";
+import { batAroundMessage } from "@/lib/groupme/messages";
 import {
   CATEGORIES,
   ENTRY_HINT,
@@ -26,6 +33,7 @@ import {
 } from "@/lib/finance/types";
 import { RECEIPT_ACCEPT, RECEIPT_MAX_BYTES, isPdf } from "@/lib/finance/receipt";
 import { activePlayers } from "@/lib/lineup/edit";
+import { GroupMePost } from "./GroupMePost";
 import { Toggle } from "./PlayerForm";
 import { ReceiptPreview } from "./ReceiptPreview";
 import { shrinkReceipt } from "./receiptFile";
@@ -130,6 +138,8 @@ export function MoneyEntryForm({
   // Receipt (Walkoffs): keep what's there, a newly picked file, or remove it.
   const [receipt, setReceipt] = useState<ReceiptState>({ kind: "keep" });
   const { mode } = useStoreState();
+  // After saving a new Bat Around: offer to tell the team on GroupMe.
+  const [announce, setAnnounce] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -178,6 +188,27 @@ export function MoneyEntryForm({
       }
       await saveFinanceEntry(saved, sharesFor(saved, players, newId));
       if (oldReceipt && oldReceipt !== saved.receiptPath) await removeReceipt(oldReceipt);
+      if (isNew && type === "bat_around" && data.groupme && !data.team.optionedAt) {
+        const dates = saved.dueDates.length ? saved.dueDates : [saved.date];
+        const share = splitCents(saved.amountCents, players.length)[0] ?? 0;
+        const thisYear = new Date().getFullYear();
+        setAnnounce(
+          batAroundMessage({
+            title: saved.title,
+            totalCents: saved.amountCents,
+            players: players.length,
+            each: eachLabel(saved.amountCents, players.length, formatCents).replace(" each", ""),
+            installments: splitCents(share, dates.length).map((amountCents, i) => ({
+              dueDate: dates[i]!,
+              amountCents,
+            })),
+            link: `${window.location.origin}/money`,
+            format: formatCents,
+            formatDate: (d) => shortDate(d, thisYear),
+          }),
+        );
+        return;
+      }
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't save. Check your connection.");
@@ -189,6 +220,23 @@ export function MoneyEntryForm({
   // Per-family amounts for the schedule preview.
   const perPlayer = type === "bat_around" ? splitCents(cents ?? 0, players.length) : [cents ?? 0];
   const lowShare = perPlayer[0] ?? 0;
+
+  if (announce !== null) {
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="rounded-xl bg-green-50 p-3 text-base font-semibold text-green-900">
+          Saved. Tell the team on GroupMe?
+        </p>
+        <GroupMePost initialText={announce} rows={10} />
+        <button
+          onClick={onDone}
+          className="h-12 rounded-xl border-2 border-slate-400 text-base font-bold active:bg-slate-100"
+        >
+          Done
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form
