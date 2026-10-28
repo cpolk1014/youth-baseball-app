@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { signInErrorMessage } from "@/lib/supabase/auth-errors";
+import { retryAfterSeconds, signInErrorMessage } from "@/lib/supabase/auth-errors";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { safeNextPath } from "@/lib/supabase/next-path";
@@ -20,7 +20,7 @@ export function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  // Seconds until another code can be sent (Supabase allows one email a minute).
+  // Seconds until Supabase allows another email; set only when it says to wait.
   const [wait, setWait] = useState(0);
 
   useEffect(() => {
@@ -50,11 +50,16 @@ export function LoginScreen() {
     });
     setBusy(false);
     if (error) {
-      setError(signInErrorMessage(error));
+      const seconds = retryAfterSeconds(error);
+      if (seconds !== null) {
+        setWait(seconds);
+        setNotice(`A code was just sent. You can send another in ${seconds} seconds.`);
+        // A recent email to this address is still good: go to the code screen.
+        setStep({ kind: "sent", email: address });
+      } else setError(signInErrorMessage(error));
       return;
     }
     setCode("");
-    setWait(60);
     if (step.kind === "sent")
       setNotice("New code sent. Use the newest email; older codes stop working.");
     setStep({ kind: "sent", email: address });

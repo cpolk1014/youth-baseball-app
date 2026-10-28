@@ -20,3 +20,12 @@ export function signInErrorMessage(error: {
   }
   return `That didn't work: ${error.message}`;
 }
+
+/**
+ * Seconds Supabase says to wait before sending another email ("…you can only request this
+ * after 42 seconds."), or null if the error isn't that.
+ */
+export function retryAfterSeconds(error: { message: string }): number | null {
+  const m = /after (\d+) seconds?/i.exec(error.message);
+  return m ? Number(m[1]) : null;
+}
