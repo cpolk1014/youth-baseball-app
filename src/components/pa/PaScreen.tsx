@@ -58,7 +58,7 @@ function Pa({ data }: { data: AppData }) {
     <>
       {pa.offline && (
         <p className="mb-3 rounded-xl bg-amber-50 p-3 text-base font-semibold text-amber-900">
-          No signal: using what&apos;s saved on this phone.
+          No signal: using what&apos;s saved on this device.
         </p>
       )}
       {staff && (
@@ -432,7 +432,7 @@ function ReadyOffline({ paths }: { paths: string[] }) {
   if (ready) {
     return (
       <p className="rounded-xl border-2 border-green-700 bg-green-50 p-3 text-base font-semibold text-green-900">
-        ✓ Ready offline: every walk-up and team sound is on this phone.
+        ✓ Ready offline: every walk-up and team sound is on this device.
       </p>
     );
   }
@@ -443,7 +443,7 @@ function ReadyOffline({ paths }: { paths: string[] }) {
           ? `Downloading ${state.done} of ${state.total}…`
           : state.failed
             ? `${state.failed} couldn't download. Try again with signal.`
-            : `${state.total - state.done} of ${state.total} sounds aren't on this phone yet.`}
+            : `${state.total - state.done} of ${state.total} sounds aren't on this device yet.`}
       </p>
       <button
         disabled={busy}
