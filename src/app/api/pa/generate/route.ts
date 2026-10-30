@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { paAccess } from "@/lib/pa/access";
 import { AudioMakerError, makeAnnouncement, makeSong, makeSoundEffect } from "@/lib/pa/elevenlabs";
 import { limitProblem, type GenerationKind } from "@/lib/pa/limits";
 import {
@@ -42,40 +43,14 @@ export async function POST(request: NextRequest) {
     return errorResponse(400, "Something's missing. Reload and try again.");
   }
 
-  const [{ data: roles }, { data: team }] = await Promise.all([
-    supabase.from("member").select("role").eq("team_id", teamId).eq("user_id", user.id),
-    supabase.from("team").select("optioned_at").eq("id", teamId).maybeSingle(),
-  ]);
-  if (!team || !roles?.length) return errorResponse(403, "You're not on this team.");
-  if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up first.");
-  const staff = roles.some((r) => ["owner", "coach", "manager"].includes(r.role));
-
-  // Walk-ups: the kid must be on this team, and a parent must be linked to them.
-  let player: { name: string; jersey_number: number | null } | null = null;
-  if (kind !== "sound") {
-    const playerId = str(body?.playerId, 40);
-    const [{ data: p }, { data: link }] = await Promise.all([
-      supabase
-        .from("player")
-        .select("name, jersey_number")
-        .eq("id", playerId)
-        .eq("team_id", teamId)
-        .maybeSingle(),
-      supabase
-        .from("player_guardian")
-        .select("id")
-        .eq("player_id", playerId)
-        .eq("user_id", user.id)
-        .maybeSingle(),
-    ]);
-    if (!p) return errorResponse(404, "That player isn't on this team.");
-    if (!staff && !link) {
-      return errorResponse(403, "Parents can only make walk-ups for their own kids.");
-    }
-    player = p;
-  } else if (!staff) {
-    return errorResponse(403, "Only coaches and managers add soundboard sounds.");
-  }
+  const access = await paAccess(
+    supabase,
+    user.id,
+    teamId,
+    kind === "sound" ? null : str(body?.playerId, 40),
+  );
+  if (!access.ok) return errorResponse(access.status, access.error);
+  const { player } = access;
 
   const { data: usage, error: usageError } = await supabase
     .rpc("pa_usage", { p_team_id: teamId, p_kind: kind })

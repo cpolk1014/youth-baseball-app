@@ -18,11 +18,12 @@ import {
   scriptProblem,
   type CallInput,
 } from "@/lib/pa/speech";
+import { LYRIC_THEMES, type LyricOption, type LyricTheme } from "@/lib/pa/lyrics";
 import type { AnnounceMode, Walkup } from "@/lib/pa/types";
 import type { Player } from "@/lib/rules/types";
 import { loadBuffer } from "./buffers";
 import { decode, playBuffer, playWalkup, renderClip, stopAll } from "./engine";
-import { generate, walkupPath } from "./paData";
+import { generate, walkupPath, writeLyrics } from "./paData";
 import { Trimmer } from "./Trimmer";
 import { usePlaying } from "./usePlaying";
 
@@ -75,6 +76,8 @@ export function WalkupEditor({
   const [vibe, setVibe] = useState("");
   const [singName, setSingName] = useState(true);
   const [lyrics, setLyrics] = useState("");
+  const [theme, setTheme] = useState<LyricTheme>("hype");
+  const [lyricOptions, setLyricOptions] = useState<LyricOption[]>([]);
 
   const [announce, setAnnounce] = useState(existing?.announce ?? signedIn);
   const [mode, setMode] = useState<AnnounceMode>(existing?.announceMode ?? "over");
@@ -173,6 +176,22 @@ export function WalkupEditor({
         await decode(await blob.arrayBuffer()),
         "ai",
         (about ? `${label}: ${about}` : label).slice(0, 600),
+      );
+    });
+
+  const suggestLyrics = () =>
+    run("Writing lyrics…", async () => {
+      setLyricOptions(
+        await writeLyrics({
+          teamId,
+          playerId: player.id,
+          theme,
+          style,
+          idea: vibe,
+          hookFirst: singName,
+          nameSpoken,
+          numberSpoken,
+        }),
       );
     });
 
@@ -336,6 +355,51 @@ export function WalkupEditor({
                       Describe the sound, not a real song or artist.
                     </span>
                   </label>
+                  <fieldset className="flex flex-col gap-2 rounded-xl bg-slate-50 p-3">
+                    <legend className="sr-only">Lyrics ideas</legend>
+                    <p className="text-base font-semibold">Need words? Pick a theme</p>
+                    <div className="flex flex-wrap gap-2">
+                      {LYRIC_THEMES.map((t) => (
+                        <button
+                          key={t.id}
+                          aria-pressed={theme === t.id}
+                          onClick={() => setTheme(t.id)}
+                          className={`h-11 rounded-full px-3 text-base font-semibold ${
+                            theme === t.id
+                              ? "bg-[var(--team)] text-white"
+                              : "border-2 border-slate-300 bg-white"
+                          }`}
+                        >
+                          <span aria-hidden="true">{t.icon}</span> {t.label}
+                        </button>
+                      ))}
+                    </div>
+                    <button onClick={suggestLyrics} disabled={!!busy} className={secondary}>
+                      {lyricOptions.length ? "✍️ Write 3 more" : "✍️ Write lyrics for me"}
+                    </button>
+                    {lyricOptions.map((o, i) => (
+                      <div key={i} className="rounded-xl border-2 border-slate-200 bg-white p-3">
+                        <p className="text-sm font-bold tracking-wide text-slate-600 uppercase">
+                          {o.title}
+                        </p>
+                        {o.lines.map((l, j) => (
+                          <p key={j} className="text-lg leading-snug">
+                            {l}
+                          </p>
+                        ))}
+                        <button
+                          onClick={() => setLyrics(o.lines.join("\n"))}
+                          className="mt-2 h-11 w-full rounded-lg bg-[var(--team)] text-base font-bold text-white active:bg-[var(--team-press)]"
+                        >
+                          Use these
+                        </button>
+                      </div>
+                    ))}
+                    <p className="text-sm text-slate-600">
+                      Uses the theme, the style and your vibe. Tap a set to drop it in below, then
+                      change any words you like.
+                    </p>
+                  </fieldset>
                   <label className="flex flex-col gap-1">
                     <span className="text-base font-semibold">Words to sing (optional)</span>
                     <textarea

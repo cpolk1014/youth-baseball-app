@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useStoreState } from "@/lib/data/store";
 import type { GenerationKind } from "@/lib/pa/limits";
+import type { LyricOption } from "@/lib/pa/lyrics";
 import type { SoundCategory, TeamSound, Walkup } from "@/lib/pa/types";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
@@ -391,3 +392,25 @@ export async function getReady(
 }
 
 export type { SoundCategory };
+
+/** Ask Claude for three lyric options for a kid's walk-up. */
+export async function writeLyrics(payload: Record<string, unknown>): Promise<LyricOption[]> {
+  let res: Response;
+  try {
+    res = await fetch("/api/pa/lyrics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error("No signal. Writing lyrics needs the internet.");
+  }
+  const body = (await res.json().catch(() => null)) as {
+    options?: LyricOption[];
+    error?: string;
+  } | null;
+  if (!res.ok || !body?.options) {
+    throw new Error(body?.error ?? "Couldn't write lyrics this time. Try again.");
+  }
+  return body.options;
+}
