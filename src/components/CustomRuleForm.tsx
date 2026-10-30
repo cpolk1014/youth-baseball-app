@@ -41,9 +41,9 @@ const KINDS: { kind: CustomRuleKind; title: string; example: string }[] = [
 
 const ALL: FieldPosition[] = ["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "LCF", "RCF"];
 const chip = (on: boolean) =>
-  `h-11 min-w-11 rounded-lg border-2 px-3 text-base font-bold ${on ? "border-[#0b1f3a] bg-[#0b1f3a] text-white" : "border-slate-300 bg-white"}`;
+  `h-11 min-w-11 rounded-lg border-2 px-3 text-base font-bold ${on ? "border-[var(--team)] bg-[var(--team)] text-white" : "border-slate-300 bg-white"}`;
 const field =
-  "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[#0b1f3a] focus:outline-none";
+  "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
 const stepBtn =
   "flex size-11 items-center justify-center rounded-lg border-2 border-slate-300 bg-white text-xl font-bold active:bg-slate-100 disabled:opacity-30";
 
@@ -104,7 +104,7 @@ export function CustomRuleForm({
               onClick={() => setKind(k.kind)}
               className="flex min-h-16 w-full flex-col items-start justify-center rounded-xl border-2 border-slate-300 bg-white px-4 py-2 text-left active:bg-slate-50"
             >
-              <span className="text-lg font-bold text-[#0b1f3a]">{k.title}</span>
+              <span className="text-lg font-bold text-[var(--team)]">{k.title}</span>
               <span className="text-sm text-slate-600">e.g. {k.example}</span>
             </button>
           </li>

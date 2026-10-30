@@ -8,6 +8,7 @@ import { buildLineupCard } from "@/lib/lineup/card";
 import { validateLineup } from "@/lib/rules/validate";
 import { AppShell, Loading } from "./AppShell";
 import { LineupCardPage, type CardSize } from "./LineupCard";
+import { logoUrl } from "@/lib/branding/logo";
 
 const PAGE_WIDTH_PX = 816; // 8.5in at 96dpi
 
@@ -58,6 +59,7 @@ export function LineupCardScreen({ gameId }: { gameId: string }) {
     opponent: game.opponent,
     when: formatGameDate(game),
     location: game.location,
+    logoUrl: logoUrl(data.team.logoPath),
   };
 
   return (
@@ -68,7 +70,7 @@ export function LineupCardScreen({ gameId }: { gameId: string }) {
         <div
           role="radiogroup"
           aria-label="Paper size"
-          className="grid grid-cols-2 rounded-xl border-2 border-[#0b1f3a] p-1"
+          className="grid grid-cols-2 rounded-xl border-2 border-[var(--team)] p-1"
         >
           {(
             [
@@ -81,7 +83,7 @@ export function LineupCardScreen({ gameId }: { gameId: string }) {
               role="radio"
               aria-checked={size === value}
               onClick={() => setSize(value)}
-              className={`h-11 rounded-lg text-base font-bold ${size === value ? "bg-[#0b1f3a] text-white" : "text-[#0b1f3a]"}`}
+              className={`h-11 rounded-lg text-base font-bold ${size === value ? "bg-[var(--team)] text-white" : "text-[var(--team)]"}`}
             >
               {label}
             </button>

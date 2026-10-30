@@ -4,10 +4,13 @@ import { SEED_DATA } from "./seed";
 import {
   defaultFieldPlayers,
   gameContext,
+  gameResult,
   lastFilledInning,
+  recordText,
   splitGames,
-  validateGameInput,
   type GameInput,
+  validateGameInput,
+  whenText,
 } from "./game";
 import type { AppData, Game } from "./types";
 
@@ -104,5 +107,49 @@ describe("game helpers", () => {
     expect(config.coachPitch).toBe(true);
     expect(config.fieldPositions).toContain("LCF");
     expect(config.fieldPositions).not.toContain("CF");
+  });
+});
+
+describe("results and record", () => {
+  const g = (extra: Partial<Game>): Game => ({
+    id: "g",
+    seasonId: "s",
+    date: "2026-10-24",
+    startTime: null,
+    opponent: "X",
+    location: null,
+    innings: 6,
+    fieldPlayers: 9,
+    status: "final",
+    ...extra,
+  });
+
+  it("gives W, L or T only for final games with both scores", () => {
+    expect(gameResult(g({ scoreUs: 7, scoreThem: 4 }))).toBe("W");
+    expect(gameResult(g({ scoreUs: 3, scoreThem: 5 }))).toBe("L");
+    expect(gameResult(g({ scoreUs: 2, scoreThem: 2 }))).toBe("T");
+    expect(gameResult(g({ scoreUs: 7, scoreThem: null }))).toBeNull();
+    expect(gameResult(g({ status: "scheduled", scoreUs: 7, scoreThem: 4 }))).toBeNull();
+  });
+
+  it("adds up the season record", () => {
+    expect(
+      recordText([
+        g({ scoreUs: 7, scoreThem: 4 }),
+        g({ scoreUs: 1, scoreThem: 4 }),
+        g({ scoreUs: 9, scoreThem: 0 }),
+      ]),
+    ).toBe("2–1");
+    expect(recordText([g({ scoreUs: 2, scoreThem: 2 }), g({ scoreUs: 3, scoreThem: 1 })])).toBe(
+      "1–0–1",
+    );
+    expect(recordText([g({})])).toBeNull();
+  });
+
+  it("says when a game is", () => {
+    expect(whenText("2026-10-29", "2026-10-29")).toBe("Today");
+    expect(whenText("2026-10-30", "2026-10-29")).toBe("Tomorrow");
+    expect(whenText("2026-10-31", "2026-10-29")).toBe("Saturday");
+    expect(whenText("2026-11-14", "2026-10-29")).toBe("Sat, Nov 14");
   });
 });

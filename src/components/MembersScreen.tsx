@@ -121,7 +121,7 @@ export function MembersScreen() {
                 }
                 className="flex min-h-14 flex-col items-start justify-center rounded-xl border-2 border-slate-300 bg-white px-4 py-2 text-left active:bg-slate-50 disabled:opacity-50"
               >
-                <span className="text-lg font-bold text-[#0b1f3a]">{r.label}</span>
+                <span className="text-lg font-bold text-[var(--team)]">{r.label}</span>
                 <span className="text-sm text-slate-600">{r.hint}</span>
               </button>
             ))}
@@ -171,7 +171,7 @@ export function MembersScreen() {
                           {" · "}
                           <button
                             onClick={() => setKidsForMember(m)}
-                            className="font-semibold text-[#0b1f3a] underline"
+                            className="font-semibold text-[var(--team)] underline"
                           >
                             {kids.length > 0 ? "Change" : "Pick player"}
                           </button>
@@ -256,7 +256,7 @@ export function MembersScreen() {
           </p>
           <button
             onClick={() => setOptioning(true)}
-            className="mt-3 h-12 w-full rounded-xl border-2 border-[#0b1f3a] text-base font-bold text-[#0b1f3a] active:bg-slate-100"
+            className="mt-3 h-12 w-full rounded-xl border-2 border-[var(--team)] text-base font-bold text-[var(--team)] active:bg-slate-100"
           >
             Option team
           </button>
@@ -308,7 +308,7 @@ export function MembersScreen() {
                 setOptioning(false);
                 setOptioned(true);
               }}
-              className="h-14 flex-1 rounded-xl bg-[#0b1f3a] text-lg font-bold text-white active:bg-[#16325a]"
+              className="h-14 flex-1 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]"
             >
               Option team
             </button>
@@ -422,7 +422,7 @@ function ShareLink({ role, url }: { role: MemberRole; url: string }) {
           onClick={() =>
             void navigator.share({ title: "RallyCap invite", text: message, url }).catch(() => {})
           }
-          className="h-14 rounded-xl bg-[#0b1f3a] text-lg font-bold text-white active:bg-[#16325a]"
+          className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]"
         >
           Share…
         </button>

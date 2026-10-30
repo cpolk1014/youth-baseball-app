@@ -35,7 +35,7 @@ export function AssignForm({
           onChange={(e) => setTitle(e.target.value)}
           maxLength={80}
           placeholder="Bunt defense"
-          className="h-12 rounded-xl border-2 border-slate-300 px-3 text-lg focus:border-[#0b1f3a] focus:outline-none"
+          className="h-12 rounded-xl border-2 border-slate-300 px-3 text-lg focus:border-[var(--team)] focus:outline-none"
         />
       </label>
       <label className="flex min-w-0 flex-col gap-1">
@@ -44,7 +44,7 @@ export function AssignForm({
           type="date"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
-          className="h-12 min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[#0b1f3a] focus:outline-none"
+          className="h-12 min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none"
         />
       </label>
       <div>

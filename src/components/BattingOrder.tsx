@@ -84,7 +84,7 @@ export function BattingOrder({
               style={{ transform: `translateY(${offset(i)}px)` }}
               className={`flex h-14 items-center gap-3 rounded-xl border-2 bg-white pl-3 ${
                 dragging
-                  ? "relative z-10 border-[#0b1f3a] shadow-xl"
+                  ? "relative z-10 border-[var(--team)] shadow-xl"
                   : "border-slate-200 transition-transform"
               }`}
             >
@@ -143,7 +143,7 @@ export function BattingOrder({
                     <button
                       onClick={() => onSetBatting(id, true)}
                       aria-label={`Add ${p?.name ?? id} back to the batting order`}
-                      className="h-10 shrink-0 rounded-lg bg-[#0b1f3a] px-3 text-sm font-bold text-white active:bg-[#16325a]"
+                      className="h-10 shrink-0 rounded-lg bg-[var(--team)] px-3 text-sm font-bold text-white active:bg-[var(--team-press)]"
                     >
                       Add back
                     </button>

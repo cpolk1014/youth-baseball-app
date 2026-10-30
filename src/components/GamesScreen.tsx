@@ -6,8 +6,11 @@ import {
   defaultFieldPlayers,
   formatGameDate,
   gameContext,
+  gameResult,
   localDateString,
+  recordText,
   splitGames,
+  whenText,
 } from "@/lib/data/game";
 import { permissionsFor } from "@/lib/data/permissions";
 import { newId, saveGame, signOut, useAppData, useStoreState } from "@/lib/data/store";
@@ -15,6 +18,8 @@ import type { AppData, Game } from "@/lib/data/types";
 import { validateLineup } from "@/lib/rules/validate";
 import { AppShell, Loading } from "./AppShell";
 import { GameForm } from "./GameForm";
+import { TeamBadge } from "./TeamBadge";
+import { useToday } from "./useToday";
 import { MoneyNudge } from "./MoneyParts";
 import { Sheet } from "./Sheet";
 import { TeamSwitcher } from "./TeamSwitcher";
@@ -51,14 +56,16 @@ export function GamesScreen() {
   return (
     <AppShell
       title={data.team.name}
-      subtitle={`${data.team.ageGroup} · ${data.season.name}`}
+      subtitle={[data.team.ageGroup, data.season.name, recordText(data.games)]
+        .filter(Boolean)
+        .join(" · ")}
       tab="games"
       onTitleTap={mode === "supabase" ? () => setSwitching(true) : undefined}
       action={
         canEdit ? (
           <button
             onClick={startAdd}
-            className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[#0b1f3a] active:bg-slate-200"
+            className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[var(--team)] active:bg-slate-200"
           >
             + Game
           </button>
@@ -66,6 +73,7 @@ export function GamesScreen() {
       }
     >
       <MoneyNudge />
+      {upcoming[0] && <NextGame game={upcoming[0]} data={data} />}
       <Section title="Upcoming" games={upcoming} data={data} empty="No upcoming games." />
       {final.length > 0 && <Section title="Final" games={final} data={data} />}
 
@@ -147,9 +155,20 @@ function GameCard({ game, data }: { game: Game; data: AppData }) {
     ? validateLineup(data.players, ctx.lineup, ctx.config, ctx.history, ctx.previous)
     : [];
   const blocks = violations.filter((v) => v.severity === "block").length;
+  const result = gameResult(game);
   const status =
     game.status === "final"
-      ? { text: "Final", cls: "bg-slate-700 text-white" }
+      ? result
+        ? {
+            text: `${result} ${game.scoreUs}–${game.scoreThem}`,
+            cls:
+              result === "W"
+                ? "bg-green-700 text-white"
+                : result === "L"
+                  ? "bg-red-700 text-white"
+                  : "bg-slate-500 text-white",
+          }
+        : { text: "Final", cls: "bg-slate-700 text-white" }
       : !ctx.hasSavedLineup
         ? { text: "No lineup yet", cls: "bg-slate-200 text-slate-800" }
         : blocks > 0
@@ -178,5 +197,42 @@ function GameCard({ game, data }: { game: Game; data: AppData }) {
         </div>
       </Link>
     </li>
+  );
+}
+
+/** The next game, front and center in the team's colors. */
+function NextGame({ game, data }: { game: Game; data: AppData }) {
+  const today = useToday();
+  const when = today ? whenText(game.date, today) : "";
+  const time = game.startTime
+    ? new Date(`2000-01-01T${game.startTime}`).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
+  return (
+    <Link
+      href={`/games/${game.id}`}
+      className="mb-5 flex items-center gap-4 overflow-hidden rounded-2xl border-b-8 border-[var(--team-accent)] bg-[var(--team)] p-4 text-white shadow-md active:bg-[var(--team-press)]"
+    >
+      <TeamBadge
+        name={data.team.name}
+        colors={data.team.colors}
+        logoPath={data.team.logoPath}
+        size={64}
+      />
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold tracking-wide text-white/75 uppercase">
+          Next game{when ? ` · ${when}` : ""}
+        </span>
+        <span className="block truncate text-2xl leading-tight font-black">vs {game.opponent}</span>
+        <span className="block truncate text-base text-white/90">
+          {[time, game.location].filter(Boolean).join(" · ") || formatGameDate(game)}
+        </span>
+      </span>
+      <span aria-hidden="true" className="text-3xl text-white/70">
+        ›
+      </span>
+    </Link>
   );
 }

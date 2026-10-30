@@ -267,7 +267,7 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
               const notes = e.target.value.trim() || null;
               if (notes !== practice.notes) save({ notes });
             }}
-            className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 text-base focus:border-[#0b1f3a] focus:outline-none"
+            className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 text-base focus:border-[var(--team)] focus:outline-none"
           />
         ) : (
           <p className="rounded-xl border-2 border-slate-200 bg-white p-3 text-base whitespace-pre-wrap">
@@ -350,7 +350,7 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
             <PlayPicker selected={practice.plays} onChange={(plays) => save({ plays })} />
             <button
               onClick={() => setPanel(null)}
-              className="sticky bottom-0 mt-4 h-14 w-full rounded-xl bg-[#0b1f3a] text-lg font-bold text-white active:bg-[#152f55]"
+              className="sticky bottom-0 mt-4 h-14 w-full rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]"
             >
               Done
             </button>
@@ -405,7 +405,7 @@ function DrillPicker({ onAdd }: { onAdd: (item: Omit<PlanItem, "id">) => void })
             onChange={(e) => setTitle(e.target.value)}
             maxLength={60}
             placeholder="e.g. Hit the cone"
-            className="h-12 min-w-0 flex-1 rounded-lg border-2 border-slate-400 bg-white px-3 text-lg focus:border-[#0b1f3a] focus:outline-none"
+            className="h-12 min-w-0 flex-1 rounded-lg border-2 border-slate-400 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none"
           />
           <select
             aria-label="Minutes"
@@ -423,7 +423,7 @@ function DrillPicker({ onAdd }: { onAdd: (item: Omit<PlanItem, "id">) => void })
         <button
           type="submit"
           disabled={!title.trim()}
-          className="h-12 rounded-lg bg-[#0b1f3a] text-base font-bold text-white disabled:opacity-40"
+          className="h-12 rounded-lg bg-[var(--team)] text-base font-bold text-white disabled:opacity-40"
         >
           Add
         </button>

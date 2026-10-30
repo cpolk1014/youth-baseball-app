@@ -1,5 +1,6 @@
 import type { RuleConfigInput } from "@/lib/rules/config";
 import type { Lineup, Player } from "@/lib/rules/types";
+import { isHex } from "@/lib/branding/color";
 import { bestRole } from "@/lib/data/permissions";
 import type { MoneySummary } from "@/lib/finance/ledger";
 import type { FinanceEntry } from "@/lib/finance/types";
@@ -69,6 +70,8 @@ export function summarizeMyTeams(
       ageGroup: t.age_group,
       role: bestRole(myMemberships.filter((m) => m.team_id === t.id).map((m) => m.role)),
       optioned: t.optioned_at !== null,
+      colors: (t.colors ?? []).filter(isHex),
+      logoPath: t.logo_path ?? null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -252,6 +255,8 @@ export function gameFromRow(r: GameRow): Game {
     innings: r.innings,
     fieldPlayers: r.field_players,
     status: r.status,
+    scoreUs: r.score_us ?? null,
+    scoreThem: r.score_them ?? null,
   };
 }
 
@@ -266,6 +271,8 @@ export function gameToRow(g: Game): GameRow {
     innings: g.innings,
     field_players: g.fieldPlayers,
     status: g.status,
+    score_us: g.scoreUs ?? null,
+    score_them: g.scoreThem ?? null,
   };
 }
 
@@ -340,6 +347,8 @@ export function appDataFromRows(
       ageGroup: rows.team.age_group,
       coachPitch: rows.team.coach_pitch,
       optionedAt: rows.team.optioned_at,
+      colors: (rows.team.colors ?? []).filter(isHex),
+      logoPath: rows.team.logo_path ?? null,
     },
     season: {
       id: rows.season.id,

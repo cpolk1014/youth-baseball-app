@@ -60,7 +60,7 @@ export function PracticesScreen() {
         canEdit ? (
           <button
             onClick={startAdd}
-            className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[#0b1f3a] active:bg-slate-200"
+            className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[var(--team)] active:bg-slate-200"
           >
             + Add
           </button>
@@ -70,7 +70,7 @@ export function PracticesScreen() {
       {canEdit && (
         <button
           onClick={() => setBuilding(true)}
-          className="mb-4 flex min-h-14 w-full flex-col items-start justify-center rounded-xl bg-[#0b1f3a] px-4 py-2 text-left text-white active:bg-[#16325a]"
+          className="mb-4 flex min-h-14 w-full flex-col items-start justify-center rounded-xl bg-[var(--team)] px-4 py-2 text-left text-white active:bg-[var(--team-press)]"
         >
           <span className="text-lg font-bold">Build season schedule</span>
           <span className="text-sm text-white/80">
@@ -81,9 +81,9 @@ export function PracticesScreen() {
       {canEdit && mode === "supabase" && (
         <button
           onClick={() => setImporting(true)}
-          className="mb-4 flex min-h-14 w-full flex-col items-start justify-center rounded-xl border-2 border-[#0b1f3a] bg-white px-4 py-2 text-left active:bg-slate-50"
+          className="mb-4 flex min-h-14 w-full flex-col items-start justify-center rounded-xl border-2 border-[var(--team)] bg-white px-4 py-2 text-left active:bg-slate-50"
         >
-          <span className="text-lg font-bold text-[#0b1f3a]">Import from a file</span>
+          <span className="text-lg font-bold text-[var(--team)]">Import from a file</span>
           <span className="text-sm text-slate-600">
             Photo, PDF or CSV of your schedule: practices and games.
           </span>

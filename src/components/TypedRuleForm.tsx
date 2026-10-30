@@ -69,14 +69,14 @@ export function TypedRuleForm({
           rows={3}
           maxLength={500}
           placeholder="No kid catches more than 2 innings. Owen never pitches."
-          className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 text-lg focus:border-[#0b1f3a] focus:outline-none"
+          className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 text-lg focus:border-[var(--team)] focus:outline-none"
         />
       </label>
       {!result && (
         <button
           onClick={() => void ask([])}
           disabled={!text.trim() || busy}
-          className="h-14 rounded-xl bg-[#0b1f3a] text-lg font-bold text-white active:bg-[#152f55] disabled:opacity-40"
+          className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)] disabled:opacity-40"
         >
           {busy ? "Checking…" : "Check this rule"}
         </button>

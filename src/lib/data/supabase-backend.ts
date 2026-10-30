@@ -64,7 +64,7 @@ export async function loadFromSupabase(
   const [allTeams, myMemberships] = await Promise.all([
     sb
       .from("team")
-      .select("id,name,age_group,coach_pitch,optioned_at")
+      .select("id,name,age_group,coach_pitch,optioned_at,colors,logo_path")
       .order("created_at")
       .then((r) => check<TeamRow[]>(r)),
     sb
@@ -103,7 +103,9 @@ export async function loadFromSupabase(
       .then((r) => check<PlayerRow[]>(r)),
     sb
       .from("game")
-      .select("id,season_id,game_date,start_time,opponent,location,innings,field_players,status")
+      .select(
+        "id,season_id,game_date,start_time,opponent,location,innings,field_players,status,score_us,score_them",
+      )
       .eq("season_id", season.id)
       .then((r) => check<GameRow[]>(r)),
   ]);
@@ -500,5 +502,44 @@ export async function deleteGroupMeRow(teamId: string): Promise<void> {
 export async function saveSeasonRulesRow(seasonId: string, rules: RuleConfigInput): Promise<void> {
   check(
     await getBrowserSupabase().from("season").update({ fair_play_rules: rules }).eq("id", seasonId),
+  );
+}
+
+export async function saveTeamLookRow(
+  teamId: string,
+  colors: string[],
+  logoPath: string | null,
+): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("team")
+      .update({ colors, logo_path: logoPath })
+      .eq("id", teamId),
+  );
+}
+
+export async function uploadLogoFile(path: string, file: Blob): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .storage.from("team-logos")
+      .upload(path, file, { contentType: file.type, upsert: false }),
+  );
+}
+
+export async function deleteLogoFile(path: string): Promise<void> {
+  check(await getBrowserSupabase().storage.from("team-logos").remove([path]));
+}
+
+export async function saveGameResult(
+  gameId: string,
+  status: GameStatus,
+  scoreUs: number | null,
+  scoreThem: number | null,
+): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("game")
+      .update({ status, score_us: scoreUs, score_them: scoreThem })
+      .eq("id", gameId),
   );
 }

@@ -9,7 +9,7 @@
 --   from auth.users where email = 'you@example.com';
 
 insert into public.team (id, name, age_group, colors, created_by) values
-  ('00000000-0000-4000-8000-000000000001', 'Riverside Rattlers', '10U', '{navy,gold}', null);
+  ('00000000-0000-4000-8000-000000000001', 'Riverside Rattlers', '10U', '{#0b1f3a,#f2b705}', null);
 
 -- fair_play_rules mirrors DEFAULT_RULE_CONFIG in src/lib/rules/config.ts.
 insert into public.season (id, team_id, name, start_date, end_date, fair_play_rules) values (

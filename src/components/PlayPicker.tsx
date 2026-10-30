@@ -33,7 +33,7 @@ export function PlayPicker({
                     type="checkbox"
                     checked={selected.includes(p.id)}
                     onChange={() => toggle(p.id)}
-                    className="size-6 shrink-0 accent-[#0b1f3a]"
+                    className="size-6 shrink-0 accent-[var(--team)]"
                   />
                   <span className="min-w-0">
                     <span className="block text-base font-semibold">{p.name}</span>

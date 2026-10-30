@@ -9,7 +9,7 @@ export function positionClass(position: Position | null): string {
       return "bg-slate-300 text-slate-700";
     case "P":
     case "C":
-      return "bg-[#0b1f3a] text-white";
+      return "bg-[var(--team)] text-white";
     case "1B":
     case "2B":
     case "3B":

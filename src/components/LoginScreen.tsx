@@ -9,9 +9,9 @@ import { safeNextPath } from "@/lib/supabase/next-path";
 type Step = { kind: "email" } | { kind: "sent"; email: string };
 
 const field =
-  "h-14 w-full rounded-xl border-2 border-slate-400 bg-white px-4 text-lg focus:border-[#0b1f3a] focus:outline-none";
+  "h-14 w-full rounded-xl border-2 border-slate-400 bg-white px-4 text-lg focus:border-[var(--team)] focus:outline-none";
 const primary =
-  "h-14 w-full rounded-xl bg-[#0b1f3a] text-lg font-bold text-white disabled:opacity-40 active:bg-[#16325a]";
+  "h-14 w-full rounded-xl bg-[var(--team)] text-lg font-bold text-white disabled:opacity-40 active:bg-[var(--team-press)]";
 
 export function LoginScreen() {
   const [step, setStep] = useState<Step>({ kind: "email" });

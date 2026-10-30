@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { formatGameDate, gameContext, lastFilledInning } from "@/lib/data/game";
-import { saveGame, saveLineup, setGameStatus, useAppData } from "@/lib/data/store";
+import { formatGameDate, gameContext, gameResult, lastFilledInning } from "@/lib/data/game";
+import { saveGame, saveLineup, setGameResult, setGameStatus, useAppData } from "@/lib/data/store";
 import { battingOrderMessage } from "@/lib/groupme/messages";
 import { assignPosition, positionAt, setAbsent, setBatting } from "@/lib/lineup/edit";
 import { rotateLeadoff } from "@/lib/rules/custom";
@@ -32,6 +32,10 @@ export function GameScreen({ gameId }: { gameId: string }) {
   const [undo, setUndo] = useState<Lineup | null>(null);
   const [editing, setEditing] = useState(false);
   const [confirmFinal, setConfirmFinal] = useState(false);
+  const [score, setScore] = useState<{ us: number | null; them: number | null }>({
+    us: null,
+    them: null,
+  });
   const [posting, setPosting] = useState(false);
 
   if (!data) {
@@ -100,10 +104,12 @@ export function GameScreen({ gameId }: { gameId: string }) {
   const rosterCount = data.players.filter((p) => p.active !== false).length;
   const hereCount = rosterCount - absentNames.length;
   const blocks = shown.filter((v) => v.severity === "block").length;
+  // Mark final (or fix the score of a final game): always asks for the score.
   const markFinal = () => {
-    if (lineup.slots.length === 0 || blocks > 0 || emptyCells > 0) setConfirmFinal(true);
-    else setGameStatus(game.id, "final");
+    setScore({ us: game.scoreUs ?? null, them: game.scoreThem ?? null });
+    setConfirmFinal(true);
   };
+  const result = gameResult(game);
 
   return (
     <AppShell
@@ -114,24 +120,42 @@ export function GameScreen({ gameId }: { gameId: string }) {
       action={
         <Link
           href={`/games/${game.id}/card`}
-          className="flex h-11 shrink-0 items-center rounded-lg bg-white px-3 text-base font-bold text-[#0b1f3a] active:bg-slate-200"
+          className="flex h-11 shrink-0 items-center rounded-lg bg-white px-3 text-base font-bold text-[var(--team)] active:bg-slate-200"
         >
           Print card
         </Link>
       }
     >
       {isFinal ? (
-        <div className="mb-4 flex items-center gap-3 rounded-xl bg-slate-700 p-3 text-white">
-          <p className="flex-1 text-base leading-snug font-semibold">
+        <div
+          className={`mb-4 flex flex-wrap items-center gap-3 rounded-xl p-3 text-white ${
+            result === "W" ? "bg-green-700" : result === "L" ? "bg-red-700" : "bg-slate-700"
+          }`}
+        >
+          <p className="min-w-0 flex-1 text-base leading-snug font-semibold">
+            {result ? (
+              <span className="block text-2xl font-black">
+                {result === "W" ? "Win" : result === "L" ? "Loss" : "Tie"} {game.scoreUs}–
+                {game.scoreThem}
+              </span>
+            ) : null}
             Final. This lineup counts toward season playing time.
           </p>
           {perms.editTeam && (
-            <button
-              onClick={() => setGameStatus(game.id, "scheduled")}
-              className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-slate-900 active:bg-slate-200"
-            >
-              Reopen
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={markFinal}
+                className="h-11 shrink-0 rounded-lg bg-white/15 px-3 text-base font-bold text-white active:bg-white/25"
+              >
+                {result ? "Edit score" : "Add score"}
+              </button>
+              <button
+                onClick={() => setGameStatus(game.id, "scheduled")}
+                className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-slate-900 active:bg-slate-200"
+              >
+                Reopen
+              </button>
+            </div>
           )}
         </div>
       ) : !perms.editTeam ? (
@@ -165,7 +189,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
 
       <div
         role="tablist"
-        className="mb-4 grid grid-cols-3 rounded-xl border-2 border-[#0b1f3a] p-1"
+        className="mb-4 grid grid-cols-3 rounded-xl border-2 border-[var(--team)] p-1"
       >
         {(["field", "batting", "attendance"] as const).map((v) => (
           <button
@@ -173,7 +197,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
             role="tab"
             aria-selected={view === v}
             onClick={() => setView(v)}
-            className={`h-11 rounded-lg text-base font-bold ${view === v ? "bg-[#0b1f3a] text-white" : "text-[#0b1f3a]"}`}
+            className={`h-11 rounded-lg text-base font-bold ${view === v ? "bg-[var(--team)] text-white" : "text-[var(--team)]"}`}
           >
             {v === "field"
               ? "Field"
@@ -317,35 +341,93 @@ export function GameScreen({ gameId }: { gameId: string }) {
         )}
       </Sheet>
 
-      <Sheet open={confirmFinal} title="Mark game final?" onClose={() => setConfirmFinal(false)}>
-        <p className="mb-4 text-lg leading-snug">
-          {lineup.slots.length === 0
-            ? "There's no lineup for this game, so it won't add any innings to season playing time."
-            : `This lineup still has ${[
-                emptyCells > 0 ? `${emptyCells} empty spot${emptyCells === 1 ? "" : "s"}` : "",
-                blocks > 0 ? `${blocks} fair-play problem${blocks === 1 ? "" : "s"}` : "",
-              ]
-                .filter(Boolean)
-                .join(" and ")}. Season playing time will count it as it is.`}
-        </p>
+      <Sheet
+        open={confirmFinal}
+        title={isFinal ? "Final score" : "Mark game final"}
+        onClose={() => setConfirmFinal(false)}
+      >
+        {!isFinal && (lineup.slots.length === 0 || blocks > 0 || emptyCells > 0) && (
+          <p className="mb-4 rounded-xl bg-amber-50 p-3 text-base leading-snug text-amber-950">
+            {lineup.slots.length === 0
+              ? "There's no lineup for this game, so it won't add any innings to season playing time."
+              : `This lineup still has ${[
+                  emptyCells > 0 ? `${emptyCells} empty spot${emptyCells === 1 ? "" : "s"}` : "",
+                  blocks > 0 ? `${blocks} fair-play problem${blocks === 1 ? "" : "s"}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" and ")}. Season playing time will count it as it is.`}
+          </p>
+        )}
+        <p className="mb-2 text-base font-semibold">Final score (optional)</p>
+        <div className="mb-4 grid grid-cols-2 gap-3">
+          <ScoreInput
+            label={data.team.name}
+            value={score.us}
+            onChange={(us) => setScore({ ...score, us })}
+          />
+          <ScoreInput
+            label={game.opponent}
+            value={score.them}
+            onChange={(them) => setScore({ ...score, them })}
+          />
+        </div>
         <div className="flex gap-3">
           <button
             onClick={() => setConfirmFinal(false)}
             className="h-14 flex-1 rounded-xl border-2 border-slate-400 text-lg font-bold active:bg-slate-100"
           >
-            Keep editing
+            {isFinal ? "Cancel" : "Keep editing"}
           </button>
           <button
             onClick={() => {
-              setGameStatus(game.id, "final");
+              const both = score.us !== null && score.them !== null;
+              setGameResult(game.id, "final", both ? score.us : null, both ? score.them : null);
               setConfirmFinal(false);
             }}
             className="h-14 flex-1 rounded-xl bg-slate-700 text-lg font-bold text-white active:bg-slate-800"
           >
-            Mark final
+            {isFinal ? "Save score" : "Mark final"}
           </button>
         </div>
       </Sheet>
     </AppShell>
+  );
+}
+
+/** A big, thumb-friendly score box: − number +, empty until tapped. */
+function ScoreInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number | null;
+  onChange: (v: number | null) => void;
+}) {
+  const btn =
+    "flex size-12 shrink-0 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-2xl font-bold active:bg-slate-100 disabled:opacity-30";
+  return (
+    <div className="rounded-xl border-2 border-slate-200 p-2">
+      <p className="mb-1 truncate text-center text-sm font-semibold text-slate-700">{label}</p>
+      <div className="flex items-center justify-between gap-1">
+        <button
+          aria-label={`Lower ${label} score`}
+          disabled={value !== null && value <= 0}
+          onClick={() => onChange(value === null ? 0 : value - 1)}
+          className={btn}
+        >
+          −
+        </button>
+        <span className="text-3xl font-black tabular-nums">{value ?? "–"}</span>
+        <button
+          aria-label={`Raise ${label} score`}
+          disabled={value !== null && value >= 99}
+          onClick={() => onChange(value === null ? 1 : value + 1)}
+          className={btn}
+        >
+          +
+        </button>
+      </div>
+    </div>
   );
 }

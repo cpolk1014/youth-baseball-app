@@ -48,7 +48,7 @@ export function Attendance({
               >
                 <span
                   className={`flex size-10 shrink-0 items-center justify-center rounded-full text-base font-bold ${
-                    isAway ? "bg-slate-300 text-slate-600" : "bg-[#0b1f3a] text-white"
+                    isAway ? "bg-slate-300 text-slate-600" : "bg-[var(--team)] text-white"
                   }`}
                 >
                   {p.jerseyNumber ?? "–"}

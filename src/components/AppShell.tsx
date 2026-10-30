@@ -2,10 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import { themeVars } from "@/lib/branding/theme";
 import { permissionsFor } from "@/lib/data/permissions";
 import { useAppData, useStoreState } from "@/lib/data/store";
 import { DataStatus } from "./DataStatus";
+import { TeamBadge } from "./TeamBadge";
 
 type Tab = "games" | "practice" | "plays" | "season" | "roster" | "money";
 
@@ -37,18 +46,23 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const data = useAppData();
   return (
-    <div className="min-h-dvh lg:flex print:block print:min-h-0">
+    // The team's colors, for everything inside (bars, buttons, badges).
+    <div
+      className="min-h-dvh lg:flex print:block print:min-h-0"
+      style={themeVars(data?.team.colors) as CSSProperties}
+    >
       {/* Laptops and desktops: the menu is always open on the side. */}
       <nav
         aria-label="Main"
-        className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col overflow-y-auto bg-[#0b1f3a] p-3 text-white lg:flex print:hidden"
+        className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col overflow-y-auto bg-[var(--team)] p-3 text-white lg:flex print:hidden"
       >
-        <p className="mb-4 px-3 pt-2 text-2xl font-bold tracking-tight">RallyCap</p>
+        <MenuHeader />
         <MenuLinks tab={tab} />
       </nav>
       <div className="mx-auto flex min-h-dvh w-full max-w-xl min-w-0 flex-col md:max-w-3xl lg:max-w-5xl print:block print:min-h-0 print:max-w-none">
-        <header className="sticky top-0 z-20 print:hidden flex min-h-14 items-center gap-1 bg-[#0b1f3a] px-2 text-white shadow">
+        <header className="sticky top-0 z-20 print:hidden flex min-h-14 items-center gap-1 border-b-4 border-[var(--team-accent)] bg-[var(--team)] px-2 text-white shadow">
           {backHref ? (
             <Link
               href={backHref}
@@ -59,6 +73,16 @@ export function AppShell({
             </Link>
           ) : (
             <span className="w-2" />
+          )}
+          {!backHref && data && (
+            <span className="mr-1">
+              <TeamBadge
+                name={data.team.name}
+                colors={data.team.colors}
+                logoPath={data.team.logoPath}
+                size={38}
+              />
+            </span>
           )}
           {onTitleTap ? (
             <button
@@ -130,10 +154,10 @@ function MenuDrawer({ open, tab, onClose }: { open: boolean; tab: Tab; onClose: 
         ref={panel}
         aria-label="Main"
         tabIndex={-1}
-        className="absolute inset-y-0 right-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-[#0b1f3a] p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] text-white shadow-2xl outline-none"
+        className="absolute inset-y-0 right-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-[var(--team)] p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] text-white shadow-2xl outline-none"
       >
         <div className="mb-4 flex items-center justify-between">
-          <p className="px-3 text-2xl font-bold tracking-tight">RallyCap</p>
+          <MenuHeader />
           <button
             onClick={onClose}
             aria-label="Close menu"
@@ -148,6 +172,28 @@ function MenuDrawer({ open, tab, onClose }: { open: boolean; tab: Tab; onClose: 
   );
 }
 
+/** The team's badge and name at the top of the menu. */
+function MenuHeader() {
+  const data = useAppData();
+  if (!data) return <p className="mb-4 px-3 pt-2 text-2xl font-bold tracking-tight">RallyCap</p>;
+  return (
+    <div className="mb-4 flex min-w-0 items-center gap-3 px-2 pt-2">
+      <TeamBadge
+        name={data.team.name}
+        colors={data.team.colors}
+        logoPath={data.team.logoPath}
+        size={44}
+      />
+      <span className="min-w-0">
+        <span className="block truncate text-lg leading-tight font-bold">{data.team.name}</span>
+        <span className="block text-xs font-semibold tracking-wide text-white/60 uppercase">
+          RallyCap
+        </span>
+      </span>
+    </div>
+  );
+}
+
 /** Main sections, then team pages the signed-in person can use. */
 function MenuLinks({ tab, onPick }: { tab: Tab; onPick?: () => void }) {
   const data = useAppData();
@@ -158,11 +204,12 @@ function MenuLinks({ tab, onPick }: { tab: Tab; onPick?: () => void }) {
   const team: { href: string; label: string; show: boolean }[] = [
     { href: "/members", label: "Coaches & parents", show: signedIn },
     { href: "/season/rules", label: "Fair play rules", show: true },
+    { href: "/team-look", label: "Team colors & logo", show: !!perms?.editTeam },
     { href: "/groupme", label: "GroupMe", show: signedIn && !!perms?.editTeam },
   ];
   const item = (current: boolean) =>
     `flex h-14 items-center rounded-lg px-3 text-lg font-bold lg:h-12 ${
-      current ? "bg-white text-[#0b1f3a]" : "text-white/90 hover:bg-white/15 active:bg-white/20"
+      current ? "bg-white text-[var(--team)]" : "text-white/90 hover:bg-white/15 active:bg-white/20"
     }`;
   return (
     <>

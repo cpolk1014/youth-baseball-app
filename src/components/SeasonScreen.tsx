@@ -60,7 +60,7 @@ export function SeasonScreen() {
       <RulesLink />
       <div
         role="tablist"
-        className="mb-3 grid grid-cols-2 rounded-xl border-2 border-[#0b1f3a] p-1"
+        className="mb-3 grid grid-cols-2 rounded-xl border-2 border-[var(--team)] p-1"
       >
         {(
           [
@@ -73,7 +73,7 @@ export function SeasonScreen() {
             role="tab"
             aria-selected={view === id}
             onClick={() => setView(id)}
-            className={`h-11 rounded-lg text-base font-bold ${view === id ? "bg-[#0b1f3a] text-white" : "text-[#0b1f3a]"}`}
+            className={`h-11 rounded-lg text-base font-bold ${view === id ? "bg-[var(--team)] text-white" : "text-[var(--team)]"}`}
           >
             {label}
           </button>
@@ -89,7 +89,7 @@ export function SeasonScreen() {
             onClick={() => setSort(s.id)}
             className={`h-10 flex-1 rounded-full border-2 text-sm font-bold ${
               sort === s.id
-                ? "border-[#0b1f3a] bg-[#0b1f3a] text-white"
+                ? "border-[var(--team)] bg-[var(--team)] text-white"
                 : "border-slate-300 bg-white text-slate-800"
             }`}
           >

@@ -38,7 +38,12 @@ describe("supabase mappers", () => {
     const g = gameFromRow(gameRow);
     expect(g.startTime).toBe("09:00");
     expect(gameFromRow({ ...gameRow, start_time: null }).startTime).toBeNull();
-    expect(gameToRow(g)).toEqual({ ...gameRow, start_time: "09:00" });
+    expect(gameToRow(g)).toEqual({
+      ...gameRow,
+      start_time: "09:00",
+      score_us: null,
+      score_them: null,
+    });
   });
 
   it("builds save_lineup arguments in snake_case", () => {
@@ -160,6 +165,8 @@ describe("supabase mappers", () => {
       ageGroup: "10U",
       coachPitch: true,
       optionedAt: null,
+      colors: [],
+      logoPath: null,
     });
     expect(data.games[0]?.fieldPlayers).toBe(10);
     expect(data.season.fairPlayRules).toEqual({ maxInningsPitched: 3 });
@@ -236,7 +243,7 @@ describe("supabase mappers", () => {
       { team_id: "t2", role: "parent" as const },
       { team_id: "t2", role: "coach" as const },
     ];
-    expect(summarizeMyTeams(teams, mine)).toEqual([
+    expect(summarizeMyTeams(teams, mine)).toMatchObject([
       { id: "t2", name: "Rattlers", ageGroup: "10U", role: "coach", optioned: false },
       { id: "t1", name: "Storm", ageGroup: "10U", role: "parent", optioned: true },
     ]);

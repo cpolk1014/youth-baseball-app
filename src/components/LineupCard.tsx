@@ -8,6 +8,8 @@ export interface CardHeader {
   opponent: string;
   when: string;
   location: string | null;
+  /** Team logo address, printed beside the team name. */
+  logoUrl?: string | null;
 }
 
 /** One printed page (8.5in × 11in). "half" holds two identical cards with a cut line. */
@@ -60,11 +62,25 @@ function Card({
   return (
     <div style={{ fontSize: base }} className="flex flex-1 flex-col">
       <div className="mb-2 flex items-end justify-between gap-4 border-b-2 border-black pb-1">
-        <div>
-          <p style={{ fontSize: compact ? "13pt" : "18pt" }} className="leading-tight font-bold">
-            {header.team} <span className="font-semibold">{header.ageGroup}</span>
-          </p>
-          <p className="font-semibold">vs {header.opponent}</p>
+        <div className="flex items-end gap-2">
+          {header.logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element -- printed page
+            <img
+              src={header.logoUrl}
+              alt=""
+              style={{
+                width: compact ? "0.45in" : "0.65in",
+                height: compact ? "0.45in" : "0.65in",
+              }}
+              className="object-contain"
+            />
+          )}
+          <div>
+            <p style={{ fontSize: compact ? "13pt" : "18pt" }} className="leading-tight font-bold">
+              {header.team} <span className="font-semibold">{header.ageGroup}</span>
+            </p>
+            <p className="font-semibold">vs {header.opponent}</p>
+          </div>
         </div>
         <div className="text-right leading-snug">
           <p>{header.when}</p>

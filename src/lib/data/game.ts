@@ -142,3 +142,37 @@ export function finalLineups(data: AppData, seasonId: string): Lineup[] {
 export function defaultFieldPlayers(coachPitch: boolean): 9 | 10 {
   return coachPitch ? 10 : 9;
 }
+
+export type GameResult = "W" | "L" | "T";
+
+/** W, L or T for a final game with both scores entered; otherwise null. */
+export function gameResult(game: Game): GameResult | null {
+  if (game.status !== "final" || game.scoreUs == null || game.scoreThem == null) return null;
+  return game.scoreUs > game.scoreThem ? "W" : game.scoreUs < game.scoreThem ? "L" : "T";
+}
+
+/** The season's record from final games with scores: "8–3", or "8–3–1" with ties. Null if none. */
+export function recordText(games: Game[]): string | null {
+  const results = games.map(gameResult).filter((r): r is GameResult => r !== null);
+  if (results.length === 0) return null;
+  const n = (r: GameResult) => results.filter((x) => x === r).length;
+  const ties = n("T");
+  return `${n("W")}–${n("L")}${ties ? `–${ties}` : ""}`;
+}
+
+/** "Today", "Tomorrow", "Saturday" (within a week), or "Sat, Nov 2". Dates are YYYY-MM-DD. */
+export function whenText(date: string, today: string): string {
+  const day = (s: string) => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
+  const days = Math.round((day(date) - day(today)) / 86400000);
+  const d = new Date(day(date));
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  if (days > 1 && days < 7)
+    return d.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}

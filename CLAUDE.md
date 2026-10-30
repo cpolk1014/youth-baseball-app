@@ -25,7 +25,8 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 **Shipped** (live at rallycap.team)
 
 - Teams, seasons, roster (name, jersey #, preferred positions, can pitch/catch, active); coach's pitch teams
-- Games (date, time, opponent, location, innings, 9 or 10 fielders); mark final / reopen
+- Games (date, time, opponent, location, innings, 9 or 10 fielders); mark final (with an optional final score) / reopen; W-L record in the Games header; next-game banner
+- Team look: coaches/managers pick two team colors (palette, exact color, or pulled from a picture) and upload a logo (squared, public `team-logos` bucket); colors drive the app (`--team` CSS vars, pale colors darkened so white text stays readable), logo/initials badge in the bar, menu, team switcher and printed lineup card; Plays fielders wear the team color
 - Inning-by-inning lineup builder with live fair-play warnings, Auto-fill, batting order with sit-outs, per-game attendance
 - Fair play rules screen (Season tab): every rule set to Must / Warn / Off with its number; separate coach pitch and kid pitch sets (pitching rules hidden for coach pitch); new rules: min outfield innings, min share of innings played, pitcher rest after a heavy game; reset to recommended. Coaches add their own rules from rule types (at least / at most N innings at positions, a player never plays a spot, a player locked to a spot in an inning, no one sits the same inning two games in a row, rotate the leadoff hitter); each is checked against the roster before saving, and auto-fill follows them
 - "Why this lineup?" under a game's lineup: rules it follows, trade-offs, and per kid the facts behind their spots (sits today vs. season rate, infield/outfield, pitching/catching, preferences, the coach's own rules); ties are called ties
@@ -56,13 +57,13 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 Source of truth: `supabase/migrations/`. Summary:
 
 - organization (optional parent of teams)
-- team: name, age_group, colors, groupme_group_id, coach_pitch, optioned_at (archived; delete only when set)
+- team: name, age_group, colors (hex: [main, accent]), logo_path, groupme_group_id, coach_pitch, optioned_at (archived; delete only when set)
 - season: team_id, name, start/end, fair_play_rules (JSONB, RuleConfig overrides)
 - member: team_id, user_id, role (owner | coach | manager | treasurer | parent), display_name (no emails stored); one owner per team (the creator), protected by a trigger; `has_team_role` treats owner as coach
 - player_guardian: player_id, user_id (parent ↔ kid links; families see their own, coaches/managers all; dropped when the member leaves)
 - invite: team_id, role, token, expires_at, max_uses, uses, revoked_at (coach-only; joined via `accept_invite`)
 - player: team_id, name, jersey_number, preferred_positions[], can_pitch, can_catch, active
-- game: season_id, date, start_time, opponent, location, innings, field_players (9 | 10), status (scheduled | final)
+- game: season_id, date, start_time, opponent, location, innings, field_players (9 | 10), status (scheduled | final), score_us, score_them
 - lineup: game_id, batting_order (player_id[]), not_batting[], absent[], version (saved via `save_lineup`)
 - practice: season_id, practice_date, start_time, end_time, location, focus, notes, plan (JSONB drills), canceled, plays (library play ids)
 - play_assignment: team_id, title, play_ids[], due_date (homework; plays live in code, `src/lib/plays/`)

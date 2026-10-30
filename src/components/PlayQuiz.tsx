@@ -45,7 +45,7 @@ export function PlayQuiz({
         {onAgain && (
           <button
             onClick={onAgain}
-            className="h-14 w-full rounded-xl bg-[#0b1f3a] text-lg font-bold text-white active:bg-[#152f55]"
+            className="h-14 w-full rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]"
           >
             Try again
           </button>
@@ -128,7 +128,7 @@ export function PlayQuiz({
       {answered && (
         <button
           onClick={next}
-          className="h-14 rounded-xl bg-[#0b1f3a] text-lg font-bold text-white active:bg-[#152f55]"
+          className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]"
         >
           {index + 1 >= questions.length ? "See my score" : "Next question"}
         </button>

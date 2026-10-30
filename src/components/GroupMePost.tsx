@@ -42,7 +42,7 @@ export function GroupMePost({
         }}
         rows={rows}
         placeholder={placeholder}
-        className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 font-mono text-sm leading-snug focus:border-[#0b1f3a] focus:outline-none"
+        className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 font-mono text-sm leading-snug focus:border-[var(--team)] focus:outline-none"
       />
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-800">

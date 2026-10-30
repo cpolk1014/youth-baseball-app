@@ -14,7 +14,7 @@ import { AppShell, Loading } from "./AppShell";
 import { GroupMePost } from "./GroupMePost";
 
 const field =
-  "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[#0b1f3a] focus:outline-none";
+  "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 
 export function GroupMeScreen() {
@@ -141,7 +141,7 @@ function ConnectForm({
               href="https://dev.groupme.com/bots"
               target="_blank"
               rel="noreferrer"
-              className="font-semibold text-[#0b1f3a] underline"
+              className="font-semibold text-[var(--team)] underline"
             >
               dev.groupme.com/bots
             </a>{" "}

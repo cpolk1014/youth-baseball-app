@@ -15,6 +15,10 @@ export interface Team {
   coachPitch: boolean;
   /** When the team was optioned (archived); null while active. */
   optionedAt: string | null;
+  /** Team colors as hex: [main, accent]. Empty until a coach picks them. */
+  colors?: string[];
+  /** Where the team's logo is stored (or a data URL in local mode). */
+  logoPath?: string | null;
 }
 
 export interface Season {
@@ -35,6 +39,9 @@ export interface Game {
   /** 9 fielders (LF CF RF) or 10 (LF LCF RCF RF). */
   fieldPlayers: 9 | 10;
   status: GameStatus;
+  /** Final score, if the coach entered it. */
+  scoreUs?: number | null;
+  scoreThem?: number | null;
 }
 
 export interface Practice {
@@ -112,6 +119,8 @@ export interface TeamSummary {
   ageGroup: string;
   role: MemberRole;
   optioned: boolean;
+  colors?: string[];
+  logoPath?: string | null;
 }
 
 /** Everything the screens need. Mirrors the Supabase schema, camelCased. */

@@ -796,4 +796,35 @@ set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 select pg_temp.expect((select count(*) from public.team_groupme) = 0, 'outsiders do not see the bot ID');
 reset role;
+-- ── team look ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+update public.team set colors = '{#c8102e,#f2b705}', logo_path = '00000000-0000-4000-8000-000000000001/logo.png'
+  where id = '00000000-0000-4000-8000-000000000001';
+select pg_temp.expect((select colors from public.team where id = '00000000-0000-4000-8000-000000000001') = '{#c8102e,#f2b705}', 'coach sets team colors and logo');
+do $$ begin
+  update public.team set colors = '{red}' where id = '00000000-0000-4000-8000-000000000001';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: team colors must be hex colors';
+end $$;
+insert into storage.objects (bucket_id, name) values ('team-logos', '00000000-0000-4000-8000-000000000001/logo.png');
+select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'team-logos') = 1, 'coach uploads a team logo');
+update public.game set score_us = 7, score_them = 4 where id = (select id from public.game limit 1);
+select pg_temp.expect((select count(*) from public.game where score_us = 7 and score_them = 4) = 1, 'coach records a final score');
+do $$ begin
+  update public.game set score_us = 120;
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: scores stay in range';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+update public.team set colors = '{#000000}' where id = '00000000-0000-4000-8000-000000000001';
+select pg_temp.expect((select colors from public.team where id = '00000000-0000-4000-8000-000000000001') = '{#c8102e,#f2b705}', 'parents cannot change team colors');
+do $$ begin
+  insert into storage.objects (bucket_id, name) values ('team-logos', '00000000-0000-4000-8000-000000000001/mine.png');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot upload a logo';
+end $$;
+reset role;
 \echo ALL RLS TESTS PASSED

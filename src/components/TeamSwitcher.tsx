@@ -6,6 +6,7 @@ import { switchTeam } from "@/lib/data/store";
 import type { TeamSummary } from "@/lib/data/types";
 import { TeamSetup } from "./DataStatus";
 import { Sheet } from "./Sheet";
+import { TeamBadge } from "./TeamBadge";
 
 /** "Your teams" sheet: switch teams (with your role on each) or start a new one. */
 export function TeamSwitcher({
@@ -97,10 +98,11 @@ function TeamList({
               aria-current={current ? "true" : undefined}
               className={`flex min-h-16 w-full items-center gap-3 rounded-xl border-2 px-4 text-left ${
                 current
-                  ? "border-[#0b1f3a] bg-slate-50"
+                  ? "border-[var(--team)] bg-slate-50"
                   : "border-slate-200 bg-white active:bg-slate-50"
               } ${t.optioned ? "opacity-70" : ""}`}
             >
+              <TeamBadge name={t.name} colors={t.colors} logoPath={t.logoPath} size={40} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-lg font-semibold">{t.name}</span>
                 <span className="block text-sm text-slate-600">
@@ -108,7 +110,7 @@ function TeamList({
                   {t.optioned ? " · Optioned" : ""}
                 </span>
               </span>
-              {current && <span className="text-xl font-bold text-[#0b1f3a]">✓</span>}
+              {current && <span className="text-xl font-bold text-[var(--team)]">✓</span>}
             </button>
           </li>
         );

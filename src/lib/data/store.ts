@@ -271,6 +271,61 @@ export function setCoachPitch(coachPitch: boolean): void {
   );
 }
 
+/** Mark a game final with its score (either score may be left out), or update the score. */
+export function setGameResult(
+  gameId: string,
+  status: GameStatus,
+  scoreUs: number | null,
+  scoreThem: number | null,
+): void {
+  update(
+    (d) => ({
+      ...d,
+      games: d.games.map((g) => (g.id === gameId ? { ...g, status, scoreUs, scoreThem } : g)),
+    }),
+    async () => (await remote()).saveGameResult(gameId, status, scoreUs, scoreThem),
+  );
+}
+
+/** Coach: save the team's colors and logo. */
+export function saveTeamLook(colors: string[], logoPath: string | null): void {
+  const teamId = data!.team.id;
+  update(
+    (d) => ({
+      ...d,
+      team: { ...d.team, colors, logoPath },
+      myTeams: d.myTeams.map((t) => (t.id === teamId ? { ...t, colors, logoPath } : t)),
+    }),
+    async () => (await remote()).saveTeamLookRow(teamId, colors, logoPath),
+  );
+}
+
+/** Upload a logo picture; returns where it's stored (a data URL in local mode). */
+export async function uploadLogo(file: Blob): Promise<string> {
+  if (state.mode !== "supabase") {
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Couldn't read the picture."));
+      reader.readAsDataURL(file);
+    });
+  }
+  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `${data!.team.id}/logo-${newId()}.${ext}`;
+  await (await remote()).uploadLogoFile(path, file);
+  return path;
+}
+
+/** Remove an old logo file; failures only leave an unused file behind. */
+export async function removeLogo(path: string): Promise<void> {
+  if (state.mode !== "supabase" || path.startsWith("data:")) return;
+  try {
+    await (await remote()).deleteLogoFile(path);
+  } catch {
+    // Not worth bothering the coach about.
+  }
+}
+
 export function setGameStatus(gameId: string, status: GameStatus): void {
   update(
     (d) => ({ ...d, games: d.games.map((g) => (g.id === gameId ? { ...g, status } : g)) }),

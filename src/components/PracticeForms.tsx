@@ -7,7 +7,7 @@ import { PRACTICE_FOCUSES } from "@/lib/practice/drills";
 import { generatePracticeDates, practiceMinutes } from "@/lib/practice/schedule";
 
 const field =
-  "h-12 w-full min-w-0 rounded-lg border-2 border-slate-400 bg-white px-3 text-lg focus:border-[#0b1f3a] focus:outline-none";
+  "h-12 w-full min-w-0 rounded-lg border-2 border-slate-400 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
 const label = "text-sm font-semibold text-slate-700";
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -46,7 +46,7 @@ function FocusPicker({
             onClick={() => onChange(value === f ? null : f)}
             className={`h-10 rounded-full border-2 px-3 text-sm font-bold ${
               value === f
-                ? "border-[#0b1f3a] bg-[#0b1f3a] text-white"
+                ? "border-[var(--team)] bg-[var(--team)] text-white"
                 : "border-slate-300 bg-white text-slate-800"
             }`}
           >
@@ -109,7 +109,7 @@ function Buttons({
       <button
         type="submit"
         disabled={disabled}
-        className="h-14 flex-[2] rounded-xl bg-[#0b1f3a] text-lg font-bold text-white disabled:opacity-40"
+        className="h-14 flex-[2] rounded-xl bg-[var(--team)] text-lg font-bold text-white disabled:opacity-40"
       >
         {submit}
       </button>
@@ -249,7 +249,7 @@ export function ScheduleBuilder({
               onClick={() => toggle(i)}
               className={`h-12 rounded-lg border-2 text-base font-bold ${
                 weekdays.includes(i)
-                  ? "border-[#0b1f3a] bg-[#0b1f3a] text-white"
+                  ? "border-[var(--team)] bg-[var(--team)] text-white"
                   : "border-slate-300 bg-white"
               }`}
             >

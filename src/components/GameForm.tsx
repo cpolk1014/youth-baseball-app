@@ -5,7 +5,7 @@ import { validateGameInput, type GameInput } from "@/lib/data/game";
 import type { Game } from "@/lib/data/types";
 
 const field =
-  "h-12 w-full rounded-lg border-2 border-slate-400 bg-white px-3 text-lg focus:border-[#0b1f3a] focus:outline-none";
+  "h-12 w-full rounded-lg border-2 border-slate-400 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
 
 export function GameForm({
   game,
@@ -122,7 +122,7 @@ export function GameForm({
               onClick={() => set("fieldPlayers", n)}
               className={`flex h-14 flex-col items-center justify-center rounded-xl border-2 ${
                 input.fieldPlayers === n
-                  ? "border-[#0b1f3a] bg-[#0b1f3a] text-white"
+                  ? "border-[var(--team)] bg-[var(--team)] text-white"
                   : "border-slate-300 bg-white active:bg-slate-100"
               }`}
             >
@@ -156,7 +156,7 @@ export function GameForm({
         </button>
         <button
           type="submit"
-          className="h-14 flex-[2] rounded-xl bg-[#0b1f3a] text-lg font-bold text-white active:bg-[#16325a]"
+          className="h-14 flex-[2] rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]"
         >
           Save
         </button>

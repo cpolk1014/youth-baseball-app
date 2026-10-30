@@ -31,7 +31,7 @@ export function KidPicker({
                     : [...selected, p.id],
                 )
               }
-              className="size-6 shrink-0 accent-[#0b1f3a]"
+              className="size-6 shrink-0 accent-[var(--team)]"
             />
             <span className="text-lg font-semibold">
               {p.jerseyNumber != null && (

@@ -58,7 +58,7 @@ export function PlayerForm({
             maxLength={40}
             autoComplete="off"
             placeholder="First name + last initial"
-            className="h-12 rounded-lg border-2 border-slate-400 px-3 text-lg focus:border-[#0b1f3a] focus:outline-none"
+            className="h-12 rounded-lg border-2 border-slate-400 px-3 text-lg focus:border-[var(--team)] focus:outline-none"
           />
         </label>
         <label className="flex w-20 flex-col gap-1">
@@ -67,7 +67,7 @@ export function PlayerForm({
             value={jersey}
             onChange={(e) => setJersey(e.target.value.replace(/\D/g, "").slice(0, 2))}
             inputMode="numeric"
-            className="h-12 rounded-lg border-2 border-slate-400 px-3 text-center text-lg focus:border-[#0b1f3a] focus:outline-none"
+            className="h-12 rounded-lg border-2 border-slate-400 px-3 text-center text-lg focus:border-[var(--team)] focus:outline-none"
           />
         </label>
       </div>
@@ -93,7 +93,7 @@ export function PlayerForm({
                 onClick={() => togglePreferred(pos)}
                 className={`h-12 rounded-lg border-2 text-base font-bold ${
                   on
-                    ? "border-[#0b1f3a] bg-[#0b1f3a] text-white"
+                    ? "border-[var(--team)] bg-[var(--team)] text-white"
                     : "border-slate-300 bg-white text-slate-800"
                 }`}
               >
@@ -122,7 +122,7 @@ export function PlayerForm({
         <button
           type="submit"
           disabled={!valid}
-          className="h-14 flex-[2] rounded-xl bg-[#0b1f3a] text-lg font-bold text-white disabled:opacity-40"
+          className="h-14 flex-[2] rounded-xl bg-[var(--team)] text-lg font-bold text-white disabled:opacity-40"
         >
           Save
         </button>

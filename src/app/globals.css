@@ -4,6 +4,11 @@
 :root {
   --background: #f3f5f8;
   --foreground: #0b1220;
+  /* Team colors; AppShell overrides these with the team's own (see src/lib/branding). */
+  --team: #0b1f3a;
+  --team-press: #152f55;
+  --team-accent: #c8352e;
+  --team-accent-ink: #ffffff;
 }
 
 @theme inline {

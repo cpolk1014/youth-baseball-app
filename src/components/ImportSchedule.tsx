@@ -73,7 +73,7 @@ export function ImportSchedule({ data, onClose }: { data: AppData; onClose: () =
   if (step.kind === "reading") {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center" role="status">
-        <div className="size-10 animate-spin rounded-full border-4 border-slate-300 border-t-[#0b1f3a]" />
+        <div className="size-10 animate-spin rounded-full border-4 border-slate-300 border-t-[var(--team)]" />
         <p className="text-lg font-semibold">Reading {step.fileName}…</p>
         <p className="text-base text-slate-600">This can take up to a minute.</p>
       </div>
@@ -92,7 +92,7 @@ export function ImportSchedule({ data, onClose }: { data: AppData; onClose: () =
         </p>
         <button
           onClick={onClose}
-          className="h-14 rounded-xl bg-[#0b1f3a] text-lg font-bold text-white"
+          className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white"
         >
           Done
         </button>
@@ -117,7 +117,7 @@ export function ImportSchedule({ data, onClose }: { data: AppData; onClose: () =
         Upload your season schedule: a photo or screenshot of a flyer, a PDF, or a CSV. We&apos;ll
         find the practices and games and show them to you before anything is added.
       </p>
-      <label className="flex h-16 cursor-pointer items-center justify-center rounded-xl bg-[#0b1f3a] text-lg font-bold text-white active:bg-[#16325a]">
+      <label className="flex h-16 cursor-pointer items-center justify-center rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]">
         Choose a file
         <input
           type="file"
@@ -330,13 +330,13 @@ function Row({
   return (
     <li>
       <label
-        className={`flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border-2 bg-white p-3 ${checked ? "border-[#0b1f3a]" : "border-slate-200"}`}
+        className={`flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border-2 bg-white p-3 ${checked ? "border-[var(--team)]" : "border-slate-200"}`}
       >
         <input
           type="checkbox"
           checked={checked}
           onChange={onToggle}
-          className="mt-1 size-6 shrink-0 accent-[#0b1f3a]"
+          className="mt-1 size-6 shrink-0 accent-[var(--team)]"
         />
         <span className="min-w-0 flex-1">
           <span className="block text-base font-bold">{title}</span>

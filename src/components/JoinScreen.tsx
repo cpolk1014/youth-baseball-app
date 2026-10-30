@@ -91,7 +91,7 @@ export function JoinScreen({ token }: { token: string }) {
             </p>
             <button
               onClick={() => openTeam(state.invite.teamId)}
-              className="h-14 rounded-xl bg-[#0b1f3a] text-lg font-bold text-white"
+              className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white"
             >
               Open {state.invite.teamName}
             </button>
@@ -119,13 +119,13 @@ export function JoinScreen({ token }: { token: string }) {
                 maxLength={60}
                 autoComplete="name"
                 placeholder={state.invite.role === "parent" ? "e.g. Sam's mom" : "e.g. Coach Dave"}
-                className="h-14 rounded-xl border-2 border-slate-400 bg-white px-4 text-lg focus:border-[#0b1f3a] focus:outline-none"
+                className="h-14 rounded-xl border-2 border-slate-400 bg-white px-4 text-lg focus:border-[var(--team)] focus:outline-none"
               />
             </label>
             <button
               type="submit"
               disabled={busy || !name.trim()}
-              className="h-14 rounded-xl bg-[#0b1f3a] text-lg font-bold text-white disabled:opacity-40"
+              className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white disabled:opacity-40"
             >
               {busy ? "Joining…" : "Join team"}
             </button>

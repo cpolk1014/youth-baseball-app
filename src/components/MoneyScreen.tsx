@@ -68,7 +68,7 @@ export function MoneyScreen() {
         perms.editMoney ? (
           <button
             onClick={() => setPicking(true)}
-            className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[#0b1f3a] active:bg-slate-200"
+            className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[var(--team)] active:bg-slate-200"
           >
             + Add
           </button>
@@ -81,7 +81,7 @@ export function MoneyScreen() {
           {families.length === 0 ? (
             <p className="rounded-xl border-2 border-slate-200 bg-white p-4 text-base text-slate-700">
               Link your player to see what you owe.{" "}
-              <Link href="/members" className="font-semibold text-[#0b1f3a] underline">
+              <Link href="/members" className="font-semibold text-[var(--team)] underline">
                 Pick your player
               </Link>
             </p>
@@ -146,7 +146,7 @@ export function MoneyScreen() {
                 aria-pressed={filter === t}
                 className={`h-10 shrink-0 rounded-full border-2 px-4 text-base font-semibold ${
                   filter === t
-                    ? "border-[#0b1f3a] bg-[#0b1f3a] text-white"
+                    ? "border-[var(--team)] bg-[var(--team)] text-white"
                     : "border-slate-300 bg-white"
                 }`}
               >

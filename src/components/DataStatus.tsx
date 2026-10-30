@@ -75,7 +75,7 @@ export function DataStatus({ children }: { children: ReactNode }) {
           {canCallUp(data.me.role) && (
             <button
               onClick={() => setOptioned(false)}
-              className="h-11 shrink-0 rounded-lg bg-[#0b1f3a] px-4 text-base font-bold text-white active:bg-[#16325a]"
+              className="h-11 shrink-0 rounded-lg bg-[var(--team)] px-4 text-base font-bold text-white active:bg-[var(--team-press)]"
             >
               Call Up
             </button>
@@ -111,7 +111,7 @@ export function TeamSetup({
 
   const valid = (hasTeam || teamName.trim() !== "") && seasonName.trim() !== "";
   const field =
-    "h-12 w-full rounded-lg border-2 border-slate-400 bg-white px-3 text-lg focus:border-[#0b1f3a] focus:outline-none";
+    "h-12 w-full rounded-lg border-2 border-slate-400 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
 
   return (
     <form
@@ -178,7 +178,7 @@ export function TeamSetup({
             type="checkbox"
             checked={coachPitch}
             onChange={(e) => setCoachPitch(e.target.checked)}
-            className="size-6 accent-[#0b1f3a]"
+            className="size-6 accent-[var(--team)]"
           />
           <span>
             <span className="block text-lg font-semibold">Coach&apos;s pitch</span>
@@ -202,7 +202,7 @@ export function TeamSetup({
       <button
         type="submit"
         disabled={!valid || busy}
-        className="h-14 rounded-xl bg-[#0b1f3a] text-lg font-bold text-white disabled:opacity-40"
+        className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white disabled:opacity-40"
       >
         {busy ? "Creating…" : hasTeam ? "Start season" : "Create team"}
       </button>

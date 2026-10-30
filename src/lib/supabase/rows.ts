@@ -8,6 +8,8 @@ export interface TeamRow {
   age_group: string;
   coach_pitch: boolean;
   optioned_at: string | null;
+  colors?: string[];
+  logo_path?: string | null;
 }
 
 export interface MemberRow {
@@ -92,6 +94,8 @@ export interface GameRow {
   innings: number;
   field_players: 9 | 10;
   status: "scheduled" | "final";
+  score_us?: number | null;
+  score_them?: number | null;
 }
 
 export interface LineupRow {

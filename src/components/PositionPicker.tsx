@@ -90,7 +90,7 @@ export function PositionPicker({
               style={{ left: `${x}%`, top: `${y}%` }}
               className={`absolute flex h-[3.25rem] w-[5.25rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-xl border-2 shadow-md ${
                 selected
-                  ? "border-amber-400 bg-[#0b1f3a] text-white ring-2 ring-amber-400"
+                  ? "border-amber-400 bg-[var(--team)] text-white ring-2 ring-amber-400"
                   : "border-white bg-white/95 active:bg-slate-100"
               }`}
             >

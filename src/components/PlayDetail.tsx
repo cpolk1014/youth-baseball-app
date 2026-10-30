@@ -115,7 +115,7 @@ export function ActorBadge({ actor }: { actor: Actor }) {
   return (
     <span
       className={`flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
-        isFielder(actor) ? "bg-[#1e3a6e]" : "bg-[#c8352e]"
+        isFielder(actor) ? "bg-[var(--team)]" : "bg-[#c8352e]"
       }`}
     >
       {actor}

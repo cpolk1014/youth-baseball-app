@@ -112,7 +112,7 @@ export function FamilyCard({
               ? "Credit on account"
               : "All paid up"}
           {" · "}
-          <span className="font-semibold text-[#0b1f3a] underline">Charges &amp; payments</span>
+          <span className="font-semibold text-[var(--team)] underline">Charges &amp; payments</span>
         </span>
       </span>
       <span className="shrink-0 text-right">

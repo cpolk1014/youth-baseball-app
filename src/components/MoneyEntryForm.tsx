@@ -39,7 +39,7 @@ import { ReceiptPreview } from "./ReceiptPreview";
 import { shrinkReceipt } from "./receiptFile";
 
 const field =
-  "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[#0b1f3a] focus:outline-none";
+  "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
 const label = "flex min-w-0 flex-col gap-1";
 const labelText = "text-base font-semibold";
 
@@ -67,7 +67,7 @@ export function EntryTypePicker({ onPick }: { onPick: (t: EntryType) => void }) 
             onClick={() => onPick(t)}
             className="flex h-full min-h-16 w-full flex-col items-start justify-center rounded-xl border-2 border-slate-300 bg-white px-4 py-2 text-left active:bg-slate-50"
           >
-            <span className="text-lg font-bold text-[#0b1f3a]">{ENTRY_LABEL[t]}</span>
+            <span className="text-lg font-bold text-[var(--team)]">{ENTRY_LABEL[t]}</span>
             <span className="text-sm text-slate-600">{ENTRY_HINT[t]}</span>
           </button>
         </li>

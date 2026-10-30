@@ -55,7 +55,7 @@ export function RosterScreen() {
         canEdit ? (
           <button
             onClick={startAdd}
-            className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[#0b1f3a] active:bg-slate-200"
+            className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[var(--team)] active:bg-slate-200"
           >
             + Add
           </button>
@@ -194,7 +194,7 @@ function PlayerRow({ player, onClick }: { player: Player; onClick?: () => void }
         onClick={onClick}
         className={`flex h-full min-h-16 w-full items-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-left ${onClick ? "active:bg-slate-50" : ""}`}
       >
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#0b1f3a] text-lg font-bold text-white">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--team)] text-lg font-bold text-white">
           {player.jerseyNumber ?? "–"}
         </span>
         <span className="min-w-0 flex-1">

@@ -51,7 +51,7 @@ export function ReceiptPreview({ path }: { path: string }) {
         href={ready.url}
         target="_blank"
         rel="noreferrer"
-        className="text-center text-base font-semibold text-[#0b1f3a] underline"
+        className="text-center text-base font-semibold text-[var(--team)] underline"
       >
         Open full size
       </a>

@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { actorsIn, keysFor, playDuration, positionAt } from "@/lib/plays/animate";
+import { distance, hexToRgb, readableOnWhite } from "@/lib/branding/color";
+import { teamColors } from "@/lib/branding/theme";
+import { useAppData } from "@/lib/data/store";
 import { isFielder } from "@/lib/plays/quiz";
 import type { Actor, Play } from "@/lib/plays/types";
 
@@ -32,6 +35,10 @@ export function PlayField({
   onSelect?: (actor: Actor | null) => void;
   showPaths?: boolean;
 }) {
+  // Fielders wear the team's colors; runners stay red, or navy if the team is red.
+  const { main } = teamColors(useAppData()?.team.colors);
+  const fielder = readableOnWhite(main);
+  const runner = distance(hexToRgb(fielder)!, hexToRgb(RED)!) < 160 ? NAVY : RED;
   const actors = actorsIn(play);
   const [bx, by] = positionAt(play.ball, time);
   return (
@@ -120,7 +127,7 @@ export function PlayField({
             {on && <circle r="13" fill="none" stroke={GOLD} strokeWidth="3" />}
             <circle
               r="9.5"
-              fill={isRunner(a) ? RED : NAVY}
+              fill={isRunner(a) ? runner : fielder}
               stroke="#fff"
               strokeWidth="1.2"
               opacity={out !== undefined && time >= out ? 0.35 : 1}
