@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { paAccess } from "@/lib/pa/access";
 import { AudioMakerError, makeAnnouncement, makeSong, makeSoundEffect } from "@/lib/pa/elevenlabs";
-import { limitProblem, type GenerationKind } from "@/lib/pa/limits";
+import { DAILY_LIMITS, limitProblem, type GenerationKind } from "@/lib/pa/limits";
 import {
   isSongStyle,
   MAX_LYRIC_LINE,
@@ -56,7 +56,22 @@ export async function POST(request: NextRequest) {
     .rpc("pa_usage", { p_team_id: teamId, p_kind: kind })
     .single<{ mine: number; team: number }>();
   if (usageError || !usage) return errorResponse(500, "Couldn't check today's limit. Try again.");
-  const tooMany = limitProblem(kind, usage);
+  const limit = DAILY_LIMITS[kind];
+  let oldestMine: string | null = null;
+  if (usage.mine >= Math.min(limit.perUser, limit.perStaff)) {
+    // When their oldest clip of the last day drops off, so the message can say when.
+    const { data: oldest } = await supabase
+      .from("pa_generation")
+      .select("created_at")
+      .eq("team_id", teamId)
+      .eq("user_id", user.id)
+      .eq("kind", kind)
+      .gt("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .order("created_at")
+      .limit(1);
+    oldestMine = (oldest?.[0] as { created_at: string } | undefined)?.created_at ?? null;
+  }
+  const tooMany = limitProblem(kind, usage, { staff: access.staff, oldestMine });
   if (tooMany) return errorResponse(429, tooMany);
 
   const call = player && {
