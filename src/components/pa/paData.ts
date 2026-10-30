@@ -3,7 +3,7 @@
 // Gameday PA data: walk-ups and team sounds (Supabase when signed in, this device in
 // local mode), and their audio files, kept on the phone so the PA works with no signal.
 import { useCallback, useEffect, useState } from "react";
-import { useStoreState } from "@/lib/data/store";
+import { SYNC_EVENT, useStoreState } from "@/lib/data/store";
 import type { GenerationKind } from "@/lib/pa/limits";
 import type { LyricOption } from "@/lib/pa/lyrics";
 import type { SoundCategory, TeamSound, Walkup } from "@/lib/pa/types";
@@ -227,6 +227,13 @@ export function usePa(teamId: string): PaData {
       current = false;
     };
   }, [teamId, signedIn, version]);
+
+  // Sync now (or coming back to the app) also picks up walk-ups saved on other devices.
+  useEffect(() => {
+    const onSync = () => setVersion((v) => v + 1);
+    window.addEventListener(SYNC_EVENT, onSync);
+    return () => window.removeEventListener(SYNC_EVENT, onSync);
+  }, []);
 
   const commit = useCallback(
     (fn: (s: PaState) => PaState) =>

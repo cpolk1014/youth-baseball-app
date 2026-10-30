@@ -12,7 +12,7 @@ import {
 } from "react";
 import { themeVars } from "@/lib/branding/theme";
 import { permissionsFor } from "@/lib/data/permissions";
-import { useAppData, useStoreState } from "@/lib/data/store";
+import { syncNow, useAppData, useStoreState } from "@/lib/data/store";
 import { DataStatus } from "./DataStatus";
 import { TeamBadge } from "./TeamBadge";
 
@@ -239,7 +239,34 @@ function MenuLinks({ tab, onPick }: { tab: Tab; onPick?: () => void }) {
             {x.label}
           </Link>
         ))}
+      {signedIn && <SyncButton />}
     </>
+  );
+}
+
+/** Pull what changed on other phones and computers, in case this one is behind. */
+function SyncButton() {
+  const [status, setStatus] = useState<"idle" | "syncing" | "done" | "failed">("idle");
+  const sync = async () => {
+    setStatus("syncing");
+    setStatus((await syncNow()) ? "done" : "failed");
+    setTimeout(() => setStatus("idle"), 4000);
+  };
+  const label = {
+    idle: "↻ Sync now",
+    syncing: "Syncing…",
+    done: "✓ Up to date",
+    failed: "Couldn't sync. Check your signal.",
+  }[status];
+  return (
+    <button
+      onClick={() => void sync()}
+      disabled={status === "syncing"}
+      aria-live="polite"
+      className="mt-auto flex min-h-12 items-center rounded-lg px-3 pt-4 text-left text-base font-semibold text-white/80 hover:bg-white/15 active:bg-white/20"
+    >
+      {label}
+    </button>
   );
 }
 

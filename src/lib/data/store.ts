@@ -363,6 +363,58 @@ export async function refreshData(): Promise<void> {
   await loadRemote();
 }
 
+let syncing: Promise<boolean> | null = null;
+let lastSync = Date.now();
+
+/**
+ * Pull the latest saved data (what other phones and computers changed) without a loading
+ * screen. Waits for this device's own saves first. With no signal it keeps what's on
+ * screen and resolves false. Also tells other parts of the app (the PA) to reload.
+ */
+export function syncNow(): Promise<boolean> {
+  if (state.mode !== "supabase" || state.status.kind !== "ready") return Promise.resolve(false);
+  syncing ??= (async () => {
+    try {
+      await saveQueue;
+      const { loadFromSupabase } = await import("./supabase-backend");
+      const result = await loadFromSupabase(
+        readJson<Record<string, number>>(SEEDS_KEY) ?? {},
+        readJson<string>(TEAM_KEY),
+      );
+      // A save started while loading would be undone by older data; the next sync gets it.
+      if (pendingSaves > 0) return false;
+      if (result.kind === "ready") {
+        data = result.data;
+        setState({ status: { kind: "ready" }, email: result.email });
+      } else {
+        data = null;
+        setState({ status: { kind: "setup", team: result.team }, email: result.email });
+      }
+      lastSync = Date.now();
+      window.dispatchEvent(new Event(SYNC_EVENT));
+      return true;
+    } catch {
+      return false;
+    } finally {
+      syncing = null;
+    }
+  })();
+  return syncing;
+}
+
+/** Fired on window after a sync, for data kept outside this store. */
+export const SYNC_EVENT = "rallycap:sync";
+
+// Coming back to the app after a while (another tab, a locked phone, a laptop lid):
+// pick up what changed elsewhere.
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && Date.now() - lastSync > 30_000) {
+      void syncNow();
+    }
+  });
+}
+
 /** Coach: create an invite link; returns its full URL. */
 export async function createInvite(role: MemberRole): Promise<string> {
   const token = await (await remote()).createInviteRow(data!.team.id, role);
