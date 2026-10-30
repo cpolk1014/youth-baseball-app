@@ -827,4 +827,64 @@ do $$ begin
 exception when insufficient_privilege then raise notice 'ok: parents cannot upload a logo';
 end $$;
 reset role;
+-- ── Gameday PA ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+insert into storage.objects (bucket_id, name) values ('pa-audio', '00000000-0000-4000-8000-000000000001/walkups/00000000-0000-4000-8000-000000001003/song.wav');
+select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'pa-audio') = 1, 'a parent uploads their kid''s walk-up song');
+do $$ begin
+  insert into storage.objects (bucket_id, name) values ('pa-audio', '00000000-0000-4000-8000-000000000001/walkups/00000000-0000-4000-8000-000000001004/song.wav');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot upload songs for other kids';
+end $$;
+do $$ begin
+  insert into storage.objects (bucket_id, name) values ('pa-audio', '00000000-0000-4000-8000-000000000001/sounds/horn.wav');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot add soundboard files';
+end $$;
+insert into public.walkup (player_id, song_path, song_source, status)
+  values ('00000000-0000-4000-8000-000000001003', '00000000-0000-4000-8000-000000000001/walkups/00000000-0000-4000-8000-000000001003/song.wav', 'ai', 'approved');
+select pg_temp.expect((select status from public.walkup where player_id = '00000000-0000-4000-8000-000000001003') = 'pending', 'a parent''s walk-up waits for a coach');
+do $$ begin
+  insert into public.walkup (player_id, song_path, song_source) values ('00000000-0000-4000-8000-000000001004', '00000000-0000-4000-8000-000000000001/walkups/00000000-0000-4000-8000-000000001004/song.wav', 'ai');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot set another kid''s walk-up';
+end $$;
+do $$ begin
+  update public.walkup set song_path = '00000000-0000-4000-8000-000000000001/walkups/00000000-0000-4000-8000-000000001004/song.wav' where player_id = '00000000-0000-4000-8000-000000001003';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: walk-up files stay in the kid''s folder';
+end $$;
+insert into public.pa_generation (team_id, kind) values ('00000000-0000-4000-8000-000000000001', 'song'), ('00000000-0000-4000-8000-000000000001', 'song');
+select pg_temp.expect((select mine from public.pa_usage('00000000-0000-4000-8000-000000000001', 'song')) = 2, 'parents see how many songs they made today');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false);
+update public.walkup set status = 'approved' where player_id = '00000000-0000-4000-8000-000000001003';
+select pg_temp.expect((select status from public.walkup where player_id = '00000000-0000-4000-8000-000000001003') = 'pending', 'managers cannot approve walk-ups');
+insert into storage.objects (bucket_id, name) values ('pa-audio', '00000000-0000-4000-8000-000000000001/sounds/horn.wav');
+insert into public.pa_sound (team_id, category, label, path, source) values ('00000000-0000-4000-8000-000000000001', 'quick', 'Horn', '00000000-0000-4000-8000-000000000001/sounds/horn.wav', 'upload');
+select pg_temp.expect((select count(*) from public.pa_sound) = 1, 'managers add soundboard sounds');
+insert into public.pa_generation (team_id, kind) values ('00000000-0000-4000-8000-000000000001', 'song');
+select pg_temp.expect((select (mine, team) = (1, 3) from public.pa_usage('00000000-0000-4000-8000-000000000001', 'song')), 'team usage counts everyone');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+update public.walkup set status = 'approved' where player_id = '00000000-0000-4000-8000-000000001003';
+select pg_temp.expect((select status = 'approved' and approved_by = 'aaaaaaaa-0000-4000-8000-000000000001' from public.walkup where player_id = '00000000-0000-4000-8000-000000001003'), 'coaches approve walk-ups');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+update public.walkup set volume = 1.5 where player_id = '00000000-0000-4000-8000-000000001003';
+select pg_temp.expect((select status = 'pending' and approved_by is null from public.walkup where player_id = '00000000-0000-4000-8000-000000001003'), 'a parent''s change needs a fresh OK');
+select pg_temp.expect((select count(*) from public.pa_sound) = 1, 'parents see the soundboard');
+delete from public.pa_sound;
+select pg_temp.expect((select count(*) from public.pa_sound) = 1, 'parents cannot remove soundboard sounds');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.walkup) = 0, 'outsiders see no walk-ups');
+select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'pa-audio') = 0, 'outsiders cannot play PA audio');
+select pg_temp.expect((select team from public.pa_usage('00000000-0000-4000-8000-000000000001', 'song')) = 0, 'outsiders cannot read team usage');
+reset role;
 \echo ALL RLS TESTS PASSED

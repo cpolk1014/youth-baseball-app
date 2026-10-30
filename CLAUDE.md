@@ -16,6 +16,7 @@ Primary users: head coach (lineups), team manager (comms), treasurer (money). Th
 - Vercel hosting (preview deploys per branch)
 - Vitest for unit tests; Playwright for a few end-to-end flows
 - Claude API (`@anthropic-ai/sdk`, structured JSON output) for AI features, server-side only (`ANTHROPIC_API_KEY`); schedule import and typed fair-play rules use it
+- ElevenLabs (REST via fetch, no SDK) for Gameday PA audio: music, announcer voice, sound effects; server-side only (`ELEVENLABS_API_KEY`, optional `ELEVENLABS_ANNOUNCER_VOICE_ID`)
 - Later: Stripe (billing)
 
 ## Features
@@ -42,6 +43,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Team money (phase 1): one ledger of Bat Arounds (split across players), Cleanups (one player), Walkoffs (team pays out), Safe at Home (family payments and money back), Rain Checks (credits), Grand Slams (fundraisers); installments with a first due date; family balances; team totals for everyone; parents see only their kids' charges plus all Walkoffs; coaches and treasurers edit. Walkoffs can carry a receipt (photo, shrunk before upload, or PDF) in a private storage bucket; everyone on the team can view it
 - GroupMe: a coach or manager connects the team's group by creating a "RallyCap" bot on dev.groupme.com and pasting its Bot ID (test post on connect); post types: a game's batting order, a free-text message, and a new Bat Around (offered after saving; treasurers can post these too); editable preview before sending; posts go through the server route `/api/groupme/post`
 - Batting order picture: from a game, coaches make a 1080×1350 image in team colors with the logo (drawn on the device) and share it through the phone's share sheet (GroupMe, Messages) or save it
+- Gameday PA (menu section): walk-up songs per kid, made with AI (ElevenLabs Music: style, vibe, optional chant of the kid's name and number) or uploaded and trimmed on the phone (up to 20 s, fades, evened-out volume, saved as WAV); an AI announcer call (ElevenLabs voice) with "say it like" fields for the name and number (e.g. "six seven") and an editable script, over the intro or before the song; parents set up their own kids' walk-ups and a coach OKs them (enforced in the database); the PA board follows a game's batting order (Now batting, Next, a play button per kid), a soundboard of built-in organ tunes and effects made in the browser (pregame, organ, mound visit, quick hits) plus the team's own AI or uploaded sounds; Stop and volume always on screen; screen stays on; "Get ready" saves every clip on the phone so it plays with no signal. AI clips go through `/api/pa/generate` (server-only key, daily limits per person and team)
 - Plays tab ("Where do I go?"): 57 animated situational plays with every position's job; random quizzes; coaches assign plays as homework to families and see who finished; plays can be added to a practice as situations to work on
 
 **Next up** (roughly in order; the user picks)
@@ -72,6 +74,9 @@ Source of truth: `supabase/migrations/`. Summary:
 - finance_entry: season_id, type (bat_around | cleanup | walkoff | safe_at_home | rain_check | grand_slam), title, amount_cents, entry_date, category, payee, method, refund, estimate, due_dates[], receipt_path (Walkoffs; file in the private `receipts` bucket at team/entry/file) (saved with shares via `save_finance_entry`; team totals via `finance_summary`)
 - finance_share: entry_id, player_id, amount_cents (who an entry is tagged to; parents see only their kids')
 - team_groupme: team_id, bot_id, group_name (coaches/managers manage it; treasurers can use it; parents never see the bot ID)
+- walkup: player_id (one per kid), song_path, song_source (ai | upload), song_prompt, volume, announce, announce_mode (over | before), name_spoken, number_spoken, script, announce_path, status (pending | approved; only coaches approve, any other change goes back to pending) (files in the private `pa-audio` bucket at team/walkups/player/file)
+- pa_sound: team_id, category (pregame | organ | mound | quick), label, path (pa-audio at team/sounds/file), source
+- pa_generation: team_id, user_id, kind (song | announce | sound) (one row per AI clip; `pa_usage` counts the last day for limits)
 - lineup_slot: lineup_id, inning, player_id, position (P, C, 1B, 2B, 3B, SS, LF, CF, RF, LCF, RCF, BENCH)
 
 Participation is **derived** from lineup_slot rows on final games, never stored separately.

@@ -16,10 +16,11 @@ import { useAppData, useStoreState } from "@/lib/data/store";
 import { DataStatus } from "./DataStatus";
 import { TeamBadge } from "./TeamBadge";
 
-type Tab = "games" | "practice" | "plays" | "season" | "roster" | "money";
+type Tab = "games" | "pa" | "practice" | "plays" | "season" | "roster" | "money";
 
 const TABS: { id: Tab; href: string; label: string }[] = [
   { id: "games", href: "/games", label: "Games" },
+  { id: "pa", href: "/pa", label: "Gameday PA" },
   { id: "practice", href: "/practices", label: "Practice" },
   { id: "plays", href: "/plays", label: "Plays" },
   { id: "season", href: "/season", label: "Season" },
