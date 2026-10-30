@@ -22,6 +22,12 @@ export const SONG_STYLES = [
   },
   { id: "latin", label: "Latin", prompt: "energetic reggaeton and Latin percussion groove" },
   {
+    id: "gospel",
+    label: "Gospel",
+    prompt:
+      "joyful, uplifting gospel with a powerful choir, Hammond organ, handclaps and a driving beat",
+  },
+  {
     id: "band",
     label: "Marching band",
     prompt: "fired-up marching band with brass and booming drumline",
