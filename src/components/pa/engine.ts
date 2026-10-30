@@ -21,22 +21,78 @@ let volume = 0.9;
 const listeners = new Set<() => void>();
 let playing: { id: string; until: number } | null = null;
 
-/** Call from a tap: phones only allow sound after the person touches the screen. */
-export function audio(): AudioContext {
-  if (!ctx) {
-    // iPhones mute web audio with the ring/silent switch unless the page says it's playback.
-    const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
-    if (session) session.type = "playback";
-    ctx = new AudioContext();
-    const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -10;
-    comp.ratio.value = 4;
-    master = ctx.createGain();
-    master.gain.value = volume;
-    master.connect(comp).connect(ctx.destination);
-  }
-  if (ctx.state === "suspended") void ctx.resume();
+function build(): AudioContext {
+  // iPhones mute web audio with the ring/silent switch unless the page says it's playback.
+  const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+  if (session) session.type = "playback";
+  else keepAwakeTrack();
+  const c = new AudioContext();
+  const comp = c.createDynamicsCompressor();
+  comp.threshold.value = -10;
+  comp.ratio.value = 4;
+  master = c.createGain();
+  master.gain.value = volume;
+  master.connect(comp).connect(c.destination);
+  bus = null;
+  return c;
+}
+
+/** Throw away a stuck context and start a new one (must happen during a tap). */
+function rebuild(): AudioContext {
+  const old = ctx;
+  ctx = build();
+  if (old && old.state !== "closed") void old.close().catch(() => undefined);
   return ctx;
+}
+
+/**
+ * Call from a tap: phones only allow sound after the person touches the screen.
+ * iPhones also stop a page's sound after a call, Siri, the lock screen, another app
+ * playing, or a Bluetooth speaker coming or going ("interrupted"). The page can't always
+ * wake it, so a stuck one is replaced with a fresh one.
+ */
+export function audio(): AudioContext {
+  if (!ctx || ctx.state === "closed" || (ctx.state as string) === "interrupted") return rebuild();
+  if (ctx.state === "suspended") {
+    const c = ctx;
+    void c.resume().catch(() => undefined);
+    // Still not running a moment later: replace it so the next tap works.
+    setTimeout(() => {
+      if (ctx === c && c.state !== "running" && document.visibilityState === "visible") {
+        rebuild();
+      }
+    }, 600);
+  }
+  return ctx;
+}
+
+/** Wake the sound when the page comes back (unlocking the phone, switching back). */
+if (typeof document !== "undefined") {
+  const wake = () => {
+    if (ctx && ctx.state !== "running" && document.visibilityState === "visible") {
+      void ctx.resume().catch(() => undefined);
+    }
+  };
+  document.addEventListener("visibilitychange", wake);
+  window.addEventListener("pageshow", wake);
+}
+
+let silentTrack: HTMLAudioElement | null = null;
+/**
+ * Older iPhones (before iOS 17) have no way to say "this page plays media", so web audio
+ * follows the silent switch. A silent looping <audio> track switches the phone into
+ * media playback, which plays out loud even on silent.
+ */
+function keepAwakeTrack() {
+  if (silentTrack) {
+    void silentTrack.play().catch(() => undefined);
+    return;
+  }
+  const wav = encodeWav(new Float32Array(4000), 8000);
+  silentTrack = new Audio(URL.createObjectURL(new Blob([wav], { type: "audio/wav" })));
+  silentTrack.loop = true;
+  silentTrack.setAttribute("playsinline", "");
+  void silentTrack.play().catch(() => undefined);
 }
 
 function freshBus(): GainNode {
@@ -341,8 +397,11 @@ export function playBuiltIn(sound: BuiltInSound) {
 
 // ── Saved clips ──
 
+let decoder: OfflineAudioContext | null = null;
+/** Decode a file. Uses its own context, so replacing a stuck playback one can't break it. */
 export async function decode(data: ArrayBuffer): Promise<AudioBuffer> {
-  return await audio().decodeAudioData(data.slice(0));
+  decoder ??= new OfflineAudioContext(1, 1, 44100);
+  return await decoder.decodeAudioData(data.slice(0));
 }
 
 /** Play a decoded clip (a team sound, a preview). */
