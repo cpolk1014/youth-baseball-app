@@ -4,11 +4,13 @@ import { SEED_DATA } from "./seed";
 import {
   addPractices,
   deleteAssignment,
+  deletePlayer,
   deletePractice,
   getAppData,
   importSchedule,
   recordQuizResult,
   resetLocalData,
+  savePlayer,
   saveAssignment,
   setKidsFor,
   saveGame,
@@ -136,5 +138,33 @@ describe("store game actions", () => {
     expect(next[0]?.id).toBe(first[1]?.id);
     await setKidsFor("dad", ["a"]);
     expect(getAppData().guardians).toHaveLength(3);
+  });
+});
+
+describe("deletePlayer", () => {
+  beforeEach(() => resetLocalData());
+  const added = {
+    id: "mistake",
+    name: "Added By Mistake",
+    jerseyNumber: null,
+    preferredPositions: [],
+    canPitch: false,
+    canCatch: false,
+    active: true,
+  };
+
+  it("deletes a player with nothing attached, and their parent links", async () => {
+    savePlayer(added);
+    await setKidsFor("parent-1", ["mistake"]);
+    await deletePlayer("mistake");
+    expect(getAppData().players.some((p) => p.id === "mistake")).toBe(false);
+    expect(getAppData().guardians.some((g) => g.playerId === "mistake")).toBe(false);
+  });
+
+  it("refuses a player who is in a lineup", async () => {
+    savePlayer(added);
+    saveLineup(game.id, { ...lineupFromGrid({ a: ["P"] }), battingOrder: ["mistake"] });
+    await expect(deletePlayer("mistake")).rejects.toThrow(/lineup.*Turn off Active/);
+    expect(getAppData().players.some((p) => p.id === "mistake")).toBe(true);
   });
 });

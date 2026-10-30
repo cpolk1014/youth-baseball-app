@@ -3,7 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { permissionsFor } from "@/lib/data/permissions";
-import { newId, savePlayer, setCoachPitch, useAppData, useStoreState } from "@/lib/data/store";
+import {
+  deletePlayer,
+  newId,
+  savePlayer,
+  setCoachPitch,
+  useAppData,
+  useStoreState,
+} from "@/lib/data/store";
 import { activePlayers } from "@/lib/lineup/edit";
 import { fieldPositionsFor } from "@/lib/rules/config";
 import { FIELD_POSITIONS } from "@/lib/rules/types";
@@ -178,6 +185,14 @@ export function RosterScreen() {
               savePlayer(p);
               setEditing(null);
             }}
+            onDelete={
+              isNew
+                ? undefined
+                : async () => {
+                    await deletePlayer(editing.id);
+                    setEditing(null);
+                  }
+            }
           />
         )}
       </Sheet>

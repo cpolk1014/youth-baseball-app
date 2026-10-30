@@ -543,3 +543,35 @@ export async function saveGameResult(
       .eq("id", gameId),
   );
 }
+
+/** What a player is part of (any season), which deleting them would erase; null if nothing. */
+export async function playerDataProblem(playerId: string): Promise<string | null> {
+  const sb = getBrowserSupabase();
+  const count = async (
+    q: PromiseLike<{ count: number | null; error: { message: string } | null }>,
+  ) => {
+    const r = await q;
+    if (r.error) throw new Error(r.error.message);
+    return r.count ?? 0;
+  };
+  const head = { count: "exact" as const, head: true };
+  const [slots, orders, shares, walkups] = await Promise.all([
+    count(sb.from("lineup_slot").select("lineup_id", head).eq("player_id", playerId)),
+    count(
+      sb
+        .from("lineup")
+        .select("game_id", head)
+        .or(`batting_order.cs.{${playerId}},not_batting.cs.{${playerId}},absent.cs.{${playerId}}`),
+    ),
+    count(sb.from("finance_share").select("entry_id", head).eq("player_id", playerId)),
+    count(sb.from("walkup").select("player_id", head).eq("player_id", playerId)),
+  ]);
+  if (slots + orders > 0) return "is in a game's lineup";
+  if (shares > 0) return "has team money tagged to them";
+  if (walkups > 0) return "has a walk-up song";
+  return null;
+}
+
+export async function deletePlayerRow(playerId: string): Promise<void> {
+  check(await getBrowserSupabase().from("player").delete().eq("id", playerId));
+}

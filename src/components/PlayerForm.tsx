@@ -8,11 +8,14 @@ export function PlayerForm({
   positions,
   onSave,
   onCancel,
+  onDelete,
 }: {
   player: Player;
   positions: FieldPosition[];
   onSave: (player: Player) => void;
   onCancel: () => void;
+  /** Existing players: delete them (rejects with the reason when something is attached). */
+  onDelete?: () => Promise<void>;
 }) {
   const [name, setName] = useState(player.name);
   const [jersey, setJersey] = useState(player.jerseyNumber?.toString() ?? "");
@@ -20,6 +23,19 @@ export function PlayerForm({
   const [canPitch, setCanPitch] = useState(player.canPitch);
   const [canCatch, setCanCatch] = useState(player.canCatch);
   const [active, setActive] = useState(player.active !== false);
+  const [deleting, setDeleting] = useState<"ask" | "busy" | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const remove = async () => {
+    setDeleting("busy");
+    setDeleteError(null);
+    try {
+      await onDelete!();
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : String(e));
+      setDeleting(null);
+    }
+  };
 
   const jerseyNumber = jersey === "" ? null : Number(jersey);
   const jerseyError =
@@ -127,6 +143,46 @@ export function PlayerForm({
           Save
         </button>
       </div>
+
+      {onDelete &&
+        (deleting === null ? (
+          <button
+            type="button"
+            onClick={() => setDeleting("ask")}
+            className="h-12 text-base font-semibold text-red-700 underline"
+          >
+            Delete player
+          </button>
+        ) : (
+          <div className="flex flex-col gap-2 rounded-xl border-2 border-red-300 bg-red-50 p-3">
+            <p className="text-base">
+              Delete {player.name}? Only for a player added by mistake: it works when they
+              aren&apos;t in any lineup, team money or walk-up.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleting(null)}
+                className="h-12 flex-1 rounded-xl border-2 border-slate-400 bg-white text-base font-bold active:bg-slate-100"
+              >
+                Keep
+              </button>
+              <button
+                type="button"
+                onClick={() => void remove()}
+                disabled={deleting === "busy"}
+                className="h-12 flex-1 rounded-xl bg-red-700 text-base font-bold text-white disabled:opacity-60"
+              >
+                {deleting === "busy" ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
+        ))}
+      {deleteError && (
+        <p role="alert" className="text-base font-semibold text-red-700">
+          {deleteError}
+        </p>
+      )}
     </form>
   );
 }

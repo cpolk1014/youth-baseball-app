@@ -237,6 +237,46 @@ export function savePlayer(player: Player): void {
   );
 }
 
+/**
+ * Coach: delete a player added by mistake. Only when nothing is attached to them (any
+ * season's lineups, team money, a walk-up); otherwise throws, and they can be made
+ * inactive instead. Links to parents go with them.
+ */
+export async function deletePlayer(playerId: string): Promise<void> {
+  const current = getSnapshot();
+  const player = current?.players.find((p) => p.id === playerId);
+  if (!current || !player) return;
+  let problem: string | null;
+  if (state.mode === "supabase") {
+    await saveQueue;
+    problem = await (await remote()).playerDataProblem(playerId);
+  } else {
+    const inLineup = Object.values(current.lineups).some(
+      (l) =>
+        l.battingOrder.includes(playerId) ||
+        (l.notBatting ?? []).includes(playerId) ||
+        (l.absent ?? []).includes(playerId) ||
+        l.slots.some((s) => s.playerId === playerId),
+    );
+    problem = inLineup
+      ? "is in a game's lineup"
+      : current.financeShares.some((s) => s.playerId === playerId)
+        ? "has team money tagged to them"
+        : null;
+  }
+  if (problem) {
+    throw new Error(
+      `${player.name} ${problem}, so deleting would erase it. Turn off Active instead.`,
+    );
+  }
+  if (state.mode === "supabase") await (await remote()).deletePlayerRow(playerId);
+  update((d) => ({
+    ...d,
+    players: d.players.filter((p) => p.id !== playerId),
+    guardians: d.guardians.filter((g) => g.playerId !== playerId),
+  }));
+}
+
 export function saveGame(game: Game): void {
   let trimmed: Lineup | null = null;
   update(
