@@ -44,13 +44,9 @@ async function call(path: string, body: unknown): Promise<ArrayBuffer> {
   throw new AudioMakerError(502, "The AI couldn't make it this time. Try again.");
 }
 
-export function makeSong(prompt: string, instrumental: boolean, seconds: number) {
-  return call("/music?output_format=mp3_44100_128", {
-    prompt,
-    music_length_ms: Math.round(seconds * 1000),
-    model_id: "music_v1",
-    force_instrumental: instrumental,
-  });
+/** A song from a request body built by `songRequest` (a prompt, or a composition plan). */
+export function makeSong(body: Record<string, unknown>) {
+  return call("/music?output_format=mp3_44100_128", body);
 }
 
 export function makeAnnouncement(text: string) {

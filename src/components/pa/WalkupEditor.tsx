@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { defaultClip, type ClipRange } from "@/lib/pa/clip";
-import { SONG_STYLES, MAX_VIBE, type SongStyle } from "@/lib/pa/songPrompt";
+import { clampClip, defaultClip, type ClipRange } from "@/lib/pa/clip";
+import {
+  lyricLines,
+  MAX_LYRIC_LINES,
+  SONG_STYLES,
+  MAX_VIBE,
+  type SongStyle,
+} from "@/lib/pa/songPrompt";
 import {
   announcement,
   DEFAULT_SCRIPT,
@@ -68,6 +74,7 @@ export function WalkupEditor({
   const [style, setStyle] = useState<SongStyle>("rock");
   const [vibe, setVibe] = useState("");
   const [singName, setSingName] = useState(true);
+  const [lyrics, setLyrics] = useState("");
 
   const [announce, setAnnounce] = useState(existing?.announce ?? signedIn);
   const [mode, setMode] = useState<AnnounceMode>(existing?.announceMode ?? "over");
@@ -136,7 +143,12 @@ export function WalkupEditor({
 
   const takeSong = (source: AudioBuffer, kind: "ai" | "upload", prompt: string | null) => {
     setSong({ source, kind, prompt });
-    setRange(defaultClip(source.duration));
+    // AI songs are made to length (intro, words, finish): keep all of them.
+    setRange(
+      kind === "ai"
+        ? clampClip({ start: 0, end: source.duration }, source.duration)
+        : defaultClip(source.duration),
+    );
     setPicking(null);
   };
 
@@ -148,14 +160,19 @@ export function WalkupEditor({
         style,
         vibe,
         singName,
+        lyrics,
         nameSpoken,
         numberSpoken,
       });
       const label = SONG_STYLES.find((s) => s.id === style)!.label;
+      const words = lyricLines(lyrics);
+      const about = [vibe.trim(), words.length ? `"${words.join(" / ")}"` : ""]
+        .filter(Boolean)
+        .join(" ");
       takeSong(
         await decode(await blob.arrayBuffer()),
         "ai",
-        vibe.trim() ? `${label}: ${vibe.trim()}` : label,
+        (about ? `${label}: ${about}` : label).slice(0, 600),
       );
     });
 
@@ -317,6 +334,20 @@ export function WalkupEditor({
                     />
                     <span className="text-sm text-slate-600">
                       Describe the sound, not a real song or artist.
+                    </span>
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-base font-semibold">Words to sing (optional)</span>
+                    <textarea
+                      value={lyrics}
+                      rows={3}
+                      onChange={(e) => setLyrics(e.target.value)}
+                      placeholder={"Step up to the plate\nBring the heat today"}
+                      className="w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 py-2 text-lg focus:border-[var(--team)] focus:outline-none"
+                    />
+                    <span className="text-sm text-slate-600">
+                      Up to {MAX_LYRIC_LINES} short lines, sung after a quick intro. Keep it clean:
+                      a coach hears it before it plays.
                     </span>
                   </label>
                   <label className="flex items-center gap-3 text-base">

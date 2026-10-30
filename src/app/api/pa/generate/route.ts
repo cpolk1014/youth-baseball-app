@@ -1,15 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AudioMakerError, makeAnnouncement, makeSong, makeSoundEffect } from "@/lib/pa/elevenlabs";
 import { limitProblem, type GenerationKind } from "@/lib/pa/limits";
-import { isSongStyle, songHook, songPrompt, MAX_VIBE } from "@/lib/pa/songPrompt";
+import {
+  isSongStyle,
+  MAX_LYRIC_LINE,
+  MAX_LYRIC_LINES,
+  MAX_VIBE,
+  songHook,
+  songRequest,
+} from "@/lib/pa/songPrompt";
 import { announcement, MAX_SPOKEN, scriptProblem, spokenName, spokenNumber } from "@/lib/pa/speech";
 import { getServerSupabase } from "@/lib/supabase/server";
 
 // Songs can take a while to compose.
 export const maxDuration = 120;
 
-/** Songs come back a little long so there's room to pick the best 15 seconds. */
-const SONG_SECONDS = 18;
 const MAX_SOUND_TEXT = 120;
 
 function errorResponse(status: number, error: string) {
@@ -93,12 +98,14 @@ export async function POST(request: NextRequest) {
       if (!isSongStyle(body?.style)) return errorResponse(400, "Pick a style first.");
       const hook =
         body?.singName === true ? songHook(spokenName(call!), spokenNumber(call!)) : null;
-      const { prompt, instrumental } = songPrompt({
-        style: body.style,
-        vibe: str(body?.vibe, MAX_VIBE),
-        hook,
-      });
-      audio = await makeSong(prompt, instrumental, SONG_SECONDS);
+      audio = await makeSong(
+        songRequest({
+          style: body.style,
+          vibe: str(body?.vibe, MAX_VIBE),
+          hook,
+          lyrics: str(body?.lyrics, (MAX_LYRIC_LINE + 1) * MAX_LYRIC_LINES * 2),
+        }),
+      );
     } else if (kind === "announce") {
       const problem = scriptProblem(call!.script);
       if (problem) return errorResponse(400, problem);
