@@ -13,7 +13,7 @@ import { playsFor } from "@/lib/plays/library";
 import { AppShell, Loading } from "./AppShell";
 import { PlayPicker } from "./PlayPicker";
 import { PracticeForm } from "./PracticeForms";
-import { QuizButton, firstNames } from "./QuizButton";
+import { QuizButton, quizNames } from "./QuizButton";
 import { Sheet } from "./Sheet";
 
 type Panel = "edit" | "drills" | "copy" | "plays" | "delete" | null;
@@ -244,7 +244,7 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
             <QuizButton
               plays={situations}
               count={quizLength(situations.length)}
-              playerNames={firstNames(data.players)}
+              playerNames={quizNames(data)}
               title="Team quiz"
               className="h-12 rounded-xl bg-[#c8352e] text-base font-bold text-white active:bg-[#a92a24]"
             >

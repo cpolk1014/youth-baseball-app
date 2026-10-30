@@ -4,7 +4,7 @@ import { useAppData } from "@/lib/data/store";
 import { playById } from "@/lib/plays/library";
 import { AppShell } from "./AppShell";
 import { PlayDetail } from "./PlayDetail";
-import { QuizButton, firstNames } from "./QuizButton";
+import { QuizButton, quizNames } from "./QuizButton";
 
 export function PlayScreen({ playId }: { playId: string }) {
   const data = useAppData();
@@ -22,7 +22,7 @@ export function PlayScreen({ playId }: { playId: string }) {
       <QuizButton
         plays={[play]}
         count={5}
-        playerNames={data ? firstNames(data.players) : undefined}
+        playerNames={data ? quizNames(data) : undefined}
         title={play.name}
         className="mt-6 h-14 w-full rounded-xl bg-[#c8352e] text-lg font-bold text-white active:bg-[#a92a24]"
       >

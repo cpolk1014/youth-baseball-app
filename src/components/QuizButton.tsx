@@ -1,10 +1,13 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { myUserId } from "@/lib/data/store";
+import type { AppData } from "@/lib/data/types";
 import { PLAYS } from "@/lib/plays/library";
 import { makeQuiz } from "@/lib/plays/quiz";
 import type { Play } from "@/lib/plays/types";
 import { createRng } from "@/lib/rules/random";
+import { kidsOf } from "./KidPicker";
 import { PlayQuiz } from "./PlayQuiz";
 import { Sheet } from "./Sheet";
 
@@ -54,6 +57,12 @@ export function QuizButton({
       </Sheet>
     </>
   );
+}
+
+/** Names for quiz questions: a parent's own kids, else the whole roster (coaches). */
+export function quizNames(data: AppData): string[] {
+  const mine = kidsOf(data, myUserId(data));
+  return firstNames(mine.length > 0 ? mine : data.players);
 }
 
 /** First names of active players, for friendlier quiz questions. */

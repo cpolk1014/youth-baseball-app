@@ -11,7 +11,7 @@ import { PLAYS, playsIn } from "@/lib/plays/library";
 import { PLAY_CATEGORIES } from "@/lib/plays/types";
 import { AppShell, Loading } from "./AppShell";
 import { AssignForm } from "./AssignForm";
-import { QuizButton, firstNames } from "./QuizButton";
+import { QuizButton, quizNames } from "./QuizButton";
 import { Sheet } from "./Sheet";
 
 export function PlaysScreen() {
@@ -42,7 +42,7 @@ export function PlaysScreen() {
       <QuizButton
         plays={PLAYS}
         count={10}
-        playerNames={firstNames(data.players)}
+        playerNames={quizNames(data)}
         className="mb-5 flex h-16 w-full items-center justify-center gap-2 rounded-xl bg-[#c8352e] text-xl font-bold text-white active:bg-[#a92a24]"
       >
         <span aria-hidden="true">⚾</span> Quiz me
