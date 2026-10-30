@@ -17,6 +17,7 @@ import { Attendance } from "./Attendance";
 import { BattingOrder } from "./BattingOrder";
 import { GameForm } from "./GameForm";
 import { GroupMePost } from "./GroupMePost";
+import { ShareBattingCard } from "./ShareBattingCard";
 import { LineupGrid } from "./LineupGrid";
 import { PositionPicker } from "./PositionPicker";
 import { Sheet } from "./Sheet";
@@ -37,6 +38,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
     them: null,
   });
   const [posting, setPosting] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   if (!data) {
     return (
@@ -176,6 +178,14 @@ export function GameScreen({ gameId }: { gameId: string }) {
           >
             Mark final
           </button>
+          {lineup.battingOrder.length > 0 && (
+            <button
+              onClick={() => setSharing(true)}
+              className="col-span-2 h-12 rounded-xl border-2 border-[var(--team)] bg-white text-base font-bold text-[var(--team)] active:bg-slate-100"
+            >
+              Share batting order picture
+            </button>
+          )}
           {data.groupme && lineup.battingOrder.length > 0 && (
             <button
               onClick={() => setPosting(true)}
@@ -309,6 +319,10 @@ export function GameScreen({ gameId }: { gameId: string }) {
             }}
           />
         )}
+      </Sheet>
+
+      <Sheet open={sharing} title="Batting order picture" onClose={() => setSharing(false)}>
+        {sharing && <ShareBattingCard data={data} game={game} lineup={lineup} />}
       </Sheet>
 
       <Sheet open={posting} title="Post batting order" onClose={() => setPosting(false)}>

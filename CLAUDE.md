@@ -41,6 +41,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Import a schedule from a photo, PDF or CSV (Claude reads it; coach reviews before adding practices and games)
 - Team money (phase 1): one ledger of Bat Arounds (split across players), Cleanups (one player), Walkoffs (team pays out), Safe at Home (family payments and money back), Rain Checks (credits), Grand Slams (fundraisers); installments with a first due date; family balances; team totals for everyone; parents see only their kids' charges plus all Walkoffs; coaches and treasurers edit. Walkoffs can carry a receipt (photo, shrunk before upload, or PDF) in a private storage bucket; everyone on the team can view it
 - GroupMe: a coach or manager connects the team's group by creating a "RallyCap" bot on dev.groupme.com and pasting its Bot ID (test post on connect); post types: a game's batting order, a free-text message, and a new Bat Around (offered after saving; treasurers can post these too); editable preview before sending; posts go through the server route `/api/groupme/post`
+- Batting order picture: from a game, coaches make a 1080×1350 image in team colors with the logo (drawn on the device) and share it through the phone's share sheet (GroupMe, Messages) or save it
 - Plays tab ("Where do I go?"): 57 animated situational plays with every position's job; random quizzes; coaches assign plays as homework to families and see who finished; plays can be added to a practice as situations to work on
 
 **Next up** (roughly in order; the user picks)
