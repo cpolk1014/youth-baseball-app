@@ -11,19 +11,20 @@ import {
   type ReactNode,
 } from "react";
 import { themeVars } from "@/lib/branding/theme";
-import { permissionsFor } from "@/lib/data/permissions";
+import { isCoach, permissionsFor } from "@/lib/data/permissions";
 import { syncNow, useAppData, useStoreState } from "@/lib/data/store";
 import { DataStatus } from "./DataStatus";
 import { TeamBadge } from "./TeamBadge";
 
-type Tab = "games" | "pa" | "practice" | "plays" | "season" | "roster" | "money";
+type Tab = "games" | "pa" | "practice" | "plays" | "season" | "stats" | "roster" | "money";
 
-const TABS: { id: Tab; href: string; label: string }[] = [
+const TABS: { id: Tab; href: string; label: string; staffOnly?: boolean }[] = [
   { id: "games", href: "/games", label: "Games" },
   { id: "pa", href: "/pa", label: "Gameday PA" },
   { id: "practice", href: "/practices", label: "Practice" },
   { id: "plays", href: "/plays", label: "Plays" },
   { id: "season", href: "/season", label: "Season" },
+  { id: "stats", href: "/stats", label: "Stats", staffOnly: true },
   { id: "roster", href: "/roster", label: "Roster" },
   { id: "money", href: "/money", label: "Money" },
 ];
@@ -201,6 +202,8 @@ function MenuLinks({ tab, onPick }: { tab: Tab; onPick?: () => void }) {
   const { mode } = useStoreState();
   const signedIn = mode === "supabase";
   const perms = data ? permissionsFor(data.me.role, data.team.optionedAt !== null) : null;
+  // Coaches (and owners) and managers; stays true on an optioned team, unlike editTeam.
+  const staff = !!data && (isCoach(data.me.role) || data.me.role === "manager");
   const pathname = usePathname();
   const team: { href: string; label: string; show: boolean }[] = [
     { href: "/members", label: "Coaches & parents", show: signedIn },
@@ -214,7 +217,7 @@ function MenuLinks({ tab, onPick }: { tab: Tab; onPick?: () => void }) {
     }`;
   return (
     <>
-      {TABS.map((t) => (
+      {TABS.filter((t) => !t.staffOnly || staff).map((t) => (
         <Link
           key={t.id}
           href={t.href}

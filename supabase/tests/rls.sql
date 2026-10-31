@@ -887,4 +887,40 @@ select pg_temp.expect((select count(*) from public.walkup) = 0, 'outsiders see n
 select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'pa-audio') = 0, 'outsiders cannot play PA audio');
 select pg_temp.expect((select team from public.pa_usage('00000000-0000-4000-8000-000000000001', 'song')) = 0, 'outsiders cannot read team usage');
 reset role;
+-- ── team stats (GameChanger import) ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+insert into public.team_stats (season_id, file_name, data) values ('00000000-0000-4000-8000-000000000101', 'stats.csv', '{"columns": [], "players": [], "totals": null}');
+select pg_temp.expect((select count(*) from public.team_stats) = 1, 'coaches import stats');
+do $$ begin
+  insert into public.team_stats (season_id, file_name, data) values ('00000000-0000-4000-8000-000000000101', 'x.csv', '[]') on conflict (season_id) do update set data = excluded.data;
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: stats must be a stats document';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false);
+insert into public.team_stats (season_id, file_name, data) values ('00000000-0000-4000-8000-000000000101', 'week2.csv', '{"columns": [], "players": [], "totals": null}')
+  on conflict (season_id) do update set file_name = excluded.file_name, data = excluded.data, imported_at = now();
+select pg_temp.expect((select file_name from public.team_stats) = 'week2.csv', 'managers replace stats');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from public.team_stats) = 0, 'parents do not see stats');
+update public.team_stats set file_name = 'hack.csv';
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000006', false);
+select pg_temp.expect((select count(*) from public.team_stats) = 0, 'treasurers do not see stats');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.team_stats) = 0, 'outsiders do not see stats');
+do $$ begin
+  insert into public.team_stats (season_id, file_name, data) values ('00000000-0000-4000-8000-000000000101', 'x.csv', '{"columns": [], "players": []}');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: outsiders cannot import stats';
+end $$;
+reset role;
+select pg_temp.expect((select file_name from public.team_stats) = 'week2.csv', 'parents cannot change stats');
 \echo ALL RLS TESTS PASSED
