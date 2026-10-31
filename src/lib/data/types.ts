@@ -42,7 +42,11 @@ export interface Game {
   /** Final score, if the coach entered it. */
   scoreUs?: number | null;
   scoreThem?: number | null;
+  /** How the lineup is built: fair play (default) or competitive from GameChanger stats. */
+  lineupStyle?: LineupStyle;
 }
+
+export type LineupStyle = "fair" | "competitive";
 
 export interface Practice {
   id: string;

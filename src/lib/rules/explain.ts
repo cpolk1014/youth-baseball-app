@@ -14,6 +14,8 @@ export interface PlayerExplanation {
 }
 
 export interface LineupExplanation {
+  /** How the lineup was made, when it isn't the usual fair-play auto-fill. */
+  intro?: string[];
   /** Rules that are on and that this lineup follows. */
   followed: string[];
   /** Rules this lineup bends (warnings) or breaks, in plain words. */

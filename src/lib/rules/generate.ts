@@ -1,4 +1,10 @@
 import { solveAssignment } from "./assignment";
+import {
+  lineupStrength,
+  mustRulesOnly,
+  POSITION_WEIGHT,
+  type CompetitivePlan,
+} from "./competitive";
 import { isRuleOn } from "./config";
 import { computeParticipation, emptyParticipation } from "./participation";
 import { createRng, shuffle } from "./random";
@@ -20,6 +26,12 @@ export interface GenerateOptions {
   attempts?: number;
   /** The team's previous game, for rules across games (pitcher rest). */
   previous?: Lineup | null;
+  /**
+   * Build to win from season stats: Must rules still hold, Warn rules are set aside, the
+   * strongest kids play the most at the spots they fit, and the batting order follows
+   * the stats.
+   */
+  competitive?: CompetitivePlan | null;
 }
 
 export interface GeneratedLineup {
@@ -36,15 +48,16 @@ export function generateLineup(
   config: RuleConfig,
   seasonHistory: SeasonHistory,
   seed: number,
-  { innings, attempts = 60, previous = null }: GenerateOptions,
+  { innings, attempts = 60, previous = null, competitive = null }: GenerateOptions,
 ): GeneratedLineup {
+  const aims = competitive ? mustRulesOnly(config) : config;
   const { config: limits, players } = buildLimits(
     roster.filter((p) => p.active !== false),
-    config,
+    aims,
     innings,
     previous,
   );
-  const balance = isRuleOn(config, "season-balance")
+  const balance = isRuleOn(aims, "season-balance")
     ? seasonBalance(players, seasonHistory, config)
     : {
         infieldDeficit: new Map(players.map((p) => [p.id, 0])),
@@ -54,13 +67,13 @@ export function generateLineup(
 
   let best: { result: GeneratedLineup; score: number[] } | null = null;
   for (let i = 0; i < attempts; i++) {
-    const lineup = buildLineup(players, limits, balance, innings, rng);
+    const lineup = buildLineup(players, limits, balance, innings, rng, competitive);
+    // Checked against every rule, so warnings a competitive lineup bends are still shown.
     const violations = validateLineup(roster, lineup, config, seasonHistory, previous);
-    const score = [
-      violations.filter((v) => v.severity === "block").length,
-      violations.length,
-      preferenceMisses(players, lineup),
-    ];
+    const blocks = violations.filter((v) => v.severity === "block").length;
+    const score = competitive
+      ? [blocks, -lineupStrength(lineup, competitive), violations.length]
+      : [blocks, violations.length, preferenceMisses(players, lineup)];
     if (!best || isBetter(score, best.score)) best = { result: { lineup, violations }, score };
   }
   return best!.result;
@@ -245,8 +258,12 @@ function buildLineup(
   balance: Balance,
   innings: number,
   rng: () => number,
+  plan: CompetitivePlan | null,
 ): Lineup {
   const positions = config.fieldPositions;
+  // Competitive: the strongest first (ties shuffled); otherwise by preference.
+  const byStrength = (list: Player[], score: (p: Player) => number) =>
+    shuffle(list, rng).sort((a, b) => score(b) - score(a));
   const maxSame = config.maxInningsSamePosition;
   const prefers = (p: Player, pos: FieldPosition) => p.preferredPositions.includes(pos);
   const byPreference = (list: Player[], pos: FieldPosition) =>
@@ -260,8 +277,14 @@ function buildLineup(
     const fresh = list.filter((p) => !config.resting.has(p.id));
     return fresh.length > 0 ? fresh : list;
   };
-  const pitchOnly = byPreference(rested(players.filter((p) => p.canPitch && !p.canCatch)), "P");
-  const dual = byPreference(rested(players.filter((p) => p.canPitch && p.canCatch)), "C");
+  const pitchScore = (p: Player) => plan!.pitching.get(p.id) ?? 0;
+  const pitchOnly = plan
+    ? byStrength(rested(players.filter((p) => p.canPitch && !p.canCatch)), pitchScore)
+    : byPreference(rested(players.filter((p) => p.canPitch && !p.canCatch)), "P");
+  const dual = plan
+    ? // Weaker-pitching catchers are kept for catching first.
+      byStrength(rested(players.filter((p) => p.canPitch && p.canCatch)), (p) => -pitchScore(p))
+    : byPreference(rested(players.filter((p) => p.canPitch && p.canCatch)), "C");
   const reserved = new Set<string>();
   if (config.catcherCannotPitch) {
     // Keep enough catchers out of the pitching rotation, but never so many that
@@ -278,6 +301,7 @@ function buildLineup(
     }
   }
   let pitchers = [...pitchOnly, ...dual.filter((p) => !reserved.has(p.id))];
+  if (plan) pitchers = byStrength(pitchers, pitchScore);
   if (pitchers.length === 0) pitchers = shuffle(players, rng);
   const pitchStint = stintLength(innings, pitchers.length, maxSame, config.maxInningsPitched);
   pitchers = pitchers.slice(0, Math.ceil(innings / pitchStint));
@@ -286,10 +310,15 @@ function buildLineup(
     positions.includes("P") && !config.coachPitch ? planStints(pitchers, innings, pitchStint) : [];
 
   const pitcherIds = new Set(config.coachPitch ? [] : pitchers.map((p) => p.id));
-  let catchers = byPreference(
-    canCatch.filter((p) => !pitcherIds.has(p.id)),
-    "C",
-  );
+  let catchers = plan
+    ? byStrength(
+        canCatch.filter((p) => !pitcherIds.has(p.id)),
+        (p) => plan.fit.get(p.id)?.C ?? 0,
+      )
+    : byPreference(
+        canCatch.filter((p) => !pitcherIds.has(p.id)),
+        "C",
+      );
   if (catchers.length === 0)
     catchers = shuffle(
       players.filter((p) => !pitcherIds.has(p.id)),
@@ -328,9 +357,12 @@ function buildLineup(
 
     const free = players.filter((p) => !fixed.has(p.id));
     const satLast = config.aims.satLastGame.get(inning);
+    // Lowest key sits first. Competitive: the weakest sit, unless a Must rule spreads sits.
+    const spreadSits = !plan || config.severity["bench-rotation"] === "block";
     const benchKey = (p: Player) =>
       (satLast?.has(p.id) ? 500 : 0) +
-      count(p.id, "BENCH") * 100 +
+      (spreadSits ? count(p.id, "BENCH") * 100 : 0) +
+      (plan ? (plan.overall.get(p.id) ?? 0) * 50 : 0) +
       (fixedLater.has(p.id) ? -2 : 0) +
       balance.benchSurplus.get(p.id)! * 10 +
       rng();
@@ -357,6 +389,7 @@ function buildLineup(
         }
         if (outfield.has(pos) && outfieldCount(p.id) < config.minOutfieldInnings) c -= 20;
         // Coach's own rules.
+        if (plan) c -= POSITION_WEIGHT[pos] * (plan.fit.get(p.id)?.[pos] ?? 0) * 30;
         if (config.aims.never.get(p.id)?.has(pos)) c += 1000;
         for (const aim of config.aims.atLeast) {
           if (aim.positions.has(pos) && groupCount(p.id, aim.positions) < aim.innings) c -= 20;
@@ -381,7 +414,11 @@ function buildLineup(
     }
   }
 
-  const battingOrder = shuffle(players, rng).map((p) => p.id);
+  const here = new Set(players.map((p) => p.id));
+  const battingOrder = plan
+    ? plan.battingOrder.filter((id) => here.has(id))
+    : shuffle(players, rng).map((p) => p.id);
+  for (const p of players) if (!battingOrder.includes(p.id)) battingOrder.push(p.id);
   const order = new Map(battingOrder.map((id, i) => [id, i]));
   slots.sort((a, b) => a.inning - b.inning || order.get(a.playerId)! - order.get(b.playerId)!);
   return { innings, battingOrder, slots };

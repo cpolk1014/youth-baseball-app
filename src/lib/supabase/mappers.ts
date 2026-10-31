@@ -257,6 +257,7 @@ export function gameFromRow(r: GameRow): Game {
     status: r.status,
     scoreUs: r.score_us ?? null,
     scoreThem: r.score_them ?? null,
+    lineupStyle: r.lineup_style ?? "fair",
   };
 }
 
@@ -273,6 +274,8 @@ export function gameToRow(g: Game): GameRow {
     status: g.status,
     score_us: g.scoreUs ?? null,
     score_them: g.scoreThem ?? null,
+    // Left out when unknown, so saving a game never resets it.
+    ...(g.lineupStyle ? { lineup_style: g.lineupStyle } : {}),
   };
 }
 

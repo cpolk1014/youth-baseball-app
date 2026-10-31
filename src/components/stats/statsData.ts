@@ -23,7 +23,11 @@ interface Row {
   data: TeamStats;
 }
 
-export function useTeamStats(seasonId: string): {
+/** `enabled` false skips loading (people who can't see stats, or no season yet). */
+export function useTeamStats(
+  seasonId: string,
+  enabled = true,
+): {
   stats: SavedStats | null;
   loading: boolean;
   error: string | null;
@@ -38,10 +42,14 @@ export function useTeamStats(seasonId: string): {
 
   useEffect(() => {
     let current = true;
+    if (!enabled || !seasonId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- nothing to load
+      setLoading(false);
+      return;
+    }
     if (!signedIn) {
       try {
         const raw = window.localStorage.getItem(localKey(seasonId));
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- reading this device's copy
         setStats(raw ? (JSON.parse(raw) as SavedStats) : null);
       } catch {
         setStats(null);
@@ -70,7 +78,7 @@ export function useTeamStats(seasonId: string): {
     return () => {
       current = false;
     };
-  }, [seasonId, signedIn, version]);
+  }, [seasonId, signedIn, version, enabled]);
 
   useEffect(() => {
     const onSync = () => setVersion((v) => v + 1);

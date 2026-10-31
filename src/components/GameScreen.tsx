@@ -3,15 +3,25 @@
 import Link from "next/link";
 import { useState } from "react";
 import { formatGameDate, gameContext, gameResult, lastFilledInning } from "@/lib/data/game";
-import { saveGame, saveLineup, setGameResult, setGameStatus, useAppData } from "@/lib/data/store";
+import {
+  saveGame,
+  saveLineup,
+  setGameResult,
+  setGameStatus,
+  setLineupStyle,
+  useAppData,
+} from "@/lib/data/store";
 import { battingOrderMessage } from "@/lib/groupme/messages";
 import { assignPosition, positionAt, setAbsent, setBatting } from "@/lib/lineup/edit";
 import { rotateLeadoff } from "@/lib/rules/custom";
+import { competitivePlan } from "@/lib/rules/competitive";
 import { explainLineup } from "@/lib/rules/explain";
+import { explainCompetitive } from "@/lib/rules/explainCompetitive";
 import { generateLineup } from "@/lib/rules/generate";
 import type { Lineup } from "@/lib/rules/types";
 import { validateLineup } from "@/lib/rules/validate";
-import { ROLE_LABEL, permissionsFor } from "@/lib/data/permissions";
+import { ROLE_LABEL, isCoach, permissionsFor } from "@/lib/data/permissions";
+import { statLines } from "@/lib/stats/profile";
 import { AppShell, Loading } from "./AppShell";
 import { Attendance } from "./Attendance";
 import { BattingOrder } from "./BattingOrder";
@@ -21,6 +31,7 @@ import { ShareBattingCard } from "./ShareBattingCard";
 import { LineupGrid } from "./LineupGrid";
 import { PositionPicker } from "./PositionPicker";
 import { Sheet } from "./Sheet";
+import { useTeamStats } from "./stats/statsData";
 import { ViolationList } from "./ViolationList";
 import { WhyLineup } from "./WhyLineup";
 
@@ -39,6 +50,9 @@ export function GameScreen({ gameId }: { gameId: string }) {
   });
   const [posting, setPosting] = useState(false);
   const [sharing, setSharing] = useState(false);
+  // Only coaches and managers can see stats (the database enforces it).
+  const seesStats = !!data && (isCoach(data.me.role) || data.me.role === "manager");
+  const stats = useTeamStats(data?.season.id ?? "", seesStats);
 
   if (!data) {
     return (
@@ -72,10 +86,51 @@ export function GameScreen({ gameId }: { gameId: string }) {
     setUndo(lineup);
     saveLineup(game.id, next, seed);
   };
+  const style = game.lineupStyle ?? "fair";
+  const absent = new Set(lineup.absent ?? []);
+  const active = data.players.filter((p) => p.active !== false && !absent.has(p.id));
+  const lines = stats.stats ? statLines(stats.stats.data) : null;
+  const hasStats = !!lines && lines.size > 0;
+  const plan = hasStats ? competitivePlan(active, lines) : null;
+  const importedOn = stats.stats
+    ? new Date(stats.stats.importedAt).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      })
+    : null;
+  const leadoffRule = (setting: "block" | "any") =>
+    config.custom.some(
+      (r) =>
+        r.kind === "leadoff-rotation" &&
+        (setting === "any" ? r.setting !== "off" : r.setting === "block"),
+    );
+
   const autoFill = () => {
     const seed = ctx.autoFillSeed + 1;
-    const absent = new Set(lineup.absent ?? []);
-    const active = data.players.filter((p) => p.active !== false && !absent.has(p.id));
+    if (style === "competitive" && plan) {
+      const { lineup: generated } = generateLineup(active, config, history, seed, {
+        innings: game.innings,
+        previous,
+        competitive: plan,
+      });
+      // The stats set the batting order; kids who aren't here keep a place at the end.
+      const order = [
+        ...generated.battingOrder,
+        ...lineup.battingOrder.filter((id) => !generated.battingOrder.includes(id)),
+      ];
+      change(
+        {
+          ...generated,
+          battingOrder: leadoffRule("block")
+            ? rotateLeadoff(order, previous?.battingOrder[0])
+            : order,
+          notBatting: lineup.notBatting ?? [],
+          absent: lineup.absent ?? [],
+        },
+        seed,
+      );
+      return;
+    }
     const { lineup: generated } = generateLineup(active, config, history, seed, {
       innings: game.innings,
       previous,
@@ -86,9 +141,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
         ...generated,
         // Keep the coach's order, but if their leadoff-rotation rule is on, don't lead off
         // with last game's leadoff hitter.
-        battingOrder: config.custom.some(
-          (r) => r.kind === "leadoff-rotation" && r.setting !== "off",
-        )
+        battingOrder: leadoffRule("any")
           ? rotateLeadoff(lineup.battingOrder, previous?.battingOrder[0])
           : lineup.battingOrder,
         notBatting: lineup.notBatting ?? [],
@@ -220,10 +273,55 @@ export function GameScreen({ gameId }: { gameId: string }) {
 
       {view === "field" ? (
         <>
+          {!lineupLocked && (
+            <div className="mb-3">
+              <div
+                role="radiogroup"
+                aria-label="How auto-fill builds the lineup"
+                className="grid grid-cols-2 gap-2"
+              >
+                {(["fair", "competitive"] as const).map((s) => (
+                  <button
+                    key={s}
+                    role="radio"
+                    aria-checked={style === s}
+                    disabled={s === "competitive" && !hasStats && style !== "competitive"}
+                    onClick={() => setLineupStyle(game.id, s)}
+                    className={`min-h-12 rounded-xl px-2 py-1 text-base font-bold disabled:opacity-40 ${
+                      style === s
+                        ? "bg-[var(--team)] text-white"
+                        : "border-2 border-slate-300 bg-white text-slate-800 active:bg-slate-100"
+                    }`}
+                  >
+                    {s === "fair" ? "Fair play" : "Competitive"}
+                    <span className="block text-xs font-semibold opacity-80">
+                      {s === "fair" ? "Everyone plays evenly" : "From GameChanger stats"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {!hasStats && !stats.loading && (
+                <p className="mt-2 text-sm text-slate-700">
+                  {seesStats ? (
+                    <>
+                      To build a competitive lineup,{" "}
+                      <Link href="/stats" className="font-semibold underline">
+                        import GameChanger stats
+                      </Link>{" "}
+                      first.
+                    </>
+                  ) : (
+                    "Competitive lineups use GameChanger stats, which coaches and managers import."
+                  )}
+                </p>
+              )}
+            </div>
+          )}
           <div className={`mb-3 flex gap-2 ${lineupLocked ? "hidden" : ""}`}>
             <button
               onClick={autoFill}
-              className="h-14 flex-1 rounded-xl bg-green-700 text-lg font-bold text-white active:bg-green-800"
+              disabled={style === "competitive" && !plan}
+              className="h-14 flex-1 rounded-xl bg-green-700 text-lg font-bold text-white active:bg-green-800 disabled:opacity-40"
             >
               {lineup.slots.length ? "Auto-fill again" : "Auto-fill"}
             </button>
@@ -271,13 +369,25 @@ export function GameScreen({ gameId }: { gameId: string }) {
           <div className="mt-4">
             {lineup.slots.length === 0 ? (
               <p className="rounded-xl border-2 border-slate-300 bg-white p-4 text-base">
-                Tap <b>Auto-fill</b> for a fair lineup, or tap any square to set a position.
+                Tap <b>Auto-fill</b> for a {style === "competitive" ? "competitive" : "fair"}{" "}
+                lineup, or tap any square to set a position.
               </p>
             ) : (
               <>
                 <ViolationList violations={shown} emptyCells={emptyCells} />
                 <WhyLineup
-                  explanation={explainLineup(data.players, lineup, config, history, violations)}
+                  explanation={
+                    style === "competitive"
+                      ? explainCompetitive(
+                          data.players,
+                          lineup,
+                          config,
+                          violations,
+                          plan,
+                          importedOn,
+                        )
+                      : explainLineup(data.players, lineup, config, history, violations)
+                  }
                 />
               </>
             )}

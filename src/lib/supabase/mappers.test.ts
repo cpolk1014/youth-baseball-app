@@ -43,7 +43,13 @@ describe("supabase mappers", () => {
       start_time: "09:00",
       score_us: null,
       score_them: null,
+      lineup_style: "fair",
     });
+    expect(gameFromRow({ ...gameRow, lineup_style: "competitive" }).lineupStyle).toBe(
+      "competitive",
+    );
+    // A game without a known style doesn't overwrite the saved one.
+    expect(gameToRow({ ...g, lineupStyle: undefined })).not.toHaveProperty("lineup_style");
   });
 
   it("builds save_lineup arguments in snake_case", () => {

@@ -96,6 +96,7 @@ export interface GameRow {
   status: "scheduled" | "final";
   score_us?: number | null;
   score_them?: number | null;
+  lineup_style?: "fair" | "competitive";
 }
 
 export interface LineupRow {

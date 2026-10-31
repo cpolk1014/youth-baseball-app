@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { competitivePlan, type StatLine } from "./competitive";
 import { fieldPositionsFor, resolveRuleConfig } from "./config";
 import { generateLineup } from "./generate";
 import { computeParticipation } from "./participation";
@@ -206,5 +207,66 @@ describe("generateLineup follows the coach's rule settings", () => {
     const roster = makeRoster(14);
     const { violations } = generateLineup(roster, config, [], 5, { innings: 6 });
     expect(violations.filter((v) => v.rule === "min-innings-played")).toEqual([]);
+  });
+});
+
+describe("generateLineup, competitive", () => {
+  const roster = makeRoster(12);
+  // Stats: the first player is the best at everything, the last the weakest.
+  const lines = new Map<string, StatLine>(
+    roster.map((p, i) => {
+      const q = 1 - i / roster.length;
+      return [
+        p.id,
+        {
+          pa: 60,
+          obp: 0.25 + 0.3 * q,
+          slg: 0.25 + 0.4 * q,
+          ops: 0.5 + 0.7 * q,
+          ip: p.canPitch ? 20 : 0,
+          whip: p.canPitch ? 3 - 2 * q : null,
+          era: null,
+          fpct: 0.7 + 0.25 * q,
+          chances: 40,
+          innings: i === 3 ? { SS: 100 } : { LF: 10 },
+        },
+      ];
+    }),
+  );
+  const plan = competitivePlan(roster, lines);
+  const build = (seed = 7) =>
+    generateLineup(roster, config, [], seed, { innings: 6, competitive: plan }).lineup;
+
+  it("still follows every Must rule, and is deterministic", () => {
+    const lineup = build();
+    expect(blocks(roster, lineup)).toEqual([]);
+    expect(build()).toEqual(lineup);
+  });
+
+  it("bats by the stats", () => {
+    expect(build().battingOrder).toEqual(plan.battingOrder);
+  });
+
+  it("starts the best pitcher, plays the shortstop at SS, and sits the weakest the most", () => {
+    const lineup = build();
+    const pitchers = roster.filter((p) => p.canPitch).map((p) => p.id);
+    const bestPitcher = pitchers.reduce((a, b) =>
+      plan.pitching.get(a)! >= plan.pitching.get(b)! ? a : b,
+    );
+    expect(positionsOf(lineup, bestPitcher)[0]).toBe("P");
+    expect(positionsOf(lineup, roster[3]!.id).filter((p) => p === "SS").length).toBeGreaterThan(0);
+    const sits = (id: string) => positionsOf(lineup, id).filter((p) => p === "BENCH").length;
+    const strong = roster.slice(0, 3).reduce((s, p) => s + sits(p.id), 0);
+    const weak = roster.slice(-3).reduce((s, p) => s + sits(p.id), 0);
+    expect(weak).toBeGreaterThan(strong);
+  });
+
+  it("sets Warn rules aside but keeps Must ones", () => {
+    const strict = resolveRuleConfig({
+      severity: { "max-same-position": "block", "season-balance": "warn" },
+    });
+    const { lineup } = generateLineup(roster, strict, [], 7, { innings: 6, competitive: plan });
+    const fails = validateLineup(roster, lineup, strict, []).filter((v) => v.severity === "block");
+    expect(fails).toEqual([]);
   });
 });

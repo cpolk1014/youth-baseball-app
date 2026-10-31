@@ -22,6 +22,13 @@ export function WhyLineup({ explanation }: { explanation: LineupExplanation }) {
       </button>
       {open && (
         <div className="flex flex-col gap-4 border-t-2 border-slate-100 px-4 pt-3 pb-4">
+          {explanation.intro && (
+            <div className="flex flex-col gap-2 rounded-lg bg-slate-100 p-3 text-base">
+              {explanation.intro.map((t) => (
+                <p key={t}>{t}</p>
+              ))}
+            </div>
+          )}
           {explanation.followed.length > 0 && (
             <div>
               <h3 className="mb-1 text-sm font-bold tracking-wide text-slate-600 uppercase">
@@ -78,8 +85,9 @@ export function WhyLineup({ explanation }: { explanation: LineupExplanation }) {
             )}
           </div>
           <p className="text-sm text-slate-600">
-            Where two choices were equally fair (like who plays 2B vs. SS in an inning), auto-fill
-            picked one. Those can be swapped without breaking any rule.
+            {explanation.intro
+              ? "Where two kids' stats were about even, auto-fill picked one. Those can be swapped without breaking any Must rule."
+              : "Where two choices were equally fair (like who plays 2B vs. SS in an inning), auto-fill picked one. Those can be swapped without breaking any rule."}
           </p>
         </div>
       )}

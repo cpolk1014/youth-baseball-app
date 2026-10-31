@@ -37,6 +37,7 @@ import type {
   AppData,
   Game,
   GameStatus,
+  LineupStyle,
   Guardian,
   PlayAssignment,
   Practice,
@@ -104,7 +105,7 @@ export async function loadFromSupabase(
     sb
       .from("game")
       .select(
-        "id,season_id,game_date,start_time,opponent,location,innings,field_players,status,score_us,score_them",
+        "id,season_id,game_date,start_time,opponent,location,innings,field_players,status,score_us,score_them,lineup_style",
       )
       .eq("season_id", season.id)
       .then((r) => check<GameRow[]>(r)),
@@ -574,4 +575,8 @@ export async function playerDataProblem(playerId: string): Promise<string | null
 
 export async function deletePlayerRow(playerId: string): Promise<void> {
   check(await getBrowserSupabase().from("player").delete().eq("id", playerId));
+}
+
+export async function saveLineupStyleRow(gameId: string, style: LineupStyle): Promise<void> {
+  check(await getBrowserSupabase().from("game").update({ lineup_style: style }).eq("id", gameId));
 }

@@ -14,6 +14,7 @@ import type {
   Game,
   GameLineup,
   GameStatus,
+  LineupStyle,
   Guardian,
   PlayAssignment,
   Practice,
@@ -324,6 +325,17 @@ export function setGameResult(
       games: d.games.map((g) => (g.id === gameId ? { ...g, status, scoreUs, scoreThem } : g)),
     }),
     async () => (await remote()).saveGameResult(gameId, status, scoreUs, scoreThem),
+  );
+}
+
+/** Coach: build this game's lineup for fair play or to compete (from GameChanger stats). */
+export function setLineupStyle(gameId: string, lineupStyle: LineupStyle): void {
+  update(
+    (d) => ({
+      ...d,
+      games: d.games.map((g) => (g.id === gameId ? { ...g, lineupStyle } : g)),
+    }),
+    async () => (await remote()).saveLineupStyleRow(gameId, lineupStyle),
   );
 }
 
