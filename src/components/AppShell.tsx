@@ -12,7 +12,7 @@ import {
 } from "react";
 import { themeVars } from "@/lib/branding/theme";
 import { isCoach, permissionsFor } from "@/lib/data/permissions";
-import { syncNow, useAppData, useStoreState } from "@/lib/data/store";
+import { myUserId, syncNow, useAppData, useStoreState } from "@/lib/data/store";
 import { DataStatus } from "./DataStatus";
 import { TeamBadge } from "./TeamBadge";
 
@@ -204,9 +204,12 @@ function MenuLinks({ tab, onPick }: { tab: Tab; onPick?: () => void }) {
   const perms = data ? permissionsFor(data.me.role, data.team.optionedAt !== null) : null;
   // Coaches (and owners) and managers; stays true on an optioned team, unlike editTeam.
   const staff = !!data && (isCoach(data.me.role) || data.me.role === "manager");
+  // Families linked to a player import that player's box scores.
+  const hasKids = !!data && data.guardians.some((g) => g.userId === myUserId(data));
   const pathname = usePathname();
   const team: { href: string; label: string; show: boolean }[] = [
     { href: "/members", label: "Coaches & parents", show: signedIn },
+    { href: "/my-stats", label: "My player's stats", show: hasKids },
     { href: "/season/rules", label: "Fair play rules", show: true },
     { href: "/team-look", label: "Team colors & logo", show: !!perms?.editTeam },
     { href: "/uniforms", label: "Uniforms", show: staff },

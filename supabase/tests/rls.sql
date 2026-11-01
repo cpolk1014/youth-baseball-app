@@ -1058,4 +1058,39 @@ select pg_temp.expect(public.send_due_game_posts() = 0, 'a game day posted by ha
 update public.team set game_post_mode = 'off' where id = 'eeeeeeee-0000-4000-8000-000000000010';
 delete from public.game_post_log where team_id = 'eeeeeeee-0000-4000-8000-000000000010';
 select pg_temp.expect(public.send_due_game_posts() = 0, 'nothing posts when game day posts are off');
+-- ── a kid's own game stats (parent box score import) ──
+-- Parent 0002 is linked to player 1003 (from the fixtures); 1004 is someone else's kid.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+insert into public.player_game_stat (player_id, game_date, opponent, batting)
+  values ('00000000-0000-4000-8000-000000001003', '2026-06-20', 'LBC Rudy 13U', '{"ab": 2, "h": 1}');
+select pg_temp.expect((select count(*) from public.player_game_stat) = 1, 'parents import their own kid''s game');
+do $$ begin
+  insert into public.player_game_stat (player_id, game_date, opponent, batting)
+    values ('00000000-0000-4000-8000-000000001004', '2026-06-20', 'LBC Rudy 13U', '{"ab": 3}');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot add stats for another family''s kid';
+end $$;
+do $$ begin
+  insert into public.player_game_stat (player_id, game_date, opponent, batting)
+    values ('00000000-0000-4000-8000-000000001003', '2026-06-20', 'LBC Rudy 13U', '{"ab": 3}');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when unique_violation then raise notice 'ok: the same game is stored once';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select count(*) from public.player_game_stat) = 0, 'coaches do not see a family''s imported stats');
+delete from public.player_game_stat;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.player_game_stat) = 0, 'outsiders do not see them');
+reset role;
+select pg_temp.expect((select count(*) from public.player_game_stat) = 1, 'nobody else can remove them');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+delete from public.player_game_stat;
+select pg_temp.expect((select count(*) from public.player_game_stat) = 0, 'parents remove their kid''s game');
+reset role;
 \echo ALL RLS TESTS PASSED
