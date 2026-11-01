@@ -33,6 +33,7 @@ import { PositionPicker } from "./PositionPicker";
 import { Sheet } from "./Sheet";
 import { useTeamStats } from "./stats/statsData";
 import { ViolationList } from "./ViolationList";
+import { GameUniformCard } from "./uniforms/GameUniformCard";
 import { WhyLineup } from "./WhyLineup";
 
 type View = "field" | "batting" | "attendance";
@@ -249,6 +250,8 @@ export function GameScreen({ gameId }: { gameId: string }) {
           )}
         </div>
       )}
+
+      <GameUniformCard game={game} combos={data.uniforms} canEdit={perms.editTeam} />
 
       <div
         role="tablist"

@@ -12,7 +12,9 @@ import {
   practiceToRow,
   quizResultToRow,
   summarizeMyTeams,
+  uniformToRow,
 } from "@/lib/supabase/mappers";
+import type { GameUniform, UniformCombo } from "@/lib/uniforms";
 import type { MemberRole } from "./permissions";
 import type {
   GameRow,
@@ -29,6 +31,7 @@ import type {
   QuizResultRow,
   SeasonRow,
   TeamRow,
+  UniformComboRow,
 } from "@/lib/supabase/rows";
 import type { MoneySummary } from "@/lib/finance/ledger";
 import type { RuleConfigInput } from "@/lib/rules/config";
@@ -105,7 +108,7 @@ export async function loadFromSupabase(
     sb
       .from("game")
       .select(
-        "id,season_id,game_date,start_time,opponent,location,innings,field_players,status,score_us,score_them,lineup_style",
+        "id,season_id,game_date,start_time,opponent,location,innings,field_players,status,score_us,score_them,lineup_style,uniform_combo_id,uniform_custom",
       )
       .eq("season_id", season.id)
       .then((r) => check<GameRow[]>(r)),
@@ -201,6 +204,13 @@ export async function loadFromSupabase(
   const groupme = check<{ bot_id: string; group_name: string | null } | null>(
     await sb.from("team_groupme").select("bot_id,group_name").eq("team_id", team.id).maybeSingle(),
   );
+  const uniforms = check<UniformComboRow[]>(
+    await sb
+      .from("uniform_combo")
+      .select("id,team_id,name,shirt,pants,hat,belt,socks")
+      .eq("team_id", team.id)
+      .order("created_at"),
+  );
   const members = check<MemberRow[]>(
     await sb.from("member").select("id,team_id,user_id,role,display_name").eq("team_id", team.id),
   );
@@ -236,6 +246,7 @@ export async function loadFromSupabase(
         financeShares,
         financeSummary,
         groupme,
+        uniforms,
         userId: user?.id ?? "",
         myTeams,
       },
@@ -579,4 +590,32 @@ export async function deletePlayerRow(playerId: string): Promise<void> {
 
 export async function saveLineupStyleRow(gameId: string, style: LineupStyle): Promise<void> {
   check(await getBrowserSupabase().from("game").update({ lineup_style: style }).eq("id", gameId));
+}
+
+export async function saveUniformRow(combo: UniformCombo, teamId: string): Promise<void> {
+  check(await getBrowserSupabase().from("uniform_combo").upsert(uniformToRow(combo, teamId)));
+}
+
+export async function addUniformRows(combos: UniformCombo[], teamId: string): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("uniform_combo")
+      .upsert(combos.map((c) => uniformToRow(c, teamId))),
+  );
+}
+
+export async function deleteUniformRow(id: string): Promise<void> {
+  check(await getBrowserSupabase().from("uniform_combo").delete().eq("id", id));
+}
+
+export async function saveGameUniformRow(gameId: string, uniform: GameUniform): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("game")
+      .update({
+        uniform_combo_id: uniform && "comboId" in uniform ? uniform.comboId : null,
+        uniform_custom: uniform && "custom" in uniform ? uniform.custom : null,
+      })
+      .eq("id", gameId),
+  );
 }

@@ -8,6 +8,7 @@ import type { MemberRole } from "./permissions";
 import { receiptPath } from "@/lib/finance/receipt";
 import type { RuleConfigInput } from "@/lib/rules/config";
 import type { FinanceEntry, FinanceShare } from "@/lib/finance/types";
+import type { GameUniform, UniformCombo } from "@/lib/uniforms";
 import { SEED_DATA } from "./seed";
 import type {
   AppData,
@@ -142,6 +143,7 @@ function upgradeLocalData(d: AppData): AppData {
     financeShares: d.financeShares ?? [],
     financeSummary: null,
     groupme: null,
+    uniforms: d.uniforms ?? [],
     myTeams: (
       d.myTeams ?? [
         {
@@ -325,6 +327,57 @@ export function setGameResult(
       games: d.games.map((g) => (g.id === gameId ? { ...g, status, scoreUs, scoreThem } : g)),
     }),
     async () => (await remote()).saveGameResult(gameId, status, scoreUs, scoreThem),
+  );
+}
+
+/** Coach or manager: add or change a uniform combo. */
+export function saveUniform(combo: UniformCombo): void {
+  const teamId = data!.team.id;
+  update(
+    (d) => ({
+      ...d,
+      uniforms: d.uniforms.some((u) => u.id === combo.id)
+        ? d.uniforms.map((u) => (u.id === combo.id ? combo : u))
+        : [...d.uniforms, combo],
+    }),
+    async () => (await remote()).saveUniformRow(combo, teamId),
+  );
+}
+
+/** Add combos read from a flyer, saved as one batch and awaited. */
+export async function addUniforms(combos: UniformCombo[]): Promise<void> {
+  const teamId = data!.team.id;
+  update((d) => ({ ...d, uniforms: [...d.uniforms, ...combos] }));
+  if (state.mode !== "supabase") return;
+  try {
+    await enqueue(async () => (await remote()).addUniformRows(combos, teamId));
+  } catch (e) {
+    await loadRemote();
+    throw e;
+  }
+}
+
+/** Remove a combo; games that wore it go back to no uniform set. */
+export function deleteUniform(id: string): void {
+  update(
+    (d) => ({
+      ...d,
+      uniforms: d.uniforms.filter((u) => u.id !== id),
+      games: d.games.map((g) =>
+        g.uniform && "comboId" in g.uniform && g.uniform.comboId === id
+          ? { ...g, uniform: null }
+          : g,
+      ),
+    }),
+    async () => (await remote()).deleteUniformRow(id),
+  );
+}
+
+/** Coach or manager: what the team wears to a game. */
+export function setGameUniform(gameId: string, uniform: GameUniform): void {
+  update(
+    (d) => ({ ...d, games: d.games.map((g) => (g.id === gameId ? { ...g, uniform } : g)) }),
+    async () => (await remote()).saveGameUniformRow(gameId, uniform),
   );
 }
 

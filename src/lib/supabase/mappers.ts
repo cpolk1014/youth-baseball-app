@@ -1,4 +1,5 @@
 import type { RuleConfigInput } from "@/lib/rules/config";
+import { cleanPieces, type UniformCombo } from "@/lib/uniforms";
 import type { Lineup, Player } from "@/lib/rules/types";
 import { isHex } from "@/lib/branding/color";
 import { bestRole } from "@/lib/data/permissions";
@@ -30,6 +31,7 @@ import type {
   QuizResultRow,
   SeasonRow,
   TeamRow,
+  UniformComboRow,
 } from "./rows";
 
 export interface TeamRows {
@@ -49,6 +51,8 @@ export interface TeamRows {
   financeShares: FinanceShareRow[];
   financeSummary: MoneySummary | null;
   groupme: { bot_id: string; group_name: string | null } | null;
+  /** Missing in older callers (tests): no combos. */
+  uniforms?: UniformComboRow[];
   /** The signed-in user. */
   userId: string;
   myTeams: TeamSummary[];
@@ -258,7 +262,29 @@ export function gameFromRow(r: GameRow): Game {
     scoreUs: r.score_us ?? null,
     scoreThem: r.score_them ?? null,
     lineupStyle: r.lineup_style ?? "fair",
+    uniform: r.uniform_combo_id
+      ? { comboId: r.uniform_combo_id }
+      : r.uniform_custom
+        ? { custom: cleanPieces(r.uniform_custom) }
+        : null,
   };
+}
+
+export function uniformFromRow(r: UniformComboRow): UniformCombo {
+  return {
+    id: r.id,
+    name: r.name,
+    shirt: r.shirt,
+    pants: r.pants,
+    hat: r.hat,
+    belt: r.belt,
+    socks: r.socks,
+  };
+}
+
+export function uniformToRow(u: UniformCombo, teamId: string): UniformComboRow {
+  const { id, name, shirt, pants, hat, belt, socks } = u;
+  return { id, team_id: teamId, name, shirt, pants, hat, belt, socks };
 }
 
 export function gameToRow(g: Game): GameRow {
@@ -344,6 +370,7 @@ export function appDataFromRows(
     groupme: rows.groupme
       ? { botId: rows.groupme.bot_id, groupName: rows.groupme.group_name }
       : null,
+    uniforms: (rows.uniforms ?? []).map(uniformFromRow),
     team: {
       id: rows.team.id,
       name: rows.team.name,

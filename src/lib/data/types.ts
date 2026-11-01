@@ -1,4 +1,5 @@
 import type { RuleConfigInput } from "@/lib/rules/config";
+import type { GameUniform, UniformCombo } from "@/lib/uniforms";
 import type { Lineup, Player } from "@/lib/rules/types";
 import type { FinanceEntry, FinanceShare } from "@/lib/finance/types";
 import type { MoneySummary } from "@/lib/finance/ledger";
@@ -44,6 +45,8 @@ export interface Game {
   scoreThem?: number | null;
   /** How the lineup is built: fair play (default) or competitive from GameChanger stats. */
   lineupStyle?: LineupStyle;
+  /** What the team wears: a saved combo, pieces just for this game, or not set. */
+  uniform?: GameUniform;
 }
 
 export type LineupStyle = "fair" | "competitive";
@@ -155,4 +158,6 @@ export interface AppData {
   financeSummary: MoneySummary | null;
   /** The team's GroupMe bot; only loaded for coaches and managers (null otherwise). */
   groupme: { botId: string; groupName: string | null } | null;
+  /** The team's uniform combos (everyone sees them; coaches and managers edit). */
+  uniforms: UniformCombo[];
 }

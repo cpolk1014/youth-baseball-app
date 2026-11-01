@@ -923,4 +923,50 @@ exception when insufficient_privilege then raise notice 'ok: outsiders cannot im
 end $$;
 reset role;
 select pg_temp.expect((select file_name from public.team_stats) = 'week2.csv', 'parents cannot change stats');
+-- ── uniforms ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+insert into public.uniform_combo (id, team_id, name, shirt, pants, hat, belt, socks) values
+  ('dddddddd-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 'Dark combo', 'Black', 'Black', 'Red', 'Red', 'Red');
+update public.game set uniform_combo_id = 'dddddddd-0000-4000-8000-000000000001' where id = '00000000-0000-4000-8000-000000010002';
+select pg_temp.expect((select uniform_combo_id is not null from public.game where id = '00000000-0000-4000-8000-000000010002'), 'coaches assign a uniform to a game');
+do $$ begin
+  update public.game set uniform_custom = '{"shirt": "White"}' where id = '00000000-0000-4000-8000-000000010002';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: a game wears a combo or its own pieces, not both';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false);
+update public.uniform_combo set hat = 'Black' where id = 'dddddddd-0000-4000-8000-000000000001';
+select pg_temp.expect((select hat from public.uniform_combo where id = 'dddddddd-0000-4000-8000-000000000001') = 'Black', 'managers change uniforms');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from public.uniform_combo) = 1, 'parents see the team''s uniforms');
+update public.uniform_combo set hat = 'Pink';
+delete from public.uniform_combo;
+select pg_temp.expect((select hat from public.uniform_combo) = 'Black', 'parents cannot change or remove uniforms');
+do $$ begin
+  insert into public.uniform_combo (team_id, name) values ('00000000-0000-4000-8000-000000000001', 'Mine');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot add uniforms';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.uniform_combo) = 0, 'outsiders see no uniforms');
+reset role;
+insert into public.team (id, name, age_group) values ('eeeeeeee-0000-4000-8000-000000000001', 'Rivals', '9U');
+insert into public.uniform_combo (id, team_id, name) values ('dddddddd-0000-4000-8000-000000000002', 'eeeeeeee-0000-4000-8000-000000000001', 'Theirs');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+do $$ begin
+  update public.game set uniform_combo_id = 'dddddddd-0000-4000-8000-000000000002' where id = '00000000-0000-4000-8000-000000010001';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: a game cannot wear another team''s uniform';
+end $$;
+reset role;
+delete from public.uniform_combo where id = 'dddddddd-0000-4000-8000-000000000001';
+select pg_temp.expect((select uniform_combo_id is null from public.game where id = '00000000-0000-4000-8000-000000010002'), 'deleting a combo clears it from games');
 \echo ALL RLS TESTS PASSED

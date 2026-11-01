@@ -3,9 +3,11 @@ import { lineupFromGrid } from "@/lib/rules/test-utils";
 import { SEED_DATA } from "./seed";
 import {
   addPractices,
+  addUniforms,
   deleteAssignment,
   deletePlayer,
   deletePractice,
+  deleteUniform,
   getAppData,
   importSchedule,
   recordQuizResult,
@@ -17,6 +19,8 @@ import {
   saveLineup,
   savePractice,
   setCoachPitch,
+  setGameUniform,
+  saveUniform,
   setGameStatus,
 } from "./store";
 
@@ -166,5 +170,37 @@ describe("deletePlayer", () => {
     saveLineup(game.id, { ...lineupFromGrid({ a: ["P"] }), battingOrder: ["mistake"] });
     await expect(deletePlayer("mistake")).rejects.toThrow(/lineup.*Turn off Active/);
     expect(getAppData().players.some((p) => p.id === "mistake")).toBe(true);
+  });
+});
+
+describe("uniforms", () => {
+  beforeEach(() => resetLocalData());
+  const dark = {
+    id: "dark",
+    name: "Dark combo",
+    shirt: "Black",
+    pants: "Black",
+    hat: "Red",
+    belt: "Red",
+    socks: "Red",
+  };
+
+  it("saves combos, assigns them to games, and clears games when a combo is deleted", () => {
+    saveUniform(dark);
+    saveUniform({ ...dark, hat: "Black" });
+    expect(getAppData().uniforms).toEqual([{ ...dark, hat: "Black" }]);
+    setGameUniform(game.id, { comboId: "dark" });
+    expect(findGame(game.id)?.uniform).toEqual({ comboId: "dark" });
+    deleteUniform("dark");
+    expect(getAppData().uniforms).toEqual([]);
+    expect(findGame(game.id)?.uniform).toBeNull();
+  });
+
+  it("keeps a game's own uniform when a combo is deleted", async () => {
+    await addUniforms([dark]);
+    const custom = { ...dark, shirt: "Gray" } as const;
+    setGameUniform(game.id, { custom });
+    deleteUniform("dark");
+    expect(findGame(game.id)?.uniform).toEqual({ custom });
   });
 });

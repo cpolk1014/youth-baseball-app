@@ -209,6 +209,7 @@ function MenuLinks({ tab, onPick }: { tab: Tab; onPick?: () => void }) {
     { href: "/members", label: "Coaches & parents", show: signedIn },
     { href: "/season/rules", label: "Fair play rules", show: true },
     { href: "/team-look", label: "Team colors & logo", show: !!perms?.editTeam },
+    { href: "/uniforms", label: "Uniforms", show: staff },
     { href: "/groupme", label: "GroupMe", show: signedIn && !!perms?.editTeam },
   ];
   const item = (current: boolean) =>

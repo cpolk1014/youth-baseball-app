@@ -85,4 +85,5 @@ export const SEED_DATA: AppData = {
   financeShares: [],
   financeSummary: null,
   groupme: null,
+  uniforms: [],
 };

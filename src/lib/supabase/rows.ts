@@ -97,6 +97,19 @@ export interface GameRow {
   score_us?: number | null;
   score_them?: number | null;
   lineup_style?: "fair" | "competitive";
+  uniform_combo_id?: string | null;
+  uniform_custom?: Record<string, unknown> | null;
+}
+
+export interface UniformComboRow {
+  id: string;
+  team_id: string;
+  name: string;
+  shirt: string | null;
+  pants: string | null;
+  hat: string | null;
+  belt: string | null;
+  socks: string | null;
 }
 
 export interface LineupRow {
