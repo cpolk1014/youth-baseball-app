@@ -108,6 +108,7 @@ export function GamesScreen() {
             key={adding.id}
             game={adding}
             filledInnings={0}
+            arriveMinutes={data.team.gameDay?.arriveMinutes ?? null}
             onCancel={() => setAdding(null)}
             onSave={(g) => {
               saveGame(g);

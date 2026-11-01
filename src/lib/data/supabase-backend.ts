@@ -39,6 +39,7 @@ import type { FinanceEntry, FinanceShare } from "@/lib/finance/types";
 import type {
   AppData,
   Game,
+  GameDaySettings,
   GameStatus,
   LineupStyle,
   Guardian,
@@ -68,7 +69,9 @@ export async function loadFromSupabase(
   const [allTeams, myMemberships] = await Promise.all([
     sb
       .from("team")
-      .select("id,name,age_group,coach_pitch,optioned_at,colors,logo_path")
+      .select(
+        "id,name,age_group,coach_pitch,optioned_at,colors,logo_path,timezone,arrive_minutes,game_post_mode,game_post_hours,game_post_days,game_post_time",
+      )
       .order("created_at")
       .then((r) => check<TeamRow[]>(r)),
     sb
@@ -108,7 +111,7 @@ export async function loadFromSupabase(
     sb
       .from("game")
       .select(
-        "id,season_id,game_date,start_time,opponent,location,innings,field_players,status,score_us,score_them,lineup_style,uniform_combo_id,uniform_custom",
+        "id,season_id,game_date,start_time,opponent,location,innings,field_players,status,score_us,score_them,lineup_style,uniform_combo_id,uniform_custom,arrive_time",
       )
       .eq("season_id", season.id)
       .then((r) => check<GameRow[]>(r)),
@@ -617,5 +620,50 @@ export async function saveGameUniformRow(gameId: string, uniform: GameUniform): 
         uniform_custom: uniform && "custom" in uniform ? uniform.custom : null,
       })
       .eq("id", gameId),
+  );
+}
+
+export async function saveGameDayRow(teamId: string, g: GameDaySettings): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("team")
+      .update({
+        timezone: g.timezone,
+        arrive_minutes: g.arriveMinutes,
+        game_post_mode: g.postMode,
+        game_post_hours: g.postHours,
+        game_post_days: g.postDays,
+        game_post_time: g.postTime,
+      })
+      .eq("id", teamId),
+  );
+}
+
+export interface GameDayPost {
+  gameDate: string;
+  /** When it goes out automatically; null when posts are off. */
+  sendAt: string | null;
+  message: string | null;
+  /** When it went out (automatically or by hand), if it has. */
+  sentAt: string | null;
+}
+
+/** The next game day's post, built by the database exactly as it will be posted. */
+export async function nextGameDayPost(teamId: string): Promise<GameDayPost | null> {
+  const rows = check<
+    { game_date: string; send_at: string | null; message: string | null; sent_at: string | null }[]
+  >(await getBrowserSupabase().rpc("next_game_day_post", { p_team_id: teamId }));
+  const r = rows[0];
+  return r
+    ? { gameDate: r.game_date, sendAt: r.send_at, message: r.message, sentAt: r.sent_at }
+    : null;
+}
+
+export async function markGameDayPosted(teamId: string, gameDate: string): Promise<void> {
+  check(
+    await getBrowserSupabase().rpc("mark_game_day_posted", {
+      p_team_id: teamId,
+      p_date: gameDate,
+    }),
   );
 }

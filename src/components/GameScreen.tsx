@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { formatGameDate, gameContext, gameResult, lastFilledInning } from "@/lib/data/game";
+import {
+  arriveBy,
+  formatGameDate,
+  gameContext,
+  gameResult,
+  lastFilledInning,
+} from "@/lib/data/game";
 import {
   saveGame,
   saveLineup,
@@ -166,6 +172,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
     setConfirmFinal(true);
   };
   const result = gameResult(game);
+  const arrival = arriveBy(game, data.team.gameDay ? data.team.gameDay.arriveMinutes : 60);
 
   return (
     <AppShell
@@ -249,6 +256,13 @@ export function GameScreen({ gameId }: { gameId: string }) {
             </button>
           )}
         </div>
+      )}
+
+      {!isFinal && arrival && (
+        <p className="mb-3 rounded-xl bg-white px-3 py-2 text-lg">
+          <span className="font-bold">Arrive by {arrival}</span>
+          {game.location && <span className="text-slate-600"> · {game.location}</span>}
+        </p>
       )}
 
       <GameUniformCard game={game} combos={data.uniforms} canEdit={perms.editTeam} />
@@ -458,6 +472,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
           <GameForm
             game={game}
             filledInnings={lastFilledInning(data.lineups[game.id])}
+            arriveMinutes={data.team.gameDay?.arriveMinutes ?? null}
             onCancel={() => setEditing(false)}
             onSave={(g) => {
               saveGame(g);

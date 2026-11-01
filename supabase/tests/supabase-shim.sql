@@ -37,3 +37,12 @@ grant usage on schema storage to anon, authenticated;
 grant all on storage.objects to anon, authenticated;
 grant select on storage.buckets to anon, authenticated;
 grant execute on function storage.foldername(text) to anon, authenticated;
+
+-- pg_net stand-in: records posts instead of sending them.
+create schema net;
+create table net.sent (id bigserial primary key, url text, body jsonb);
+create function net.http_post(
+  url text, body jsonb, params jsonb default '{}', headers jsonb default '{}',
+  timeout_milliseconds int default 5000
+) returns bigint language sql as
+  $$ insert into net.sent (url, body) values (url, body) returning id $$;

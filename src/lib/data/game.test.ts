@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { lineupFromGrid } from "@/lib/rules/test-utils";
 import { SEED_DATA } from "./seed";
 import {
+  arriveBy,
+  formatClock,
   defaultFieldPlayers,
   gameContext,
   gameResult,
@@ -151,5 +153,22 @@ describe("results and record", () => {
     expect(whenText("2026-10-30", "2026-10-29")).toBe("Tomorrow");
     expect(whenText("2026-10-31", "2026-10-29")).toBe("Saturday");
     expect(whenText("2026-11-14", "2026-10-29")).toBe("Sat, Nov 14");
+  });
+});
+
+describe("arriveBy", () => {
+  const g = { ...SEED_DATA.games[0]!, startTime: "19:00", arriveTime: null };
+  it("uses the game's own time, else minutes before the start", () => {
+    expect(arriveBy(g, 60)).toBe("6:00 PM");
+    expect(arriveBy({ ...g, startTime: "10:00" }, 75)).toBe("8:45 AM");
+    expect(arriveBy({ ...g, arriveTime: "17:30" }, 60)).toBe("5:30 PM");
+    expect(arriveBy({ ...g, startTime: "00:30" }, 60)).toBe("11:30 PM");
+    expect(arriveBy(g, null)).toBeNull();
+    expect(arriveBy({ ...g, startTime: null }, 60)).toBeNull();
+  });
+
+  it("formats noon and midnight", () => {
+    expect(formatClock("12:00")).toBe("12:00 PM");
+    expect(formatClock("00:05")).toBe("12:05 AM");
   });
 });

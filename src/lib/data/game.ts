@@ -176,3 +176,20 @@ export function whenText(date: string, today: string): string {
     timeZone: "UTC",
   });
 }
+
+/** "6:00 PM": when players arrive for a game (its own time, else minutes before the start). */
+export function arriveBy(game: Game, arriveMinutes: number | null | undefined): string | null {
+  let hhmm = game.arriveTime ?? null;
+  if (!hhmm && game.startTime && arriveMinutes != null) {
+    const [h, m] = game.startTime.split(":").map(Number) as [number, number];
+    const total = (((h * 60 + m - arriveMinutes) % 1440) + 1440) % 1440;
+    hhmm = `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  }
+  return hhmm ? formatClock(hhmm) : null;
+}
+
+/** "18:00" → "6:00 PM". */
+export function formatClock(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number) as [number, number];
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}

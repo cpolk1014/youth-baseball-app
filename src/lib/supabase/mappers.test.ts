@@ -44,6 +44,7 @@ describe("supabase mappers", () => {
       score_us: null,
       score_them: null,
       lineup_style: "fair",
+      arrive_time: null,
     });
     expect(gameFromRow({ ...gameRow, lineup_style: "competitive" }).lineupStyle).toBe(
       "competitive",
@@ -173,6 +174,14 @@ describe("supabase mappers", () => {
       optionedAt: null,
       colors: [],
       logoPath: null,
+      gameDay: {
+        timezone: "America/Chicago",
+        arriveMinutes: 60,
+        postMode: "off",
+        postHours: 3,
+        postDays: 1,
+        postTime: "18:00",
+      },
     });
     expect(data.games[0]?.fieldPlayers).toBe(10);
     expect(data.season.fairPlayRules).toEqual({ maxInningsPitched: 3 });

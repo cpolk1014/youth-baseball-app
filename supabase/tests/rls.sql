@@ -969,4 +969,93 @@ end $$;
 reset role;
 delete from public.uniform_combo where id = 'dddddddd-0000-4000-8000-000000000001';
 select pg_temp.expect((select uniform_combo_id is null from public.game where id = '00000000-0000-4000-8000-000000010002'), 'deleting a combo clears it from games');
+-- ── game day posts ──
+-- A fresh team (so other fixtures' games don't mix in): coach 0001, parent 0002.
+insert into public.team (id, name, age_group) values ('eeeeeeee-0000-4000-8000-000000000010', 'Canes', '7U');
+insert into public.member (team_id, user_id, role) values
+  ('eeeeeeee-0000-4000-8000-000000000010', 'aaaaaaaa-0000-4000-8000-000000000001', 'coach'),
+  ('eeeeeeee-0000-4000-8000-000000000010', 'aaaaaaaa-0000-4000-8000-000000000002', 'parent');
+insert into public.season (id, team_id, name) values ('eeeeeeee-0000-4000-8000-000000000011', 'eeeeeeee-0000-4000-8000-000000000010', 'Spring');
+insert into public.uniform_combo (id, team_id, name) values ('eeeeeeee-0000-4000-8000-000000000012', 'eeeeeeee-0000-4000-8000-000000000010', 'White combo');
+insert into public.game (id, season_id, game_date, start_time, opponent, location, uniform_combo_id) values
+  ('eeeeeeee-0000-4000-8000-000000000020', 'eeeeeeee-0000-4000-8000-000000000011', '2027-04-09', '19:00', 'The Cubs', 'Chabills Field', 'eeeeeeee-0000-4000-8000-000000000012'),
+  ('eeeeeeee-0000-4000-8000-000000000021', 'eeeeeeee-0000-4000-8000-000000000011', '2027-04-10', '12:00', 'Broncos', 'Chabills Field', 'eeeeeeee-0000-4000-8000-000000000012'),
+  ('eeeeeeee-0000-4000-8000-000000000022', 'eeeeeeee-0000-4000-8000-000000000011', '2027-04-10', '10:00', 'Cubs', 'Chabills Field', 'eeeeeeee-0000-4000-8000-000000000012');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect(
+  public.game_day_message('eeeeeeee-0000-4000-8000-000000000010', '2027-04-09', true)
+    = E'Game against The Cubs\nChabills Field\n7:00 PM\nArrive by 6:00 PM\nWhite combo',
+  'game day post for one game');
+select pg_temp.expect(
+  public.game_day_message('eeeeeeee-0000-4000-8000-000000000010', '2027-04-09', false)
+    like 'Friday game against The Cubs%',
+  'a post before game day names the day');
+select pg_temp.expect(
+  public.game_day_message('eeeeeeee-0000-4000-8000-000000000010', '2027-04-10', false)
+    = E'Saturday games 10:00 AM and noon against Cubs and Broncos\nChabills Field\nArrive by 9:00 AM\nWhite combo',
+  'game day post for two games');
+reset role;
+update public.game set arrive_time = '08:30' where id = 'eeeeeeee-0000-4000-8000-000000000022';
+update public.game set location = 'Moore Park', uniform_combo_id = null, uniform_custom = '{"shirt": "Black", "hat": "Red"}'
+  where id = 'eeeeeeee-0000-4000-8000-000000000021';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect(
+  public.game_day_message('eeeeeeee-0000-4000-8000-000000000010', '2027-04-10', true)
+    = E'Games 10:00 AM and noon against Cubs and Broncos\n10:00 AM: Chabills Field\nnoon: Moore Park\nArrive by 8:30 AM\n10:00 AM: White combo\nnoon: Black shirt · Red hat',
+  'a game''s own arrival time, and per-game places and uniforms when they differ');
+select pg_temp.expect(public.game_day_message('eeeeeeee-0000-4000-8000-000000000010', '2027-04-11', true) is null, 'no games, no post');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+do $$ begin
+  perform public.game_day_message('eeeeeeee-0000-4000-8000-000000000010', '2027-04-09', true);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot preview game day posts';
+end $$;
+do $$ begin
+  perform public.mark_game_day_posted('eeeeeeee-0000-4000-8000-000000000010', '2027-04-09');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot mark a game day posted';
+end $$;
+reset role;
+do $$ begin
+  update public.team set timezone = 'Mars/Olympus' where id = 'eeeeeeee-0000-4000-8000-000000000010';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: time zones must be real';
+end $$;
+
+-- The scheduler runs with nobody signed in.
+select set_config('request.jwt.claim.sub', '', false);
+-- Pick a time zone where it's about noon now, a game at 2 PM today, posts
+-- 3 hours before.
+do $$
+declare
+  off int := 12 - extract(hour from now() at time zone 'UTC')::int;
+  tz text := 'Etc/GMT' || case when off > 0 then '-' || off when off < 0 then '+' || -off else '' end;
+  today date := (now() at time zone tz)::date;
+begin
+  update public.team set timezone = tz, game_post_mode = 'hours', game_post_hours = 3
+    where id = 'eeeeeeee-0000-4000-8000-000000000010';
+  insert into public.game (season_id, game_date, start_time, opponent) values
+    ('eeeeeeee-0000-4000-8000-000000000011', today, '14:00', 'Astros'),
+    ('eeeeeeee-0000-4000-8000-000000000011', today + 2, '14:00', 'Later');
+end $$;
+select pg_temp.expect(public.send_due_game_posts() = 0, 'no posts without a GroupMe bot');
+insert into public.team_groupme (team_id, bot_id) values ('eeeeeeee-0000-4000-8000-000000000010', 'abcdefghij1234567890');
+select pg_temp.expect(public.send_due_game_posts() = 1, 'posts today''s game once it''s due (not the one in 2 days)');
+select pg_temp.expect((select body ->> 'bot_id' = 'abcdefghij1234567890' and body ->> 'text' like 'Game against Astros%' from net.sent order by id desc limit 1), 'posts through the team''s bot');
+select pg_temp.expect(public.send_due_game_posts() = 0, 'never posts the same game day twice');
+update public.team set game_post_mode = 'days', game_post_days = 2, game_post_time = '00:00' where id = 'eeeeeeee-0000-4000-8000-000000000010';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select message ilike '%game against Astros%' and message not like 'Game%' and sent_at is not null from public.next_game_day_post('eeeeeeee-0000-4000-8000-000000000010')), 'coaches see the next post and that it went out');
+select public.mark_game_day_posted('eeeeeeee-0000-4000-8000-000000000010', (now() at time zone (select timezone from public.team where id = 'eeeeeeee-0000-4000-8000-000000000010'))::date + 2);
+reset role;
+select set_config('request.jwt.claim.sub', '', false);
+select pg_temp.expect(public.send_due_game_posts() = 0, 'a game day posted by hand isn''t posted again');
+update public.team set game_post_mode = 'off' where id = 'eeeeeeee-0000-4000-8000-000000000010';
+delete from public.game_post_log where team_id = 'eeeeeeee-0000-4000-8000-000000000010';
+select pg_temp.expect(public.send_due_game_posts() = 0, 'nothing posts when game day posts are off');
 \echo ALL RLS TESTS PASSED

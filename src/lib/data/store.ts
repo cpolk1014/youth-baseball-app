@@ -14,6 +14,7 @@ import type {
   AppData,
   Game,
   GameLineup,
+  GameDaySettings,
   GameStatus,
   LineupStyle,
   Guardian,
@@ -328,6 +329,20 @@ export function setGameResult(
     }),
     async () => (await remote()).saveGameResult(gameId, status, scoreUs, scoreThem),
   );
+}
+
+/** Coach or manager: arrival time and the automatic game day post (awaited, so a preview
+ * fetched afterwards uses the new settings). */
+export async function saveGameDay(gameDay: GameDaySettings): Promise<void> {
+  const teamId = data!.team.id;
+  update((d) => ({ ...d, team: { ...d.team, gameDay } }));
+  if (state.mode !== "supabase") return;
+  try {
+    await enqueue(async () => (await remote()).saveGameDayRow(teamId, gameDay));
+  } catch (e) {
+    await loadRemote();
+    throw e;
+  }
 }
 
 /** Coach or manager: add or change a uniform combo. */

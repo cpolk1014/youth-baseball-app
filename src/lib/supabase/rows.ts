@@ -10,6 +10,12 @@ export interface TeamRow {
   optioned_at: string | null;
   colors?: string[];
   logo_path?: string | null;
+  timezone?: string;
+  arrive_minutes?: number | null;
+  game_post_mode?: "off" | "hours" | "days";
+  game_post_hours?: number;
+  game_post_days?: number;
+  game_post_time?: string;
 }
 
 export interface MemberRow {
@@ -99,6 +105,7 @@ export interface GameRow {
   lineup_style?: "fair" | "competitive";
   uniform_combo_id?: string | null;
   uniform_custom?: Record<string, unknown> | null;
+  arrive_time?: string | null;
 }
 
 export interface UniformComboRow {

@@ -8,6 +8,7 @@ import type { FinanceEntry } from "@/lib/finance/types";
 import type {
   AppData,
   Game,
+  GameDaySettings,
   GameLineup,
   Invite,
   Member,
@@ -267,6 +268,18 @@ export function gameFromRow(r: GameRow): Game {
       : r.uniform_custom
         ? { custom: cleanPieces(r.uniform_custom) }
         : null,
+    arriveTime: r.arrive_time ? r.arrive_time.slice(0, 5) : null,
+  };
+}
+
+export function gameDayFromRow(r: TeamRow): GameDaySettings {
+  return {
+    timezone: r.timezone ?? "America/Chicago",
+    arriveMinutes: r.arrive_minutes === undefined ? 60 : r.arrive_minutes,
+    postMode: r.game_post_mode ?? "off",
+    postHours: r.game_post_hours ?? 3,
+    postDays: r.game_post_days ?? 1,
+    postTime: (r.game_post_time ?? "18:00").slice(0, 5),
   };
 }
 
@@ -302,6 +315,7 @@ export function gameToRow(g: Game): GameRow {
     score_them: g.scoreThem ?? null,
     // Left out when unknown, so saving a game never resets it.
     ...(g.lineupStyle ? { lineup_style: g.lineupStyle } : {}),
+    ...(g.arriveTime !== undefined ? { arrive_time: g.arriveTime } : {}),
   };
 }
 
@@ -379,6 +393,7 @@ export function appDataFromRows(
       optionedAt: rows.team.optioned_at,
       colors: (rows.team.colors ?? []).filter(isHex),
       logoPath: rows.team.logo_path ?? null,
+      gameDay: gameDayFromRow(rows.team),
     },
     season: {
       id: rows.season.id,

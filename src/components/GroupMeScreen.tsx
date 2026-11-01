@@ -11,6 +11,7 @@ import {
 } from "@/lib/data/store";
 import { isBotId } from "@/lib/groupme/bot";
 import { AppShell, Loading } from "./AppShell";
+import { GameDayPosts } from "./GameDayPosts";
 import { GroupMePost } from "./GroupMePost";
 
 const field =
@@ -62,6 +63,8 @@ export function GroupMeScreen() {
           up from the RallyCap bot.
         </p>
       </section>
+
+      <GameDayPosts team={data.team} />
 
       <section className="mb-6">
         <h2 className={heading}>Send a message to the team</h2>

@@ -20,6 +20,21 @@ export interface Team {
   colors?: string[];
   /** Where the team's logo is stored (or a data URL in local mode). */
   logoPath?: string | null;
+  /** Game day: arrival and the automatic GroupMe post. */
+  gameDay?: GameDaySettings;
+}
+
+export interface GameDaySettings {
+  /** Where the team plays (IANA time zone), for post times. */
+  timezone: string;
+  /** Arrive this many minutes before the first game; null leaves "Arrive by" out. */
+  arriveMinutes: number | null;
+  /** off | hours before the first game | days before at a time (0 = the morning of). */
+  postMode: "off" | "hours" | "days";
+  postHours: number;
+  postDays: number;
+  /** HH:MM */
+  postTime: string;
 }
 
 export interface Season {
@@ -47,6 +62,8 @@ export interface Game {
   lineupStyle?: LineupStyle;
   /** What the team wears: a saved combo, pieces just for this game, or not set. */
   uniform?: GameUniform;
+  /** HH:MM this game's players arrive by, instead of the team's "minutes before". */
+  arriveTime?: string | null;
 }
 
 export type LineupStyle = "fair" | "competitive";

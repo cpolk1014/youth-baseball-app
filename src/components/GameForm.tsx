@@ -12,12 +12,15 @@ export function GameForm({
   filledInnings,
   onSave,
   onCancel,
+  arriveMinutes,
 }: {
   game: Game;
   /** Last inning with saved positions, to warn before shortening the game. */
   filledInnings: number;
   onSave: (game: Game) => void;
   onCancel: () => void;
+  /** The team's "arrive this many minutes before", for the Arrive by hint. */
+  arriveMinutes?: number | null;
 }) {
   const [input, setInput] = useState<GameInput>({
     opponent: game.opponent,
@@ -27,6 +30,7 @@ export function GameForm({
     innings: game.innings,
     fieldPlayers: game.fieldPlayers,
   });
+  const [arrive, setArrive] = useState(game.arriveTime ?? "");
   const [submitted, setSubmitted] = useState(false);
   const errors = validateGameInput(input);
   const shown = submitted ? errors : {};
@@ -46,6 +50,7 @@ export function GameForm({
           date: input.date,
           startTime: input.startTime || null,
           location: input.location.trim() || null,
+          arriveTime: arrive || null,
           innings: input.innings,
           fieldPlayers: input.fieldPlayers === 10 ? 10 : 9,
         });
@@ -80,6 +85,33 @@ export function GameForm({
           />
         </Field>
       </div>
+
+      <Field
+        label="Arrive by"
+        hint={
+          arriveMinutes != null
+            ? `optional · team default: ${arriveMinutes} min before`
+            : "optional"
+        }
+      >
+        <div className="flex gap-2">
+          <input
+            type="time"
+            value={arrive}
+            onChange={(e) => setArrive(e.target.value)}
+            className={field}
+          />
+          {arrive && (
+            <button
+              type="button"
+              onClick={() => setArrive("")}
+              className="h-12 shrink-0 rounded-xl border-2 border-slate-300 px-3 text-base font-semibold active:bg-slate-100"
+            >
+              Use default
+            </button>
+          )}
+        </div>
+      </Field>
 
       <Field label="Field / location" hint="optional">
         <input
