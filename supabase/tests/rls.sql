@@ -1169,4 +1169,75 @@ set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
 select pg_temp.expect((select count(*) from public.player where team_id = '00000000-0000-4000-8000-000000000001') = 0, 'when the season''s code expires, the club''s view ends');
 reset role;
+-- ── clubs, phase 2: look, uniforms, library, GroupMe ──
+update public.club_code set expires_on = current_date + 30 where team_id = '00000000-0000-4000-8000-000000000001';
+delete from net.sent;
+insert into public.team_groupme (team_id, bot_id) values ('00000000-0000-4000-8000-000000000001', 'teambot0001abcdef')
+  on conflict (team_id) do update set bot_id = excluded.bot_id;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
+update public.organization set colors = '{#c8102e,#111111}', logo_path = 'club/' || (select org from club_t) || '/logo.png' where id = (select org from club_t);
+insert into storage.objects (bucket_id, name) values ('team-logos', 'club/' || (select org from club_t) || '/logo.png');
+insert into public.uniform_combo (id, organization_id, name, shirt) values ('dddddddd-0000-4000-8000-000000000030', (select org from club_t), 'White combo', 'White');
+insert into public.club_practice_plan (organization_id, title, items) values ((select org from club_t), 'Canes infield day', '[{"title": "Ground balls", "minutes": 15}]');
+insert into public.club_play_set (organization_id, title, play_ids) values ((select org from club_t), 'Bunt defense', '{bunt-1b-3b}');
+insert into public.club_groupme (organization_id, bot_id) values ((select org from club_t), 'coachesbotabcdef12');
+select pg_temp.expect((select count(*) from public.club_groupme_targets((select org from club_t)) where connected) = 1, 'the club sees which team groups it can post to');
+select pg_temp.expect(public.club_groupme_post((select org from club_t), true, array['00000000-0000-4000-8000-000000000001'::uuid], 'Tryouts July 12') = 2, 'the club posts to its coaches group and a team group');
+do $$ begin
+  perform public.club_groupme_post((select org from club_t), true, null, repeat('x', 1001));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when raise_exception then raise notice 'ok: club posts stay under GroupMe''s limit';
+end $$;
+reset role;
+select pg_temp.expect((select array_agg(body ->> 'bot_id' order by body ->> 'bot_id') from net.sent) = '{coachesbotabcdef12,teambot0001abcdef}', 'posts go through the club''s and the team''s bots');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select colors = '{#c8102e,#111111}' from public.organization where id = (select org from club_t)), 'club teams see the club''s colors and logo');
+select pg_temp.expect((select count(*) from public.uniform_combo where organization_id is not null) = 1, 'club teams see the club''s uniforms');
+update public.uniform_combo set shirt = 'Pink' where id = 'dddddddd-0000-4000-8000-000000000030';
+select pg_temp.expect((select shirt from public.uniform_combo where id = 'dddddddd-0000-4000-8000-000000000030') = 'White', 'teams cannot change club uniforms');
+update public.game set uniform_combo_id = 'dddddddd-0000-4000-8000-000000000030', uniform_custom = null where id = '00000000-0000-4000-8000-000000010002';
+select pg_temp.expect((select uniform_combo_id = 'dddddddd-0000-4000-8000-000000000030' from public.game where id = '00000000-0000-4000-8000-000000010002'), 'a club team''s game wears a club uniform');
+select pg_temp.expect((select count(*) from public.club_practice_plan) = 1 and (select count(*) from public.club_play_set) = 1, 'club teams see the club library');
+do $$ begin
+  insert into public.club_practice_plan (organization_id, title) values ((select org from club_t), 'Mine');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: teams cannot add to the club library';
+end $$;
+select pg_temp.expect((select count(*) from public.club_groupme) = 0, 'coaches cannot see the club''s coaches group bot');
+do $$ begin
+  perform public.club_groupme_post((select org from club_t), true, null, 'hi');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: only club admins post for the club';
+end $$;
+do $$ begin
+  insert into storage.objects (bucket_id, name) values ('team-logos', 'club/' || (select org from club_t) || '/mine.png');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: teams cannot change the club logo';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.uniform_combo where organization_id is not null) = 0 and (select count(*) from public.club_practice_plan) = 0, 'outsiders see none of the club''s things');
+reset role;
+update public.club_code set expires_on = current_date - 1 where team_id = '00000000-0000-4000-8000-000000000001';
+update public.game set uniform_combo_id = null where id = '00000000-0000-4000-8000-000000010002';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+do $$ begin
+  update public.game set uniform_combo_id = 'dddddddd-0000-4000-8000-000000000030' where id = '00000000-0000-4000-8000-000000010002';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: after the code expires, club uniforms can''t be picked';
+end $$;
+select pg_temp.expect((select count(*) from public.club_practice_plan) = 0, 'after the code expires, the team no longer sees the club library');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
+do $$ begin
+  perform public.club_groupme_post((select org from club_t), false, array['00000000-0000-4000-8000-000000000001'::uuid], 'hi');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when raise_exception then raise notice 'ok: after the code expires, the club can''t post to that team';
+end $$;
+reset role;
 \echo ALL RLS TESTS PASSED

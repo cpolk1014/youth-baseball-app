@@ -7,6 +7,9 @@ import { formatClock } from "@/lib/data/game";
 import { useStoreState } from "@/lib/data/store";
 import { AppShell, Loading } from "../AppShell";
 import { TeamBadge } from "../TeamBadge";
+import { ClubGroupMeTab } from "./ClubGroupMeTab";
+import { ClubLibraryTab } from "./ClubLibraryTab";
+import { ClubLookTab } from "./ClubLookTab";
 import { useMyClubs } from "./useMyClubs";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -53,9 +56,47 @@ export function ClubScreen() {
           ))}
         </div>
       )}
-      <ClubDashboard key={club.id} clubId={club.id} />
+      <ClubTabs key={club.id} clubId={club.id} />
     </>,
     "Club · view only",
+  );
+}
+
+type Tab = "teams" | "look" | "library" | "groupme";
+const TABS: [Tab, string][] = [
+  ["teams", "Teams"],
+  ["look", "Look"],
+  ["library", "Library"],
+  ["groupme", "GroupMe"],
+];
+
+function ClubTabs({ clubId }: { clubId: string }) {
+  const [tab, setTab] = useState<Tab>("teams");
+  return (
+    <>
+      <div
+        role="tablist"
+        className="mb-4 grid grid-cols-4 gap-1 rounded-xl border-2 border-[var(--team)] p-1"
+      >
+        {TABS.map(([id, label]) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={`min-h-11 rounded-lg px-1 text-sm font-bold sm:text-base ${
+              tab === id ? "bg-[var(--team)] text-white" : "text-[var(--team)]"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === "teams" && <ClubDashboard clubId={clubId} />}
+      {tab === "look" && <ClubLookTab clubId={clubId} />}
+      {tab === "library" && <ClubLibraryTab clubId={clubId} />}
+      {tab === "groupme" && <ClubGroupMeTab clubId={clubId} />}
+    </>
   );
 }
 

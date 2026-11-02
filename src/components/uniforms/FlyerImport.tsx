@@ -2,14 +2,25 @@
 
 import { useState } from "react";
 import { addUniforms, newId, useStoreState } from "@/lib/data/store";
-import { cleanName, type FlyerCombo, type UniformPieces } from "@/lib/uniforms";
+import { cleanName, type FlyerCombo, type UniformCombo, type UniformPieces } from "@/lib/uniforms";
 import { UniformForm } from "./UniformForm";
 import { UniformSwatches } from "./UniformSwatches";
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
 /** Picture of the flyer → combos to check and fix → saved. */
-export function FlyerImport({ teamId, onDone }: { teamId: string; onDone: () => void }) {
+export function FlyerImport({
+  teamId,
+  clubId,
+  onSave = addUniforms,
+  onDone,
+}: {
+  /** Whose combos these are: a team's, or (with clubId) the club's. */
+  teamId?: string;
+  clubId?: string;
+  onSave?: (combos: UniformCombo[]) => Promise<void>;
+  onDone: () => void;
+}) {
   const { mode } = useStoreState();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +43,8 @@ export function FlyerImport({ teamId, onDone }: { teamId: string; onDone: () => 
     try {
       const body = new FormData();
       body.set("file", file);
-      body.set("teamId", teamId);
+      if (clubId) body.set("clubId", clubId);
+      else if (teamId) body.set("teamId", teamId);
       const res = await fetch("/api/uniforms/read", { method: "POST", body });
       const json = (await res.json().catch(() => ({}))) as {
         combos?: FlyerCombo[];
@@ -56,7 +68,7 @@ export function FlyerImport({ teamId, onDone }: { teamId: string; onDone: () => 
     setBusy("Saving…");
     setError(null);
     try {
-      await addUniforms(
+      await onSave(
         keep.map((c) => ({
           id: newId(),
           name: cleanName(c.name),

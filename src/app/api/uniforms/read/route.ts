@@ -64,18 +64,36 @@ export async function POST(request: NextRequest) {
   const form = await request.formData();
   const file = form.get("file");
   const teamId = form.get("teamId");
-  if (!(file instanceof File) || typeof teamId !== "string") {
+  const clubId = form.get("clubId");
+  if (!(file instanceof File) || (typeof teamId !== "string" && typeof clubId !== "string")) {
     return errorResponse(400, "Choose a picture of the flyer.");
   }
   if (file.size > MAX_BYTES) return errorResponse(413, "That file is too big. Try one under 4 MB.");
 
-  const [{ data: roles }, { data: team }] = await Promise.all([
-    supabase.from("member").select("role").eq("team_id", teamId).eq("user_id", user.id),
-    supabase.from("team").select("name,optioned_at").eq("id", teamId).maybeSingle(),
-  ]);
-  const allowed = (roles ?? []).some((r) => ["owner", "coach", "manager"].includes(r.role));
-  if (!allowed || !team) return errorResponse(403, "Only coaches and managers set up uniforms.");
-  if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up first.");
+  // A team's coaches and managers, or a club's admins (for the club's combos).
+  let ownerName: string;
+  if (typeof clubId === "string") {
+    const [{ data: admin }, { data: club }] = await Promise.all([
+      supabase
+        .from("club_admin")
+        .select("role")
+        .eq("organization_id", clubId)
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase.from("organization").select("name").eq("id", clubId).maybeSingle(),
+    ]);
+    if (!admin || !club) return errorResponse(403, "Only club admins set up club uniforms.");
+    ownerName = club.name;
+  } else {
+    const [{ data: roles }, { data: team }] = await Promise.all([
+      supabase.from("member").select("role").eq("team_id", teamId).eq("user_id", user.id),
+      supabase.from("team").select("name,optioned_at").eq("id", teamId).maybeSingle(),
+    ]);
+    const allowed = (roles ?? []).some((r) => ["owner", "coach", "manager"].includes(r.role));
+    if (!allowed || !team) return errorResponse(403, "Only coaches and managers set up uniforms.");
+    if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up first.");
+    ownerName = team.name;
+  }
 
   const bytes = Buffer.from(await file.arrayBuffer()).toString("base64");
   let source: Anthropic.Beta.BetaContentBlockParam;
@@ -108,7 +126,7 @@ export async function POST(request: NextRequest) {
           role: "user",
           content: [
             source,
-            { type: "text", text: `Team: ${team.name}. List the uniform combos in this flyer.` },
+            { type: "text", text: `Team: ${ownerName}. List the uniform combos in this flyer.` },
           ],
         },
       ],

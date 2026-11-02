@@ -70,10 +70,13 @@ export async function loadFromSupabase(
     sb
       .from("team")
       .select(
-        "id,name,age_group,coach_pitch,optioned_at,colors,logo_path,timezone,arrive_minutes,game_post_mode,game_post_hours,game_post_days,game_post_time",
+        "id,name,age_group,coach_pitch,optioned_at,colors,logo_path,timezone,arrive_minutes,game_post_mode,game_post_hours,game_post_days,game_post_time,organization_id,organization:organization_id(id,name,colors,logo_path)",
       )
       .order("created_at")
-      .then((r) => check<TeamRow[]>(r)),
+      // The untyped client thinks the joined club is a list; it's one row (or null).
+      .then((r) =>
+        check<TeamRow[]>(r as { data: TeamRow[] | null; error: { message: string } | null }),
+      ),
     sb
       .from("member")
       .select("team_id,role")
@@ -210,8 +213,14 @@ export async function loadFromSupabase(
   const uniforms = check<UniformComboRow[]>(
     await sb
       .from("uniform_combo")
-      .select("id,team_id,name,shirt,pants,hat,belt,socks")
-      .eq("team_id", team.id)
+      .select("id,team_id,organization_id,name,shirt,pants,hat,belt,socks")
+      // The team's own combos, and its club's (the database shows those only while the
+      // team holds an active club code).
+      .or(
+        team.organization_id
+          ? `team_id.eq.${team.id},organization_id.eq.${team.organization_id}`
+          : `team_id.eq.${team.id}`,
+      )
       .order("created_at"),
   );
   const members = check<MemberRow[]>(

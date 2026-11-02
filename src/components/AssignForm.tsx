@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { PlayAssignment } from "@/lib/data/types";
+import { useAppData } from "@/lib/data/store";
+import { useClubLibrary } from "./club/useClubLibrary";
 import { PlayPicker } from "./PlayPicker";
 
 /** Title, due date and plays for a homework assignment. */
@@ -17,6 +19,8 @@ export function AssignForm({
   const [title, setTitle] = useState(assignment.title);
   const [dueDate, setDueDate] = useState(assignment.dueDate ?? "");
   const [playIds, setPlayIds] = useState(assignment.playIds);
+  const data = useAppData();
+  const club = useClubLibrary(data?.team.club?.id);
   const valid = title.trim().length > 0 && playIds.length > 0;
 
   return (
@@ -28,6 +32,28 @@ export function AssignForm({
       }}
       className="flex flex-col gap-4"
     >
+      {club.sets.length > 0 && (
+        <div>
+          <p className="mb-2 text-base font-semibold">
+            Start from {data?.team.club?.name ?? "your club"}&apos;s sets
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {club.sets.map((set) => (
+              <button
+                key={set.id}
+                type="button"
+                onClick={() => {
+                  setTitle(set.title);
+                  setPlayIds(set.playIds);
+                }}
+                className="min-h-11 rounded-full border-2 border-slate-300 bg-white px-4 text-base font-semibold active:bg-slate-100"
+              >
+                {set.title} ({set.playIds.length})
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <label className="flex flex-col gap-1">
         <span className="text-base font-semibold">Title</span>
         <input

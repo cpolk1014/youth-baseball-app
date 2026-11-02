@@ -36,7 +36,9 @@ function Uniforms({ data }: { data: AppData }) {
   const [editing, setEditing] = useState<UniformCombo | null>(null);
   const [reading, setReading] = useState(false);
   const canEdit = data.team.optionedAt === null;
-  const isNew = editing !== null && !data.uniforms.some((u) => u.id === editing.id);
+  const own = data.uniforms.filter((u) => !u.clubId);
+  const fromClub = data.uniforms.filter((u) => u.clubId);
+  const isNew = editing !== null && !own.some((u) => u.id === editing.id);
   const add = () => setEditing({ id: newId(), name: "", ...cleanPieces({}) });
   const used = (id: string) =>
     data.games.filter((g) => g.uniform && "comboId" in g.uniform && g.uniform.comboId === id)
@@ -73,14 +75,46 @@ function Uniforms({ data }: { data: AppData }) {
         </button>
       )}
 
-      {data.uniforms.length === 0 ? (
+      {fromClub.length > 0 && (
+        <section className="mb-5">
+          <h2 className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">
+            From {data.team.club?.name ?? "your club"}
+          </h2>
+          <ul className="grid gap-3 md:grid-cols-2">
+            {fromClub.map((u) => (
+              <li
+                key={u.id}
+                className="flex flex-col gap-2 rounded-xl border-2 border-slate-200 bg-white p-3"
+              >
+                <span className="flex w-full items-baseline justify-between gap-2">
+                  <span className="text-lg font-bold">{u.name}</span>
+                  {used(u.id) > 0 && (
+                    <span className="text-sm text-slate-600">
+                      {used(u.id)} game{used(u.id) === 1 ? "" : "s"}
+                    </span>
+                  )}
+                </span>
+                <UniformSwatches pieces={u} />
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-sm text-slate-600">The club keeps these up to date.</p>
+        </section>
+      )}
+
+      {own.length > 0 && fromClub.length > 0 && (
+        <h2 className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">
+          Your team&apos;s combos
+        </h2>
+      )}
+      {own.length === 0 && fromClub.length === 0 ? (
         <p className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-4 text-base">
           No combos yet. Add one, or take a picture of the uniform flyer and RallyCap builds them
           for you.
         </p>
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">
-          {data.uniforms.map((u) => (
+          {own.map((u) => (
             <li key={u.id}>
               <button
                 onClick={canEdit ? () => setEditing(u) : undefined}
@@ -102,7 +136,7 @@ function Uniforms({ data }: { data: AppData }) {
         </ul>
       )}
 
-      {canEdit && data.uniforms.length > 0 && (
+      {canEdit && own.length > 0 && (
         <button
           onClick={add}
           className="mt-4 h-14 w-full rounded-xl border-2 border-dashed border-slate-400 text-lg font-bold text-slate-700 active:bg-slate-100"

@@ -79,6 +79,7 @@ export function TeamLookScreen() {
   };
 
   const preview = themeVars([colors.main, colors.accent]) as CSSProperties;
+  const club = data.team.club;
 
   return (
     <AppShell title="Team colors & logo" subtitle={data.team.name} backHref="/roster" tab="roster">
@@ -86,6 +87,24 @@ export function TeamLookScreen() {
         <p className="text-lg">Coaches and managers set the team&apos;s colors and logo.</p>
       ) : (
         <div className="flex flex-col gap-6">
+          {club && (club.logoPath || club.colors.length > 0) && (
+            <section className="flex items-center gap-3 rounded-xl border-2 border-slate-200 bg-white p-3">
+              <TeamBadge name={club.name} colors={club.colors} logoPath={club.logoPath} size={48} />
+              <p className="min-w-0 flex-1 text-base">
+                <b>{club.name}</b>&apos;s logo and colors
+              </p>
+              <button
+                onClick={() => {
+                  if (club.colors[0]) setMain(club.colors[0]);
+                  if (club.colors[1]) setAccent(club.colors[1]);
+                  if (club.logoPath) setLogo({ path: club.logoPath, changed: true });
+                }}
+                className="h-11 shrink-0 rounded-lg bg-[var(--team)] px-3 text-base font-bold text-white"
+              >
+                Use them
+              </button>
+            </section>
+          )}
           <section style={preview} aria-label="Preview">
             <h2 className={heading}>Preview</h2>
             <div className="overflow-hidden rounded-xl border-2 border-slate-200 bg-white">
@@ -263,7 +282,7 @@ export function TeamLookScreen() {
   );
 }
 
-function Swatches({
+export function Swatches({
   colors,
   names,
   selected,

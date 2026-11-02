@@ -11,6 +11,7 @@ import { movePlanItem, planMinutes, practiceMinutes, type PlanItem } from "@/lib
 import { quizLength } from "@/lib/plays/homework";
 import { playsFor } from "@/lib/plays/library";
 import { AppShell, Loading } from "./AppShell";
+import { useClubLibrary } from "./club/useClubLibrary";
 import { PlayPicker } from "./PlayPicker";
 import { PracticeForm } from "./PracticeForms";
 import { QuizButton, quizNames } from "./QuizButton";
@@ -24,6 +25,7 @@ const small =
 export function PracticeScreen({ practiceId }: { practiceId: string }) {
   const data = useAppData();
   const [panel, setPanel] = useState<Panel>(null);
+  const club = useClubLibrary(data?.team.club?.id);
 
   if (!data) {
     return (
@@ -192,7 +194,7 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
             </button>
             <button
               onClick={() => setPanel("copy")}
-              disabled={others.length === 0}
+              disabled={others.length === 0 && club.plans.length === 0}
               className="h-12 rounded-xl border-2 border-slate-400 bg-white text-base font-bold active:bg-slate-100 disabled:opacity-40"
             >
               Copy a plan
@@ -323,6 +325,39 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
             ? "Replaces this practice's plan with the one you pick."
             : "Pick a practice to copy its drills."}
         </p>
+        {club.plans.length > 0 && (
+          <>
+            <h3 className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">
+              From {data.team.club?.name ?? "your club"}
+            </h3>
+            <ul className="mb-4 flex flex-col gap-2">
+              {club.plans.map((p) => (
+                <li key={p.id}>
+                  <button
+                    onClick={() => {
+                      setPlan(p.items.map((x) => ({ ...x, id: newId() })));
+                      if (p.focus && !practice.focus) save({ focus: p.focus });
+                      setPanel(null);
+                    }}
+                    className="w-full rounded-xl border-2 border-slate-200 bg-white p-3 text-left active:bg-slate-50"
+                  >
+                    <span className="block text-base font-bold">{p.title}</span>
+                    <span className="block text-sm text-slate-600">
+                      {p.focus ? `${p.focus} · ` : ""}
+                      {p.items.length} drills ·{" "}
+                      {planMinutes(p.items.map((x, k) => ({ ...x, id: String(k) })))} min
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {others.length > 0 && (
+              <h3 className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">
+                Your practices
+              </h3>
+            )}
+          </>
+        )}
         <ul className="flex flex-col gap-2">
           {others.map((p) => (
             <li key={p.id}>
@@ -386,7 +421,7 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
   );
 }
 
-function DrillPicker({ onAdd }: { onAdd: (item: Omit<PlanItem, "id">) => void }) {
+export function DrillPicker({ onAdd }: { onAdd: (item: Omit<PlanItem, "id">) => void }) {
   const [title, setTitle] = useState("");
   const [minutes, setMinutes] = useState(10);
   return (

@@ -540,6 +540,8 @@ export async function uploadLogo(file: Blob): Promise<string> {
 /** Remove an old logo file; failures only leave an unused file behind. */
 export async function removeLogo(path: string): Promise<void> {
   if (state.mode !== "supabase" || path.startsWith("data:")) return;
+  // Only the team's own files: a logo borrowed from the club stays the club's.
+  if (!path.startsWith(`${data?.team.id}/`)) return;
   try {
     await (await remote()).deleteLogoFile(path);
   } catch {

@@ -10,6 +10,14 @@ export interface TeamRow {
   optioned_at: string | null;
   colors?: string[];
   logo_path?: string | null;
+  organization_id?: string | null;
+  /** The team's club (joined on load), for its logo and colors. */
+  organization?: {
+    id: string;
+    name: string;
+    colors: string[] | null;
+    logo_path: string | null;
+  } | null;
   timezone?: string;
   arrive_minutes?: number | null;
   game_post_mode?: "off" | "hours" | "days";
@@ -110,7 +118,9 @@ export interface GameRow {
 
 export interface UniformComboRow {
   id: string;
-  team_id: string;
+  /** A team's own combo, or (with organization_id) its club's. */
+  team_id: string | null;
+  organization_id?: string | null;
   name: string;
   shirt: string | null;
   pants: string | null;

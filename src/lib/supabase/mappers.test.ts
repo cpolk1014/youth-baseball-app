@@ -182,6 +182,7 @@ describe("supabase mappers", () => {
         postDays: 1,
         postTime: "18:00",
       },
+      club: null,
     });
     expect(data.games[0]?.fieldPlayers).toBe(10);
     expect(data.season.fairPlayRules).toEqual({ maxInningsPitched: 3 });

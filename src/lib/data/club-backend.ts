@@ -1,4 +1,4 @@
-import { appDataFromRows } from "@/lib/supabase/mappers";
+import { appDataFromRows, uniformFromRow } from "@/lib/supabase/mappers";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import type {
   GameRow,
@@ -8,7 +8,9 @@ import type {
   PlayerRow,
   SeasonRow,
   TeamRow,
+  UniformComboRow,
 } from "@/lib/supabase/rows";
+import type { UniformCombo } from "@/lib/uniforms";
 import type { AppData } from "./types";
 
 // Clubs: a club's admins see the teams that joined with a club code (view only; the
@@ -259,4 +261,232 @@ export async function loadClubTeam(teamId: string): Promise<AppData> {
   });
   // Not a member: view only.
   return { ...data, me: { userId: user?.id ?? null, role: "parent" } };
+}
+
+// ── Phase 2: the club's look, uniforms, library and GroupMe ──
+
+export interface ClubLook {
+  name: string;
+  colors: string[];
+  logoPath: string | null;
+}
+
+export async function clubLook(clubId: string): Promise<ClubLook> {
+  const r = check<{ name: string; colors: string[] | null; logo_path: string | null }>(
+    await getBrowserSupabase()
+      .from("organization")
+      .select("name, colors, logo_path")
+      .eq("id", clubId)
+      .single(),
+  );
+  return { name: r.name, colors: r.colors ?? [], logoPath: r.logo_path };
+}
+
+export async function saveClubLook(
+  clubId: string,
+  colors: string[],
+  logoPath: string | null,
+): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("organization")
+      .update({ colors, logo_path: logoPath })
+      .eq("id", clubId),
+  );
+}
+
+/** Upload the club's logo (already squared); returns where it's stored. */
+export async function uploadClubLogo(clubId: string, file: Blob): Promise<string> {
+  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `club/${clubId}/logo-${crypto.randomUUID()}.${ext}`;
+  check(
+    await getBrowserSupabase()
+      .storage.from("team-logos")
+      .upload(path, file, { contentType: file.type, upsert: false }),
+  );
+  return path;
+}
+
+export async function removeClubLogo(path: string): Promise<void> {
+  if (!path.startsWith("club/")) return;
+  await getBrowserSupabase().storage.from("team-logos").remove([path]);
+}
+
+const UNIFORM_COLS = "id,team_id,organization_id,name,shirt,pants,hat,belt,socks";
+
+export async function clubUniforms(clubId: string): Promise<UniformCombo[]> {
+  const rows = check<UniformComboRow[]>(
+    await getBrowserSupabase()
+      .from("uniform_combo")
+      .select(UNIFORM_COLS)
+      .eq("organization_id", clubId)
+      .order("created_at"),
+  );
+  return rows.map(uniformFromRow);
+}
+
+export async function saveClubUniforms(clubId: string, combos: UniformCombo[]): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("uniform_combo")
+      .upsert(
+        combos.map(({ id, name, shirt, pants, hat, belt, socks }) => ({
+          id,
+          organization_id: clubId,
+          team_id: null,
+          name,
+          shirt,
+          pants,
+          hat,
+          belt,
+          socks,
+        })),
+      ),
+  );
+}
+
+export async function deleteClubUniform(id: string): Promise<void> {
+  check(await getBrowserSupabase().from("uniform_combo").delete().eq("id", id));
+}
+
+export interface ClubPlan {
+  id: string;
+  title: string;
+  focus: string | null;
+  items: { title: string; minutes: number; notes?: string }[];
+}
+
+export interface ClubPlaySet {
+  id: string;
+  title: string;
+  playIds: string[];
+}
+
+export async function clubPlans(clubId: string): Promise<ClubPlan[]> {
+  const rows = check<
+    { id: string; title: string; focus: string | null; items: ClubPlan["items"] }[]
+  >(
+    await getBrowserSupabase()
+      .from("club_practice_plan")
+      .select("id, title, focus, items")
+      .eq("organization_id", clubId)
+      .order("title"),
+  );
+  return rows.map((r) => ({ ...r, items: Array.isArray(r.items) ? r.items : [] }));
+}
+
+export async function saveClubPlan(clubId: string, plan: ClubPlan): Promise<void> {
+  check(
+    await getBrowserSupabase().from("club_practice_plan").upsert({
+      id: plan.id,
+      organization_id: clubId,
+      title: plan.title,
+      focus: plan.focus,
+      items: plan.items,
+    }),
+  );
+}
+
+export async function deleteClubPlan(id: string): Promise<void> {
+  check(await getBrowserSupabase().from("club_practice_plan").delete().eq("id", id));
+}
+
+export async function clubPlaySets(clubId: string): Promise<ClubPlaySet[]> {
+  const rows = check<{ id: string; title: string; play_ids: string[] }[]>(
+    await getBrowserSupabase()
+      .from("club_play_set")
+      .select("id, title, play_ids")
+      .eq("organization_id", clubId)
+      .order("title"),
+  );
+  return rows.map((r) => ({ id: r.id, title: r.title, playIds: r.play_ids }));
+}
+
+export async function saveClubPlaySet(clubId: string, set: ClubPlaySet): Promise<void> {
+  check(
+    await getBrowserSupabase().from("club_play_set").upsert({
+      id: set.id,
+      organization_id: clubId,
+      title: set.title,
+      play_ids: set.playIds,
+    }),
+  );
+}
+
+export async function deleteClubPlaySet(id: string): Promise<void> {
+  check(await getBrowserSupabase().from("club_play_set").delete().eq("id", id));
+}
+
+export interface ClubGroupMe {
+  botId: string;
+  groupName: string | null;
+}
+
+export async function clubGroupMe(clubId: string): Promise<ClubGroupMe | null> {
+  const r = check<{ bot_id: string; group_name: string | null } | null>(
+    await getBrowserSupabase()
+      .from("club_groupme")
+      .select("bot_id, group_name")
+      .eq("organization_id", clubId)
+      .maybeSingle(),
+  );
+  return r ? { botId: r.bot_id, groupName: r.group_name } : null;
+}
+
+export async function saveClubGroupMe(
+  clubId: string,
+  botId: string,
+  groupName: string | null,
+): Promise<void> {
+  check(
+    await getBrowserSupabase().from("club_groupme").upsert({
+      organization_id: clubId,
+      bot_id: botId,
+      group_name: groupName,
+      connected_at: new Date().toISOString(),
+    }),
+  );
+}
+
+export async function disconnectClubGroupMe(clubId: string): Promise<void> {
+  check(await getBrowserSupabase().from("club_groupme").delete().eq("organization_id", clubId));
+}
+
+export interface ClubTarget {
+  teamId: string;
+  name: string;
+  ageGroup: string;
+  connected: boolean;
+}
+
+/** Club teams this season and whether each has GroupMe connected. */
+export async function clubTargets(clubId: string): Promise<ClubTarget[]> {
+  const rows = check<
+    { team_id: string; team_name: string; age_group: string; connected: boolean }[]
+  >(await getBrowserSupabase().rpc("club_groupme_targets", { p_org: clubId }));
+  return rows
+    .map((r) => ({
+      teamId: r.team_id,
+      name: r.team_name,
+      ageGroup: r.age_group,
+      connected: r.connected,
+    }))
+    .sort((a, b) => a.ageGroup.localeCompare(b.ageGroup) || a.name.localeCompare(b.name));
+}
+
+/** Post to the coaches group and/or team groups; returns how many groups it went to. */
+export async function clubPost(
+  clubId: string,
+  coaches: boolean,
+  teamIds: string[],
+  text: string,
+): Promise<number> {
+  return check<number>(
+    await getBrowserSupabase().rpc("club_groupme_post", {
+      p_org: clubId,
+      p_coaches: coaches,
+      p_team_ids: teamIds,
+      p_text: text,
+    }),
+  );
 }

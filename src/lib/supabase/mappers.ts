@@ -292,6 +292,7 @@ export function uniformFromRow(r: UniformComboRow): UniformCombo {
     hat: r.hat,
     belt: r.belt,
     socks: r.socks,
+    clubId: r.organization_id ?? null,
   };
 }
 
@@ -394,6 +395,14 @@ export function appDataFromRows(
       colors: (rows.team.colors ?? []).filter(isHex),
       logoPath: rows.team.logo_path ?? null,
       gameDay: gameDayFromRow(rows.team),
+      club: rows.team.organization
+        ? {
+            id: rows.team.organization.id,
+            name: rows.team.organization.name,
+            colors: (rows.team.organization.colors ?? []).filter(isHex),
+            logoPath: rows.team.organization.logo_path,
+          }
+        : null,
     },
     season: {
       id: rows.season.id,

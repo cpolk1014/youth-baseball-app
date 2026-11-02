@@ -22,6 +22,8 @@ export interface Team {
   logoPath?: string | null;
   /** Game day: arrival and the automatic GroupMe post. */
   gameDay?: GameDaySettings;
+  /** The club the team belongs to (its look is offered to the team). */
+  club?: { id: string; name: string; colors: string[]; logoPath: string | null } | null;
 }
 
 export interface GameDaySettings {

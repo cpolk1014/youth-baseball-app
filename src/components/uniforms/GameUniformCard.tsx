@@ -94,7 +94,14 @@ export function GameUniformCard({
                         : "border-slate-300 bg-white active:bg-slate-50"
                     }`}
                   >
-                    <span className="text-lg font-bold">{c.name}</span>
+                    <span className="text-lg font-bold">
+                      {c.name}
+                      {c.clubId && (
+                        <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 align-middle text-xs font-bold text-slate-700">
+                          Club
+                        </span>
+                      )}
+                    </span>
                     <UniformSwatches pieces={c} />
                   </button>
                 ))}

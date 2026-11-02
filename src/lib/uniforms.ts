@@ -16,6 +16,8 @@ export type UniformPieces = Record<UniformPiece, string | null>;
 export interface UniformCombo extends UniformPieces {
   id: string;
   name: string;
+  /** Set for the club's combos: club admins edit them, the team only picks them. */
+  clubId?: string | null;
 }
 
 /** What a game wears: one of the team's combos, its own pieces, or nothing set. */
