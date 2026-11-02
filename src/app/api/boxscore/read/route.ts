@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
+import { namesAgree } from "@/lib/boxscore/names";
 import { cleanBatting, cleanPitching } from "@/lib/boxscore/stats";
 import { getServerSupabase } from "@/lib/supabase/server";
 
@@ -132,14 +133,10 @@ export async function POST(request: NextRequest) {
   const form = await request.formData();
   const file = form.get("file");
   const playerId = form.get("playerId");
-  const number = String(form.get("number") ?? "")
-    .replace(/[^0-9]/g, "")
-    .slice(0, 3);
   const chosenTeam = clean(form.get("team"), 80);
   if (!(file instanceof File) || typeof playerId !== "string") {
     return errorResponse(400, "Choose the box score file.");
   }
-  if (!number) return errorResponse(400, "Enter your player's jersey number.");
   if (file.size > MAX_BYTES) return errorResponse(413, "That file is too big. Try one under 4 MB.");
 
   // Only the kid's own linked parent (RLS shows families just their own links).
@@ -152,13 +149,21 @@ export async function POST(request: NextRequest) {
   if (!link) return errorResponse(403, "You can only import stats for your own player.");
   const { data: player } = await supabase
     .from("player")
-    .select("name, team_id")
+    .select("name, team_id, jersey_number")
     .eq("id", playerId)
     .maybeSingle();
   const { data: team } = player
     ? await supabase.from("team").select("name").eq("id", player.team_id).maybeSingle()
     : { data: null };
   if (!player || !team) return errorResponse(404, "That player isn't on a team you're on.");
+  // The roster's number only (set by coaches), so a parent can't pull another kid's line.
+  if (player.jersey_number === null) {
+    return errorResponse(
+      409,
+      `${player.name} doesn't have a jersey number on the roster yet. Ask a coach to add it.`,
+    );
+  }
+  const number = String(player.jersey_number);
 
   const bytes = Buffer.from(await file.arrayBuffer()).toString("base64");
   let source: Anthropic.Beta.BetaContentBlockParam;
@@ -208,14 +213,21 @@ export async function POST(request: NextRequest) {
       .filter((t): t is string => !!t)
       .slice(0, 2);
     const ourTeam = clean(raw.our_team, 80);
-    if (raw.needs_team === true || !ourTeam)
-      return NextResponse.json({ status: "pick_team", teams });
+    if (raw.needs_team === true || !ourTeam) {
+      return NextResponse.json({ status: "pick_team", teams, number });
+    }
 
     // A number match must be the number asked for; otherwise it isn't their player.
     const boxNumber = clean(raw.box_number, 4)?.replace(/[^0-9]/g, "") ?? null;
     const byNumber = raw.matched_by === "number";
     if (raw.found !== true || (byNumber && boxNumber !== number) || raw.matched_by === "none") {
-      return NextResponse.json({ status: "not_found", teams, ourTeam });
+      return NextResponse.json({ status: "not_found", teams, ourTeam, number });
+    }
+
+    // And the name printed at that spot must be theirs (catches a changed number too).
+    const boxName = clean(raw.box_name, 60);
+    if (!namesAgree(player.name, boxName)) {
+      return NextResponse.json({ status: "mismatch", teams, ourTeam, number });
     }
 
     const pitchingRaw = raw.pitching as Record<string, unknown> | undefined;
@@ -231,7 +243,7 @@ export async function POST(request: NextRequest) {
         gameDate: date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
         ourRuns: runs(raw.our_runs),
         theirRuns: runs(raw.their_runs),
-        boxName: clean(raw.box_name, 60),
+        boxName,
         boxNumber,
         matchedBy: byNumber ? "number" : "name",
         batting: cleanBatting(raw.batting),

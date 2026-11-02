@@ -27,6 +27,7 @@ interface Found {
 type Answer =
   | { status: "pick_team"; teams: string[] }
   | { status: "not_found"; teams: string[]; ourTeam: string | null }
+  | { status: "mismatch"; teams: string[]; ourTeam: string | null }
   | { status: "found"; teams: string[]; line: Found };
 
 /**
@@ -43,7 +44,8 @@ export function ImportBoxScore({
   onCancel: () => void;
 }) {
   const { mode } = useStoreState();
-  const [number, setNumber] = useState(kid.jerseyNumber == null ? "" : String(kid.jerseyNumber));
+  // Always the roster's number (coaches set it); the server uses the roster too.
+  const number = kid.jerseyNumber == null ? "" : String(kid.jerseyNumber);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +68,6 @@ export function ImportBoxScore({
       const body = new FormData();
       body.set("file", f);
       body.set("playerId", kid.id);
-      body.set("number", number);
       if (team) body.set("team", team);
       const res = await fetch("/api/boxscore/read", { method: "POST", body });
       const json = (await res.json().catch(() => ({}))) as Answer & { error?: string };
@@ -214,16 +215,17 @@ export function ImportBoxScore({
         {kid.name}&apos;s line from it. Nothing about other players is kept, and only you (and{" "}
         {kid.name}&apos;s other linked parents) can see it.
       </p>
-      <label className="flex flex-col gap-1">
-        <span className="text-base font-semibold">Jersey number in GameChanger</span>
-        <input
-          inputMode="numeric"
-          value={number}
-          onChange={(e) => setNumber(e.target.value.replace(/[^0-9]/g, "").slice(0, 3))}
-          placeholder="45"
-          className={field}
-        />
-      </label>
+      {number ? (
+        <p className="rounded-xl bg-slate-100 p-3 text-base">
+          Looking for <strong>#{number}</strong> (from the roster). If {kid.name} wears a different
+          number in GameChanger, ask a coach to update the roster.
+        </p>
+      ) : (
+        <p className="rounded-xl bg-amber-50 p-3 text-base text-amber-950">
+          {kid.name} doesn&apos;t have a jersey number on the roster yet. Ask a coach to add it,
+          then import.
+        </p>
+      )}
       <label
         className={`flex h-14 cursor-pointer items-center justify-center rounded-xl text-lg font-bold ${
           number ? "bg-[var(--team)] text-white" : "bg-slate-300 text-slate-600"
@@ -256,6 +258,13 @@ export function ImportBoxScore({
           </p>
           {answer.teams.length > 0 && teamButtons(answer.teams, "Their team in this box score:")}
         </>
+      )}
+      {answer?.status === "mismatch" && (
+        <p className="rounded-xl bg-amber-50 p-3 text-base text-amber-950">
+          The player wearing #{number} on {answer.ourTeam ?? "your team"} in this box score has a
+          different name than {kid.name}, so it wasn&apos;t imported. If {kid.name} changed numbers,
+          ask a coach to update the roster.
+        </p>
       )}
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-800">
