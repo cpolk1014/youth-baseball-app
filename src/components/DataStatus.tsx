@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { canCallUp } from "@/lib/data/permissions";
 import {
@@ -11,6 +12,7 @@ import {
   useAppData,
   useStoreState,
 } from "@/lib/data/store";
+import { useMyClubs } from "./club/useMyClubs";
 import { KidsPrompt } from "./KidPicker";
 
 const AGE_GROUPS = ["7U", "8U", "9U", "10U", "11U", "12U", "13U", "14U"];
@@ -26,7 +28,14 @@ export function DataStatus({ children }: { children: ReactNode }) {
   const { status, saveError, offline, savedAt, pending } = useStoreState();
   const data = useAppData();
 
-  if (status.kind === "setup") return <TeamSetup hasTeam={status.team !== null} />;
+  if (status.kind === "setup") {
+    return (
+      <>
+        <ClubLink />
+        <TeamSetup hasTeam={status.team !== null} />
+      </>
+    );
+  }
   if (status.kind === "error") {
     return (
       <div className="rounded-xl border-2 border-red-700 bg-red-50 p-4 text-red-950">
@@ -88,6 +97,20 @@ export function DataStatus({ children }: { children: ReactNode }) {
       <KidsPrompt />
       {children}
     </>
+  );
+}
+
+/** A club director with no team of their own: their club is what they came for. */
+function ClubLink() {
+  const clubs = useMyClubs();
+  if (!clubs?.length) return null;
+  return (
+    <Link
+      href="/club"
+      className="mb-4 flex h-14 items-center justify-center rounded-xl bg-[var(--team)] text-lg font-bold text-white"
+    >
+      Open {clubs.length === 1 ? clubs[0]!.name : "your club"} →
+    </Link>
   );
 }
 

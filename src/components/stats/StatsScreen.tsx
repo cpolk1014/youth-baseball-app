@@ -142,7 +142,7 @@ function shownPlayers(stats: TeamStats, data: AppData): Shown[] {
   });
 }
 
-function StatTables({ stats, data }: { stats: TeamStats; data: AppData }) {
+export function StatTables({ stats, data }: { stats: TeamStats; data: AppData }) {
   const groups = statGroups(stats);
   const [group, setGroup] = useState(groups[0] ?? "");
   const [all, setAll] = useState(false);

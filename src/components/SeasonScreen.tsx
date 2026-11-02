@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { finalLineups } from "@/lib/data/game";
 import { useAppData } from "@/lib/data/store";
+import type { AppData } from "@/lib/data/types";
 import { resolveRuleConfig } from "@/lib/rules/config";
 import { seasonSummary, type SeasonRow, type SeasonSummary } from "@/lib/season/summary";
 import { AppShell, Loading } from "./AppShell";
@@ -19,9 +20,6 @@ const SORTS: { id: Sort; label: string }[] = [
 
 export function SeasonScreen() {
   const data = useAppData();
-  const [view, setView] = useState<View>("summary");
-  const [sort, setSort] = useState<Sort>("jersey");
-
   if (!data) {
     return (
       <AppShell title="Season" tab="season">
@@ -29,17 +27,29 @@ export function SeasonScreen() {
       </AppShell>
     );
   }
-
   const config = resolveRuleConfig(data.season.fairPlayRules);
   const summary = seasonSummary(data.players, finalLineups(data, data.season.id), config);
   const subtitle = `${data.season.name} · ${summary.finalGames} final game${summary.finalGames === 1 ? "" : "s"}`;
+  return (
+    <AppShell title="Playing time" subtitle={subtitle} tab="season">
+      <RulesLink />
+      <PlayingTime data={data} />
+    </AppShell>
+  );
+}
+
+/** The season's playing time (summary and by position); also shown read-only to clubs. */
+export function PlayingTime({ data, club = false }: { data: AppData; club?: boolean }) {
+  const [view, setView] = useState<View>("summary");
+  const [sort, setSort] = useState<Sort>("jersey");
+  const config = resolveRuleConfig(data.season.fairPlayRules);
+  const summary = seasonSummary(data.players, finalLineups(data, data.season.id), config);
 
   if (summary.finalGames === 0) {
     return (
-      <AppShell title="Playing time" subtitle={subtitle} tab="season">
-        <RulesLink />
-        <div className="rounded-xl border-2 border-slate-300 bg-white p-4 text-lg leading-snug">
-          <p className="font-bold">No final games yet.</p>
+      <div className="rounded-xl border-2 border-slate-300 bg-white p-4 text-lg leading-snug">
+        <p className="font-bold">No final games yet.</p>
+        {!club && (
           <p className="mt-1">
             Open a game on the{" "}
             <Link href="/games" className="font-semibold underline">
@@ -47,8 +57,8 @@ export function SeasonScreen() {
             </Link>{" "}
             tab and tap <b>Mark final</b> after it&apos;s played. Its lineup then counts here.
           </p>
-        </div>
-      </AppShell>
+        )}
+      </div>
     );
   }
 
@@ -56,8 +66,7 @@ export function SeasonScreen() {
   const flagged = summary.rows.filter((r) => r.lowInfield || r.highBench).length;
 
   return (
-    <AppShell title="Playing time" subtitle={subtitle} tab="season">
-      <RulesLink />
+    <>
       <div
         role="tablist"
         className="mb-3 grid grid-cols-2 rounded-xl border-2 border-[var(--team)] p-1"
@@ -103,7 +112,9 @@ export function SeasonScreen() {
           <b>
             {flagged} player{flagged === 1 ? " is" : "s are"} behind on playing time.
           </b>{" "}
-          Auto-fill favors them in the next game.
+          {club
+            ? "Auto-fill favors them in the team's next game."
+            : "Auto-fill favors them in the next game."}
         </p>
       )}
 
@@ -118,7 +129,7 @@ export function SeasonScreen() {
         {config.seasonBalanceThreshold !== null &&
           ` Flagged: ${config.seasonBalanceThreshold}+ innings from the team average.`}
       </p>
-    </AppShell>
+    </>
   );
 }
 

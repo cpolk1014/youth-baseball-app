@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ROLE_LABEL, canCallUp, permissionsFor, type MemberRole } from "@/lib/data/permissions";
+import {
+  ROLE_LABEL,
+  canCallUp,
+  isCoach,
+  permissionsFor,
+  type MemberRole,
+} from "@/lib/data/permissions";
 import {
   createInvite,
   deleteTeam,
@@ -15,6 +21,7 @@ import {
   useStoreState,
 } from "@/lib/data/store";
 import type { Invite, Member } from "@/lib/data/types";
+import { ClubSection } from "./club/ClubSection";
 import { AppShell, Loading } from "./AppShell";
 import { KidsForm, kidsOf } from "./KidPicker";
 import { Sheet } from "./Sheet";
@@ -246,6 +253,8 @@ export function MembersScreen() {
           Leave this team
         </button>
       )}
+
+      {perms.editTeam && <ClubSection teamId={data.team.id} canJoin={isCoach(data.me.role)} />}
 
       {canCallUp(data.me.role) && !data.team.optionedAt && (
         <section className="mt-4 rounded-xl border-2 border-slate-300 bg-white p-4">

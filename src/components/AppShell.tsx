@@ -13,11 +13,12 @@ import {
 import { themeVars } from "@/lib/branding/theme";
 import { isCoach, permissionsFor } from "@/lib/data/permissions";
 import { myUserId, syncNow, useAppData, useStoreState } from "@/lib/data/store";
+import { useMyClubs } from "./club/useMyClubs";
 import { DataStatus } from "./DataStatus";
 import { OfflineSupport } from "./OfflineSupport";
 import { TeamBadge } from "./TeamBadge";
 
-type Tab = "games" | "pa" | "practice" | "plays" | "season" | "stats" | "roster" | "money";
+type Tab = "games" | "pa" | "practice" | "plays" | "season" | "stats" | "roster" | "money" | "club";
 
 const TABS: { id: Tab; href: string; label: string; staffOnly?: boolean }[] = [
   { id: "games", href: "/games", label: "Games" },
@@ -37,6 +38,7 @@ export function AppShell({
   backHref,
   tab,
   action,
+  bare = false,
   children,
 }: {
   title: string;
@@ -46,6 +48,8 @@ export function AppShell({
   backHref?: string;
   tab: Tab;
   action?: ReactNode;
+  /** Club pages: shown even with no team of your own (no team setup or team notices). */
+  bare?: boolean;
   children: ReactNode;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -128,7 +132,7 @@ export function AppShell({
         </header>
 
         <main className="flex-1 px-4 pt-4 pb-10 md:px-6 lg:px-8 print:p-0">
-          <DataStatus>{children}</DataStatus>
+          {bare ? children : <DataStatus>{children}</DataStatus>}
         </main>
       </div>
       <MenuDrawer open={menuOpen} tab={tab} onClose={() => setMenuOpen(false)} />
@@ -206,10 +210,12 @@ function MenuLinks({ tab, onPick }: { tab: Tab; onPick?: () => void }) {
   const perms = data ? permissionsFor(data.me.role, data.team.optionedAt !== null) : null;
   // Coaches (and owners) and managers; stays true on an optioned team, unlike editTeam.
   const staff = !!data && (isCoach(data.me.role) || data.me.role === "manager");
+  const clubs = useMyClubs();
   // Families linked to a player import that player's box scores.
   const hasKids = !!data && data.guardians.some((g) => g.userId === myUserId(data));
   const pathname = usePathname();
   const team: { href: string; label: string; show: boolean }[] = [
+    { href: "/club", label: clubs?.length === 1 ? clubs[0]!.name : "Club", show: !!clubs?.length },
     { href: "/members", label: "Coaches & parents", show: signedIn },
     { href: "/my-stats", label: "My player's stats", show: hasKids },
     { href: "/season/rules", label: "Fair play rules", show: true },

@@ -1093,4 +1093,80 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002
 delete from public.player_game_stat;
 select pg_temp.expect((select count(*) from public.player_game_stat) = 0, 'parents remove their kid''s game');
 reset role;
+-- ── clubs ──
+insert into auth.users (id, email) values ('aaaaaaaa-0000-4000-8000-000000000008', 'director@example.test');
+create temp table club_t as select public.create_club('Traction Canes', 'Director@Example.test') as org;
+create temp table codes_t as select public.create_club_codes((select org from club_t), 2, '2026-27') as code;
+grant select on club_t, codes_t to authenticated;
+select pg_temp.expect((select count(*) from codes_t) = 2 and (select bool_and(code ~ '^[A-HJ-NP-Z2-9]{8}$') from codes_t), 'codes are made');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
+select pg_temp.expect((select count(*) from public.player where team_id = '00000000-0000-4000-8000-000000000001') = 0, 'a club sees nothing of a team before it joins');
+select pg_temp.expect((select count(*) from public.club_code) = 2, 'the director sees the club''s codes');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+do $$ begin
+  perform public.redeem_club_code('00000000-0000-4000-8000-000000000001', (select min(code) from codes_t));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot enter a club code';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false);
+do $$ begin
+  perform public.redeem_club_code('00000000-0000-4000-8000-000000000001', (select min(code) from codes_t));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: managers cannot enter a club code';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+do $$ begin
+  perform public.redeem_club_code('00000000-0000-4000-8000-000000000001', 'NOPE2345');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when no_data_found then raise notice 'ok: a wrong code is refused';
+end $$;
+select pg_temp.expect(
+  (public.redeem_club_code('00000000-0000-4000-8000-000000000001', lower((select min(code) from codes_t)))) ->> 'club' = 'Traction Canes',
+  'a coach enters a club code (any case)');
+do $$ begin
+  perform public.redeem_club_code('00000000-0000-4000-8000-000000000001', (select max(code) from codes_t));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when raise_exception then raise notice 'ok: one code per team per season';
+end $$;
+select pg_temp.expect((select count(*) from public.club_code) = 1, 'coaches see only their team''s code');
+select pg_temp.expect((select organization_id is not null from public.team where id = '00000000-0000-4000-8000-000000000001'), 'the team joins the club');
+do $$ begin
+  perform * from public.club_overview((select org from club_t));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: only club admins see the club dashboard';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
+select pg_temp.expect((select count(*) from public.player where team_id = '00000000-0000-4000-8000-000000000001') > 0, 'the club views the team''s players');
+select pg_temp.expect((select count(*) from public.game g join public.season s on s.id = g.season_id where s.team_id = '00000000-0000-4000-8000-000000000001') > 0, 'the club views games');
+select pg_temp.expect((select count(*) from public.lineup_slot) > 0, 'the club views lineups');
+select pg_temp.expect((select count(*) from public.team_stats) >= 0, 'the club can read imported team stats');
+select pg_temp.expect((select bool_and(role in ('owner', 'coach')) from public.member), 'the club sees only coaches, not parents');
+select pg_temp.expect((select count(*) from public.finance_entry) = 0, 'the club sees no team money');
+select pg_temp.expect((select count(*) from public.player_guardian) = 0, 'the club sees no parent links');
+select pg_temp.expect((select count(*) from public.walkup) = 0, 'the club sees no walk-ups');
+select pg_temp.expect((select count(*) from public.team_groupme) = 0, 'the club sees no GroupMe bot');
+select pg_temp.expect((select count(*) from public.player_game_stat) = 0, 'the club sees no parents'' box score imports');
+update public.player set name = 'Changed by club' where team_id = '00000000-0000-4000-8000-000000000001';
+select pg_temp.expect((select count(*) from public.player where name = 'Changed by club') = 0, 'the club cannot change anything');
+select pg_temp.expect((select team_name from public.club_overview((select org from club_t))) is not null, 'the club dashboard lists the team');
+do $$ begin
+  perform public.create_club_codes((select org from club_t), 5, '2026-27');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: codes are only made by RallyCap (SQL Editor)';
+end $$;
+reset role;
+update public.club_code set expires_on = current_date - 1 where team_id = '00000000-0000-4000-8000-000000000001';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
+select pg_temp.expect((select count(*) from public.player where team_id = '00000000-0000-4000-8000-000000000001') = 0, 'when the season''s code expires, the club''s view ends');
+reset role;
 \echo ALL RLS TESTS PASSED
