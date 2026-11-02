@@ -38,6 +38,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 - Magic-link + code sign-in, invite links, roles (owner / coach / manager / treasurer / parent read-only), multiple teams with a switcher; the team creator is its Owner (coach powers, can never be removed or demoted)
 - Parents linked to their kids (parent picks on first open; coaches/managers fix links on Coaches & parents); homework uses the links
 - Option a team (archive, read-only, "Call Up" to restore); delete only optioned teams
+- Offline dugout use: the last team data loaded is kept on the device (`rallycap:offline:v1`) and opens with no signal (amber "Offline · showing your team as of…" banner); lineups, attendance, batting order and final scores made offline wait in an outbox on the device (`src/lib/data/offline.ts`, survives restarts, newest change per game wins) and sync on reconnect, every 30 s, or on return to the app; other edits say they need a connection; a change the server refuses is dropped and shown. A service worker (`public/sw.js`, production only) keeps app code, serves pages from the device offline or after 4 s of weak signal, and pre-saves Games, the next three weeks of games and their lineup cards, and the main sections. Sign-out clears the device copy and saved pages
 - Installable on a phone's home screen; responsive layout (phone and tablet: menu button top right (thumb reach) opens a slide-in menu; tablet: two-column lists, centered dialogs; desktop: the menu stays open on the side). The menu has the sections (Stats only for coaches and managers) plus Team links (Coaches & parents, My player's stats, Fair play rules, Team colors & logo, Uniforms, GroupMe)
 - Practice schedule: build a season of practices (days × dates), each with a focus, a drill plan (starter library or custom, minutes vs. scheduled length), notes, cancel; parents view
 - Import a schedule from a photo, PDF or CSV (Claude reads it; coach reviews before adding practices and games)
@@ -55,8 +56,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 
 - Team money phase 2: re-split a Bat Around when the roster changes, budget vs. actual, umpire-fee estimates from the schedule, pass fundraiser money on to families
 
-- Tournament finder
-- Offline use in the dugout (local copy, sync when back online)
+- Tournament finder (shelved for now)
 
 **Later:** in-app payments (Stripe), AI practice plans, native chat.
 

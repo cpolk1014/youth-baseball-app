@@ -14,6 +14,7 @@ import { themeVars } from "@/lib/branding/theme";
 import { isCoach, permissionsFor } from "@/lib/data/permissions";
 import { myUserId, syncNow, useAppData, useStoreState } from "@/lib/data/store";
 import { DataStatus } from "./DataStatus";
+import { OfflineSupport } from "./OfflineSupport";
 import { TeamBadge } from "./TeamBadge";
 
 type Tab = "games" | "pa" | "practice" | "plays" | "season" | "stats" | "roster" | "money";
@@ -131,6 +132,7 @@ export function AppShell({
         </main>
       </div>
       <MenuDrawer open={menuOpen} tab={tab} onClose={() => setMenuOpen(false)} />
+      <OfflineSupport />
     </div>
   );
 }

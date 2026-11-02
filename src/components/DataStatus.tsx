@@ -23,7 +23,7 @@ function defaultSeasonName(today: Date): string {
 
 /** Wraps screen content: first-time setup, load errors, and failed-save notices. */
 export function DataStatus({ children }: { children: ReactNode }) {
-  const { status, saveError } = useStoreState();
+  const { status, saveError, offline, savedAt, pending } = useStoreState();
   const data = useAppData();
 
   if (status.kind === "setup") return <TeamSetup hasTeam={status.team !== null} />;
@@ -66,6 +66,9 @@ export function DataStatus({ children }: { children: ReactNode }) {
           </button>
         </div>
       )}
+      {(offline || pending > 0) && (
+        <OfflineBanner offline={offline} savedAt={savedAt} pending={pending} />
+      )}
       {data?.team.optionedAt && (
         <div className="mb-3 flex items-center gap-3 rounded-xl border-2 border-amber-500 bg-amber-50 p-3 text-amber-950">
           <p className="flex-1 text-base leading-snug">
@@ -85,6 +88,51 @@ export function DataStatus({ children }: { children: ReactNode }) {
       <KidsPrompt />
       {children}
     </>
+  );
+}
+
+/** No signal: what's showing, and what will sync. Signal back with changes waiting: syncing. */
+function OfflineBanner({
+  offline,
+  savedAt,
+  pending,
+}: {
+  offline: boolean;
+  savedAt: string | null;
+  pending: number;
+}) {
+  const waiting = `${pending} change${pending === 1 ? "" : "s"}`;
+  const asOf = savedAt
+    ? new Date(savedAt).toLocaleString(undefined, {
+        weekday: "short",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
+  if (!offline) {
+    return (
+      <p
+        role="status"
+        className="mb-3 rounded-xl border-2 border-sky-600 bg-sky-50 p-3 text-base font-semibold text-sky-950"
+      >
+        Back online · saving {waiting} made offline…
+      </p>
+    );
+  }
+  return (
+    <div
+      role="status"
+      className="mb-3 rounded-xl border-2 border-amber-500 bg-amber-50 p-3 text-amber-950"
+    >
+      <p className="text-base font-bold">
+        Offline{asOf ? ` · showing your team as of ${asOf}` : ""}
+        {pending > 0 ? ` · ${waiting} will sync` : ""}
+      </p>
+      <p className="text-sm leading-snug">
+        Lineups, attendance, batting order and scores save on this device and sync when you&apos;re
+        back online.
+      </p>
+    </div>
   );
 }
 

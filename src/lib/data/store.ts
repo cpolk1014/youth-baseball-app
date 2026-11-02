@@ -9,11 +9,18 @@ import { receiptPath } from "@/lib/finance/receipt";
 import type { RuleConfigInput } from "@/lib/rules/config";
 import type { FinanceEntry, FinanceShare } from "@/lib/finance/types";
 import type { GameUniform, UniformCombo } from "@/lib/uniforms";
+import {
+  addToOutbox,
+  applyOp,
+  applyOutbox,
+  isNetworkError,
+  type OfflineOp,
+  type Snapshot,
+} from "./offline";
 import { SEED_DATA } from "./seed";
 import type {
   AppData,
   Game,
-  GameLineup,
   GameDaySettings,
   GameStatus,
   LineupStyle,
@@ -41,16 +48,28 @@ export interface StoreState {
   /** Signed-in user's email (Supabase mode only). */
   email: string | null;
   mode: "local" | "supabase";
+  /** No connection: showing the device's copy of the team (from `savedAt`). */
+  offline: boolean;
+  savedAt: string | null;
+  /** Offline changes waiting to be saved. */
+  pending: number;
 }
 
 const STORAGE_KEY = "lineup-app:v1";
 const SEEDS_KEY = "lineup-app:autofill-seeds";
 const TEAM_KEY = "lineup-app:team-id";
+const SNAPSHOT_KEY = "rallycap:offline:v1";
+const OUTBOX_KEY = "rallycap:outbox:v1";
+const OFFLINE_EDIT =
+  "You're offline. Lineups, attendance, batting order and scores save on this device; this change needs a connection.";
 const SERVER_STATE: StoreState = {
   status: { kind: "loading" },
   saveError: null,
   email: null,
   mode: "local",
+  offline: false,
+  savedAt: null,
+  pending: 0,
 };
 
 const listeners = new Set<() => void>();
@@ -63,6 +82,8 @@ let state: StoreState = {
 let loadStarted = false;
 let saveQueue: Promise<void> = Promise.resolve();
 let pendingSaves = 0;
+/** Offline changes not yet saved, oldest first (kept on the device across restarts). */
+let outbox: OfflineOp[] = [];
 
 // Closing or reloading the page drops saves that haven't run yet, so ask first.
 if (typeof window !== "undefined") {
@@ -109,6 +130,20 @@ function writeJson(key: string, value: unknown): void {
   }
 }
 
+const online = () => typeof navigator === "undefined" || navigator.onLine !== false;
+
+function saveOutbox(): void {
+  writeJson(OUTBOX_KEY, outbox);
+  setState({ pending: outbox.length });
+}
+
+/** Keep the server's copy of the team on this device, for opening the app with no signal. */
+function keepSnapshot(d: AppData, email: string | null): string {
+  const savedAt = new Date().toISOString();
+  writeJson(SNAPSHOT_KEY, { savedAt, email, data: d } satisfies Snapshot);
+  return savedAt;
+}
+
 async function loadRemote(): Promise<void> {
   const { loadFromSupabase } = await import("./supabase-backend");
   try {
@@ -117,15 +152,60 @@ async function loadRemote(): Promise<void> {
       readJson<string>(TEAM_KEY),
     );
     if (result.kind === "ready") {
-      data = result.data;
+      data = applyOutbox(result.data, outbox);
       writeJson(TEAM_KEY, result.teamId);
-      setState({ status: { kind: "ready" }, email: result.email });
+      const savedAt = keepSnapshot(result.data, result.email);
+      setState({ status: { kind: "ready" }, email: result.email, offline: false, savedAt });
+      if (outbox.length) void enqueue(flushOutbox);
     } else {
       data = null;
       setState({ status: { kind: "setup", team: result.team }, email: result.email });
     }
   } catch (e) {
+    // No signal (or the server can't be reached): open the device's copy instead.
+    const snap = readJson<Snapshot>(SNAPSHOT_KEY);
+    if (snap?.data) {
+      data = applyOutbox(snap.data, outbox);
+      setState({
+        status: { kind: "ready" },
+        email: snap.email,
+        offline: true,
+        savedAt: snap.savedAt,
+        pending: outbox.length,
+      });
+      return;
+    }
     setState({ status: { kind: "error", message: e instanceof Error ? e.message : String(e) } });
+  }
+}
+
+/**
+ * Save waiting offline changes, oldest first. Stops at the first one that can't reach the
+ * server (still offline); a change the server refuses is dropped and shown as an error.
+ */
+async function flushOutbox(): Promise<void> {
+  while (outbox.length) {
+    const op = outbox[0]!;
+    try {
+      const r = await remote();
+      if (op.kind === "lineup") await r.saveLineupRpc(op.gameId, op.lineup);
+      else if (op.kind === "gameResult")
+        await r.saveGameResult(op.gameId, op.status, op.scoreUs, op.scoreThem);
+      else await r.saveGameStatus(op.gameId, op.status);
+    } catch (e) {
+      if (isNetworkError(e, online())) {
+        setState({ offline: true });
+        return;
+      }
+      outbox = outbox.filter((o) => o !== op);
+      saveOutbox();
+      setState({
+        saveError: `A change made offline couldn't be saved (${e instanceof Error ? e.message : String(e)}).`,
+      });
+      continue;
+    }
+    outbox = outbox.filter((o) => o !== op);
+    saveOutbox();
   }
 }
 
@@ -184,6 +264,12 @@ function subscribe(listener: () => void): () => void {
 function update(fn: (current: AppData) => AppData, save?: () => Promise<void>): void {
   const current = getSnapshot();
   if (!current) return;
+  // Only game-day changes work offline (see updateOffline); refuse the rest up front.
+  if (state.mode === "supabase" && save && (state.offline || !online())) {
+    setState({ saveError: OFFLINE_EDIT });
+    void syncNow();
+    return;
+  }
   data = fn(current);
   if (state.mode === "local") writeJson(STORAGE_KEY, data);
   notify();
@@ -198,6 +284,22 @@ function update(fn: (current: AppData) => AppData, save?: () => Promise<void>): 
 }
 
 const remote = () => import("./supabase-backend");
+
+/** A game-day change: applied now, kept on the device, and saved whenever there's signal. */
+function updateOffline(op: OfflineOp): void {
+  const current = getSnapshot();
+  if (!current) return;
+  data = applyOp(current, op);
+  if (state.mode === "local") {
+    writeJson(STORAGE_KEY, data);
+    notify();
+    return;
+  }
+  outbox = addToOutbox(outbox, op);
+  saveOutbox();
+  notify();
+  void enqueue(flushOutbox);
+}
 
 /** Current app data outside React (e.g. in tests). */
 export function getAppData(): AppData {
@@ -215,6 +317,11 @@ export function useStoreState(): StoreState {
     () => state,
     () => SERVER_STATE,
   );
+}
+
+/** Current store state outside React (e.g. in tests). */
+export function getStoreState(): StoreState {
+  return state;
 }
 
 export function dismissSaveError(): void {
@@ -322,13 +429,7 @@ export function setGameResult(
   scoreUs: number | null,
   scoreThem: number | null,
 ): void {
-  update(
-    (d) => ({
-      ...d,
-      games: d.games.map((g) => (g.id === gameId ? { ...g, status, scoreUs, scoreThem } : g)),
-    }),
-    async () => (await remote()).saveGameResult(gameId, status, scoreUs, scoreThem),
-  );
+  updateOffline({ kind: "gameResult", gameId, status, scoreUs, scoreThem });
 }
 
 /** Coach or manager: arrival time and the automatic game day post (awaited, so a preview
@@ -447,35 +548,19 @@ export async function removeLogo(path: string): Promise<void> {
 }
 
 export function setGameStatus(gameId: string, status: GameStatus): void {
-  update(
-    (d) => ({ ...d, games: d.games.map((g) => (g.id === gameId ? { ...g, status } : g)) }),
-    async () => (await remote()).saveGameStatus(gameId, status),
-  );
+  updateOffline({ kind: "gameStatus", gameId, status });
 }
 
 export function saveLineup(gameId: string, lineup: Lineup, autoFillSeed?: number): void {
-  update(
-    (d) => {
-      const seed = autoFillSeed ?? d.lineups[gameId]?.autoFillSeed ?? 0;
-      if (state.mode === "supabase" && autoFillSeed !== undefined) {
-        // Auto-fill seeds are a per-device convenience; they aren't stored in the database.
-        writeJson(SEEDS_KEY, {
-          ...(readJson<Record<string, number>>(SEEDS_KEY) ?? {}),
-          [gameId]: seed,
-        });
-      }
-      const next: GameLineup = {
-        innings: lineup.innings,
-        battingOrder: lineup.battingOrder,
-        notBatting: lineup.notBatting ?? [],
-        absent: lineup.absent ?? [],
-        slots: lineup.slots,
-        autoFillSeed: seed,
-      };
-      return { ...d, lineups: { ...d.lineups, [gameId]: next } };
-    },
-    async () => (await remote()).saveLineupRpc(gameId, lineup),
-  );
+  const seed = autoFillSeed ?? getSnapshot()?.lineups[gameId]?.autoFillSeed ?? 0;
+  if (state.mode === "supabase" && autoFillSeed !== undefined) {
+    // Auto-fill seeds are a per-device convenience; they aren't stored in the database.
+    writeJson(SEEDS_KEY, {
+      ...(readJson<Record<string, number>>(SEEDS_KEY) ?? {}),
+      [gameId]: seed,
+    });
+  }
+  updateOffline({ kind: "lineup", gameId, lineup, seed });
 }
 
 /** Reload team data in the background (no loading screen), e.g. after managing members. */
@@ -496,6 +581,7 @@ export function syncNow(): Promise<boolean> {
   syncing ??= (async () => {
     try {
       await saveQueue;
+      await enqueue(flushOutbox);
       const { loadFromSupabase } = await import("./supabase-backend");
       const result = await loadFromSupabase(
         readJson<Record<string, number>>(SEEDS_KEY) ?? {},
@@ -504,8 +590,9 @@ export function syncNow(): Promise<boolean> {
       // A save started while loading would be undone by older data; the next sync gets it.
       if (pendingSaves > 0) return false;
       if (result.kind === "ready") {
-        data = result.data;
-        setState({ status: { kind: "ready" }, email: result.email });
+        data = applyOutbox(result.data, outbox);
+        const savedAt = keepSnapshot(result.data, result.email);
+        setState({ status: { kind: "ready" }, email: result.email, offline: false, savedAt });
       } else {
         data = null;
         setState({ status: { kind: "setup", team: result.team }, email: result.email });
@@ -513,7 +600,8 @@ export function syncNow(): Promise<boolean> {
       lastSync = Date.now();
       window.dispatchEvent(new Event(SYNC_EVENT));
       return true;
-    } catch {
+    } catch (e) {
+      if (isNetworkError(e, online())) setState({ offline: true });
       return false;
     } finally {
       syncing = null;
@@ -524,6 +612,17 @@ export function syncNow(): Promise<boolean> {
 
 /** Fired on window after a sync, for data kept outside this store. */
 export const SYNC_EVENT = "rallycap:sync";
+
+// Offline changes from an earlier visit; and saving them (then refreshing) when signal comes
+// back, or every 30 seconds while some are waiting.
+if (typeof window !== "undefined" && state.mode === "supabase") {
+  outbox = readJson<OfflineOp[]>(OUTBOX_KEY) ?? [];
+  state = { ...state, pending: outbox.length };
+  window.addEventListener("online", () => void syncNow());
+  window.setInterval(() => {
+    if ((outbox.length || state.offline) && online()) void syncNow();
+  }, 30_000);
+}
 
 // Coming back to the app after a while (another tab, a locked phone, a laptop lid):
 // pick up what changed elsewhere.
@@ -827,6 +926,24 @@ export function switchTeam(teamId: string): void {
 }
 
 export async function signOut(): Promise<void> {
+  if (outbox.length) await enqueue(flushOutbox).catch(() => undefined);
+  if (
+    outbox.length &&
+    !window.confirm(
+      `${outbox.length} change${outbox.length === 1 ? "" : "s"} made offline haven't been saved yet and will be lost. Sign out anyway?`,
+    )
+  ) {
+    return;
+  }
+  // This device's copy of the team (data and saved pages) leaves with the user.
+  outbox = [];
+  try {
+    window.localStorage.removeItem(SNAPSHOT_KEY);
+    window.localStorage.removeItem(OUTBOX_KEY);
+    for (const key of await caches.keys()) await caches.delete(key);
+  } catch {
+    // Storage unavailable: nothing to clear.
+  }
   await (await remote()).signOut();
   // A full page load (not router.push) so the signed-in user's data in memory is dropped.
   // eslint-disable-next-line @next/next/no-location-assign-relative-destination
