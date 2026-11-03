@@ -167,7 +167,7 @@ export function ProfileScreen() {
             />
           </div>
           <span className="text-sm text-slate-600">
-            Only you see this. Teammates&apos; families get a <b>Pay with Venmo</b> button by your
+            Only you see this. Teammates&apos; families get a blue Venmo <b>V</b> button by your
             name on Coaches &amp; parents.
           </span>
           <div className="flex gap-2">

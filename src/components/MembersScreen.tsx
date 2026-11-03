@@ -37,6 +37,15 @@ const INVITE_ROLES: { role: MemberRole; label: string; hint: string }[] = [
   { role: "treasurer", label: "Invite a treasurer", hint: "One person · 7 days · team money" },
 ];
 
+/** Venmo's "V", white, for the pay button. */
+function VenmoMark() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-7" fill="#fff">
+      <path d="M19.5 3.2c.7 1.2 1 2.4 1 3.9 0 4.9-4.2 11.2-7.6 15.6H5.1L2 4.1l6.8-.6 1.7 13.5c1.5-2.5 3.4-6.4 3.4-9.1 0-1.5-.3-2.5-.6-3.3l6.2-1.4z" />
+    </svg>
+  );
+}
+
 /** Which teammates have a Venmo handle (for the Pay button; the handles stay private). */
 function useVenmoUsers(teamId: string | undefined): Set<string> {
   const [ids, setIds] = useState<Set<string>>(new Set());
@@ -217,9 +226,11 @@ export function MembersScreen() {
                 {!isMe && venmoUsers.has(m.userId) && (
                   <a
                     href={`/api/venmo?team=${data.team.id}&user=${m.userId}`}
-                    className="flex h-11 shrink-0 items-center rounded-lg bg-[#008cff] px-3 text-sm font-bold text-white active:bg-[#0074d4]"
+                    aria-label={`Pay ${nameOf(m)} with Venmo`}
+                    title="Pay with Venmo"
+                    className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#008cff] active:bg-[#0074d4]"
                   >
-                    Pay with Venmo
+                    <VenmoMark />
                   </a>
                 )}
                 {perms.manageMembers && m.role !== "owner" ? (
