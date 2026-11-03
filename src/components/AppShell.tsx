@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Fragment,
   useEffect,
   useEffectEvent,
   useRef,
@@ -459,10 +460,17 @@ function MenuLinks({
       {rail && collapsed ? <span className="sr-only">{x.label}</span> : x.label}
     </Link>
   );
+  // Parents have no Team settings: Coaches & parents sits under Roster instead.
+  const parent = data?.me.role === "parent";
   const section = (title: string, tabs: MenuTab[]) => (
     <>
       {heading(title)}
-      {visibleTabs(tabs, data).map((t) => link(t, t.id === tab && !onSetting))}
+      {visibleTabs(tabs, data).map((t) => (
+        <Fragment key={t.href}>
+          {link(t, t.id === tab && !onSetting)}
+          {parent && t.id === "roster" && settings.map((x) => link(x, isOn(x)))}
+        </Fragment>
+      ))}
     </>
   );
   return (
@@ -475,7 +483,7 @@ function MenuLinks({
       )}
       {section("Game day", GAME_DAY)}
       {section("Team", TEAM)}
-      {settings.length > 0 && (
+      {settings.length > 0 && !parent && (
         <>
           {heading("Team settings")}
           {settings.map((x) => link(x, isOn(x)))}
@@ -518,7 +526,7 @@ function AccountMenu({
       label: "My clubs",
       show: (clubs?.length ?? 0) > 0 || (teamClubs?.length ?? 0) > 0,
     },
-    { href: "/my-player", label: "My player", show: hasKids },
+    { href: "/my-player", label: myPlayerLabel(data), show: hasKids },
   ].filter((x) => x.show);
   const current = (href: string) =>
     pathname === href || (href === "/my-clubs" && pathname.startsWith("/club"));
@@ -601,6 +609,17 @@ function AccountMenu({
       )}
     </div>
   );
+}
+
+/** "My player: Leo T." (or "My players: Leo, Mia" for families with more than one). */
+function myPlayerLabel(data: ReturnType<typeof useAppData>): string {
+  if (!data) return "My player";
+  const me = myUserId(data);
+  const ids = new Set(data.guardians.filter((g) => g.userId === me).map((g) => g.playerId));
+  const kids = data.players.filter((p) => ids.has(p.id));
+  if (kids.length === 0) return "My player";
+  if (kids.length === 1) return `My player: ${kids[0]!.name}`;
+  return `My players: ${kids.map((k) => k.name.split(" ")[0]).join(", ")}`;
 }
 
 /** Pull what changed on other phones and computers, in case this one is behind. */

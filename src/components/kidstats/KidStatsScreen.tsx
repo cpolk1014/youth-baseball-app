@@ -15,6 +15,10 @@ import { AppShell, Loading } from "../AppShell";
 import { kidsOf } from "../KidPicker";
 import { Sheet } from "../Sheet";
 import { ImportBoxScore } from "./ImportBoxScore";
+import { SharePlayerCard } from "./SharePlayerCard";
+import { StrikeChart, TrendChart } from "../charts/Charts";
+import { useToday } from "../useToday";
+import { battingTrend, pitchingTrend, playerCardModel } from "@/lib/boxscore/trends";
 import { useKidGames } from "./kidGames";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
@@ -42,9 +46,15 @@ function KidStats({ data }: { data: AppData }) {
   const { games, loading, error, save, remove } = useKidGames(kids.map((k) => k.id));
   const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState<KidGame | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const today = useToday();
 
   const shell = (children: React.ReactNode) => (
-    <AppShell title="My player" subtitle={data.team.name} tab="account">
+    <AppShell
+      title={kid ? kid.name : "My player"}
+      subtitle={`${kid ? "My player · " : ""}${data.team.name}`}
+      tab="account"
+    >
       {children}
     </AppShell>
   );
@@ -58,6 +68,7 @@ function KidStats({ data }: { data: AppData }) {
   }
 
   const mine = games.filter((g) => g.playerId === kid.id);
+  const year = Number((today || "2026").slice(0, 4));
   const t = seasonTotals(mine);
   const b = t.batting;
   const stat = (label: string, value: string | number, big = false) => (
@@ -164,6 +175,12 @@ function KidStats({ data }: { data: AppData }) {
             <p className="mt-3 text-sm text-slate-600">
               Errors: {t.errors}. ERA is per {ERA_INNINGS} innings, a youth game.
             </p>
+            <button
+              onClick={() => setSharing(true)}
+              className="mt-3 h-12 w-full rounded-xl border-2 border-[var(--team)] bg-white text-base font-bold text-[var(--team)] active:bg-slate-100"
+            >
+              Share {kid.name.split(" ")[0]}&apos;s player card
+            </button>
           </section>
 
           <section>
@@ -193,8 +210,33 @@ function KidStats({ data }: { data: AppData }) {
               ))}
             </ul>
           </section>
+
+          {/* Season trends: how the numbers moved game by game. */}
+          {mine.length >= 2 && (
+            <div className="flex flex-col gap-4 md:col-span-2 md:grid md:grid-cols-2 md:items-start">
+              <TrendChart points={battingTrend(mine)} year={year} />
+              {pitchingTrend(mine).length >= 2 && (
+                <StrikeChart points={pitchingTrend(mine)} year={year} />
+              )}
+            </div>
+          )}
         </div>
       )}
+
+      <Sheet open={sharing} title={`${kid.name}'s player card`} onClose={() => setSharing(false)}>
+        {sharing && (
+          <SharePlayerCard
+            data={data}
+            model={playerCardModel({
+              name: kid.name,
+              jersey: kid.jerseyNumber ?? null,
+              teamName: data.team.name,
+              season: data.season.name,
+              totals: t,
+            })}
+          />
+        )}
+      </Sheet>
 
       <Sheet open={importing} title="Import a box score" onClose={() => setImporting(false)}>
         {importing && (

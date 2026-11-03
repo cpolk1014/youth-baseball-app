@@ -3,9 +3,9 @@
 import { contrast, hexToRgb, inkFor, readableOnWhite } from "@/lib/branding/color";
 import { CARD_HEIGHT, CARD_WIDTH, type BattingCardModel } from "@/lib/share/battingCard";
 
-const FONT = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+export const FONT = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
-async function loadImage(url: string | null): Promise<HTMLImageElement | null> {
+export async function loadImage(url: string | null): Promise<HTMLImageElement | null> {
   if (!url) return null;
   const img = new Image();
   // Logos come from public storage; anonymous CORS keeps the canvas exportable.
@@ -20,7 +20,7 @@ async function loadImage(url: string | null): Promise<HTMLImageElement | null> {
 }
 
 /** Shrink a font until the text fits the width. */
-function fit(
+export function fit(
   ctx: CanvasRenderingContext2D,
   text: string,
   weight: number,
@@ -36,7 +36,7 @@ function fit(
   return s;
 }
 
-function roundRect(
+export function roundRect(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,

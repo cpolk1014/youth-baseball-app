@@ -4,6 +4,7 @@
 // blue / aqua / orange for series, blue <-> red for won/lost, gray for "nothing".
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { GameRuns, MoneyPoint, PlayingTimeBar } from "@/lib/charts";
+import type { PitchingPoint, TrendPoint } from "@/lib/boxscore/trends";
 import { formatCents, shortDate } from "@/lib/finance/money";
 
 const BLUE = "#2a78d6";
@@ -335,5 +336,212 @@ export function RunsChart({ games, year }: { games: GameRuns[]; year: number }) 
         </span>
       </div>
     </div>
+  );
+}
+
+const rate3 = (x: number) => (x < 1 ? x.toFixed(3).replace(/^0/, "") : x.toFixed(3));
+
+/** A kid's AVG, OBP and OPS season-to-date after each game (My player). */
+export function TrendChart({ points, year }: { points: TrendPoint[]; year: number }) {
+  const { ref, width } = useWidth<HTMLDivElement>();
+  const [at, setAt] = useState<number | null>(null);
+  const H = 210;
+  const pad = { l: 44, r: 44, t: 12, b: 26 };
+  const w = Math.max(0, width - pad.l - pad.r);
+  const h = H - pad.t - pad.b;
+  const series = [
+    { key: "avg" as const, label: "AVG", color: BLUE },
+    { key: "ops" as const, label: "OPS", color: ORANGE },
+    { key: "obp" as const, label: "OBP", color: AQUA },
+  ];
+  const top = Math.max(1, ...points.flatMap((p) => series.map((s) => p[s.key] ?? 0)));
+  const yMax = Math.ceil(top * 4) / 4;
+  const x = (i: number) => pad.l + (points.length > 1 ? (i / (points.length - 1)) * w : w / 2);
+  const y = (v: number) => pad.t + h - (v / yMax) * h;
+  const ticks = Array.from({ length: Math.round(yMax / 0.25) + 1 }, (_, i) => i * 0.25).filter(
+    (v, i, all) => all.length <= 5 || i % 2 === 0,
+  );
+  const line = (key: "avg" | "obp" | "ops") =>
+    points
+      .map((p, i) => (p[key] === null ? null : `${x(i)},${y(p[key]!)}`))
+      .filter(Boolean)
+      .map((xy, i) => `${i === 0 ? "M" : "L"}${xy}`)
+      .join("");
+  const p = at === null ? null : points[at]!;
+  const last = points.at(-1);
+
+  return (
+    <figure className="rounded-xl border-2 border-slate-200 bg-white p-3">
+      <figcaption className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <span className="text-sm font-bold tracking-wide text-slate-600 uppercase">
+          Season so far, game by game
+        </span>
+        <Legend items={series.map((s) => ({ label: s.label, color: s.color, line: true }))} />
+      </figcaption>
+      <div ref={ref} className="relative" onMouseLeave={() => setAt(null)}>
+        {width > 0 && points.length > 0 && (
+          <svg width={width} height={H} role="img" aria-label="AVG, OBP and OPS after each game">
+            {ticks.map((v) => (
+              <g key={v}>
+                <line x1={pad.l} x2={pad.l + w} y1={y(v)} y2={y(v)} stroke={GRID} />
+                <text
+                  x={pad.l - 8}
+                  y={y(v) + 4}
+                  textAnchor="end"
+                  className="fill-slate-500 text-[11px]"
+                >
+                  {v === 0 ? "0" : rate3(v)}
+                </text>
+              </g>
+            ))}
+            <text x={pad.l} y={H - 6} className="fill-slate-500 text-[11px]">
+              {shortDate(points[0]!.date, year)}
+            </text>
+            {points.length > 1 && (
+              <text x={pad.l + w} y={H - 6} textAnchor="end" className="fill-slate-500 text-[11px]">
+                {shortDate(last!.date, year)}
+              </text>
+            )}
+            {series.map((s) => (
+              <g key={s.key}>
+                <path d={line(s.key)} fill="none" stroke={s.color} strokeWidth={2} />
+                {points.map((pt, i) =>
+                  pt[s.key] === null ? null : (
+                    <circle
+                      key={i}
+                      cx={x(i)}
+                      cy={y(pt[s.key]!)}
+                      r={at === i ? 5 : 3.5}
+                      fill={s.color}
+                      stroke="white"
+                      strokeWidth={1.5}
+                    />
+                  ),
+                )}
+                {last && last[s.key] !== null && (
+                  <text
+                    x={pad.l + w + 6}
+                    y={y(last[s.key]!) + 4}
+                    className="fill-slate-700 text-[11px] font-bold"
+                  >
+                    {s.label}
+                  </text>
+                )}
+              </g>
+            ))}
+            {p && (
+              <line
+                x1={x(at!)}
+                x2={x(at!)}
+                y1={pad.t}
+                y2={pad.t + h}
+                stroke="#94a3b8"
+                strokeDasharray="3 3"
+              />
+            )}
+            {points.map((_, i) => (
+              <rect
+                key={i}
+                x={x(i) - (points.length > 1 ? w / (points.length - 1) / 2 : w / 2)}
+                y={pad.t}
+                width={points.length > 1 ? w / (points.length - 1) : w}
+                height={h}
+                fill="transparent"
+                onPointerEnter={() => setAt(i)}
+                onClick={() => setAt(i)}
+              />
+            ))}
+          </svg>
+        )}
+        {p && (
+          <Tooltip x={x(at!)} y={pad.t + 20}>
+            <p className="font-bold">
+              vs {p.opponent} · {shortDate(p.date, year)}
+            </p>
+            <p>
+              {p.hits}-for-{p.atBats} that game
+            </p>
+            <p className="text-white/80">
+              Season: {p.avg === null ? "–" : rate3(p.avg)} AVG ·{" "}
+              {p.obp === null ? "–" : rate3(p.obp)} OBP · {p.ops === null ? "–" : rate3(p.ops)} OPS
+            </p>
+          </Tooltip>
+        )}
+      </div>
+    </figure>
+  );
+}
+
+/** Strike share in each game they pitched (My player). */
+export function StrikeChart({ points, year }: { points: PitchingPoint[]; year: number }) {
+  const { ref, width } = useWidth<HTMLDivElement>();
+  const [at, setAt] = useState<number | null>(null);
+  const H = 130;
+  const pad = { l: 40, r: 8, t: 10, b: 22 };
+  const w = Math.max(0, width - pad.l - pad.r);
+  const h = H - pad.t - pad.b;
+  const slot = points.length ? w / points.length : 0;
+  const barW = Math.max(6, Math.min(28, slot - 6));
+  const y = (v: number) => pad.t + h - v * h;
+  const p = at === null ? null : points[at]!;
+  return (
+    <figure className="rounded-xl border-2 border-slate-200 bg-white p-3">
+      <figcaption className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">
+        Strikes thrown, each game pitched
+      </figcaption>
+      <div ref={ref} className="relative" onMouseLeave={() => setAt(null)}>
+        {width > 0 && (
+          <svg width={width} height={H} role="img" aria-label="Share of pitches that were strikes">
+            {[0, 0.5, 1].map((v) => (
+              <g key={v}>
+                <line x1={pad.l} x2={pad.l + w} y1={y(v)} y2={y(v)} stroke={GRID} />
+                <text
+                  x={pad.l - 6}
+                  y={y(v) + 4}
+                  textAnchor="end"
+                  className="fill-slate-500 text-[11px]"
+                >
+                  {v * 100}%
+                </text>
+              </g>
+            ))}
+            {points.map((pt, i) => {
+              const v = pt.strikePct ?? 0;
+              const cx = pad.l + slot * i + slot / 2;
+              return (
+                <g key={pt.gameId} onPointerEnter={() => setAt(i)} onClick={() => setAt(i)}>
+                  <rect x={pad.l + slot * i} y={pad.t} width={slot} height={h} fill="transparent" />
+                  <rect
+                    x={cx - barW / 2}
+                    y={y(v)}
+                    width={barW}
+                    height={Math.max(2, v * h)}
+                    rx={3}
+                    fill={pt.strikePct === null ? GRAY : BLUE}
+                    opacity={at === null || at === i ? 1 : 0.5}
+                  />
+                </g>
+              );
+            })}
+            <text x={pad.l} y={H - 4} className="fill-slate-500 text-[11px]">
+              {points[0] ? shortDate(points[0].date, year) : ""}
+            </text>
+          </svg>
+        )}
+        {p && (
+          <Tooltip x={pad.l + slot * at! + slot / 2} y={pad.t + 10}>
+            <p className="font-bold">
+              vs {p.opponent} · {shortDate(p.date, year)}
+            </p>
+            <p>
+              {p.strikePct === null
+                ? "No pitch count"
+                : `${Math.round(p.strikePct * 100)}% strikes`}
+              {p.pitches ? ` · ${p.pitches} pitches` : ""} · {p.strikeouts} K
+            </p>
+          </Tooltip>
+        )}
+      </div>
+    </figure>
   );
 }
