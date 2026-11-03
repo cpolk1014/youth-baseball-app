@@ -159,8 +159,11 @@ const nameCell = "sticky left-0 z-10 bg-white px-2 text-left";
 
 function PlayerName({ row }: { row: SeasonRow }) {
   return (
-    <th scope="row" className={`${nameCell} w-[120px] max-w-[120px] py-1.5`}>
-      <span className="block w-[108px] truncate text-[15px] leading-tight font-semibold">
+    <th
+      scope="row"
+      className={`${nameCell} w-[120px] max-w-[120px] py-1.5 md:w-56 md:max-w-56 md:pl-4`}
+    >
+      <span className="block w-[108px] truncate text-[15px] leading-tight font-semibold md:w-full">
         {row.player.name}
       </span>
       <span className="block text-xs text-slate-600">#{row.player.jerseyNumber ?? "–"}</span>
@@ -237,10 +240,11 @@ function PositionGrid({ summary, rows }: { summary: SeasonSummary; rows: SeasonR
   const all = [...rows, ...summary.inactiveRows];
   return (
     <div className="overflow-x-auto rounded-xl border-2 border-slate-200 bg-white">
-      <table className="border-collapse">
+      {/* Phones: as narrow as it can be (it scrolls); tablets and up: the full width. */}
+      <table className="border-collapse md:w-full">
         <thead className="border-b-2 border-slate-200">
           <tr>
-            <th className={`${th} ${nameCell} text-left`}>Player</th>
+            <th className={`${th} ${nameCell} text-left md:pl-4`}>Player</th>
             {summary.positions.map((pos) => (
               <th key={pos} className={`${th} min-w-10 ${pos === "BENCH" ? "bg-slate-100" : ""}`}>
                 {pos === "BENCH" ? "BN" : pos}
