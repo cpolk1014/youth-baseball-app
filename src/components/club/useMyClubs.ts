@@ -7,6 +7,11 @@ import { useStoreState } from "@/lib/data/store";
 // Clubs the signed-in user runs, fetched once per page load (they rarely change).
 let cached: Promise<MyClub[]> | null = null;
 
+/** After buying a new club: look again. */
+export function forgetMyClubs(): void {
+  cached = null;
+}
+
 export function useMyClubs(): MyClub[] | null {
   const { mode, offline } = useStoreState();
   const [clubs, setClubs] = useState<MyClub[] | null>(null);

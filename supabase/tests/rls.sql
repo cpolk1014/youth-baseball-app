@@ -1240,4 +1240,45 @@ do $$ begin
 exception when raise_exception then raise notice 'ok: after the code expires, the club can''t post to that team';
 end $$;
 reset role;
+-- ── billing (Stripe purchases, fulfilled by the server) ──
+insert into auth.users (id, email) values ('aaaaaaaa-0000-4000-8000-000000000009', 'newclub@example.test');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000009', false);
+do $$ begin
+  perform public.fulfill_purchase('cs_test_1', 'club', 'aaaaaaaa-0000-4000-8000-000000000009', null, 'Bayou Bats', null, 3, '2026-27', 29700);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: only the server records purchases';
+end $$;
+reset role;
+set role service_role;
+create temp table bought_t as
+  select public.fulfill_purchase('cs_test_1', 'club', 'aaaaaaaa-0000-4000-8000-000000000009', null, 'Bayou Bats', null, 3, '2026-27', 29700) as r;
+reset role;
+select pg_temp.expect(jsonb_array_length((select r -> 'codes' from bought_t)) = 3, 'a new club pays and gets its codes');
+select pg_temp.expect((select role from public.club_admin where user_id = 'aaaaaaaa-0000-4000-8000-000000000009') = 'director', 'the buyer becomes the new club''s director');
+select pg_temp.expect((select bool_and(expires_on = '2027-07-31') from public.club_code where organization_id = ((select r ->> 'club' from bought_t))::uuid), 'codes run to July 31');
+set role service_role;
+select pg_temp.expect((public.fulfill_purchase('cs_test_1', 'club', 'aaaaaaaa-0000-4000-8000-000000000009', null, 'Bayou Bats', null, 3, '2026-27', 29700)) ->> 'already' = 'true', 'a payment notice that arrives twice is recorded once');
+select pg_temp.expect((public.fulfill_purchase('cs_test_2', 'club', 'aaaaaaaa-0000-4000-8000-000000000009', ((select r ->> 'club' from bought_t))::uuid, null, null, 2, '2026-27', 19800)) ? 'codes', 'an existing club buys more codes');
+do $$ begin
+  perform public.fulfill_purchase('cs_test_3', 'club', 'aaaaaaaa-0000-4000-8000-000000000003', ((select r ->> 'club' from bought_t))::uuid, null, null, 1, '2026-27', 9900);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when raise_exception then raise notice 'ok: only the club''s admins buy codes for it';
+end $$;
+select public.fulfill_purchase('cs_test_4', 'team', 'aaaaaaaa-0000-4000-8000-000000000001', null, null, '00000000-0000-4000-8000-000000000001', 1, '2026-27', 12900);
+reset role;
+select pg_temp.expect((select count(*) from public.club_code where organization_id = ((select r ->> 'club' from bought_t))::uuid) = 5, 'the club now has 5 codes');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select expires_on = '2027-07-31' from public.team_pass where team_id = '00000000-0000-4000-8000-000000000001'), 'the team''s season pass shows for its members');
+select pg_temp.expect((select count(*) from public.purchase) = 0, 'parents don''t see purchases');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select count(*) from public.purchase where kind = 'team') = 1, 'coaches see their team''s purchase');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.team_pass) = 0 and (select count(*) from public.purchase) = 0, 'outsiders see no passes or purchases');
+reset role;
 \echo ALL RLS TESTS PASSED

@@ -490,3 +490,15 @@ export async function clubPost(
     }),
   );
 }
+
+/** The team's own season passes (team members can see them). */
+export async function teamPasses(teamId: string): Promise<{ season: string; expiresOn: string }[]> {
+  const rows = check<{ season_label: string; expires_on: string }[]>(
+    await getBrowserSupabase()
+      .from("team_pass")
+      .select("season_label, expires_on")
+      .eq("team_id", teamId)
+      .order("season_label", { ascending: false }),
+  );
+  return rows.map((r) => ({ season: r.season_label, expiresOn: r.expires_on }));
+}

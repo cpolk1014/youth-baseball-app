@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { TEAM_PRICE_CENTS, dollars, seasonEnds, seasonFor } from "@/lib/billing/season";
 import type { TeamClub } from "@/lib/data/club-backend";
 
 const field =
@@ -13,6 +14,10 @@ const field =
  */
 export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: boolean }) {
   const [club, setClub] = useState<TeamClub | null | "loading">("loading");
+  const [passes, setPasses] = useState<{ season: string; expiresOn: string }[]>([]);
+  const [paying, setPaying] = useState(false);
+  const [paid, setPaid] = useState(false);
+  const [look, setLook] = useState(0);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,15 +25,28 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
   useEffect(() => {
     let current = true;
     import("@/lib/data/club-backend")
-      .then((m) => m.teamClub(teamId))
+      .then((m) => Promise.all([m.teamClub(teamId), m.teamPasses(teamId).catch(() => [])]))
       .then(
-        (c) => current && setClub(c),
+        ([c, p]) => {
+          if (!current) return;
+          setClub(c);
+          setPasses(p);
+        },
         () => current && setClub(null),
       );
     return () => {
       current = false;
     };
-  }, [teamId]);
+  }, [teamId, look]);
+
+  // Back from paying ("?paid=1"): the pass shows once Stripe confirms; look again a few times.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("paid") !== "1") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the address
+    setPaid(true);
+    const timers = [3000, 8000, 15000].map((ms) => setTimeout(() => setLook((n) => n + 1), ms));
+    return () => timers.forEach(clearTimeout);
+  }, []);
 
   const join = async () => {
     setBusy(true);
@@ -46,8 +64,34 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
   };
 
   if (club === "loading") return null;
-  const active = club && club.expiresOn >= new Date().toISOString().slice(0, 10);
-  if (!active && !canJoin) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  const active = club && club.expiresOn >= today;
+  const pass = passes.find((p) => p.expiresOn >= today);
+  if (!active && !canJoin && !pass) return null;
+  const until = (iso: string) =>
+    new Date(`${iso}T12:00`).toLocaleDateString(undefined, {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+
+  const payForTeam = async () => {
+    setPaying(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "team", teamId, season: seasonFor(new Date()) }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !json.url) throw new Error(json.error ?? "Couldn't start the payment.");
+      window.location.assign(json.url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setPaying(false);
+    }
+  };
 
   return (
     <section className="mb-6 rounded-xl border-2 border-slate-200 bg-white p-4">
@@ -102,6 +146,34 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
             </p>
           )}
         </>
+      )}
+      {!active && (
+        <div className="mt-4 border-t-2 border-slate-100 pt-3">
+          <h2 className="mb-1 text-sm font-bold tracking-wide text-slate-600 uppercase">Season</h2>
+          {pass ? (
+            <p className="text-base">
+              ✓ Paid for {pass.season}, through <b>{until(pass.expiresOn)}</b>.
+            </p>
+          ) : paid ? (
+            <p role="status" className="text-base font-semibold text-green-800">
+              Payment received. It shows here in a few seconds.
+            </p>
+          ) : canJoin ? (
+            <>
+              <p className="mb-2 text-base text-slate-700">
+                Not part of a club? Pay for this team&apos;s {seasonFor(new Date())} season:{" "}
+                {dollars(TEAM_PRICE_CENTS)}, through {until(seasonEnds(seasonFor(new Date())))}.
+              </p>
+              <button
+                onClick={() => void payForTeam()}
+                disabled={paying}
+                className="h-12 w-full rounded-xl border-2 border-[var(--team)] bg-white text-base font-bold text-[var(--team)] disabled:opacity-40"
+              >
+                {paying ? "Opening checkout…" : `Pay ${dollars(TEAM_PRICE_CENTS)} for the season`}
+              </button>
+            </>
+          ) : null}
+        </div>
       )}
     </section>
   );

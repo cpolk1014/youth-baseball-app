@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ClubCode, ClubTeam } from "@/lib/data/club-backend";
+import { CLUB_PRICE_CENTS, dollars } from "@/lib/billing/season";
 import { formatClock } from "@/lib/data/game";
 import { useStoreState } from "@/lib/data/store";
 import { AppShell, Loading } from "../AppShell";
+import { Sheet } from "../Sheet";
 import { TeamBadge } from "../TeamBadge";
 import { ClubGroupMeTab } from "./ClubGroupMeTab";
 import { ClubLibraryTab } from "./ClubLibraryTab";
 import { ClubLookTab } from "./ClubLookTab";
-import { useMyClubs } from "./useMyClubs";
+import { BuyCodes } from "./BuyCodes";
+import { forgetMyClubs, useMyClubs } from "./useMyClubs";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -29,11 +32,7 @@ export function ClubScreen() {
   if (mode !== "supabase") return shell(<p className="text-lg">Clubs need sign-in.</p>);
   if (!clubs) return shell(<Loading />);
   if (!club) {
-    return shell(
-      <p className="text-lg">
-        You&apos;re not a club admin. Clubs are set up with RallyCap; ask your club director.
-      </p>,
-    );
+    return shell(<StartClub />);
   }
   return shell(
     <>
@@ -100,7 +99,64 @@ function ClubTabs({ clubId }: { clubId: string }) {
   );
 }
 
+/** Just back from Stripe: "?paid=1" in the address. */
+function usePaid(): boolean {
+  const [paid, setPaid] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the address
+    setPaid(new URLSearchParams(window.location.search).get("paid") === "1");
+  }, []);
+  return paid;
+}
+
+/** Not a club admin: start a club by paying for its teams. */
+function StartClub() {
+  const paid = usePaid();
+  const [waited, setWaited] = useState(0);
+
+  // Back from paying: the club appears once Stripe confirms (usually seconds).
+  useEffect(() => {
+    if (!paid || waited >= 10) return;
+    const t = setTimeout(async () => {
+      const m = await import("@/lib/data/club-backend");
+      const clubs = await m.myClubs().catch(() => []);
+      if (clubs.length) {
+        forgetMyClubs();
+        window.location.replace("/club");
+      } else setWaited((n) => n + 1);
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [paid, waited]);
+
+  if (paid) {
+    return (
+      <p role="status" className="rounded-xl border-2 border-green-700 bg-green-50 p-4 text-lg">
+        {waited < 10
+          ? "Payment received. Setting up your club…"
+          : "Payment received. Your club is taking longer than usual to appear; reload in a minute, or contact RallyCap if it doesn't."}
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="rounded-xl border-2 border-slate-200 bg-white p-4 text-base">
+        <p className="text-lg font-bold">Start a club</p>
+        <p className="mt-1 text-slate-700">
+          Running several teams? Pay {dollars(CLUB_PRICE_CENTS)} per team for the season and get one
+          code per team. Head coaches enter their code, and you can see every team&apos;s lineups,
+          playing time and stats (view only), share your logo, uniforms and practice plans, and post
+          to all your teams&apos; GroupMe groups.
+        </p>
+      </div>
+      <BuyCodes />
+    </div>
+  );
+}
+
 function ClubDashboard({ clubId }: { clubId: string }) {
+  const paid = usePaid();
+  const [buying, setBuying] = useState(false);
+  const [reload, setReload] = useState(0);
   const [teams, setTeams] = useState<ClubTeam[] | null>(null);
   // When the dashboard loaded, for "last lineup N days ago".
   const [now, setNow] = useState(0);
@@ -125,7 +181,14 @@ function ClubDashboard({ clubId }: { clubId: string }) {
     return () => {
       current = false;
     };
-  }, [clubId]);
+  }, [clubId, reload]);
+
+  // Back from paying: new codes show up once Stripe confirms; look again a few times.
+  useEffect(() => {
+    if (!paid) return;
+    const timers = [3000, 8000, 15000].map((ms) => setTimeout(() => setReload((n) => n + 1), ms));
+    return () => timers.forEach(clearTimeout);
+  }, [paid]);
 
   if (error) {
     return (
@@ -152,6 +215,14 @@ function ClubDashboard({ clubId }: { clubId: string }) {
 
   return (
     <>
+      {paid && (
+        <p
+          role="status"
+          className="mb-4 rounded-xl border-2 border-green-700 bg-green-50 p-3 text-base font-semibold"
+        >
+          Payment received. New codes appear below in a few seconds.
+        </p>
+      )}
       <div className="mb-4 grid grid-cols-3 gap-2">
         <Stat label={`Teams${season ? ` · ${season}` : ""}`} value={teams.length} />
         <Stat label="Codes unused" value={unused.length} />
@@ -175,7 +246,7 @@ function ClubDashboard({ clubId }: { clubId: string }) {
 
       <details
         className="rounded-xl border-2 border-slate-200 bg-white p-3"
-        open={teams.length === 0}
+        open={teams.length === 0 || paid}
       >
         <summary className="flex min-h-11 cursor-pointer items-center text-lg font-bold">
           Team codes{season ? ` · ${season}` : ""} ({thisSeason.length - unused.length} of{" "}
@@ -185,6 +256,12 @@ function ClubDashboard({ clubId }: { clubId: string }) {
           One code per team for the season. The head coach enters it on Coaches &amp; parents; the
           team keeps its data and you can view it here until June 30.
         </p>
+        <button
+          onClick={() => setBuying(true)}
+          className="mb-3 h-12 w-full rounded-xl bg-[var(--team)] text-base font-bold text-white"
+        >
+          Buy codes ({dollars(CLUB_PRICE_CENTS)} per team)
+        </button>
         <ul className="flex flex-col gap-2">
           {thisSeason.map((c) => (
             <li
@@ -206,6 +283,10 @@ function ClubDashboard({ clubId }: { clubId: string }) {
           ))}
         </ul>
       </details>
+
+      <Sheet open={buying} title="Buy team codes" onClose={() => setBuying(false)}>
+        {buying && <BuyCodes clubId={clubId} onCancel={() => setBuying(false)} />}
+      </Sheet>
     </>
   );
 }
