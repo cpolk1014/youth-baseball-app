@@ -62,7 +62,14 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 
 - Tournament finder (shelved for now)
 
-**Later:** AI practice plans, native chat, a paywall (what's free vs. paid).
+**Later:** AI practice plans, native chat, the paywall (below).
+
+**Free vs. paid** (working list, not built yet; "paid" = an active club code or a $129 team pass for the season). Rule: **every AI feature is paid**; the manual way to do the same thing stays free.
+
+- Free: roster; games and practices added by hand; fair-play lineup builder, auto-fill, warnings, "Why this lineup?"; lineup cards and the batting order picture; playing time and charts; offline use; Plays library and quizzes; Home dashboard, desktop layout, search; uploaded walk-up songs and the built-in soundboard
+- Paid, AI: schedule import (photo/PDF/CSV, games and practices), typed fair-play rules, uniform flyer reader, parents' box score imports, Gameday PA AI songs, lyrics and announcer
+- Paid, other: GroupMe posting and game day posts, team money, competitive lineups and the GameChanger stats import, Plays homework
+- Still open: what unpaid teams see (Renew button on locked features; data never deleted), reminders from June 1 and a 14-day August grace, a free trial for new teams or not; enforce on the server for AI routes and in the database for money and GroupMe
 
 ## Data model
 
