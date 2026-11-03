@@ -24,7 +24,7 @@ export function KidStatsScreen() {
   const data = useAppData();
   if (!data) {
     return (
-      <AppShell title="My player's stats" tab="season">
+      <AppShell title="My player's stats" tab="account">
         <Loading />
       </AppShell>
     );
@@ -41,7 +41,7 @@ function KidStats({ data }: { data: AppData }) {
   const [open, setOpen] = useState<KidGame | null>(null);
 
   const shell = (children: React.ReactNode) => (
-    <AppShell title="My player's stats" subtitle={data.team.name} tab="season">
+    <AppShell title="My player's stats" subtitle={data.team.name} tab="account">
       {children}
     </AppShell>
   );

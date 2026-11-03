@@ -81,7 +81,10 @@ export function AppShell({
         aria-label="Main"
         className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col overflow-y-auto bg-[var(--team)] p-3 text-white lg:flex print:hidden"
       >
-        <MenuHeader />
+        {/* A plain block, so the header keeps its own height in this column. */}
+        <div className="shrink-0">
+          <MenuHeader />
+        </div>
         <MenuLinks tab={tab} />
       </nav>
       <div className="mx-auto flex min-h-dvh w-full max-w-xl min-w-0 flex-col md:max-w-3xl lg:max-w-5xl print:block print:min-h-0 print:max-w-none">
