@@ -10,7 +10,7 @@ insert into public.member (team_id, user_id, role) values
   ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 'parent');
 
 create function pg_temp.expect(cond boolean, label text) returns void language plpgsql as
-  $$ begin if not cond then raise exception 'FAIL: %', label using errcode = 'T0001'; end if;
+  $$ begin if cond is not true then raise exception 'FAIL: %', label using errcode = 'T0001'; end if;
      raise notice 'ok: %', label; end $$;
 grant execute on function pg_temp.expect(boolean, text) to anon, authenticated;
 
@@ -1292,5 +1292,32 @@ do $$ begin
   raise exception 'should have failed' using errcode = 'T0001';
 exception when raise_exception then raise notice 'ok: a name can''t be blank';
 end $$;
+reset role;
+-- ── profile: Venmo handle (only you see yours; teammates only learn that you have one) ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+insert into public.profile (venmo) values ('Polk-Family');
+select pg_temp.expect((select venmo from public.profile) = 'Polk-Family', 'a parent sees their own Venmo handle');
+do $$ begin
+  update public.profile set venmo = '@bad handle!' where user_id = 'aaaaaaaa-0000-4000-8000-000000000002';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: Venmo handles are checked';
+end $$;
+do $$ begin
+  insert into public.profile (user_id, venmo) values ('aaaaaaaa-0000-4000-8000-000000000001', 'Hijacked1');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: you can only set your own handle';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select count(*) from public.profile where user_id = 'aaaaaaaa-0000-4000-8000-000000000002') = 0, 'teammates can''t see another person''s handle');
+select pg_temp.expect('aaaaaaaa-0000-4000-8000-000000000002'::uuid in (select public.team_venmo_users('00000000-0000-4000-8000-000000000001')), 'teammates learn who has a handle (for the button)');
+update public.profile set venmo = 'Changed1' where user_id = 'aaaaaaaa-0000-4000-8000-000000000002';
+reset role;
+select pg_temp.expect((select venmo from public.profile where user_id = 'aaaaaaaa-0000-4000-8000-000000000002') = 'Polk-Family', 'nobody else can change it');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.team_venmo_users('00000000-0000-4000-8000-000000000001')) = 0, 'people not on the team learn nothing');
 reset role;
 \echo ALL RLS TESTS PASSED

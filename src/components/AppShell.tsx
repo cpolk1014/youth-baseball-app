@@ -250,7 +250,7 @@ function MenuLinks({ tab, onPick }: { tab: Tab; onPick?: () => void }) {
     },
     {
       href: "/groupme",
-      label: "GroupMe & game day posts",
+      label: "GroupMe",
       show: signedIn && !!perms?.editTeam,
       also: [],
     },

@@ -108,3 +108,28 @@ export async function myTeamClubs(): Promise<MyTeamClub[]> {
     expiresOn: r.expires_on,
   }));
 }
+
+/** My own Venmo handle (only I can read it). */
+export async function myVenmo(userId: string): Promise<string | null> {
+  const r = check<{ venmo: string | null } | null>(
+    await getBrowserSupabase().from("profile").select("venmo").eq("user_id", userId).maybeSingle(),
+  );
+  return r?.venmo ?? null;
+}
+
+/** Save (or, with null, clear) my Venmo handle. */
+export async function saveMyVenmo(userId: string, venmo: string | null): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("profile")
+      .upsert({ user_id: userId, venmo, updated_at: new Date().toISOString() }),
+  );
+}
+
+/** Which members of a team have a Venmo handle (never the handles themselves). */
+export async function teamVenmoUsers(teamId: string): Promise<Set<string>> {
+  const ids = check<string[]>(
+    await getBrowserSupabase().rpc("team_venmo_users", { p_team_id: teamId }),
+  );
+  return new Set(ids);
+}

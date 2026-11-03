@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { MyPlayer } from "@/lib/data/account-backend";
 import { ROLE_LABEL } from "@/lib/data/permissions";
+import { cleanVenmo } from "@/lib/venmo/handle";
 import { signOut, switchTeam, useAppData, useStoreState } from "@/lib/data/store";
 import { AppShell } from "../AppShell";
 import { useMyClubs } from "../club/useMyClubs";
@@ -26,14 +27,21 @@ export function ProfileScreen() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [players, setPlayers] = useState<MyPlayer[] | null>(null);
+  const [venmo, setVenmo] = useState<string | null>(null);
+  const [venmoSaved, setVenmoSaved] = useState<string | null | undefined>(undefined);
+  const [venmoMsg, setVenmoMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     if (!me?.id) return;
     let current = true;
     import("@/lib/data/account-backend")
-      .then((m) => m.myPlayers(me.id))
+      .then((m) => Promise.all([m.myPlayers(me.id), m.myVenmo(me.id).catch(() => null)]))
       .then(
-        (p) => current && setPlayers(p),
+        ([p, v]) => {
+          if (!current) return;
+          setPlayers(p);
+          setVenmoSaved(v);
+        },
         () => current && setPlayers([]),
       );
     return () => {
@@ -65,6 +73,26 @@ export function ProfileScreen() {
     }
   };
   const teams = data?.myTeams ?? [];
+  const venmoShown = venmo ?? venmoSaved ?? "";
+  const saveVenmo = async (clear = false) => {
+    setVenmoMsg(null);
+    const handle = clear ? null : cleanVenmo(venmoShown);
+    if (!clear && !handle) {
+      setVenmoMsg({
+        ok: false,
+        text: "That isn't a Venmo username (5 to 30 letters, numbers, - or _).",
+      });
+      return;
+    }
+    try {
+      await (await import("@/lib/data/account-backend")).saveMyVenmo(me!.id, handle);
+      setVenmoSaved(handle);
+      setVenmo(null);
+      setVenmoMsg({ ok: true, text: clear ? "Removed." : "Saved." });
+    } catch (e) {
+      setVenmoMsg({ ok: false, text: e instanceof Error ? e.message : String(e) });
+    }
+  };
 
   return shell(
     <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:items-start">
@@ -117,6 +145,58 @@ export function ProfileScreen() {
             {error}
           </p>
         )}
+        <div className="flex flex-col gap-1">
+          <label htmlFor="venmo" className="text-base font-semibold">
+            Venmo handle <span className="font-normal text-slate-600">(optional)</span>
+          </label>
+          <div className="flex gap-2">
+            <span className="flex h-12 items-center text-lg font-bold text-slate-500">@</span>
+            <input
+              id="venmo"
+              value={venmoShown}
+              onChange={(e) => {
+                setVenmo(e.target.value);
+                setVenmoMsg(null);
+              }}
+              placeholder="Your-Venmo-Name"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              maxLength={60}
+              className="h-12 min-w-0 flex-1 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none"
+            />
+          </div>
+          <span className="text-sm text-slate-600">
+            Only you see this. Teammates&apos; families get a <b>Pay with Venmo</b> button by your
+            name on Coaches &amp; parents.
+          </span>
+          <div className="flex gap-2">
+            {venmo !== null && venmo.trim() !== (venmoSaved ?? "") && venmo.trim() !== "" && (
+              <button
+                onClick={() => void saveVenmo()}
+                className="h-11 flex-1 rounded-xl bg-[var(--team)] text-base font-bold text-white"
+              >
+                Save Venmo
+              </button>
+            )}
+            {venmoSaved && (
+              <button
+                onClick={() => void saveVenmo(true)}
+                className="h-11 rounded-xl border-2 border-slate-300 bg-white px-4 text-base font-semibold"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          {venmoMsg && (
+            <p
+              role={venmoMsg.ok ? "status" : "alert"}
+              className={`text-base font-semibold ${venmoMsg.ok ? "text-green-800" : "text-red-700"}`}
+            >
+              {venmoMsg.text}
+            </p>
+          )}
+        </div>
         <div>
           <p className="text-base font-semibold">Email</p>
           <p className="text-base text-slate-700">{me?.email ?? "…"}</p>

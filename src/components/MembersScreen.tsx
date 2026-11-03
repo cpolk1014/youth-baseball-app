@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ROLE_LABEL,
   canCallUp,
@@ -37,6 +37,25 @@ const INVITE_ROLES: { role: MemberRole; label: string; hint: string }[] = [
   { role: "treasurer", label: "Invite a treasurer", hint: "One person · 7 days · team money" },
 ];
 
+/** Which teammates have a Venmo handle (for the Pay button; the handles stay private). */
+function useVenmoUsers(teamId: string | undefined): Set<string> {
+  const [ids, setIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!teamId) return;
+    let current = true;
+    import("@/lib/data/account-backend")
+      .then((m) => m.teamVenmoUsers(teamId))
+      .then(
+        (s) => current && setIds(s),
+        () => undefined,
+      );
+    return () => {
+      current = false;
+    };
+  }, [teamId]);
+  return ids;
+}
+
 function shortDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
@@ -59,6 +78,14 @@ export function MembersScreen() {
   const [optioning, setOptioning] = useState(false);
   const [confirmName, setConfirmName] = useState("");
   const [kidsFor, setKidsForMember] = useState<Member | null>(null);
+  const venmoUsers = useVenmoUsers(mode === "supabase" ? data?.team.id : undefined);
+  // Back from a Venmo button whose handle was removed.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("venmo") !== "unavailable") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the address
+    setError("That person's Venmo isn't available. They may have removed it from their profile.");
+    window.history.replaceState(window.history.state, "", "/members");
+  }, []);
 
   if (!data) {
     return (
@@ -187,6 +214,14 @@ export function MembersScreen() {
                     </span>
                   )}
                 </span>
+                {!isMe && venmoUsers.has(m.userId) && (
+                  <a
+                    href={`/api/venmo?team=${data.team.id}&user=${m.userId}`}
+                    className="flex h-11 shrink-0 items-center rounded-lg bg-[#008cff] px-3 text-sm font-bold text-white active:bg-[#0074d4]"
+                  >
+                    Pay with Venmo
+                  </a>
+                )}
                 {perms.manageMembers && m.role !== "owner" ? (
                   <>
                     <select
