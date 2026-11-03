@@ -274,8 +274,16 @@ function ClubDashboard({ clubId, clubName }: { clubId: string; clubName: string 
           {thisSeason.length} used)
         </summary>
         <p className="mb-3 text-base text-slate-700">
-          One code per team for the season. The head coach enters it on Coaches &amp; parents; the
-          team keeps its data and you can view it here until June 30.
+          One code per team for the season. Tap <b>Share</b> to text a head coach their code; they
+          enter it on Coaches &amp; parents. The team keeps its data, and you can view it here until{" "}
+          {thisSeason[0]
+            ? new Date(`${thisSeason[0].expiresOn}T12:00`).toLocaleDateString(undefined, {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })
+            : "the season ends"}
+          .
         </p>
         <button
           onClick={() => setBuying(true)}
