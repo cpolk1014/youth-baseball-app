@@ -346,15 +346,16 @@ function MenuHeader({
   const { mode } = useStoreState();
   const rail = variant === "rail";
   if (!data) {
+    // No team yet (club pages, first sign-in): the RallyCap logo.
+    const src = collapsed
+      ? "/brand/rallycap-icon-color.svg"
+      : rail
+        ? "/brand/rallycap-horizontal-color.svg"
+        : "/brand/rallycap-horizontal-white.svg";
     return (
-      <p
-        className={
-          rail
-            ? "mb-3 px-2 pt-1 text-xl font-black tracking-tight text-[var(--team)]"
-            : "mb-4 px-3 pt-2 text-2xl font-bold tracking-tight"
-        }
-      >
-        {collapsed ? "RC" : "RallyCap"}
+      <p className={rail ? "mb-3 px-1" : "mb-4 px-1 pt-1"}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}
+        <img src={src} alt="RallyCap" className={collapsed ? "size-10" : "h-11 w-auto"} />
       </p>
     );
   }

@@ -3,8 +3,8 @@ import { teamColors, themeVars } from "./theme";
 
 describe("team theme", () => {
   it("falls back to RallyCap colors and ignores non-colors", () => {
-    expect(teamColors(undefined)).toEqual({ main: "#0b1f3a", accent: "#c8352e" });
-    expect(teamColors(["navy", "gold"])).toEqual({ main: "#0b1f3a", accent: "#c8352e" });
+    expect(teamColors(undefined)).toEqual({ main: "#1b2a4a", accent: "#dc143c" });
+    expect(teamColors(["navy", "gold"])).toEqual({ main: "#1b2a4a", accent: "#dc143c" });
   });
 
   it("keeps dark colors, darkens pale ones, and picks text for the accent", () => {

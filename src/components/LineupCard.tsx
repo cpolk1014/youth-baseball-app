@@ -164,9 +164,15 @@ function Card({
         </>
       )}
 
-      <div className="mt-auto flex gap-6 pt-3">
+      <div className="mt-auto flex items-end gap-6 pt-3">
         <p className="flex-1 border-t border-black pt-0.5">Coach</p>
         <p className="w-1/3 border-t border-black pt-0.5">Umpire</p>
+        {/* eslint-disable-next-line @next/next/no-img-element -- prints as-is */}
+        <img
+          src="/brand/rallycap-horizontal-color.svg"
+          alt="RallyCap"
+          className="h-[0.22in] w-auto shrink-0"
+        />
       </div>
     </div>
   );

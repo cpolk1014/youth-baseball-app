@@ -1,6 +1,6 @@
 import { DEFAULT_ACCENT, DEFAULT_PRIMARY, inkFor, isHex, pressed, readableOnWhite } from "./color";
 
-/** A team's two colors, falling back to RallyCap's navy and red. */
+/** A team's two colors, falling back to RallyCap's navy and crimson. */
 export function teamColors(colors: string[] | undefined): { main: string; accent: string } {
   const [main, accent] = (colors ?? []).filter(isHex);
   return { main: main ?? DEFAULT_PRIMARY, accent: accent ?? DEFAULT_ACCENT };

@@ -81,7 +81,16 @@ export function LoginScreen() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-8">
-      <h1 className="text-3xl font-bold">RallyCap</h1>
+      <h1>
+        {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}
+        <img
+          src="/brand/rallycap-horizontal-color.svg"
+          alt="RallyCap"
+          width={710}
+          height={266}
+          className="-ml-3 h-20 w-auto"
+        />
+      </h1>
       <p className="mt-1 mb-6 text-lg text-slate-700">
         Run your travel team. Fair lineups, every game.
       </p>

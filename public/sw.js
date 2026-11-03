@@ -15,7 +15,7 @@ const OFFLINE_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"
 <style>body{font-family:system-ui,sans-serif;background:#f3f5f8;color:#0f172a;margin:0;padding:24px}
 .c{max-width:420px;margin:15vh auto;background:#fff;border:2px solid #e2e8f0;border-radius:16px;padding:20px}
 h1{font-size:22px;margin:0 0 8px}p{font-size:17px;line-height:1.4}
-a{display:block;text-align:center;background:#0b1f3a;color:#fff;text-decoration:none;font-weight:700;
+a{display:block;text-align:center;background:#1b2a4a;color:#fff;text-decoration:none;font-weight:700;
 padding:16px;border-radius:12px;font-size:18px;margin-top:16px}</style></head><body><div class="c">
 <h1>You're offline</h1><p>This page hasn't been opened on this device yet, so it isn't saved here.
 Your games and lineups are.</p><a href="/games">Go to Games</a></div></body></html>`;

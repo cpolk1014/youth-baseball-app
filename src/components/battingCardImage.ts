@@ -147,10 +147,19 @@ export async function renderBattingCard(
     fit(ctx, note, 600, 28, CARD_WIDTH - 120);
     ctx.fillText(note, 60, 1240 + i * 38);
   });
-  ctx.globalAlpha = 0.7;
+  // Footer: the white RallyCap logo, with the web address beside it.
+  const brand = await loadImage("/brand/rallycap-horizontal-white.svg");
+  const logoH = 52;
+  const logoW = brand ? (logoH * 710) / 266 : 0;
+  ctx.globalAlpha = 0.85;
+  if (brand) ctx.drawImage(brand, CARD_WIDTH - 52 - logoW, CARD_HEIGHT - 30 - logoH, logoW, logoH);
   ctx.textAlign = "right";
   ctx.font = `700 24px ${FONT}`;
-  ctx.fillText("RallyCap · rallycap.team", CARD_WIDTH - 60, CARD_HEIGHT - 44);
+  ctx.fillText(
+    brand ? "rallycap.team" : "RallyCap · rallycap.team",
+    CARD_WIDTH - 60 - logoW - (brand ? 12 : 0),
+    CARD_HEIGHT - 44,
+  );
   ctx.globalAlpha = 1;
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));

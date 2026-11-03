@@ -40,7 +40,7 @@ export function Trimmer({
     const h = (el.height = el.clientHeight * 2);
     const g = el.getContext("2d")!;
     g.clearRect(0, 0, w, h);
-    const team = getComputedStyle(el).getPropertyValue("--team").trim() || "#0b1f3a";
+    const team = getComputedStyle(el).getPropertyValue("--team").trim() || "#1b2a4a";
     const a = (range.start / total) * w;
     const b = (range.end / total) * w;
     g.fillStyle = "rgba(148,163,184,0.18)";

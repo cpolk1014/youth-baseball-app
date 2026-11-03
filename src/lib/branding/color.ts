@@ -1,8 +1,8 @@
 // Team colors: pulling a palette out of a picture, and keeping text readable on a
 // phone in the sun. Pure.
 
-export const DEFAULT_PRIMARY = "#0b1f3a";
-export const DEFAULT_ACCENT = "#c8352e";
+export const DEFAULT_PRIMARY = "#1b2a4a";
+export const DEFAULT_ACCENT = "#dc143c";
 
 export type RGB = [number, number, number];
 
