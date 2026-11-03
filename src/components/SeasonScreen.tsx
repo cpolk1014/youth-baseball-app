@@ -6,7 +6,9 @@ import { finalLineups } from "@/lib/data/game";
 import { useAppData } from "@/lib/data/store";
 import type { AppData } from "@/lib/data/types";
 import { resolveRuleConfig } from "@/lib/rules/config";
+import { playingTimeBars } from "@/lib/charts";
 import { seasonSummary, type SeasonRow, type SeasonSummary } from "@/lib/season/summary";
+import { PlayingTimeChart } from "./charts/Charts";
 import { AppShell, Loading } from "./AppShell";
 
 type View = "summary" | "positions";
@@ -127,7 +129,12 @@ export function PlayingTime({ data, club = false }: { data: AppData; club?: bool
       )}
 
       {view === "summary" ? (
-        <SummaryTable summary={summary} rows={sorted} />
+        <>
+          <div className="mb-4">
+            <PlayingTimeChart bars={playingTimeBars(sorted)} />
+          </div>
+          <SummaryTable summary={summary} rows={sorted} />
+        </>
       ) : (
         <PositionGrid summary={summary} rows={sorted} />
       )}

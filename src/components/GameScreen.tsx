@@ -34,6 +34,8 @@ import { AppShell, Loading } from "./AppShell";
 import { Attendance } from "./Attendance";
 import { BattingOrder } from "./BattingOrder";
 import { GameForm } from "./GameForm";
+import { toast } from "./shell/Toast";
+import { Shortcut } from "./shell/useShortcut";
 import { GamesPane } from "./GamesScreen";
 import { GroupMePost } from "./GroupMePost";
 import { ShareBattingCard } from "./ShareBattingCard";
@@ -116,6 +118,10 @@ export function GameScreen({ gameId }: { gameId: string }) {
         (setting === "any" ? r.setting !== "off" : r.setting === "block"),
     );
 
+  const undoLast = () => {
+    if (undo) saveLineup(game.id, undo);
+    setUndo(null);
+  };
   const autoFill = () => {
     const seed = ctx.autoFillSeed + 1;
     if (style === "competitive" && plan) {
@@ -348,8 +354,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
             </button>
             <button
               onClick={() => {
-                if (undo) saveLineup(game.id, undo);
-                setUndo(null);
+                undoLast();
               }}
               disabled={!undo}
               className="h-14 w-20 rounded-xl border-2 border-slate-400 bg-white text-base font-bold disabled:opacity-40"
@@ -377,6 +382,13 @@ export function GameScreen({ gameId }: { gameId: string }) {
             </p>
           )}
 
+          {/* Keyboards: A auto-fills, U undoes. */}
+          <Shortcut
+            keyName="a"
+            run={autoFill}
+            enabled={!lineupLocked && !(style === "competitive" && !plan)}
+          />
+          <Shortcut keyName="u" run={undoLast} enabled={!lineupLocked && !!undo} />
           {/* Very wide screens: fair-play notes and "Why this lineup?" beside the grid. */}
           <div className="min-[1400px]:grid min-[1400px]:grid-cols-[minmax(0,1fr)_340px] min-[1400px]:items-start min-[1400px]:gap-6">
             <div className="min-w-0">
@@ -391,7 +403,20 @@ export function GameScreen({ gameId }: { gameId: string }) {
                 onSwap={
                   lineupLocked
                     ? undefined
-                    : (inning, a, b) => change(swapInInning(lineup, inning, a, b))
+                    : (inning, a, b) => {
+                        const before = lineup;
+                        change(swapInInning(lineup, inning, a, b));
+                        toast(
+                          `Swapped ${players.get(a)?.name ?? "?"} and ${players.get(b)?.name ?? "?"} in inning ${inning}`,
+                          {
+                            label: "Undo",
+                            run: () => {
+                              saveLineup(game.id, before);
+                              setUndo(null);
+                            },
+                          },
+                        );
+                      }
                 }
               />
               {!lineupLocked && (

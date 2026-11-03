@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { permissionsFor } from "@/lib/data/permissions";
 import { myUserId, useAppData } from "@/lib/data/store";
+import { moneyTimeline } from "@/lib/charts";
 import { summaryToShow } from "@/lib/finance/entry";
 import { playerLedger } from "@/lib/finance/ledger";
 import { formatCents, shortDate } from "@/lib/finance/money";
 import { ENTRY_LABEL, ENTRY_TYPES, type EntryType, type FinanceEntry } from "@/lib/finance/types";
 import { AppShell, Loading } from "./AppShell";
+import { MoneyChart } from "./charts/Charts";
 import { kidsOf } from "./KidPicker";
 import { EntryTypePicker, MoneyEntryForm, newEntry } from "./MoneyEntryForm";
 import { FamilyCard, MoneySummaryCard, moneyPlayers } from "./MoneyParts";
@@ -103,6 +105,11 @@ export function MoneyScreen() {
       <section className="mb-5">
         <h2 className={heading}>Team totals</h2>
         <MoneySummaryCard s={summary} />
+        {perms.seeAllMoney && moneyTimeline(data.financeEntries).length > 0 && (
+          <div className="mt-3">
+            <MoneyChart points={moneyTimeline(data.financeEntries)} year={year} />
+          </div>
+        )}
       </section>
 
       {perms.seeAllMoney && (

@@ -256,7 +256,24 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
             </li>
           ))}
         </ul>
+        <p className="flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-500">
+          <span>
+            <Key>↑</Key> <Key>↓</Key> move · <Key>↵</Key> open
+          </span>
+          <span>
+            Shortcuts: <Key>N</Key> new game or player · <Key>A</Key> auto-fill · <Key>U</Key> undo
+            · <Key>/</Key> search
+          </span>
+        </p>
       </div>
     </div>
+  );
+}
+
+function Key({ children }: { children: string }) {
+  return (
+    <kbd className="rounded border border-slate-300 bg-white px-1 font-sans text-[11px] text-slate-600">
+      {children}
+    </kbd>
   );
 }

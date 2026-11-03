@@ -22,6 +22,7 @@ import { TeamBadge } from "./TeamBadge";
 import { useToday } from "./useToday";
 import { MoneyNudge } from "./MoneyParts";
 import { Sheet } from "./Sheet";
+import { Shortcut } from "./shell/useShortcut";
 import { TeamSwitcher } from "./TeamSwitcher";
 
 export function GamesScreen() {
@@ -72,6 +73,8 @@ export function GamesScreen() {
         ) : undefined
       }
     >
+      {/* Keyboards: N adds a game. */}
+      <Shortcut keyName="n" run={startAdd} enabled={canEdit} />
       <MoneyNudge />
       {upcoming[0] && <NextGame game={upcoming[0]} data={data} />}
       <Section title="Upcoming" games={upcoming} data={data} empty="No upcoming games." />

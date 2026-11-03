@@ -20,6 +20,7 @@ import { OfflineSupport } from "./OfflineSupport";
 import { TeamBadge } from "./TeamBadge";
 import { CommandPalette, useCommandPalette } from "./shell/CommandPalette";
 import { NavIcon, type IconName } from "./shell/NavIcon";
+import { ToastHost } from "./shell/Toast";
 import {
   GAME_DAY,
   HOME,
@@ -187,6 +188,7 @@ export function AppShell({
       </div>
       <MenuDrawer open={menuOpen} tab={tab} back={back} onClose={() => setMenuOpen(false)} />
       <CommandPalette state={palette} />
+      <ToastHost />
       <OfflineSupport />
     </div>
   );
@@ -626,6 +628,22 @@ function SyncButton({ className }: { className: string }) {
   );
 }
 
+/** Gray shapes where the page will be, while it loads. */
 export function Loading() {
-  return <p className="p-6 text-center text-lg text-slate-600">Loading…</p>;
+  const bar = "rounded-xl bg-slate-200/80";
+  return (
+    <div role="status" aria-label="Loading" className="animate-pulse motion-reduce:animate-none">
+      <div className={`mb-4 h-24 ${bar} lg:h-32`} />
+      <div className="grid gap-3 md:grid-cols-2">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="rounded-xl border-2 border-slate-100 bg-white p-4 lg:border">
+            <div className={`mb-2 h-3 w-1/3 ${bar}`} />
+            <div className={`mb-2 h-5 w-2/3 ${bar}`} />
+            <div className={`h-3 w-1/2 ${bar}`} />
+          </div>
+        ))}
+      </div>
+      <span className="sr-only">Loading…</span>
+    </div>
+  );
 }

@@ -19,6 +19,8 @@ import type { AppData } from "@/lib/data/types";
 import { finalLineups } from "@/lib/data/game";
 import { seasonSummary } from "@/lib/season/summary";
 import { DataTable, stopRow, type Column } from "./shell/DataTable";
+import { toast } from "./shell/Toast";
+import { Shortcut } from "./shell/useShortcut";
 import { AppShell, Loading } from "./AppShell";
 import { PlayerForm, Toggle } from "./PlayerForm";
 import { Sheet } from "./Sheet";
@@ -129,6 +131,8 @@ export function RosterScreen() {
         </span>
       </Link>
 
+      {/* Keyboards: N adds a player. */}
+      <Shortcut keyName="n" run={startAdd} enabled={canEdit} />
       <div className={`mb-4 ${canEdit ? "" : "pointer-events-none"}`} aria-disabled={!canEdit}>
         <Toggle
           label="Coach's pitch"
@@ -285,6 +289,10 @@ function RosterTable({
       onClick={(e) => {
         stopRow(e);
         savePlayer({ ...p, [key]: !p[key] });
+        toast(`${p.name} ${p[key] ? "can't" : "can"} ${label.replace("can ", "")} now`, {
+          label: "Undo",
+          run: () => savePlayer(p),
+        });
       }}
       disabled={!canEdit}
       aria-pressed={p[key]}

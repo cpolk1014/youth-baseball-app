@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { coachTodos, comingUp, lineupStatus, seasonRecord, type Todo } from "@/lib/dashboard";
+import { gameRuns } from "@/lib/charts";
 import {
   arriveBy,
   finalLineups,
@@ -23,6 +24,7 @@ import { resolveRuleConfig } from "@/lib/rules/config";
 import { seasonSummary } from "@/lib/season/summary";
 import { gameUniformShown } from "@/lib/uniforms";
 import { AppShell, Loading } from "./AppShell";
+import { RunsChart } from "./charts/Charts";
 import { TONE_CLASS } from "./GamesScreen";
 import { TeamBadge } from "./TeamBadge";
 import { TeamSwitcher } from "./TeamSwitcher";
@@ -68,7 +70,7 @@ export function HomeScreen() {
             </Card>
           )}
         </div>
-        <RecordCard data={data} />
+        <RecordCard data={data} today={today} />
         {staff && <TodoCard todos={coachTodos(data, today)} />}
         <ComingUpCard data={data} today={today} />
         {!parent && <PlayingTimeCard data={data} />}
@@ -175,7 +177,7 @@ function NextGame({ game, data, today }: { game: Game; data: AppData; today: str
 
 const RESULT_CLASS = { W: "bg-green-600", L: "bg-red-600", T: "bg-slate-400" } as const;
 
-function RecordCard({ data }: { data: AppData }) {
+function RecordCard({ data, today }: { data: AppData; today: string }) {
   const r = seasonRecord(data.games);
   const played = r.wins + r.losses + r.ties;
   const diff = r.runsFor - r.runsAgainst;
@@ -224,6 +226,11 @@ function RecordCard({ data }: { data: AppData }) {
               </div>
             ))}
           </dl>
+          {played > 1 && (
+            <div className="mt-4">
+              <RunsChart games={gameRuns(data.games)} year={Number(today.slice(0, 4))} />
+            </div>
+          )}
         </>
       )}
     </Card>
