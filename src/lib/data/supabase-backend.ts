@@ -114,7 +114,7 @@ export async function loadFromSupabase(
     sb
       .from("game")
       .select(
-        "id,season_id,game_date,start_time,opponent,location,innings,field_players,status,score_us,score_them,lineup_style,uniform_combo_id,uniform_custom,arrive_time",
+        "id,season_id,game_date,start_time,opponent,location,innings,field_players,status,score_us,score_them,lineup_style,uniform_combo_id,uniform_custom,arrive_time,field,location_address,location_lat,location_lng,location_place_id",
       )
       .eq("season_id", season.id)
       .then((r) => check<GameRow[]>(r)),

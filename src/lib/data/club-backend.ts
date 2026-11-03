@@ -206,7 +206,7 @@ export async function loadClubTeam(teamId: string): Promise<AppData> {
     sb
       .from("game")
       .select(
-        "id,season_id,game_date,start_time,opponent,location,innings,field_players,status,score_us,score_them,lineup_style",
+        "id,season_id,game_date,start_time,opponent,location,innings,field_players,status,score_us,score_them,lineup_style,field",
       )
       .eq("season_id", season.id)
       .then((r) => check<GameRow[]>(r)),

@@ -8,6 +8,8 @@ import {
   gameContext,
   gameResult,
   lastFilledInning,
+  recentPlaces,
+  placeLabel,
 } from "@/lib/data/game";
 import {
   saveGame,
@@ -39,6 +41,7 @@ import { PositionPicker } from "./PositionPicker";
 import { Sheet } from "./Sheet";
 import { useTeamStats } from "./stats/statsData";
 import { ViolationList } from "./ViolationList";
+import { GamePlaceCard } from "./GamePlaceCard";
 import { GameUniformCard } from "./uniforms/GameUniformCard";
 import { WhyLineup } from "./WhyLineup";
 
@@ -259,11 +262,10 @@ export function GameScreen({ gameId }: { gameId: string }) {
       )}
 
       {!isFinal && arrival && (
-        <p className="mb-3 rounded-xl bg-white px-3 py-2 text-lg">
-          <span className="font-bold">Arrive by {arrival}</span>
-          {game.location && <span className="text-slate-600"> · {game.location}</span>}
-        </p>
+        <p className="mb-3 rounded-xl bg-white px-3 py-2 text-lg font-bold">Arrive by {arrival}</p>
       )}
+
+      <GamePlaceCard game={game} />
 
       <GameUniformCard game={game} combos={data.uniforms} canEdit={perms.editTeam} />
 
@@ -459,7 +461,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
             initialText={battingOrderMessage({
               opponent: game.opponent,
               when: formatGameDate(game),
-              location: game.location,
+              location: placeLabel(game),
               players: data.players,
               lineup,
             })}
@@ -473,6 +475,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
             game={game}
             filledInnings={lastFilledInning(data.lineups[game.id])}
             arriveMinutes={data.team.gameDay?.arriveMinutes ?? null}
+            recentPlaces={recentPlaces(data.games)}
             onCancel={() => setEditing(false)}
             onSave={(g) => {
               saveGame(g);

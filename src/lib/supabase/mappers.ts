@@ -269,6 +269,11 @@ export function gameFromRow(r: GameRow): Game {
         ? { custom: cleanPieces(r.uniform_custom) }
         : null,
     arriveTime: r.arrive_time ? r.arrive_time.slice(0, 5) : null,
+    field: r.field ?? null,
+    locationAddress: r.location_address ?? null,
+    locationLat: r.location_lat ?? null,
+    locationLng: r.location_lng ?? null,
+    locationPlaceId: r.location_place_id ?? null,
   };
 }
 
@@ -317,6 +322,16 @@ export function gameToRow(g: Game): GameRow {
     // Left out when unknown, so saving a game never resets it.
     ...(g.lineupStyle ? { lineup_style: g.lineupStyle } : {}),
     ...(g.arriveTime !== undefined ? { arrive_time: g.arriveTime } : {}),
+    // Saved together with the location (left out when unknown, e.g. an imported game).
+    ...(g.locationAddress !== undefined
+      ? {
+          field: g.field ?? null,
+          location_address: g.locationAddress,
+          location_lat: g.locationLat ?? null,
+          location_lng: g.locationLng ?? null,
+          location_place_id: g.locationPlaceId ?? null,
+        }
+      : {}),
   };
 }
 

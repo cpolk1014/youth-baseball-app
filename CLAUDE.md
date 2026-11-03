@@ -17,6 +17,7 @@ Primary users: head coach (lineups), team manager (comms), treasurer (money). Th
 - Vitest for unit tests; Playwright for a few end-to-end flows
 - Claude API (`@anthropic-ai/sdk`, structured JSON output) for AI features, server-side only (`ANTHROPIC_API_KEY`); schedule import and typed fair-play rules use it
 - ElevenLabs (REST via fetch, no SDK) for Gameday PA audio: music, announcer voice, sound effects; server-side only (`ELEVENLABS_API_KEY`, optional `ELEVENLABS_ANNOUNCER_VOICE_ID`)
+- Google Maps Platform (REST via fetch): Places API (New) for game locations, server-only `GOOGLE_MAPS_API_KEY`; Maps Embed API for the map on a game, browser key `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` (locked to the site)
 - Stripe (`stripe` 23.0.0, server-only: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) for paying for seasons; the webhook records payments with the Supabase service role (`SUPABASE_SERVICE_ROLE_KEY`, server-only, `src/lib/supabase/admin.ts`)
 
 ## Features
@@ -26,7 +27,7 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 **Shipped** (live at rallycap.team)
 
 - Teams, seasons, roster (name, jersey #, preferred positions, can pitch/catch, active); coach's pitch teams
-- Games (date, time, opponent, location, innings, 9 or 10 fielders); mark final (with an optional final score) / reopen; W-L record in the Games header; next-game banner
+- Games (date, time, opponent, location, field, innings, 9 or 10 fielders); the location is searched as you type (the team's recent places first, then Google Maps via `/api/places/search` and `/api/places/details`, one session per pick) and keeps the address and map position; the game page shows Where (location, field, address, a Google map) and Open in Apple Maps (iPhone/iPad), Google Maps (Android and non-Windows computers), Bing Maps (Windows) and Waze (any phone or tablet) (`src/lib/places/maps.ts`); lineup cards, posts and the game day post show "Location · Field"; mark final (with an optional final score) / reopen; W-L record in the Games header; next-game banner
 - Team look: coaches/managers pick two team colors (palette, exact color, or pulled from a picture) and upload a logo (squared, public `team-logos` bucket); colors drive the app (`--team` CSS vars, pale colors darkened so white text stays readable), logo/initials badge in the bar, menu, team switcher and printed lineup card; Plays fielders wear the team color
 - Inning-by-inning lineup builder with live fair-play warnings, Auto-fill, batting order with sit-outs, per-game attendance
 - Fair play rules screen (Season tab): every rule set to Must / Warn / Off with its number; separate coach pitch and kid pitch sets (pitching rules hidden for coach pitch); new rules: min outfield innings, min share of innings played, pitcher rest after a heavy game; reset to recommended. Coaches add their own rules from rule types (at least / at most N innings at positions, a player never plays a spot, a player locked to a spot in an inning, no one sits the same inning two games in a row, rotate the leadoff hitter); each is checked against the roster before saving, and auto-fill follows them
@@ -78,7 +79,7 @@ Source of truth: `supabase/migrations/`. Summary:
 - player_guardian: player_id, user_id (parent ↔ kid links; families see their own, coaches/managers all; dropped when the member leaves)
 - invite: team_id, role, token, expires_at, max_uses, uses, revoked_at (coach-only; joined via `accept_invite`)
 - player: team_id, name, jersey_number, preferred_positions[], can_pitch, can_catch, active
-- game: season_id, date, start_time, opponent, location, innings, field_players (9 | 10), status (scheduled | final), score_us, score_them, lineup_style (fair | competitive), uniform_combo_id or uniform_custom (JSONB pieces; one or the other), arrive_time (overrides the team's arrival)
+- game: season_id, date, start_time, opponent, location, field, location_address, location_lat, location_lng, location_place_id, innings, field_players (9 | 10), status (scheduled | final), score_us, score_them, lineup_style (fair | competitive), uniform_combo_id or uniform_custom (JSONB pieces; one or the other), arrive_time (overrides the team's arrival)
 - lineup: game_id, batting_order (player_id[]), not_batting[], absent[], version (saved via `save_lineup`)
 - practice: season_id, practice_date, start_time, end_time, location, focus, notes, plan (JSONB drills), canceled, plays (library play ids)
 - play_assignment: team_id, title, play_ids[], due_date (homework; plays live in code, `src/lib/plays/`)

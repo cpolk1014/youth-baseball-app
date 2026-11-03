@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { logoUrl } from "@/lib/branding/logo";
 import { teamColors } from "@/lib/branding/theme";
-import { formatGameDate } from "@/lib/data/game";
+import { formatGameDate, placeLabel } from "@/lib/data/game";
 import type { AppData, Game } from "@/lib/data/types";
 import type { Lineup } from "@/lib/rules/types";
 import { battingCardModel, cardFileName } from "@/lib/share/battingCard";
@@ -39,7 +39,7 @@ export function ShareBattingCard({
         teamName: data.team.name,
         opponent: game.opponent,
         when: formatGameDate(game),
-        location: game.location,
+        location: placeLabel(game),
         players: data.players,
         lineup,
       }),

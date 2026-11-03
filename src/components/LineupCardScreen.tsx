@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { formatGameDate, gameContext } from "@/lib/data/game";
+import { formatGameDate, gameContext, placeLabel } from "@/lib/data/game";
 import { useAppData } from "@/lib/data/store";
 import { buildLineupCard } from "@/lib/lineup/card";
 import { validateLineup } from "@/lib/rules/validate";
@@ -58,7 +58,7 @@ export function LineupCardScreen({ gameId }: { gameId: string }) {
     ageGroup: data.team.ageGroup,
     opponent: game.opponent,
     when: formatGameDate(game),
-    location: game.location,
+    location: placeLabel(game),
     logoUrl: logoUrl(data.team.logoPath),
   };
 

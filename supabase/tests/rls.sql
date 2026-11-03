@@ -1320,4 +1320,16 @@ set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 select pg_temp.expect((select count(*) from public.team_venmo_users('00000000-0000-4000-8000-000000000001')) = 0, 'people not on the team learn nothing');
 reset role;
+-- ── game places ──
+update public.game set location = 'Traction Sports Complex', field = 'Chabills Field', location_lat = 30.2, location_lng = -92.0
+  where id = 'eeeeeeee-0000-4000-8000-000000000020';
+select set_config('request.jwt.claim.sub', '', false);
+select pg_temp.expect(
+  public.game_day_message('eeeeeeee-0000-4000-8000-000000000010', '2027-04-09', true) like E'Game against The Cubs\nTraction Sports Complex · Chabills Field\n%',
+  'game day posts name the field');
+do $$ begin
+  update public.game set location_lat = 120 where id = 'eeeeeeee-0000-4000-8000-000000000020';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: map positions are checked';
+end $$;
 \echo ALL RLS TESTS PASSED

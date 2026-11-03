@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import type { GamePlace } from "@/lib/places/maps";
+import { PlaceSearch } from "./PlaceSearch";
 import { validateGameInput, type GameInput } from "@/lib/data/game";
 import type { Game } from "@/lib/data/types";
 
@@ -13,6 +15,7 @@ export function GameForm({
   onSave,
   onCancel,
   arriveMinutes,
+  recentPlaces = [],
 }: {
   game: Game;
   /** Last inning with saved positions, to warn before shortening the game. */
@@ -21,6 +24,8 @@ export function GameForm({
   onCancel: () => void;
   /** The team's "arrive this many minutes before", for the Arrive by hint. */
   arriveMinutes?: number | null;
+  /** Places the team has played, offered first when typing a location. */
+  recentPlaces?: GamePlace[];
 }) {
   const [input, setInput] = useState<GameInput>({
     opponent: game.opponent,
@@ -31,6 +36,14 @@ export function GameForm({
     fieldPlayers: game.fieldPlayers,
   });
   const [arrive, setArrive] = useState(game.arriveTime ?? "");
+  const [fieldName, setFieldName] = useState(game.field ?? "");
+  const [place, setPlace] = useState<GamePlace>({
+    name: game.location ?? "",
+    address: game.locationAddress ?? null,
+    lat: game.locationLat ?? null,
+    lng: game.locationLng ?? null,
+    placeId: game.locationPlaceId ?? null,
+  });
   const [submitted, setSubmitted] = useState(false);
   const errors = validateGameInput(input);
   const shown = submitted ? errors : {};
@@ -50,6 +63,12 @@ export function GameForm({
           date: input.date,
           startTime: input.startTime || null,
           location: input.location.trim() || null,
+          field: fieldName.trim() || null,
+          // Map details only for a picked place (cleared when the name is typed over).
+          locationAddress: input.location.trim() ? place.address : null,
+          locationLat: input.location.trim() ? place.lat : null,
+          locationLng: input.location.trim() ? place.lng : null,
+          locationPlaceId: input.location.trim() ? place.placeId : null,
           arriveTime: arrive || null,
           innings: input.innings,
           fieldPlayers: input.fieldPlayers === 10 ? 10 : 9,
@@ -113,12 +132,25 @@ export function GameForm({
         </div>
       </Field>
 
-      <Field label="Field / location" hint="optional">
+      <Field label="Location" hint="optional">
+        <PlaceSearch
+          value={{ ...place, name: input.location }}
+          recent={recentPlaces}
+          onChange={(p) => {
+            set("location", p.name);
+            setPlace(p);
+          }}
+          className={field}
+        />
+      </Field>
+
+      <Field label="Field" hint="optional">
         <input
-          value={input.location}
-          onChange={(e) => set("location", e.target.value)}
-          maxLength={80}
+          value={fieldName}
+          onChange={(e) => setFieldName(e.target.value)}
+          maxLength={60}
           autoComplete="off"
+          placeholder="e.g. Chabills Field"
           className={field}
         />
       </Field>

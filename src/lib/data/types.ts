@@ -66,6 +66,13 @@ export interface Game {
   uniform?: GameUniform;
   /** HH:MM this game's players arrive by, instead of the team's "minutes before". */
   arriveTime?: string | null;
+  /** The field within the location ("Chabills Field"). */
+  field?: string | null;
+  /** Picked from Google Maps: address, map position and place id (null for typed places). */
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
+  locationPlaceId?: string | null;
 }
 
 export type LineupStyle = "fair" | "competitive";

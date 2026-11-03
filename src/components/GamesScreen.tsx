@@ -11,6 +11,8 @@ import {
   recordText,
   splitGames,
   whenText,
+  recentPlaces,
+  placeLabel,
 } from "@/lib/data/game";
 import { permissionsFor } from "@/lib/data/permissions";
 import { newId, saveGame, useAppData, useStoreState } from "@/lib/data/store";
@@ -100,6 +102,7 @@ export function GamesScreen() {
             game={adding}
             filledInnings={0}
             arriveMinutes={data.team.gameDay?.arriveMinutes ?? null}
+            recentPlaces={recentPlaces(data.games)}
             onCancel={() => setAdding(null)}
             onSave={(g) => {
               saveGame(g);
@@ -180,7 +183,7 @@ function GameCard({ game, data }: { game: Game; data: AppData }) {
       >
         <p className="text-sm font-semibold text-slate-600">{formatGameDate(game)}</p>
         <p className="mt-0.5 text-xl font-bold">vs {game.opponent}</p>
-        {game.location && <p className="text-base text-slate-700">{game.location}</p>}
+        {placeLabel(game) && <p className="text-base text-slate-700">{placeLabel(game)}</p>}
         <div className="mt-3 flex items-center justify-between">
           <span className="text-sm font-semibold text-slate-600">{game.innings} innings</span>
           <span className={`rounded-full px-3 py-1 text-sm font-bold ${status.cls}`}>
@@ -219,7 +222,7 @@ function NextGame({ game, data }: { game: Game; data: AppData }) {
         </span>
         <span className="block truncate text-2xl leading-tight font-black">vs {game.opponent}</span>
         <span className="block truncate text-base text-white/90">
-          {[time, game.location].filter(Boolean).join(" · ") || formatGameDate(game)}
+          {[time, placeLabel(game)].filter(Boolean).join(" · ") || formatGameDate(game)}
         </span>
       </span>
       <span aria-hidden="true" className="text-3xl text-white/70">

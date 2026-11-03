@@ -114,6 +114,11 @@ export interface GameRow {
   uniform_combo_id?: string | null;
   uniform_custom?: Record<string, unknown> | null;
   arrive_time?: string | null;
+  field?: string | null;
+  location_address?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
+  location_place_id?: string | null;
 }
 
 export interface UniformComboRow {

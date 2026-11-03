@@ -45,6 +45,11 @@ describe("supabase mappers", () => {
       score_them: null,
       lineup_style: "fair",
       arrive_time: null,
+      field: null,
+      location_address: null,
+      location_lat: null,
+      location_lng: null,
+      location_place_id: null,
     });
     expect(gameFromRow({ ...gameRow, lineup_style: "competitive" }).lineupStyle).toBe(
       "competitive",
