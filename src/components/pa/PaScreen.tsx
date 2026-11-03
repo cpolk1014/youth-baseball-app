@@ -37,7 +37,9 @@ function Pa({ data }: { data: AppData }) {
   const perms = permissionsFor(data.me.role, data.team.optionedAt !== null);
   const staff = perms.editTeam;
   const coach = isCoach(data.me.role) && data.team.optionedAt === null;
-  const [view, setView] = useState<"pa" | "walkups">(staff ? "pa" : "walkups");
+  // Anyone on the team can run the PA at a game (approved walk-ups only); parents edit only
+  // their own kids' walk-ups, and team sounds are added by coaches and managers.
+  const [view, setView] = useState<"pa" | "walkups">("pa");
 
   const shell = (children: React.ReactNode) => (
     <AppShell title="Gameday PA" subtitle={data.team.name} tab="pa">
@@ -61,30 +63,33 @@ function Pa({ data }: { data: AppData }) {
           No signal: using what&apos;s saved on this device.
         </p>
       )}
-      {staff && (
-        <div className="mb-4 grid grid-cols-2 gap-2" role="tablist">
-          {(
+      <div className="mb-4 grid grid-cols-2 gap-2" role="tablist">
+        {(
+          [
+            ["pa", "PA"],
             [
-              ["pa", "PA"],
-              ["walkups", `Walk-ups${coach && waiting ? ` (${waiting} to OK)` : ""}`],
-            ] as const
-          ).map(([v, label]) => (
-            <button
-              key={v}
-              role="tab"
-              aria-selected={view === v}
-              onClick={() => setView(v)}
-              className={`h-12 rounded-xl text-base font-bold ${
-                view === v ? "bg-[var(--team)] text-white" : "border-2 border-slate-300 bg-white"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
-      {view === "pa" && staff ? (
-        <Board data={data} pa={pa} />
+              "walkups",
+              staff
+                ? `Walk-ups${coach && waiting ? ` (${waiting} to OK)` : ""}`
+                : "Your kids' walk-ups",
+            ],
+          ] as const
+        ).map(([v, label]) => (
+          <button
+            key={v}
+            role="tab"
+            aria-selected={view === v}
+            onClick={() => setView(v)}
+            className={`h-12 rounded-xl text-base font-bold ${
+              view === v ? "bg-[var(--team)] text-white" : "border-2 border-slate-300 bg-white"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {view === "pa" ? (
+        <Board data={data} pa={pa} manageSounds={staff} />
       ) : (
         <Walkups data={data} pa={pa} staff={staff} coach={coach} />
       )}
@@ -94,7 +99,16 @@ function Pa({ data }: { data: AppData }) {
 
 // ── The PA board: now batting, the lineup, the soundboard ──
 
-function Board({ data, pa }: { data: AppData; pa: PaData }) {
+function Board({
+  data,
+  pa,
+  manageSounds,
+}: {
+  data: AppData;
+  pa: PaData;
+  /** Coaches and managers add and remove team sounds; everyone can play them. */
+  manageSounds: boolean;
+}) {
   const games = useMemo(() => {
     const { upcoming, final } = splitGames(data.games);
     return [...upcoming, ...final.slice(0, 3)];
@@ -283,12 +297,14 @@ function Board({ data, pa }: { data: AppData; pa: PaData }) {
               <h2 className="text-sm font-bold tracking-wide text-slate-600 uppercase">
                 {CATEGORY_LABEL[cat]}
               </h2>
-              <button
-                onClick={() => setAdding(cat)}
-                className="h-10 rounded-lg px-2 text-base font-bold text-[var(--team)] underline"
-              >
-                + Add
-              </button>
+              {manageSounds && (
+                <button
+                  onClick={() => setAdding(cat)}
+                  className="h-10 rounded-lg px-2 text-base font-bold text-[var(--team)] underline"
+                >
+                  + Add
+                </button>
+              )}
             </div>
             <div className="grid grid-cols-3 gap-2 md:grid-cols-4 lg:grid-cols-6">
               {BUILT_IN_SOUNDS.filter((s) => s.category === cat).map((s) => (
@@ -329,7 +345,7 @@ function Board({ data, pa }: { data: AppData; pa: PaData }) {
           </section>
         );
       })}
-      {pa.sounds.length > 0 && (
+      {manageSounds && pa.sounds.length > 0 && (
         <button
           onClick={() => setEditing(!editing)}
           className="h-12 rounded-xl border-2 border-slate-300 text-base font-bold"
