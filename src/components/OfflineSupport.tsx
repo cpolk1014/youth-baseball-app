@@ -31,6 +31,8 @@ export function OfflineSupport() {
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(0, 20);
     const paths = [
+      "/",
+      "/home",
       "/games",
       ...soon.flatMap((g) => [`/games/${g.id}`, `/games/${g.id}/card`]),
       "/pa",

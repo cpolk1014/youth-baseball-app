@@ -16,7 +16,7 @@ describe("safeNextPath", () => {
       "/\\evil.com",
       "games",
     ]) {
-      expect(safeNextPath(bad)).toBe("/games");
+      expect(safeNextPath(bad)).toBe("/");
     }
   });
 });

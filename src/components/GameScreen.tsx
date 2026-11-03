@@ -34,6 +34,7 @@ import { AppShell, Loading } from "./AppShell";
 import { Attendance } from "./Attendance";
 import { BattingOrder } from "./BattingOrder";
 import { GameForm } from "./GameForm";
+import { GamesPane } from "./GamesScreen";
 import { GroupMePost } from "./GroupMePost";
 import { ShareBattingCard } from "./ShareBattingCard";
 import { LineupGrid } from "./LineupGrid";
@@ -183,6 +184,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
       subtitle={`${formatGameDate(game)} · ${game.innings} inn`}
       backHref="/games"
       tab="games"
+      pane={<GamesPane currentId={game.id} />}
       action={
         <Link
           href={`/games/${game.id}/card`}

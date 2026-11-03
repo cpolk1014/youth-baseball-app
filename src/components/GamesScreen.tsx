@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   defaultFieldPlayers,
   formatGameDate,
-  gameContext,
-  gameResult,
   localDateString,
   recordText,
   splitGames,
@@ -17,7 +15,7 @@ import {
 import { permissionsFor } from "@/lib/data/permissions";
 import { newId, saveGame, useAppData, useStoreState } from "@/lib/data/store";
 import type { AppData, Game } from "@/lib/data/types";
-import { validateLineup } from "@/lib/rules/validate";
+import { lineupStatus, type StatusTone } from "@/lib/dashboard";
 import { AppShell, Loading } from "./AppShell";
 import { GameForm } from "./GameForm";
 import { TeamBadge } from "./TeamBadge";
@@ -144,54 +142,104 @@ function Section({
   );
 }
 
-function GameCard({ game, data }: { game: Game; data: AppData }) {
-  const ctx = gameContext(data, game.id)!;
-  const violations = ctx.hasSavedLineup
-    ? validateLineup(data.players, ctx.lineup, ctx.config, ctx.history, ctx.previous)
-    : [];
-  const blocks = violations.filter((v) => v.severity === "block").length;
-  const result = gameResult(game);
-  const status =
-    game.status === "final"
-      ? result
-        ? {
-            text: `${result} ${game.scoreUs}–${game.scoreThem}`,
-            cls:
-              result === "W"
-                ? "bg-green-700 text-white"
-                : result === "L"
-                  ? "bg-red-700 text-white"
-                  : "bg-slate-500 text-white",
-          }
-        : { text: "Final", cls: "bg-slate-700 text-white" }
-      : !ctx.hasSavedLineup
-        ? { text: "No lineup yet", cls: "bg-slate-200 text-slate-800" }
-        : blocks > 0
-          ? { text: `${blocks} to fix`, cls: "bg-red-700 text-white" }
-          : violations.length > 0
-            ? {
-                text: `Ready · ${violations.length} warning${violations.length === 1 ? "" : "s"}`,
-                cls: "bg-amber-300 text-slate-900",
-              }
-            : { text: "Lineup ready", cls: "bg-green-700 text-white" };
+/** Badge colors for a game's lineup or result. */
+export const TONE_CLASS: Record<StatusTone, string> = {
+  win: "bg-green-700 text-white",
+  loss: "bg-red-700 text-white",
+  tie: "bg-slate-500 text-white",
+  final: "bg-slate-700 text-white",
+  none: "bg-slate-200 text-slate-800",
+  block: "bg-red-700 text-white",
+  warn: "bg-amber-300 text-slate-900",
+  ready: "bg-green-700 text-white",
+};
 
+function GameCard({ game, data }: { game: Game; data: AppData }) {
+  const status = lineupStatus(data, game);
   return (
     <li>
       <Link
         href={`/games/${game.id}`}
-        className="block h-full rounded-xl border-2 border-slate-200 bg-white p-4 active:bg-slate-50"
+        className="block h-full rounded-xl border-2 border-slate-200 bg-white p-4 active:bg-slate-50 lg:border lg:transition-shadow lg:hover:border-slate-300 lg:hover:shadow-md"
       >
         <p className="text-sm font-semibold text-slate-600">{formatGameDate(game)}</p>
         <p className="mt-0.5 text-xl font-bold">vs {game.opponent}</p>
         {placeLabel(game) && <p className="text-base text-slate-700">{placeLabel(game)}</p>}
         <div className="mt-3 flex items-center justify-between">
           <span className="text-sm font-semibold text-slate-600">{game.innings} innings</span>
-          <span className={`rounded-full px-3 py-1 text-sm font-bold ${status.cls}`}>
+          <span className={`rounded-full px-3 py-1 text-sm font-bold ${TONE_CLASS[status.tone]}`}>
             {status.text}
           </span>
         </div>
       </Link>
     </li>
+  );
+}
+
+/** Wide screens: every game in a column beside the one that's open. */
+export function GamesPane({ currentId }: { currentId: string }) {
+  const data = useAppData();
+  const current = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    current.current?.scrollIntoView({ block: "nearest" });
+  }, [currentId]);
+  if (!data) return null;
+  const { upcoming, final } = splitGames(data.games);
+  const group = (title: string, games: Game[]) =>
+    games.length > 0 && (
+      <>
+        <p className="sticky top-16 z-10 bg-white/95 px-4 pt-4 pb-1 text-[11px] font-bold tracking-wider text-slate-400 uppercase backdrop-blur">
+          {title}
+        </p>
+        <ul className="px-2">
+          {games.map((g) => {
+            const on = g.id === currentId;
+            const status = lineupStatus(data, g);
+            return (
+              <li key={g.id}>
+                <Link
+                  ref={on ? current : undefined}
+                  href={`/games/${g.id}`}
+                  aria-current={on ? "page" : undefined}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 ${
+                    on ? "bg-[var(--team)]/10" : "hover:bg-slate-50"
+                  }`}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span
+                      className={`block truncate text-[15px] font-semibold ${on ? "text-[var(--team)]" : "text-slate-900"}`}
+                    >
+                      vs {g.opponent}
+                    </span>
+                    <span className="block truncate text-sm text-slate-500">
+                      {formatGameDate(g)}
+                    </span>
+                  </span>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${TONE_CLASS[status.tone]}`}
+                  >
+                    {status.text.replace(/^Ready · .*/, "Ready")}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </>
+    );
+  return (
+    <div className="pb-6">
+      <div className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4">
+        <Link href="/games" className="text-lg font-bold tracking-tight hover:underline">
+          Games
+        </Link>
+        {recordText(data.games) && (
+          <span className="text-sm font-semibold text-slate-500">{recordText(data.games)}</span>
+        )}
+      </div>
+      {group("Upcoming", upcoming)}
+      {group("Final", final)}
+    </div>
   );
 }
 
