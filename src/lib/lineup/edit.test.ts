@@ -10,6 +10,7 @@ import {
   positionAt,
   setAbsent,
   setBatting,
+  swapInInning,
 } from "./edit";
 
 const players = [
@@ -113,5 +114,18 @@ describe("lineup editing", () => {
     const l = normalizeLineup({ ...emptyLineup(players, 2), absent: ["a", "c"] }, players, 2);
     expect(l.battingOrder).toEqual(["b", "d"]);
     expect(l.absent).toEqual(["a"]); // c is inactive anyway
+  });
+
+  it("swaps two players' spots in one inning (drag and drop), leaving other innings alone", () => {
+    const l = swapInInning(lineupFromGrid({ a: ["P", "SS"], b: ["BENCH", "C"] }), 1, "a", "b");
+    expect([positionAt(l, 1, "a"), positionAt(l, 1, "b")]).toEqual(["BENCH", "P"]);
+    expect([positionAt(l, 2, "a"), positionAt(l, 2, "b")]).toEqual(["SS", "C"]);
+  });
+
+  it("moves a spot onto an empty cell, and ignores dropping a cell on itself", () => {
+    const start = lineupFromGrid({ a: ["2B"], b: [] });
+    const l = swapInInning(start, 1, "a", "b");
+    expect([positionAt(l, 1, "a"), positionAt(l, 1, "b")]).toEqual([null, "2B"]);
+    expect(swapInInning(start, 1, "a", "a")).toBe(start);
   });
 });

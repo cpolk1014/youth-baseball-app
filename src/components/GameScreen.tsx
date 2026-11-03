@@ -20,7 +20,7 @@ import {
   useAppData,
 } from "@/lib/data/store";
 import { battingOrderMessage } from "@/lib/groupme/messages";
-import { assignPosition, positionAt, setAbsent, setBatting } from "@/lib/lineup/edit";
+import { assignPosition, positionAt, setAbsent, setBatting, swapInInning } from "@/lib/lineup/edit";
 import { rotateLeadoff } from "@/lib/rules/custom";
 import { competitivePlan } from "@/lib/rules/competitive";
 import { explainLineup } from "@/lib/rules/explain";
@@ -377,41 +377,57 @@ export function GameScreen({ gameId }: { gameId: string }) {
             </p>
           )}
 
-          <LineupGrid
-            lineup={lineup}
-            players={players}
-            positions={config.fieldPositions}
-            violations={shown}
-            onCellTap={
-              lineupLocked ? undefined : (playerId, inning) => setCell({ playerId, inning })
-            }
-          />
+          {/* Very wide screens: fair-play notes and "Why this lineup?" beside the grid. */}
+          <div className="min-[1400px]:grid min-[1400px]:grid-cols-[minmax(0,1fr)_340px] min-[1400px]:items-start min-[1400px]:gap-6">
+            <div className="min-w-0">
+              <LineupGrid
+                lineup={lineup}
+                players={players}
+                positions={config.fieldPositions}
+                violations={shown}
+                onCellTap={
+                  lineupLocked ? undefined : (playerId, inning) => setCell({ playerId, inning })
+                }
+                onSwap={
+                  lineupLocked
+                    ? undefined
+                    : (inning, a, b) => change(swapInInning(lineup, inning, a, b))
+                }
+              />
+              {!lineupLocked && (
+                <p className="mt-2 hidden text-sm text-slate-500 lg:block">
+                  Click a square to pick a position, or drag it onto another player in the same
+                  inning to swap them (on a touch screen, press and hold first).
+                </p>
+              )}
+            </div>
 
-          <div className="mt-4">
-            {lineup.slots.length === 0 ? (
-              <p className="rounded-xl border-2 border-slate-300 bg-white p-4 text-base">
-                Tap <b>Auto-fill</b> for a {style === "competitive" ? "competitive" : "fair"}{" "}
-                lineup, or tap any square to set a position.
-              </p>
-            ) : (
-              <>
-                <ViolationList violations={shown} emptyCells={emptyCells} />
-                <WhyLineup
-                  explanation={
-                    style === "competitive"
-                      ? explainCompetitive(
-                          data.players,
-                          lineup,
-                          config,
-                          violations,
-                          plan,
-                          importedOn,
-                        )
-                      : explainLineup(data.players, lineup, config, history, violations)
-                  }
-                />
-              </>
-            )}
+            <div className="mt-4 min-[1400px]:sticky min-[1400px]:top-20 min-[1400px]:mt-0 min-[1400px]:max-h-[calc(100dvh-6rem)] min-[1400px]:overflow-y-auto">
+              {lineup.slots.length === 0 ? (
+                <p className="rounded-xl border-2 border-slate-300 bg-white p-4 text-base">
+                  Tap <b>Auto-fill</b> for a {style === "competitive" ? "competitive" : "fair"}{" "}
+                  lineup, or tap any square to set a position.
+                </p>
+              ) : (
+                <>
+                  <ViolationList violations={shown} emptyCells={emptyCells} />
+                  <WhyLineup
+                    explanation={
+                      style === "competitive"
+                        ? explainCompetitive(
+                            data.players,
+                            lineup,
+                            config,
+                            violations,
+                            plan,
+                            importedOn,
+                          )
+                        : explainLineup(data.players, lineup, config, history, violations)
+                    }
+                  />
+                </>
+              )}
+            </div>
           </div>
         </>
       ) : view === "attendance" ? (

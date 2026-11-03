@@ -56,6 +56,19 @@ export function holdersByPosition(lineup: Lineup, inning: number): Map<Position,
   return map;
 }
 
+/** Trade two players' spots in one inning (either may be empty), e.g. dragging one onto the other. */
+export function swapInInning(lineup: Lineup, inning: number, a: string, b: string): Lineup {
+  if (a === b) return lineup;
+  const posA = positionAt(lineup, inning, a);
+  const posB = positionAt(lineup, inning, b);
+  const slots = lineup.slots.filter(
+    (s) => !(s.inning === inning && (s.playerId === a || s.playerId === b)),
+  );
+  if (posB) slots.push({ inning, playerId: a, position: posB });
+  if (posA) slots.push({ inning, playerId: b, position: posA });
+  return { ...lineup, slots };
+}
+
 /**
  * Put a player at a position for one inning (null clears it). If someone else already has
  * that field position, they swap: they take the player's old spot (or become unassigned).
