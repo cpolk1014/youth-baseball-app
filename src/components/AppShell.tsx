@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { themeVars } from "@/lib/branding/theme";
+import { pageName, previousPage, visitPage, type Visit } from "@/lib/navHistory";
 import { isCoach, permissionsFor } from "@/lib/data/permissions";
 import { myUserId, signOut, syncNow, useAppData, useStoreState } from "@/lib/data/store";
 import { initials, useMe, useMyTeamClubs } from "./account/useMe";
@@ -77,6 +78,7 @@ export function AppShell({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const data = useAppData();
+  const back = useBackTo(title);
   return (
     // The team's colors, for everything inside (bars, buttons, badges).
     <div
@@ -90,6 +92,7 @@ export function AppShell({
       >
         {/* A plain block, so the header keeps its own height in this column. */}
         <div className="shrink-0">
+          <BackLink back={back} />
           <MenuHeader />
         </div>
         <MenuLinks tab={tab} />
@@ -161,14 +164,24 @@ export function AppShell({
           {bare ? children : <DataStatus>{children}</DataStatus>}
         </main>
       </div>
-      <MenuDrawer open={menuOpen} tab={tab} onClose={() => setMenuOpen(false)} />
+      <MenuDrawer open={menuOpen} tab={tab} back={back} onClose={() => setMenuOpen(false)} />
       <OfflineSupport />
     </div>
   );
 }
 
 /** The menu that slides in from the right on phones and tablets. */
-function MenuDrawer({ open, tab, onClose }: { open: boolean; tab: Tab; onClose: () => void }) {
+function MenuDrawer({
+  open,
+  tab,
+  back,
+  onClose,
+}: {
+  open: boolean;
+  tab: Tab;
+  back: Visit | null;
+  onClose: () => void;
+}) {
   const panel = useRef<HTMLElement>(null);
   const close = useEffectEvent(() => onClose());
 
@@ -190,6 +203,7 @@ function MenuDrawer({ open, tab, onClose }: { open: boolean; tab: Tab; onClose: 
         tabIndex={-1}
         className="absolute inset-y-0 right-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-[var(--team)] p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] text-white shadow-2xl outline-none"
       >
+        <BackLink back={back} onPick={onClose} />
         <div className="mb-2 flex items-center justify-between gap-1">
           <MenuHeader onPick={onClose} />
           <button
@@ -203,6 +217,54 @@ function MenuDrawer({ open, tab, onClose }: { open: boolean; tab: Tab; onClose: 
         <MenuLinks tab={tab} onPick={onClose} />
       </nav>
     </div>
+  );
+}
+
+const VISITS_KEY = "rallycap:visits";
+
+/**
+ * Where "Back to …" in the menu goes: the page before this one in RallyCap (this browser
+ * tab). Records each page as it's shown, named by its header title.
+ */
+function useBackTo(title: string): Visit | null {
+  const pathname = usePathname();
+  const [back, setBack] = useState<Visit | null>(null);
+  useEffect(() => {
+    const path = pathname + window.location.search;
+    let stack: Visit[] = [];
+    try {
+      stack = JSON.parse(window.sessionStorage.getItem(VISITS_KEY) ?? "[]") as Visit[];
+    } catch {
+      stack = [];
+    }
+    // The Games list's header is the team's name; "Back to Games" reads better.
+    const name = pathname === "/games" ? "Games" : pageName(title, pathname);
+    stack = visitPage(stack, { path, title: name });
+    try {
+      window.sessionStorage.setItem(VISITS_KEY, JSON.stringify(stack));
+    } catch {
+      // Private mode: Back just won't show.
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reading this tab's trail
+    setBack(previousPage(stack, path));
+  }, [pathname, title]);
+  return back;
+}
+
+/** "‹ Back to Practice": the previous page in RallyCap, at the top of the menu. */
+function BackLink({ back, onPick }: { back: Visit | null; onPick?: () => void }) {
+  if (!back) return null;
+  return (
+    <Link
+      href={back.path}
+      onClick={onPick}
+      className="mb-2 flex min-h-11 items-center gap-2 rounded-lg px-3 text-base font-semibold text-white/85 hover:bg-white/15 active:bg-white/20"
+    >
+      <span aria-hidden="true" className="text-xl leading-none">
+        ‹
+      </span>
+      <span className="min-w-0 truncate">Back to {back.title}</span>
+    </Link>
   );
 }
 
