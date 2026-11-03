@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { permissionsFor } from "@/lib/data/permissions";
@@ -21,6 +21,8 @@ import type { AppData } from "@/lib/data/types";
 import { finalLineups } from "@/lib/data/game";
 import { seasonSummary } from "@/lib/season/summary";
 import { DataTable, stopRow, type Column } from "./shell/DataTable";
+import { VenmoButton, useVenmoUsers } from "./venmo";
+import type { FamilyMember } from "@/lib/data/account-backend";
 import { toast } from "./shell/Toast";
 import { Shortcut } from "./shell/useShortcut";
 import { AppShell, Loading } from "./AppShell";
@@ -33,6 +35,10 @@ export function RosterScreen() {
   const [editing, setEditing] = useState<Player | null>(null);
   const { mode } = useStoreState();
   const router = useRouter();
+  const parentView = data?.me.role === "parent";
+  // Parents see each kid's family (names, and a Venmo button for those who have one).
+  const families = useTeamFamilies(parentView && mode === "supabase" ? data?.team.id : undefined);
+  const venmoUsers = useVenmoUsers(parentView && mode === "supabase" ? data?.team.id : undefined);
 
   if (!data) {
     return (
@@ -58,6 +64,39 @@ export function RosterScreen() {
         ? router.push(`/my-player?player=${p.id}`)
         : undefined;
   const clickable = (p: Player) => canEdit || myKids.has(p.id);
+  const me = myUserId(data);
+  // Signed out (sample team), the links on this device stand in for the server's list.
+  const familyOf = (p: Player): FamilyMember[] =>
+    families?.get(p.id) ??
+    data.guardians
+      .filter((g) => g.playerId === p.id)
+      .map((g) => ({
+        userId: g.userId,
+        name: data.members.find((m) => m.userId === g.userId)?.displayName ?? null,
+      }));
+  const familyLine = (p: Player) =>
+    familyOf(p)
+      .map((f) => (f.userId === me ? "You" : (f.name ?? "A parent")))
+      .join(", ");
+  const venmoFor = (p: Player, small = false) =>
+    familyOf(p)
+      .filter((f) => f.userId !== me && venmoUsers.has(f.userId))
+      .map((f) => (
+        <VenmoButton
+          key={f.userId}
+          teamId={data.team.id}
+          userId={f.userId}
+          name={f.name ?? "this family"}
+          small={small}
+        />
+      ));
+  const parentCard = (p: Player) =>
+    parentView
+      ? {
+          family: familyLine(p) || "Family not linked yet",
+          extra: myKids.has(p.id) ? null : venmoFor(p),
+        }
+      : {};
   const others = data.members.length;
   const active = activePlayers(data.players);
   const inactive = data.players.filter((p) => p.active === false);
@@ -146,18 +185,21 @@ export function RosterScreen() {
 
       {/* Keyboards: N adds a player. */}
       <Shortcut keyName="n" run={startAdd} enabled={canEdit} />
-      <div className={`mb-4 ${canEdit ? "" : "pointer-events-none"}`} aria-disabled={!canEdit}>
-        <Toggle
-          label="Coach's pitch"
-          hint={
-            data.team.coachPitch
-              ? "P is a fielding spot. New games default to 10 fielders."
-              : "Kids pitch. New games default to 9 fielders."
-          }
-          checked={data.team.coachPitch}
-          onChange={setCoachPitch}
-        />
-      </div>
+      {/* A coaches' setting; parents don't need it. */}
+      {!parentView && (
+        <div className={`mb-4 ${canEdit ? "" : "pointer-events-none"}`} aria-disabled={!canEdit}>
+          <Toggle
+            label="Coach's pitch"
+            hint={
+              data.team.coachPitch
+                ? "P is a fielding spot. New games default to 10 fielders."
+                : "Kids pitch. New games default to 9 fielders."
+            }
+            checked={data.team.coachPitch}
+            onChange={setCoachPitch}
+          />
+        </div>
+      )}
 
       {!canEdit && myKids.size > 0 && (
         <p className="mb-3 flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-base text-slate-700">
@@ -174,6 +216,8 @@ export function RosterScreen() {
           canEdit={canEdit}
           onOpen={openPlayer}
           canOpen={clickable}
+          familyLine={familyLine}
+          venmoFor={venmoFor}
         />
       </div>
 
@@ -184,6 +228,7 @@ export function RosterScreen() {
             player={p}
             onClick={clickable(p) ? () => openPlayer(p) : undefined}
             mine={!canEdit && myKids.has(p.id)}
+            {...parentCard(p)}
           />
         ))}
       </ul>
@@ -200,6 +245,7 @@ export function RosterScreen() {
                 player={p}
                 onClick={clickable(p) ? () => openPlayer(p) : undefined}
                 mine={!canEdit && myKids.has(p.id)}
+                {...parentCard(p)}
               />
             ))}
           </ul>
@@ -250,11 +296,17 @@ function PlayerRow({
   player,
   onClick,
   mine = false,
+  family,
+  extra,
 }: {
   player: Player;
   onClick?: () => void;
   /** A parent's own kid: tap to open My player. */
   mine?: boolean;
+  /** Parents: the kid's family instead of positions and pitch/catch. */
+  family?: string;
+  /** Parents: Venmo buttons for that family. */
+  extra?: ReactNode;
 }) {
   const Tag = onClick ? "button" : "div";
   return (
@@ -270,15 +322,19 @@ function PlayerRow({
         <span className="min-w-0 flex-1">
           <span className="block truncate text-lg font-semibold">{player.name}</span>
           <span className="block truncate text-sm text-slate-600">
-            {player.preferredPositions.length
-              ? player.preferredPositions.join(" · ")
-              : "Any position"}
+            {family ??
+              (player.preferredPositions.length
+                ? player.preferredPositions.join(" · ")
+                : "Any position")}
           </span>
         </span>
-        <span className="flex shrink-0 gap-1">
-          {player.canPitch && <Badge>P</Badge>}
-          {player.canCatch && <Badge>C</Badge>}
-        </span>
+        {family === undefined && (
+          <span className="flex shrink-0 gap-1">
+            {player.canPitch && <Badge>P</Badge>}
+            {player.canCatch && <Badge>C</Badge>}
+          </span>
+        )}
+        {extra && <span className="flex shrink-0 gap-1">{extra}</span>}
         {mine && <SwingingBat />}
       </Tag>
     </li>
@@ -317,10 +373,14 @@ function RosterTable({
   canEdit,
   onOpen,
   canOpen,
+  familyLine,
+  venmoFor,
 }: {
   data: AppData;
   players: Player[];
   canEdit: boolean;
+  familyLine: (p: Player) => string;
+  venmoFor: (p: Player, small?: boolean) => ReactNode[];
   /** Coaches edit the player; parents open their own kid's page. */
   onOpen: (p: Player) => void;
   canOpen: (p: Player) => boolean;
@@ -462,10 +522,30 @@ function RosterTable({
         ]
       : []),
   ];
+  // Parents: who the kid is and their family; positions and pitch/catch are for coaches.
+  const shown = parent
+    ? [
+        columns[0]!,
+        columns[1]!,
+        {
+          key: "family",
+          label: "Family",
+          sort: (a: Player, b: Player) => familyLine(a).localeCompare(familyLine(b)),
+          render: (p: Player) => (
+            <span className="flex items-center gap-2">
+              <span className={familyLine(p) ? "" : "text-slate-400"}>
+                {familyLine(p) || "Not linked yet"}
+              </span>
+              {!canOpen(p) && venmoFor(p, true)}
+            </span>
+          ),
+        },
+      ]
+    : columns;
   return (
     <DataTable
       rows={players}
-      columns={columns}
+      columns={shown}
       rowKey={(p) => p.id}
       onRowClick={onOpen}
       canClick={canOpen}
@@ -473,4 +553,23 @@ function RosterTable({
       dimRow={(p) => p.active === false}
     />
   );
+}
+
+/** Every kid's family on the team, from the server (null until loaded or when signed out). */
+function useTeamFamilies(teamId: string | undefined): Map<string, FamilyMember[]> | null {
+  const [families, setFamilies] = useState<Map<string, FamilyMember[]> | null>(null);
+  useEffect(() => {
+    if (!teamId) return;
+    let current = true;
+    import("@/lib/data/account-backend")
+      .then((m) => m.teamFamilies(teamId))
+      .then(
+        (f) => current && setFamilies(f),
+        () => undefined,
+      );
+    return () => {
+      current = false;
+    };
+  }, [teamId]);
+  return families;
 }

@@ -1320,6 +1320,31 @@ set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 select pg_temp.expect((select count(*) from public.team_venmo_users('00000000-0000-4000-8000-000000000001')) = 0, 'people not on the team learn nothing');
 reset role;
+-- ── team_families: every kid's family names for the team's roster ──
+reset role;
+select set_config('request.jwt.claim.sub', '', false);
+insert into public.player_guardian (player_id, user_id)
+  select p.id, 'aaaaaaaa-0000-4000-8000-000000000001' from public.player p
+  where p.team_id = '00000000-0000-4000-8000-000000000001'
+    and not exists (select 1 from public.player_guardian g where g.player_id = p.id)
+  limit 1;
+create temp table families_expected as
+  select count(*) as n from public.player_guardian g
+  join public.player p on p.id = g.player_id and p.team_id = '00000000-0000-4000-8000-000000000001'
+  join public.member m on m.user_id = g.user_id and m.team_id = p.team_id;
+grant select on families_expected to authenticated;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect(
+  (select count(*) from public.team_families('00000000-0000-4000-8000-000000000001')) = (select n from families_expected)
+  and (select n from families_expected) > 0,
+  'a parent sees every kid''s family on the roster');
+select pg_temp.expect(
+  (select count(*) from public.player_guardian where user_id <> 'aaaaaaaa-0000-4000-8000-000000000002') = 0,
+  'but still can''t read other families'' links directly');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.team_families('00000000-0000-4000-8000-000000000001')) = 0, 'people not on the team see no families');
+reset role;
 -- ── game places ──
 update public.game set location = 'Traction Sports Complex', field = 'Chabills Field', location_lat = 30.2, location_lng = -92.0
   where id = 'eeeeeeee-0000-4000-8000-000000000020';

@@ -133,3 +133,22 @@ export async function teamVenmoUsers(teamId: string): Promise<Set<string>> {
   );
   return new Set(ids);
 }
+
+export interface FamilyMember {
+  userId: string;
+  name: string | null;
+}
+
+/** Every kid's family on the team (parents' names as shown on the team; never emails). */
+export async function teamFamilies(teamId: string): Promise<Map<string, FamilyMember[]>> {
+  const rows = check<{ player_id: string; user_id: string; display_name: string | null }[]>(
+    await getBrowserSupabase().rpc("team_families", { p_team_id: teamId }),
+  );
+  const byPlayer = new Map<string, FamilyMember[]>();
+  for (const r of rows) {
+    const list = byPlayer.get(r.player_id) ?? [];
+    list.push({ userId: r.user_id, name: r.display_name });
+    byPlayer.set(r.player_id, list);
+  }
+  return byPlayer;
+}
