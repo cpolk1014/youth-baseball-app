@@ -6,6 +6,7 @@ import { finalLineups } from "@/lib/data/game";
 import { useAppData } from "@/lib/data/store";
 import type { AppData } from "@/lib/data/types";
 import { resolveRuleConfig } from "@/lib/rules/config";
+import type { Position } from "@/lib/rules/types";
 import { playingTimeBars } from "@/lib/charts";
 import { seasonSummary, type SeasonRow, type SeasonSummary } from "@/lib/season/summary";
 import { PlayingTimeChart } from "./charts/Charts";
@@ -136,7 +137,7 @@ export function PlayingTime({ data, club = false }: { data: AppData; club?: bool
           <SummaryTable summary={summary} rows={sorted} />
         </>
       ) : (
-        <PositionGrid summary={summary} rows={sorted} />
+        <PositionGrid key={sort} summary={summary} rows={sorted} />
       )}
 
       <p className="mt-3 text-sm text-slate-600">
@@ -236,18 +237,60 @@ function SummaryTable({ summary, rows }: { summary: SeasonSummary; rows: SeasonR
   );
 }
 
+type ColumnSort = { col: Position | "name"; dir: "asc" | "desc" } | null;
+
+/**
+ * Innings at each position. Tap a column to sort by it (most first, tap again for fewest);
+ * the sort buttons above start it over. Inactive players stay at the bottom.
+ */
 function PositionGrid({ summary, rows }: { summary: SeasonSummary; rows: SeasonRow[] }) {
-  const all = [...rows, ...summary.inactiveRows];
+  const [colSort, setColSort] = useState<ColumnSort>(null);
+  const order = (list: SeasonRow[]) => {
+    if (!colSort) return list;
+    const sign = colSort.dir === "asc" ? 1 : -1;
+    return [...list].sort((a, b) =>
+      colSort.col === "name"
+        ? sign * a.player.name.localeCompare(b.player.name)
+        : sign * ((a.byPosition[colSort.col] ?? 0) - (b.byPosition[colSort.col] ?? 0)),
+    );
+  };
+  const all = [...order(rows), ...order(summary.inactiveRows)];
+  const toggle = (col: Position | "name") =>
+    setColSort(
+      colSort?.col === col
+        ? { col, dir: colSort.dir === "asc" ? "desc" : "asc" }
+        : { col, dir: col === "name" ? "asc" : "desc" },
+    );
+  const header = (col: Position | "name", label: string) => {
+    const on = colSort?.col === col;
+    return (
+      <button
+        onClick={() => toggle(col)}
+        className={`inline-flex min-h-8 items-center gap-0.5 rounded px-1 uppercase hover:text-slate-900 ${on ? "text-slate-900" : ""}`}
+      >
+        {label}
+        {on && <span aria-hidden="true">{colSort!.dir === "desc" ? "↓" : "↑"}</span>}
+      </button>
+    );
+  };
+  const ariaSort = (col: Position | "name") =>
+    colSort?.col === col ? (colSort.dir === "asc" ? "ascending" : "descending") : undefined;
   return (
     <div className="overflow-x-auto rounded-xl border-2 border-slate-200 bg-white">
       {/* Phones: as narrow as it can be (it scrolls); tablets and up: the full width. */}
       <table className="border-collapse md:w-full">
         <thead className="border-b-2 border-slate-200">
           <tr>
-            <th className={`${th} ${nameCell} text-left md:pl-4`}>Player</th>
+            <th aria-sort={ariaSort("name")} className={`${th} ${nameCell} text-left md:pl-3`}>
+              {header("name", "Player")}
+            </th>
             {summary.positions.map((pos) => (
-              <th key={pos} className={`${th} min-w-10 ${pos === "BENCH" ? "bg-slate-100" : ""}`}>
-                {pos === "BENCH" ? "BN" : pos}
+              <th
+                key={pos}
+                aria-sort={ariaSort(pos)}
+                className={`${th} min-w-10 ${pos === "BENCH" ? "bg-slate-100" : ""}`}
+              >
+                {header(pos, pos === "BENCH" ? "BN" : pos)}
               </th>
             ))}
           </tr>
