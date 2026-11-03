@@ -159,6 +159,13 @@ export function RosterScreen() {
         />
       </div>
 
+      {!canEdit && myKids.size > 0 && (
+        <p className="mb-3 flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-base text-slate-700">
+          <SwingingBat />
+          Tap your player to see their stats and upload box scores.
+        </p>
+      )}
+
       {/* Wide screens: one sortable table, pitch/catch toggled in place. */}
       <div className="hidden lg:block">
         <RosterTable
@@ -272,31 +279,26 @@ function PlayerRow({
           {player.canPitch && <Badge>P</Badge>}
           {player.canCatch && <Badge>C</Badge>}
         </span>
-        {mine && <OpenArrow />}
+        {mine && <SwingingBat />}
       </Tag>
     </li>
   );
 }
 
-/** A round arrow in the team color: "tap to open" without words. */
-function OpenArrow() {
+/** A small bat in the team color that takes a swing now and then: "tap me", without words. */
+function SwingingBat() {
   return (
-    <span
+    <svg
+      viewBox="0 0 24 24"
       aria-hidden="true"
-      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--team)] text-white"
+      className="bat-swing size-7 shrink-0 text-[var(--team)]"
+      fill="currentColor"
     >
-      <svg
-        viewBox="0 0 24 24"
-        className="size-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M9 5l7 7-7 7" />
-      </svg>
-    </span>
+      <g transform="rotate(-45 12 12)">
+        <circle cx="2.8" cy="12" r="2" />
+        <path d="M4 10.9 L10.5 10.9 C13.5 9.6 16.5 9.3 19.5 9.3 A2.7 2.7 0 0 1 19.5 14.7 C16.5 14.7 13.5 14.4 10.5 13.1 L4 13.1 Z" />
+      </g>
+    </svg>
   );
 }
 
@@ -379,7 +381,7 @@ function RosterTable({
       render: (p) => (
         <span className="inline-flex items-center gap-2 font-semibold">
           {p.name}
-          {!canEdit && canOpen(p) && <OpenArrow />}
+          {!canEdit && canOpen(p) && <SwingingBat />}
           {p.active === false && (
             <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-bold text-slate-500 uppercase">
               Inactive
@@ -414,7 +416,8 @@ function RosterTable({
       firstDir: "desc",
       render: (p) => toggle(p, "canCatch", "can catch"),
     },
-    ...(data.members.length > 0
+    // Parents only see their own family's links, so the column would mislead them.
+    ...(data.members.length > 0 && !parent
       ? [
           {
             key: "family",

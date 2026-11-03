@@ -28,6 +28,30 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+/* Roster: a parent's own player has a small bat that takes a swing now and then. */
+@keyframes bat-swing {
+  0%,
+  70%,
+  100% {
+    transform: rotate(0deg);
+  }
+  80% {
+    transform: rotate(-30deg);
+  }
+  90% {
+    transform: rotate(16deg);
+  }
+}
+.bat-swing {
+  transform-origin: 22% 78%;
+  animation: bat-swing 2.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bat-swing {
+    animation: none;
+  }
+}
+
 /* Printing: only the lineup card, at true size, on white. */
 @media print {
   html,
