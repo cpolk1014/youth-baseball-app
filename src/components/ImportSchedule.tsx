@@ -48,8 +48,22 @@ function gameWhen(g: ReviewGame): string {
   return formatPracticeWhen({ date: g.date, startTime: g.startTime, endTime: null });
 }
 
-/** Upload a schedule (photo, PDF or CSV), review what was found, add the checked items. */
-export function ImportSchedule({ data, onClose }: { data: AppData; onClose: () => void }) {
+/**
+ * Upload a schedule (photo, PDF or CSV), review what was found, add the checked items.
+ * From Games (`gamesOnly`), only games are offered, with a way to add one by hand.
+ */
+export function ImportSchedule({
+  data,
+  onClose,
+  gamesOnly = false,
+  onManual,
+}: {
+  data: AppData;
+  onClose: () => void;
+  gamesOnly?: boolean;
+  /** Shows "Add manually" under the file picker. */
+  onManual?: () => void;
+}) {
   const [step, setStep] = useState<Step>({ kind: "pick" });
   const [error, setError] = useState<string | null>(null);
 
@@ -63,7 +77,8 @@ export function ImportSchedule({ data, onClose }: { data: AppData; onClose: () =
       const res = await fetch("/api/schedule-import", { method: "POST", body });
       const json = (await res.json().catch(() => ({}))) as ScheduleExtraction & { error?: string };
       if (!res.ok) throw new Error(json.error ?? "Couldn't read that file. Try again.");
-      setStep({ kind: "review", review: buildImportReview(json, data.practices, data.games) });
+      const review = buildImportReview(json, data.practices, data.games);
+      setStep({ kind: "review", review: gamesOnly ? { ...review, practices: [] } : review });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setStep({ kind: "pick" });
@@ -84,11 +99,14 @@ export function ImportSchedule({ data, onClose }: { data: AppData; onClose: () =
     return (
       <div className="flex flex-col gap-4">
         <p className="rounded-xl bg-green-700 p-4 text-lg font-bold text-white" role="status">
-          Added {step.practices} practice{step.practices === 1 ? "" : "s"} and {step.games} game
-          {step.games === 1 ? "" : "s"}.
+          Added{" "}
+          {gamesOnly ? "" : `${step.practices} practice${step.practices === 1 ? "" : "s"} and `}
+          {step.games} game{step.games === 1 ? "" : "s"}.
         </p>
         <p className="text-base text-slate-700">
-          Games are on the Games tab; open any of them to edit details.
+          {gamesOnly
+            ? "Open any game to set its field, uniform and lineup."
+            : "Games are on the Games tab; open any of them to edit details."}
         </p>
         <button
           onClick={onClose}
@@ -114,8 +132,9 @@ export function ImportSchedule({ data, onClose }: { data: AppData; onClose: () =
   return (
     <div className="flex flex-col gap-4">
       <p className="text-base text-slate-700">
-        Upload your season schedule: a photo or screenshot of a flyer, a PDF, or a CSV. We&apos;ll
-        find the practices and games and show them to you before anything is added.
+        {gamesOnly
+          ? "Add games from a schedule: a screenshot (GameChanger, a tournament site, a text), a photo of a flyer, a PDF, or a CSV or spreadsheet export. We'll find the games and show them to you before anything is added."
+          : "Upload your season schedule: a photo or screenshot of a flyer, a PDF, or a CSV. We'll find the practices and games and show them to you before anything is added."}
       </p>
       <label className="flex h-16 cursor-pointer items-center justify-center rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]">
         Choose a file
@@ -139,6 +158,14 @@ export function ImportSchedule({ data, onClose }: { data: AppData; onClose: () =
         Your file is sent to Claude (Anthropic&apos;s AI) to read the dates. Nothing is added until
         you confirm.
       </p>
+      {onManual && (
+        <button
+          onClick={onManual}
+          className="h-14 rounded-xl border-2 border-slate-400 bg-white text-lg font-bold text-slate-800 active:bg-slate-100"
+        >
+          Add manually
+        </button>
+      )}
     </div>
   );
 }
@@ -187,7 +214,7 @@ function ReviewList({
     return (
       <div className="flex flex-col gap-4">
         <p className="rounded-xl border-2 border-amber-500 bg-amber-50 p-4 text-base">
-          No practices or games were found in that file.
+          Nothing to add was found in that file.
           {review.warnings.length > 0 && ` ${review.warnings.join(" ")}`}
         </p>
         <button

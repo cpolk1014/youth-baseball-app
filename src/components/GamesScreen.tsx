@@ -18,6 +18,7 @@ import type { AppData, Game } from "@/lib/data/types";
 import { lineupStatus, type StatusTone } from "@/lib/dashboard";
 import { AppShell, Loading } from "./AppShell";
 import { GameForm } from "./GameForm";
+import { ImportSchedule } from "./ImportSchedule";
 import { TeamBadge } from "./TeamBadge";
 import { useToday } from "./useToday";
 import { MoneyNudge } from "./MoneyParts";
@@ -28,6 +29,8 @@ import { TeamSwitcher } from "./TeamSwitcher";
 export function GamesScreen() {
   const data = useAppData();
   const [adding, setAdding] = useState<Game | null>(null);
+  // Adding games starts with the import (a screenshot, PDF or file); "Add manually" is there too.
+  const [importing, setImporting] = useState(false);
   const { mode } = useStoreState();
   const [switching, setSwitching] = useState(false);
 
@@ -41,7 +44,10 @@ export function GamesScreen() {
 
   const { upcoming, final } = splitGames(data.games);
   const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
-  const startAdd = () =>
+  // The import needs the server (and a signal); otherwise go straight to the form.
+  const canImport = mode === "supabase" && (typeof navigator === "undefined" || navigator.onLine);
+  const startAdd = () => (canImport ? setImporting(true) : addManually());
+  const addManually = () =>
     setAdding({
       id: newId(),
       seasonId: data.season.id,
@@ -95,6 +101,20 @@ export function GamesScreen() {
         teams={data.myTeams}
         currentTeamId={data.team.id}
       />
+
+      <Sheet open={importing} title="Add games" onClose={() => setImporting(false)}>
+        {importing && (
+          <ImportSchedule
+            data={data}
+            gamesOnly
+            onClose={() => setImporting(false)}
+            onManual={() => {
+              setImporting(false);
+              addManually();
+            }}
+          />
+        )}
+      </Sheet>
 
       <Sheet open={adding !== null} title="Add game" onClose={() => setAdding(null)}>
         {adding && (
