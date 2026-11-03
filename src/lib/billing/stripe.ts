@@ -75,7 +75,8 @@ export function purchaseFromEvent(event: Stripe.Event): Fulfillment | null {
  */
 export function stripeProblem(e: unknown): string {
   if (e instanceof Stripe.errors.StripeAuthenticationError) {
-    return "Stripe didn't accept the key in STRIPE_SECRET_KEY. Check it's the secret key (sk_test_…) from the same Stripe account, with no extra spaces, then redeploy.";
+    const why = /expired/i.test(e.message) ? "says it has expired" : "doesn't recognize it";
+    return `Stripe ${why}. The key this site has: ${keyShape(process.env.STRIPE_SECRET_KEY)}. Paste the current secret key into STRIPE_SECRET_KEY (Production) and redeploy.`;
   }
   if (e instanceof Stripe.errors.StripePermissionError) {
     return "The Stripe key in STRIPE_SECRET_KEY isn't allowed to create checkouts. Use the standard secret key, or give the restricted key Checkout Sessions write access.";
@@ -88,4 +89,16 @@ export function stripeProblem(e: unknown): string {
   }
   if (e instanceof Error && e.message.includes("STRIPE_SECRET_KEY")) return e.message;
   return "Couldn't start the payment. Try again.";
+}
+
+/** A key's shape for troubleshooting, never its value: "sk_test_…, 107 characters". */
+export function keyShape(raw: string | undefined): string {
+  if (!raw) return "none";
+  const kind = /^(sk|rk|pk)_(test|live)_/.exec(raw.trim())?.[0] ?? "an unknown kind of key";
+  const notes = [
+    `${raw.length} characters`,
+    /^\s|\s$/.test(raw) ? "spaces at the start or end" : null,
+    /["']/.test(raw) ? "quote marks in it" : null,
+  ].filter(Boolean);
+  return `${kind}…, ${notes.join(", ")}`;
 }

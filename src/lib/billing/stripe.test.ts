@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { describe, expect, it } from "vitest";
-import { purchaseFromEvent, stripeProblem } from "./stripe";
+import { keyShape, purchaseFromEvent, stripeProblem } from "./stripe";
 
 const stripe = new Stripe("sk_test_dummy");
 const SECRET = "whsec_test_secret";
@@ -85,7 +85,7 @@ describe("stripeProblem", () => {
       message: "Invalid API Key provided: sk_test_****abcd",
       type: "invalid_request_error",
     });
-    expect(stripeProblem(auth)).toMatch(/didn't accept the key/);
+    expect(stripeProblem(auth)).toMatch(/doesn't recognize it/);
     expect(stripeProblem(auth)).not.toMatch(/abcd/);
     const bad = new Stripe.errors.StripeInvalidRequestError({
       message: "No such price for key sk_test_abc123",
@@ -93,5 +93,15 @@ describe("stripeProblem", () => {
     });
     expect(stripeProblem(bad)).toBe("Stripe refused the checkout: No such price for key [key]");
     expect(stripeProblem(new Error("boom"))).toBe("Couldn't start the payment. Try again.");
+  });
+});
+
+describe("keyShape", () => {
+  it("describes a key without showing it", () => {
+    expect(keyShape("sk_test_abcdef")).toBe("sk_test_…, 14 characters");
+    expect(keyShape(' "sk_live_abc" ')).toBe(
+      "an unknown kind of key…, 15 characters, spaces at the start or end, quote marks in it",
+    );
+    expect(keyShape(undefined)).toBe("none");
   });
 });
