@@ -25,6 +25,7 @@ export function DataTable<T>({
   rowLabel,
   initialSort = null,
   dimRow,
+  canClick = () => true,
 }: {
   rows: T[];
   columns: Column<T>[];
@@ -34,6 +35,8 @@ export function DataTable<T>({
   rowLabel?: (row: T) => string;
   initialSort?: Sort;
   dimRow?: (row: T) => boolean;
+  /** Only these rows open on click (e.g. a parent's own kids). Default: every row. */
+  canClick?: (row: T) => boolean;
 }) {
   const [sort, setSort] = useState<Sort>(initialSort);
   const col = columns.find((c) => c.key === sort?.key);
@@ -83,31 +86,34 @@ export function DataTable<T>({
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {sorted.map((row) => (
-            <tr
-              key={rowKey(row)}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-              onKeyDown={
-                onRowClick
-                  ? (e) => {
-                      if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
-                        e.preventDefault();
-                        onRowClick(row);
+          {sorted.map((row) => {
+            const open = onRowClick && canClick(row) ? onRowClick : undefined;
+            return (
+              <tr
+                key={rowKey(row)}
+                onClick={open ? () => open(row) : undefined}
+                onKeyDown={
+                  open
+                    ? (e) => {
+                        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                          e.preventDefault();
+                          open(row);
+                        }
                       }
-                    }
-                  : undefined
-              }
-              tabIndex={onRowClick ? 0 : undefined}
-              aria-label={onRowClick && rowLabel ? rowLabel(row) : undefined}
-              className={`${onRowClick ? "cursor-pointer hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-2 focus-visible:outline-[var(--team)]" : ""} ${dimRow?.(row) ? "text-slate-400" : ""}`}
-            >
-              {columns.map((c) => (
-                <td key={c.key} className={`px-4 py-2.5 ${align(c)} ${c.className ?? ""}`}>
-                  {c.render(row)}
-                </td>
-              ))}
-            </tr>
-          ))}
+                    : undefined
+                }
+                tabIndex={open ? 0 : undefined}
+                aria-label={open && rowLabel ? rowLabel(row) : undefined}
+                className={`${open ? "cursor-pointer hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-2 focus-visible:outline-[var(--team)]" : ""} ${dimRow?.(row) ? "text-slate-400" : ""}`}
+              >
+                {columns.map((c) => (
+                  <td key={c.key} className={`px-4 py-2.5 ${align(c)} ${c.className ?? ""}`}>
+                    {c.render(row)}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

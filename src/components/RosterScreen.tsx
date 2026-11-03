@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { permissionsFor } from "@/lib/data/permissions";
 import {
   deletePlayer,
+  myUserId,
   newId,
   savePlayer,
   setCoachPitch,
@@ -22,6 +24,7 @@ import { DataTable, stopRow, type Column } from "./shell/DataTable";
 import { toast } from "./shell/Toast";
 import { Shortcut } from "./shell/useShortcut";
 import { AppShell, Loading } from "./AppShell";
+import { kidsOf } from "./KidPicker";
 import { PlayerForm, Toggle } from "./PlayerForm";
 import { Sheet } from "./Sheet";
 
@@ -29,6 +32,7 @@ export function RosterScreen() {
   const data = useAppData();
   const [editing, setEditing] = useState<Player | null>(null);
   const { mode } = useStoreState();
+  const router = useRouter();
 
   if (!data) {
     return (
@@ -45,6 +49,15 @@ export function RosterScreen() {
       )
     : fieldPositionsFor(9);
   const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
+  // Parents open their own kid's My player page from the roster.
+  const myKids = new Set(kidsOf(data, myUserId(data)).map((p) => p.id));
+  const openPlayer = (p: Player) =>
+    canEdit
+      ? setEditing(p)
+      : myKids.has(p.id)
+        ? router.push(`/my-player?player=${p.id}`)
+        : undefined;
+  const clickable = (p: Player) => canEdit || myKids.has(p.id);
   const others = data.members.length;
   const active = activePlayers(data.players);
   const inactive = data.players.filter((p) => p.active === false);
@@ -152,13 +165,19 @@ export function RosterScreen() {
           data={data}
           players={[...active, ...inactive]}
           canEdit={canEdit}
-          onEdit={(p) => setEditing(p)}
+          onOpen={openPlayer}
+          canOpen={clickable}
         />
       </div>
 
       <ul className="grid gap-2 md:grid-cols-2 lg:hidden">
         {active.map((p) => (
-          <PlayerRow key={p.id} player={p} onClick={canEdit ? () => setEditing(p) : undefined} />
+          <PlayerRow
+            key={p.id}
+            player={p}
+            onClick={clickable(p) ? () => openPlayer(p) : undefined}
+            mine={!canEdit && myKids.has(p.id)}
+          />
         ))}
       </ul>
 
@@ -172,7 +191,8 @@ export function RosterScreen() {
               <PlayerRow
                 key={p.id}
                 player={p}
-                onClick={canEdit ? () => setEditing(p) : undefined}
+                onClick={clickable(p) ? () => openPlayer(p) : undefined}
+                mine={!canEdit && myKids.has(p.id)}
               />
             ))}
           </ul>
@@ -219,13 +239,22 @@ export function RosterScreen() {
 }
 
 /** A player card; tappable to edit when `onClick` is given, otherwise view-only. */
-function PlayerRow({ player, onClick }: { player: Player; onClick?: () => void }) {
+function PlayerRow({
+  player,
+  onClick,
+  mine = false,
+}: {
+  player: Player;
+  onClick?: () => void;
+  /** A parent's own kid: tap to open My player. */
+  mine?: boolean;
+}) {
   const Tag = onClick ? "button" : "div";
   return (
     <li>
       <Tag
         onClick={onClick}
-        className={`flex h-full min-h-16 w-full items-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-left ${onClick ? "active:bg-slate-50" : ""}`}
+        className={`flex h-full min-h-16 w-full items-center gap-3 rounded-xl border-2 bg-white px-3 py-2 text-left ${mine ? "border-[var(--team)]" : "border-slate-200"} ${onClick ? "active:bg-slate-50" : ""}`}
       >
         <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--team)] text-lg font-bold text-white">
           {player.jerseyNumber ?? "–"}
@@ -242,6 +271,11 @@ function PlayerRow({ player, onClick }: { player: Player; onClick?: () => void }
           {player.canPitch && <Badge>P</Badge>}
           {player.canCatch && <Badge>C</Badge>}
         </span>
+        {mine && (
+          <span className="shrink-0 text-sm font-bold text-[var(--team)]">
+            My player <span aria-hidden="true">›</span>
+          </span>
+        )}
       </Tag>
     </li>
   );
@@ -260,12 +294,15 @@ function RosterTable({
   data,
   players,
   canEdit,
-  onEdit,
+  onOpen,
+  canOpen,
 }: {
   data: AppData;
   players: Player[];
   canEdit: boolean;
-  onEdit: (p: Player) => void;
+  /** Coaches edit the player; parents open their own kid's page. */
+  onOpen: (p: Player) => void;
+  canOpen: (p: Player) => boolean;
 }) {
   const parent = data.me.role === "parent";
   const summary = seasonSummary(
@@ -407,8 +444,9 @@ function RosterTable({
       rows={players}
       columns={columns}
       rowKey={(p) => p.id}
-      onRowClick={canEdit ? onEdit : undefined}
-      rowLabel={(p) => `Edit ${p.name}`}
+      onRowClick={onOpen}
+      canClick={canOpen}
+      rowLabel={(p) => (canEdit ? `Edit ${p.name}` : `Open ${p.name}`)}
       dimRow={(p) => p.active === false}
     />
   );

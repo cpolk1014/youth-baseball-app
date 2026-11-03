@@ -518,7 +518,7 @@ function AccountMenu({
       label: "My clubs",
       show: (clubs?.length ?? 0) > 0 || (teamClubs?.length ?? 0) > 0,
     },
-    { href: "/my-stats", label: "My player's stats", show: hasKids },
+    { href: "/my-player", label: "My player", show: hasKids },
   ].filter((x) => x.show);
   const current = (href: string) =>
     pathname === href || (href === "/my-clubs" && pathname.startsWith("/club"));

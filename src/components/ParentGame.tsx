@@ -100,7 +100,7 @@ export function ParentGame({
                 </span>
                 {importedFor(kid) && (
                   <Link
-                    href="/my-stats"
+                    href="/my-player"
                     className="flex h-12 items-center rounded-xl border-2 border-slate-300 px-3 text-base font-semibold"
                   >
                     Stats

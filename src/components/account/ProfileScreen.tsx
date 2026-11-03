@@ -213,7 +213,7 @@ export function ProfileScreen() {
                 <button
                   onClick={() => {
                     switchTeam(p.teamId);
-                    router.push("/my-stats");
+                    router.push(`/my-player?player=${p.playerId}`);
                   }}
                   className="flex min-h-14 w-full items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 text-left active:bg-slate-100"
                 >

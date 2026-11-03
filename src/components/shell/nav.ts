@@ -66,7 +66,8 @@ export function settingsLinks(data: AppData | null, signedIn: boolean) {
       href: "/season/rules",
       label: "Fair play rules",
       icon: "rules" as IconName,
-      show: true,
+      // Coaches' rules for building lineups; parents don't need them.
+      show: data?.me.role !== "parent",
       also: [],
     },
     {

@@ -24,7 +24,7 @@ export function KidStatsScreen() {
   const data = useAppData();
   if (!data) {
     return (
-      <AppShell title="My player's stats" tab="account">
+      <AppShell title="My player" tab="account">
         <Loading />
       </AppShell>
     );
@@ -34,14 +34,17 @@ export function KidStatsScreen() {
 
 function KidStats({ data }: { data: AppData }) {
   const kids = kidsOf(data, myUserId(data));
-  const [kidId, setKidId] = useState(kids[0]?.id ?? null);
+  // ?player=<id> (from Roster or My profile) opens that kid when there's more than one.
+  const [kidId, setKidId] = useState(
+    () => new URLSearchParams(window.location.search).get("player") ?? kids[0]?.id ?? null,
+  );
   const kid = kids.find((k) => k.id === kidId) ?? kids[0] ?? null;
   const { games, loading, error, save, remove } = useKidGames(kids.map((k) => k.id));
   const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState<KidGame | null>(null);
 
   const shell = (children: React.ReactNode) => (
-    <AppShell title="My player's stats" subtitle={data.team.name} tab="account">
+    <AppShell title="My player" subtitle={data.team.name} tab="account">
       {children}
     </AppShell>
   );

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { KidStatsScreen } from "@/components/kidstats/KidStatsScreen";
 
-export const metadata: Metadata = { title: "My player's stats" };
+export const metadata: Metadata = { title: "My player" };
 
-export default function MyStatsPage() {
+export default function MyPlayerPage() {
   return <KidStatsScreen />;
 }
