@@ -15,6 +15,7 @@ import { AppShell, Loading } from "../AppShell";
 import { kidsOf } from "../KidPicker";
 import { Sheet } from "../Sheet";
 import { ImportBoxScore } from "./ImportBoxScore";
+import { KidWalkup } from "./KidWalkup";
 import { SharePlayerCard } from "./SharePlayerCard";
 import { StrikeChart, TrendChart } from "../charts/Charts";
 import { useToday } from "../useToday";
@@ -108,6 +109,8 @@ function KidStats({ data }: { data: AppData }) {
       >
         + Import a box score
       </button>
+
+      <KidWalkup key={kid.id} data={data} kid={kid} />
 
       {loading ? (
         <Loading />
