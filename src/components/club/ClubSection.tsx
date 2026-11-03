@@ -17,6 +17,7 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
   const [passes, setPasses] = useState<{ season: string; expiresOn: string }[]>([]);
   const [paying, setPaying] = useState(false);
   const [paid, setPaid] = useState(false);
+  const [fromLink, setFromLink] = useState(false);
   const [look, setLook] = useState(0);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -38,6 +39,18 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
       current = false;
     };
   }, [teamId, look]);
+
+  // A club's message link ("?code=…"): fill the code in.
+  useEffect(() => {
+    const linked = (new URLSearchParams(window.location.search).get("code") ?? "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "")
+      .slice(0, 8);
+    if (!linked) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the address
+    setCode(linked);
+    setFromLink(true);
+  }, []);
 
   // Back from paying ("?paid=1"): the pass shows once Stripe confirms; look again a few times.
   useEffect(() => {
@@ -109,6 +122,12 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
             its data. The club can view lineups, playing time, rules and GameChanger stats, and
             can&apos;t change anything.
           </p>
+          {fromLink && (
+            <p className="mb-2 rounded-lg bg-amber-50 p-2 text-base text-amber-950">
+              Your club&apos;s code is filled in. Check this is the right team (its name is at the
+              top), then tap <b>Join</b>.
+            </p>
+          )}
           <form
             className="flex gap-2"
             onSubmit={(e) => {

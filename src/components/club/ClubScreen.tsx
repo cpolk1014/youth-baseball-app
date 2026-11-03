@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ClubCode, ClubTeam } from "@/lib/data/club-backend";
 import { CLUB_PRICE_CENTS, dollars } from "@/lib/billing/season";
+import { codeMessage } from "@/lib/club";
 import { formatClock } from "@/lib/data/game";
 import { useStoreState } from "@/lib/data/store";
 import { AppShell, Loading } from "../AppShell";
@@ -55,7 +56,7 @@ export function ClubScreen() {
           ))}
         </div>
       )}
-      <ClubTabs key={club.id} clubId={club.id} />
+      <ClubTabs key={club.id} clubId={club.id} clubName={club.name} />
     </>,
     "Club · view only",
   );
@@ -69,7 +70,7 @@ const TABS: [Tab, string][] = [
   ["groupme", "GroupMe"],
 ];
 
-function ClubTabs({ clubId }: { clubId: string }) {
+function ClubTabs({ clubId, clubName }: { clubId: string; clubName: string }) {
   const [tab, setTab] = useState<Tab>("teams");
   return (
     <>
@@ -91,7 +92,7 @@ function ClubTabs({ clubId }: { clubId: string }) {
           </button>
         ))}
       </div>
-      {tab === "teams" && <ClubDashboard clubId={clubId} />}
+      {tab === "teams" && <ClubDashboard clubId={clubId} clubName={clubName} />}
       {tab === "look" && <ClubLookTab clubId={clubId} />}
       {tab === "library" && <ClubLibraryTab clubId={clubId} />}
       {tab === "groupme" && <ClubGroupMeTab clubId={clubId} />}
@@ -153,7 +154,7 @@ function StartClub() {
   );
 }
 
-function ClubDashboard({ clubId }: { clubId: string }) {
+function ClubDashboard({ clubId, clubName }: { clubId: string; clubName: string }) {
   const paid = usePaid();
   const [buying, setBuying] = useState(false);
   const [reload, setReload] = useState(0);
@@ -208,6 +209,26 @@ function ClubDashboard({ clubId }: { clubId: string }) {
     try {
       await navigator.clipboard.writeText(code);
       setCopied(code);
+    } catch {
+      setCopied(null);
+    }
+  };
+
+  /** The phone's share sheet (text the head coach); on a computer, copy the message. */
+  const share = async (code: string, season: string) => {
+    const text = codeMessage(clubName, season, code, window.location.origin);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `${clubName} code`, text });
+        return;
+      }
+    } catch (e) {
+      // Closing the share sheet isn't an error.
+      if (e instanceof DOMException && e.name === "AbortError") return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(`${code}:message`);
     } catch {
       setCopied(null);
     }
@@ -272,12 +293,20 @@ function ClubDashboard({ clubId }: { clubId: string }) {
               {c.teamName ? (
                 <span className="text-right text-sm text-slate-700">✓ {c.teamName}</span>
               ) : (
-                <button
-                  onClick={() => void copy(c.code)}
-                  className="h-10 rounded-lg border-2 border-slate-300 bg-white px-3 text-sm font-bold active:bg-slate-100"
-                >
-                  {copied === c.code ? "Copied" : "Copy"}
-                </button>
+                <span className="flex shrink-0 gap-2">
+                  <button
+                    onClick={() => void share(c.code, c.season)}
+                    className="h-11 rounded-lg bg-[var(--team)] px-4 text-sm font-bold text-white"
+                  >
+                    {copied === `${c.code}:message` ? "Message copied" : "Share"}
+                  </button>
+                  <button
+                    onClick={() => void copy(c.code)}
+                    className="h-11 rounded-lg border-2 border-slate-300 bg-white px-3 text-sm font-bold active:bg-slate-100"
+                  >
+                    {copied === c.code ? "Copied" : "Copy"}
+                  </button>
+                </span>
               )}
             </li>
           ))}

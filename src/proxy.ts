@@ -38,7 +38,8 @@ export async function proxy(request: NextRequest) {
 
   const login = request.nextUrl.clone();
   login.pathname = "/login";
-  login.search = `?next=${encodeURIComponent(path)}`;
+  // Keep the query too (e.g. a club code link: /members?code=…).
+  login.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
   const redirect = NextResponse.redirect(login);
   for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
   return redirect;
