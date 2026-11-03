@@ -27,6 +27,14 @@ export function SeasonScreen() {
       </AppShell>
     );
   }
+  // Every kid's innings: for coaches, managers and treasurers, not families.
+  if (data.me.role === "parent") {
+    return (
+      <AppShell title="Playing time" subtitle={data.team.name} tab="season">
+        <p className="text-lg">Playing time is for the team&apos;s coaches.</p>
+      </AppShell>
+    );
+  }
   const config = resolveRuleConfig(data.season.fairPlayRules);
   const summary = seasonSummary(data.players, finalLineups(data, data.season.id), config);
   const subtitle = `${data.season.name} · ${summary.finalGames} final game${summary.finalGames === 1 ? "" : "s"}`;

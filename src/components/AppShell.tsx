@@ -31,7 +31,14 @@ type Tab =
   | "club"
   | "account";
 
-type MenuTab = { id: Tab; href: string; label: string; staffOnly?: boolean };
+type MenuTab = {
+  id: Tab;
+  href: string;
+  label: string;
+  staffOnly?: boolean;
+  /** Hidden from parents (other kids' playing time). */
+  notParents?: boolean;
+};
 
 /** The menu's sections, grouped by what people are doing. */
 const GAME_DAY: MenuTab[] = [
@@ -42,7 +49,7 @@ const TEAM: MenuTab[] = [
   { id: "roster", href: "/roster", label: "Roster" },
   { id: "practice", href: "/practices", label: "Practice" },
   { id: "plays", href: "/plays", label: "Plays" },
-  { id: "season", href: "/season", label: "Playing time" },
+  { id: "season", href: "/season", label: "Playing time", notParents: true },
   { id: "stats", href: "/stats", label: "Stats", staffOnly: true },
   { id: "money", href: "/money", label: "Money" },
 ];
@@ -270,7 +277,7 @@ function MenuLinks({ tab, onPick }: { tab: Tab; onPick?: () => void }) {
     <>
       <p className={groupTitle}>{title}</p>
       {tabs
-        .filter((t) => !t.staffOnly || staff)
+        .filter((t) => (!t.staffOnly || staff) && (!t.notParents || data?.me.role !== "parent"))
         .map((t) => (
           <Link
             key={t.id}

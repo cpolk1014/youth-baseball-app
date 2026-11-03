@@ -38,7 +38,7 @@ export function FairPlayScreen() {
 
   if (!data) {
     return (
-      <AppShell title="Fair play rules" backHref="/season" tab="season">
+      <AppShell title="Fair play rules" backHref="/games" tab="season">
         <Loading />
       </AppShell>
     );
@@ -71,7 +71,7 @@ export function FairPlayScreen() {
     <AppShell
       title="Fair play rules"
       subtitle={`${data.team.coachPitch ? "Coach pitch" : "Kid pitch"} · ${data.season.name}`}
-      backHref="/season"
+      backHref={data.me.role === "parent" ? "/games" : "/season"}
       tab="season"
     >
       <p className="mb-4 text-base text-slate-700">
