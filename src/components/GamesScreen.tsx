@@ -207,6 +207,8 @@ export function GamesPane({ currentId }: { currentId: string }) {
     current.current?.scrollIntoView({ block: "nearest" });
   }, [currentId]);
   if (!data) return null;
+  // Parents don't see lineup status, only results.
+  const parent = data.me.role === "parent";
   const { upcoming, final } = splitGames(data.games);
   const group = (title: string, games: Game[]) =>
     games.length > 0 && (
@@ -238,11 +240,13 @@ export function GamesPane({ currentId }: { currentId: string }) {
                       {formatGameDate(g)}
                     </span>
                   </span>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${TONE_CLASS[status.tone]}`}
-                  >
-                    {status.text.replace(/^Ready · .*/, "Ready")}
-                  </span>
+                  {(!parent || g.status === "final") && (
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${TONE_CLASS[status.tone]}`}
+                    >
+                      {status.text.replace(/^Ready · .*/, "Ready")}
+                    </span>
+                  )}
                 </Link>
               </li>
             );

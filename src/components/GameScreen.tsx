@@ -34,6 +34,7 @@ import { AppShell, Loading } from "./AppShell";
 import { Attendance } from "./Attendance";
 import { BattingOrder } from "./BattingOrder";
 import { GameForm } from "./GameForm";
+import { ParentGame } from "./ParentGame";
 import { toast } from "./shell/Toast";
 import { Shortcut } from "./shell/useShortcut";
 import { GamesPane } from "./GamesScreen";
@@ -183,6 +184,9 @@ export function GameScreen({ gameId }: { gameId: string }) {
   };
   const result = gameResult(game);
   const arrival = arriveBy(game, data.team.gameDay ? data.team.gameDay.arriveMinutes : 60);
+
+  // Parents: uniform, where to go and their kid's box score; no lineup.
+  if (data.me.role === "parent") return <ParentGame data={data} game={game} arrival={arrival} />;
 
   return (
     <AppShell
