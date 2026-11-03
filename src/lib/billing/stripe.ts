@@ -5,8 +5,13 @@ import Stripe from "stripe";
 let client: Stripe | null = null;
 
 export function getStripe(): Stripe {
-  const key = process.env.STRIPE_SECRET_KEY;
+  const key = process.env.STRIPE_SECRET_KEY?.trim();
   if (!key) throw new Error("Payments aren't set up yet (missing STRIPE_SECRET_KEY).");
+  if (key.startsWith("pk_")) {
+    throw new Error(
+      "STRIPE_SECRET_KEY holds the publishable key (pk_…). Use the secret key (sk_test_… or sk_live_…).",
+    );
+  }
   client ??= new Stripe(key);
   return client;
 }
@@ -62,4 +67,25 @@ export function purchaseFromEvent(event: Stripe.Event): Fulfillment | null {
     season: m.season,
     amountCents: s.amount_total ?? 0,
   };
+}
+
+/**
+ * What to tell the person when Stripe refuses a request: what's wrong with the setup, or
+ * Stripe's own reason for a bad request. Never includes any part of a key.
+ */
+export function stripeProblem(e: unknown): string {
+  if (e instanceof Stripe.errors.StripeAuthenticationError) {
+    return "Stripe didn't accept the key in STRIPE_SECRET_KEY. Check it's the secret key (sk_test_…) from the same Stripe account, with no extra spaces, then redeploy.";
+  }
+  if (e instanceof Stripe.errors.StripePermissionError) {
+    return "The Stripe key in STRIPE_SECRET_KEY isn't allowed to create checkouts. Use the standard secret key, or give the restricted key Checkout Sessions write access.";
+  }
+  if (e instanceof Stripe.errors.StripeConnectionError) {
+    return "Couldn't reach Stripe. Try again in a minute.";
+  }
+  if (e instanceof Stripe.errors.StripeInvalidRequestError) {
+    return `Stripe refused the checkout: ${e.message.replace(/\b(sk|rk|pk)_(test|live)_[A-Za-z0-9*]+/g, "[key]")}`;
+  }
+  if (e instanceof Error && e.message.includes("STRIPE_SECRET_KEY")) return e.message;
+  return "Couldn't start the payment. Try again.";
 }

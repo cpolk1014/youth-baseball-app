@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { describe, expect, it } from "vitest";
-import { purchaseFromEvent } from "./stripe";
+import { purchaseFromEvent, stripeProblem } from "./stripe";
 
 const stripe = new Stripe("sk_test_dummy");
 const SECRET = "whsec_test_secret";
@@ -76,5 +76,22 @@ describe("Stripe payment notices", () => {
   it("complains about a paid checkout without RallyCap details", () => {
     const e = signedEvent("checkout.session.completed", { payment_status: "paid", metadata: {} });
     expect(() => purchaseFromEvent(e)).toThrow(/missing RallyCap details/);
+  });
+});
+
+describe("stripeProblem", () => {
+  it("says what's wrong with the setup, never showing a key", () => {
+    const auth = new Stripe.errors.StripeAuthenticationError({
+      message: "Invalid API Key provided: sk_test_****abcd",
+      type: "invalid_request_error",
+    });
+    expect(stripeProblem(auth)).toMatch(/didn't accept the key/);
+    expect(stripeProblem(auth)).not.toMatch(/abcd/);
+    const bad = new Stripe.errors.StripeInvalidRequestError({
+      message: "No such price for key sk_test_abc123",
+      type: "invalid_request_error",
+    });
+    expect(stripeProblem(bad)).toBe("Stripe refused the checkout: No such price for key [key]");
+    expect(stripeProblem(new Error("boom"))).toBe("Couldn't start the payment. Try again.");
   });
 });

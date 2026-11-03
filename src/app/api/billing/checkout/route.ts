@@ -6,7 +6,7 @@ import {
   seasonEnds,
   seasonsOnSale,
 } from "@/lib/billing/season";
-import { getStripe, type PurchaseMeta } from "@/lib/billing/stripe";
+import { getStripe, stripeProblem, type PurchaseMeta } from "@/lib/billing/stripe";
 import { getServerSupabase } from "@/lib/supabase/server";
 
 function errorResponse(status: number, error: string) {
@@ -120,11 +120,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: session.url });
   } catch (e) {
     console.error("checkout failed", e instanceof Error ? e.message : e);
-    return errorResponse(
-      502,
-      e instanceof Error && e.message.includes("STRIPE_SECRET_KEY")
-        ? e.message
-        : "Couldn't start the payment. Try again.",
-    );
+    return errorResponse(502, stripeProblem(e));
   }
 }
