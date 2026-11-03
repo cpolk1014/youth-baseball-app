@@ -117,6 +117,23 @@ export async function myVenmo(userId: string): Promise<string | null> {
   return r?.venmo ?? null;
 }
 
+/** My cell phone (+1XXXXXXXXXX), if I've added one. */
+export async function myPhone(userId: string): Promise<string | null> {
+  const r = check<{ phone: string | null } | null>(
+    await getBrowserSupabase().from("profile").select("phone").eq("user_id", userId).maybeSingle(),
+  );
+  return r?.phone ?? null;
+}
+
+/** Save (or, with null, clear) my cell phone; my team sees it on the roster. */
+export async function saveMyPhone(userId: string, phone: string | null): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("profile")
+      .upsert({ user_id: userId, phone, updated_at: new Date().toISOString() }),
+  );
+}
+
 /** Save (or, with null, clear) my Venmo handle. */
 export async function saveMyVenmo(userId: string, venmo: string | null): Promise<void> {
   check(
@@ -137,17 +154,19 @@ export async function teamVenmoUsers(teamId: string): Promise<Set<string>> {
 export interface FamilyMember {
   userId: string;
   name: string | null;
+  /** Their cell, if they've shared one (+1XXXXXXXXXX). */
+  phone: string | null;
 }
 
 /** Every kid's family on the team (parents' names as shown on the team; never emails). */
 export async function teamFamilies(teamId: string): Promise<Map<string, FamilyMember[]>> {
-  const rows = check<{ player_id: string; user_id: string; display_name: string | null }[]>(
-    await getBrowserSupabase().rpc("team_families", { p_team_id: teamId }),
-  );
+  const rows = check<
+    { player_id: string; user_id: string; display_name: string | null; phone: string | null }[]
+  >(await getBrowserSupabase().rpc("team_families", { p_team_id: teamId }));
   const byPlayer = new Map<string, FamilyMember[]>();
   for (const r of rows) {
     const list = byPlayer.get(r.player_id) ?? [];
-    list.push({ userId: r.user_id, name: r.display_name });
+    list.push({ userId: r.user_id, name: r.display_name, phone: r.phone });
     byPlayer.set(r.player_id, list);
   }
   return byPlayer;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { permissionsFor } from "@/lib/data/permissions";
@@ -21,12 +21,13 @@ import type { AppData } from "@/lib/data/types";
 import { finalLineups } from "@/lib/data/game";
 import { seasonSummary } from "@/lib/season/summary";
 import { DataTable, stopRow, type Column } from "./shell/DataTable";
-import { VenmoButton, useVenmoUsers } from "./venmo";
 import type { FamilyMember } from "@/lib/data/account-backend";
 import { toast } from "./shell/Toast";
 import { Shortcut } from "./shell/useShortcut";
 import { AppShell, Loading } from "./AppShell";
 import { kidsOf } from "./KidPicker";
+import { detectPlatform, isPhoneOrTablet } from "@/lib/places/maps";
+import { formatPhone, telUrl } from "@/lib/phone/phone";
 import { PlayerForm, Toggle } from "./PlayerForm";
 import { Sheet } from "./Sheet";
 
@@ -36,9 +37,9 @@ export function RosterScreen() {
   const { mode } = useStoreState();
   const router = useRouter();
   const parentView = data?.me.role === "parent";
-  // Parents see each kid's family (names, and a Venmo button for those who have one).
+  // Parents see each kid's family: names, and cell numbers families have shared.
   const families = useTeamFamilies(parentView && mode === "supabase" ? data?.team.id : undefined);
-  const venmoUsers = useVenmoUsers(parentView && mode === "supabase" ? data?.team.id : undefined);
+  const callable = useCanCall();
 
   if (!data) {
     return (
@@ -73,30 +74,30 @@ export function RosterScreen() {
       .map((g) => ({
         userId: g.userId,
         name: data.members.find((m) => m.userId === g.userId)?.displayName ?? null,
+        phone: null,
       }));
   const familyLine = (p: Player) =>
     familyOf(p)
       .map((f) => (f.userId === me ? "You" : (f.name ?? "A parent")))
       .join(", ");
-  const venmoFor = (p: Player, small = false) =>
-    familyOf(p)
-      .filter((f) => f.userId !== me && venmoUsers.has(f.userId))
-      .map((f) => (
-        <VenmoButton
-          key={f.userId}
-          teamId={data.team.id}
-          userId={f.userId}
-          name={f.name ?? "this family"}
-          small={small}
-        />
-      ));
+  // Each parent's name and cell; the number dials on phones and tablets.
+  // `links: false` inside a card that's itself a button (a parent's own kid).
+  const familyList = (p: Player, links = true) => {
+    const list = familyOf(p);
+    if (list.length === 0) return <span className="text-slate-400">Not linked yet</span>;
+    return (
+      <span className="flex flex-col gap-0.5">
+        {list.map((f) => (
+          <span key={f.userId} className="flex flex-wrap items-baseline gap-x-2">
+            <span>{f.userId === me ? "You" : (f.name ?? "A parent")}</span>
+            {f.phone && f.userId !== me && <Phone phone={f.phone} callable={callable && links} />}
+          </span>
+        ))}
+      </span>
+    );
+  };
   const parentCard = (p: Player) =>
-    parentView
-      ? {
-          family: familyLine(p) || "Family not linked yet",
-          extra: myKids.has(p.id) ? null : venmoFor(p),
-        }
-      : {};
+    parentView ? { family: familyList(p, !myKids.has(p.id)) } : {};
   const others = data.members.length;
   const active = activePlayers(data.players);
   const inactive = data.players.filter((p) => p.active === false);
@@ -217,7 +218,7 @@ export function RosterScreen() {
           onOpen={openPlayer}
           canOpen={clickable}
           familyLine={familyLine}
-          venmoFor={venmoFor}
+          familyList={familyList}
         />
       </div>
 
@@ -297,16 +298,13 @@ function PlayerRow({
   onClick,
   mine = false,
   family,
-  extra,
 }: {
   player: Player;
   onClick?: () => void;
   /** A parent's own kid: tap to open My player. */
   mine?: boolean;
-  /** Parents: the kid's family instead of positions and pitch/catch. */
-  family?: string;
-  /** Parents: Venmo buttons for that family. */
-  extra?: ReactNode;
+  /** Parents: the kid's family (names and cells) instead of positions and pitch/catch. */
+  family?: ReactNode;
 }) {
   const Tag = onClick ? "button" : "div";
   return (
@@ -321,12 +319,15 @@ function PlayerRow({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-lg font-semibold">{player.name}</span>
-          <span className="block truncate text-sm text-slate-600">
-            {family ??
-              (player.preferredPositions.length
+          {family !== undefined ? (
+            <span className="mt-0.5 block text-sm text-slate-600">{family}</span>
+          ) : (
+            <span className="block truncate text-sm text-slate-600">
+              {player.preferredPositions.length
                 ? player.preferredPositions.join(" · ")
-                : "Any position")}
-          </span>
+                : "Any position"}
+            </span>
+          )}
         </span>
         {family === undefined && (
           <span className="flex shrink-0 gap-1">
@@ -334,7 +335,6 @@ function PlayerRow({
             {player.canCatch && <Badge>C</Badge>}
           </span>
         )}
-        {extra && <span className="flex shrink-0 gap-1">{extra}</span>}
         {mine && <SwingingBat />}
       </Tag>
     </li>
@@ -374,13 +374,13 @@ function RosterTable({
   onOpen,
   canOpen,
   familyLine,
-  venmoFor,
+  familyList,
 }: {
   data: AppData;
   players: Player[];
   canEdit: boolean;
   familyLine: (p: Player) => string;
-  venmoFor: (p: Player, small?: boolean) => ReactNode[];
+  familyList: (p: Player) => ReactNode;
   /** Coaches edit the player; parents open their own kid's page. */
   onOpen: (p: Player) => void;
   canOpen: (p: Player) => boolean;
@@ -531,14 +531,7 @@ function RosterTable({
           key: "family",
           label: "Family",
           sort: (a: Player, b: Player) => familyLine(a).localeCompare(familyLine(b)),
-          render: (p: Player) => (
-            <span className="flex items-center gap-2">
-              <span className={familyLine(p) ? "" : "text-slate-400"}>
-                {familyLine(p) || "Not linked yet"}
-              </span>
-              {!canOpen(p) && venmoFor(p, true)}
-            </span>
-          ),
+          render: (p: Player) => familyList(p),
         },
       ]
     : columns;
@@ -572,4 +565,35 @@ function useTeamFamilies(teamId: string | undefined): Map<string, FamilyMember[]
     };
   }, [teamId]);
   return families;
+}
+
+const noSubscription = () => () => {};
+
+/** Whether this device can place a call (phones and tablets). */
+function useCanCall(): boolean {
+  return useSyncExternalStore(
+    noSubscription,
+    () =>
+      isPhoneOrTablet(
+        detectPlatform(navigator.userAgent, navigator.maxTouchPoints),
+        navigator.userAgent,
+      ),
+    () => false,
+  );
+}
+
+/** A parent's cell: a tap-to-call link on phones and tablets, plain text on computers. */
+function Phone({ phone, callable }: { phone: string; callable: boolean }) {
+  const shown = formatPhone(phone);
+  return callable ? (
+    <a
+      href={telUrl(phone)}
+      onClick={(e) => e.stopPropagation()}
+      className="font-semibold whitespace-nowrap text-[var(--team)] underline"
+    >
+      {shown}
+    </a>
+  ) : (
+    <span className="whitespace-nowrap text-slate-700 tabular-nums">{shown}</span>
+  );
 }

@@ -1344,7 +1344,26 @@ select pg_temp.expect(
   'but still can''t read other families'' links directly');
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 select pg_temp.expect((select count(*) from public.team_families('00000000-0000-4000-8000-000000000001')) = 0, 'people not on the team see no families');
+-- a parent's cell phone shows by their family on the roster; only they can set it
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+update public.profile set phone = '+13375550123' where user_id = 'aaaaaaaa-0000-4000-8000-000000000001';
+insert into public.profile (phone) select '+13375550123'
+  where not exists (select 1 from public.profile where user_id = 'aaaaaaaa-0000-4000-8000-000000000001');
+do $$ begin
+  update public.profile set phone = '555-0123' where user_id = 'aaaaaaaa-0000-4000-8000-000000000001';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: phone numbers are checked';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect(
+  (select phone from public.team_families('00000000-0000-4000-8000-000000000001') where user_id = 'aaaaaaaa-0000-4000-8000-000000000001' limit 1) = '+13375550123',
+  'teammates see a family''s cell phone on the roster');
+update public.profile set phone = '+15045550000' where user_id = 'aaaaaaaa-0000-4000-8000-000000000001';
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.team_families('00000000-0000-4000-8000-000000000001') where phone is not null) = 0, 'people not on the team see no phones');
 reset role;
+reset role;
+select pg_temp.expect((select phone from public.profile where user_id = 'aaaaaaaa-0000-4000-8000-000000000001') = '+13375550123', 'nobody else can change your phone');
 -- ── game places ──
 update public.game set location = 'Traction Sports Complex', field = 'Chabills Field', location_lat = 30.2, location_lng = -92.0
   where id = 'eeeeeeee-0000-4000-8000-000000000020';

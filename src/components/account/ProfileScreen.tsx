@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { MyPlayer } from "@/lib/data/account-backend";
 import { ROLE_LABEL } from "@/lib/data/permissions";
+import { cleanPhone, formatPhone } from "@/lib/phone/phone";
 import { cleanVenmo } from "@/lib/venmo/handle";
 import { signOut, switchTeam, useAppData, useStoreState } from "@/lib/data/store";
 import { AppShell } from "../AppShell";
@@ -30,17 +31,27 @@ export function ProfileScreen() {
   const [venmo, setVenmo] = useState<string | null>(null);
   const [venmoSaved, setVenmoSaved] = useState<string | null | undefined>(undefined);
   const [venmoMsg, setVenmoMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [phone, setPhone] = useState<string | null>(null);
+  const [phoneSaved, setPhoneSaved] = useState<string | null | undefined>(undefined);
+  const [phoneMsg, setPhoneMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     if (!me?.id) return;
     let current = true;
     import("@/lib/data/account-backend")
-      .then((m) => Promise.all([m.myPlayers(me.id), m.myVenmo(me.id).catch(() => null)]))
+      .then((m) =>
+        Promise.all([
+          m.myPlayers(me.id),
+          m.myVenmo(me.id).catch(() => null),
+          m.myPhone(me.id).catch(() => null),
+        ]),
+      )
       .then(
-        ([p, v]) => {
+        ([p, v, ph]) => {
           if (!current) return;
           setPlayers(p);
           setVenmoSaved(v);
+          setPhoneSaved(ph);
         },
         () => current && setPlayers([]),
       );
@@ -73,6 +84,26 @@ export function ProfileScreen() {
     }
   };
   const teams = data?.myTeams ?? [];
+  const phoneShown = phone ?? (phoneSaved ? formatPhone(phoneSaved) : "");
+  const savePhone = async (clear = false) => {
+    setPhoneMsg(null);
+    const cleaned = clear ? null : cleanPhone(phoneShown);
+    if (!clear && !cleaned) {
+      setPhoneMsg({
+        ok: false,
+        text: "That doesn't look like a phone number. Include the area code.",
+      });
+      return;
+    }
+    try {
+      await (await import("@/lib/data/account-backend")).saveMyPhone(me!.id, cleaned);
+      setPhoneSaved(cleaned);
+      setPhone(null);
+      setPhoneMsg({ ok: true, text: clear ? "Removed." : "Saved." });
+    } catch (e) {
+      setPhoneMsg({ ok: false, text: e instanceof Error ? e.message : String(e) });
+    }
+  };
   const venmoShown = venmo ?? venmoSaved ?? "";
   const saveVenmo = async (clear = false) => {
     setVenmoMsg(null);
@@ -145,6 +176,55 @@ export function ProfileScreen() {
             {error}
           </p>
         )}
+        <div className="flex flex-col gap-1">
+          <label htmlFor="phone" className="text-base font-semibold">
+            Cell phone <span className="font-normal text-slate-600">(optional)</span>
+          </label>
+          <input
+            id="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={phoneShown}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              setPhoneMsg(null);
+            }}
+            placeholder="(337) 555-0123"
+            maxLength={25}
+            className="h-12 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none"
+          />
+          <span className="text-sm text-slate-600">
+            Your teams see it on the roster by your player&apos;s name, so families and coaches can
+            call or text you.
+          </span>
+          <div className="flex gap-2">
+            {phone !== null && phone.trim() !== "" && cleanPhone(phone) !== phoneSaved && (
+              <button
+                onClick={() => void savePhone()}
+                className="h-11 flex-1 rounded-xl bg-[var(--team)] text-base font-bold text-white"
+              >
+                Save phone
+              </button>
+            )}
+            {phoneSaved && (
+              <button
+                onClick={() => void savePhone(true)}
+                className="h-11 rounded-xl border-2 border-slate-300 bg-white px-4 text-base font-semibold"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          {phoneMsg && (
+            <p
+              role={phoneMsg.ok ? "status" : "alert"}
+              className={`text-base font-semibold ${phoneMsg.ok ? "text-green-800" : "text-red-700"}`}
+            >
+              {phoneMsg.text}
+            </p>
+          )}
+        </div>
         <div className="flex flex-col gap-1">
           <label htmlFor="venmo" className="text-base font-semibold">
             Venmo handle <span className="font-normal text-slate-600">(optional)</span>
