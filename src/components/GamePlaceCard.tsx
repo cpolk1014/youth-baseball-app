@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { placeLabel } from "@/lib/data/game";
 import type { Game } from "@/lib/data/types";
+import { MapAppIcon } from "./MapAppIcon";
 import { detectPlatform, isPhoneOrTablet, openInLinks, type GamePlace } from "@/lib/places/maps";
 
 /** The browser key for showing maps (Maps Embed API only, locked to RallyCap's site). */
@@ -58,16 +59,19 @@ export function GamePlaceCard({ game }: { game: Game }) {
         />
       )}
       {place.name && links.length > 0 && (
-        <div className="flex flex-wrap gap-2 p-3">
+        <div className="flex flex-wrap items-center gap-3 p-3">
+          <span className="text-sm font-semibold text-slate-600">Directions</span>
           {links.map((l) => (
             <a
               key={l.app}
               href={l.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-12 flex-1 basis-36 items-center justify-center rounded-xl border-2 border-slate-300 bg-white px-3 text-base font-bold active:bg-slate-100"
+              aria-label={`Open in ${l.app}`}
+              title={`Open in ${l.app}`}
+              className="flex size-14 items-center justify-center rounded-2xl border-2 border-slate-200 bg-white shadow-sm active:bg-slate-100"
             >
-              Open in {l.app}
+              <MapAppIcon app={l.app} />
             </a>
           ))}
         </div>
