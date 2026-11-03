@@ -254,6 +254,7 @@ function PlayerRow({
     <li>
       <Tag
         onClick={onClick}
+        aria-label={mine ? `Open ${player.name} (your player)` : undefined}
         className={`flex h-full min-h-16 w-full items-center gap-3 rounded-xl border-2 bg-white px-3 py-2 text-left ${mine ? "border-[var(--team)]" : "border-slate-200"} ${onClick ? "active:bg-slate-50" : ""}`}
       >
         <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--team)] text-lg font-bold text-white">
@@ -271,13 +272,31 @@ function PlayerRow({
           {player.canPitch && <Badge>P</Badge>}
           {player.canCatch && <Badge>C</Badge>}
         </span>
-        {mine && (
-          <span className="shrink-0 text-sm font-bold text-[var(--team)]">
-            My player <span aria-hidden="true">›</span>
-          </span>
-        )}
+        {mine && <OpenArrow />}
       </Tag>
     </li>
+  );
+}
+
+/** A round arrow in the team color: "tap to open" without words. */
+function OpenArrow() {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--team)] text-white"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="size-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M9 5l7 7-7 7" />
+      </svg>
+    </span>
   );
 }
 
@@ -358,8 +377,9 @@ function RosterTable({
       label: "Player",
       sort: (a, b) => a.name.localeCompare(b.name),
       render: (p) => (
-        <span className="font-semibold">
+        <span className="inline-flex items-center gap-2 font-semibold">
           {p.name}
+          {!canEdit && canOpen(p) && <OpenArrow />}
           {p.active === false && (
             <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-bold text-slate-500 uppercase">
               Inactive
