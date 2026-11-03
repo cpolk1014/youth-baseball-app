@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TEAM_PRICE_CENTS, dollars, seasonEnds, seasonFor } from "@/lib/billing/season";
 import type { TeamClub } from "@/lib/data/club-backend";
+import { clearPaidFlag } from "./paidFlag";
 
 const field =
   "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 font-mono text-lg tracking-widest uppercase focus:border-[var(--team)] focus:outline-none";
@@ -57,7 +58,9 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
     if (new URLSearchParams(window.location.search).get("paid") !== "1") return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the address
     setPaid(true);
+    clearPaidFlag();
     const timers = [3000, 8000, 15000].map((ms) => setTimeout(() => setLook((n) => n + 1), ms));
+    timers.push(setTimeout(() => setPaid(false), 18000));
     return () => timers.forEach(clearTimeout);
   }, []);
 

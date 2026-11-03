@@ -14,6 +14,7 @@ import { ClubGroupMeTab } from "./ClubGroupMeTab";
 import { ClubLibraryTab } from "./ClubLibraryTab";
 import { ClubLookTab } from "./ClubLookTab";
 import { BuyCodes } from "./BuyCodes";
+import { clearPaidFlag } from "./paidFlag";
 import { forgetMyClubs, useMyClubs } from "./useMyClubs";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -106,6 +107,7 @@ function usePaid(): boolean {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the address
     setPaid(new URLSearchParams(window.location.search).get("paid") === "1");
+    clearPaidFlag();
   }, []);
   return paid;
 }
@@ -156,6 +158,7 @@ function StartClub() {
 
 function ClubDashboard({ clubId, clubName }: { clubId: string; clubName: string }) {
   const paid = usePaid();
+  const [notice, setNotice] = useState(true);
   const [buying, setBuying] = useState(false);
   const [reload, setReload] = useState(0);
   const [teams, setTeams] = useState<ClubTeam[] | null>(null);
@@ -188,6 +191,7 @@ function ClubDashboard({ clubId, clubName }: { clubId: string; clubName: string 
   useEffect(() => {
     if (!paid) return;
     const timers = [3000, 8000, 15000].map((ms) => setTimeout(() => setReload((n) => n + 1), ms));
+    timers.push(setTimeout(() => setNotice(false), 18000));
     return () => timers.forEach(clearTimeout);
   }, [paid]);
 
@@ -236,7 +240,7 @@ function ClubDashboard({ clubId, clubName }: { clubId: string; clubName: string 
 
   return (
     <>
-      {paid && (
+      {paid && notice && (
         <p
           role="status"
           className="mb-4 rounded-xl border-2 border-green-700 bg-green-50 p-3 text-base font-semibold"
