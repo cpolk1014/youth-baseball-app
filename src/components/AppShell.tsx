@@ -12,22 +12,38 @@ import {
 } from "react";
 import { themeVars } from "@/lib/branding/theme";
 import { isCoach, permissionsFor } from "@/lib/data/permissions";
-import { myUserId, syncNow, useAppData, useStoreState } from "@/lib/data/store";
+import { myUserId, signOut, syncNow, useAppData, useStoreState } from "@/lib/data/store";
+import { initials, useMe, useMyTeamClubs } from "./account/useMe";
 import { useMyClubs } from "./club/useMyClubs";
 import { DataStatus } from "./DataStatus";
 import { OfflineSupport } from "./OfflineSupport";
 import { TeamBadge } from "./TeamBadge";
 
-type Tab = "games" | "pa" | "practice" | "plays" | "season" | "stats" | "roster" | "money" | "club";
+type Tab =
+  | "games"
+  | "pa"
+  | "practice"
+  | "plays"
+  | "season"
+  | "stats"
+  | "roster"
+  | "money"
+  | "club"
+  | "account";
 
-const TABS: { id: Tab; href: string; label: string; staffOnly?: boolean }[] = [
+type MenuTab = { id: Tab; href: string; label: string; staffOnly?: boolean };
+
+/** The menu's sections, grouped by what people are doing. */
+const GAME_DAY: MenuTab[] = [
   { id: "games", href: "/games", label: "Games" },
   { id: "pa", href: "/pa", label: "Gameday PA" },
+];
+const TEAM: MenuTab[] = [
+  { id: "roster", href: "/roster", label: "Roster" },
   { id: "practice", href: "/practices", label: "Practice" },
   { id: "plays", href: "/plays", label: "Plays" },
-  { id: "season", href: "/season", label: "Season" },
+  { id: "season", href: "/season", label: "Playing time" },
   { id: "stats", href: "/stats", label: "Stats", staffOnly: true },
-  { id: "roster", href: "/roster", label: "Roster" },
   { id: "money", href: "/money", label: "Money" },
 ];
 
@@ -164,8 +180,8 @@ function MenuDrawer({ open, tab, onClose }: { open: boolean; tab: Tab; onClose: 
         tabIndex={-1}
         className="absolute inset-y-0 right-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-[var(--team)] p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] text-white shadow-2xl outline-none"
       >
-        <div className="mb-4 flex items-center justify-between">
-          <MenuHeader />
+        <div className="mb-2 flex items-center justify-between gap-1">
+          <MenuHeader onPick={onClose} />
           <button
             onClick={onClose}
             aria-label="Close menu"
@@ -180,29 +196,41 @@ function MenuDrawer({ open, tab, onClose }: { open: boolean; tab: Tab; onClose: 
   );
 }
 
-/** The team's badge and name at the top of the menu. */
-function MenuHeader() {
+/** The team's badge and name at the top of the menu; tap to switch teams. */
+function MenuHeader({ onPick }: { onPick?: () => void }) {
   const data = useAppData();
+  const { mode } = useStoreState();
   if (!data) return <p className="mb-4 px-3 pt-2 text-2xl font-bold tracking-tight">RallyCap</p>;
-  return (
-    <div className="mb-4 flex min-w-0 items-center gap-3 px-2 pt-2">
+  const inner = (
+    <>
       <TeamBadge
         name={data.team.name}
         colors={data.team.colors}
         logoPath={data.team.logoPath}
         size={44}
       />
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         <span className="block truncate text-lg leading-tight font-bold">{data.team.name}</span>
         <span className="block text-xs font-semibold tracking-wide text-white/60 uppercase">
-          RallyCap
+          {mode === "supabase" ? "Switch team ▾" : "RallyCap"}
         </span>
       </span>
-    </div>
+    </>
+  );
+  return mode === "supabase" ? (
+    <Link
+      href="/my-teams"
+      onClick={onPick}
+      className="mb-2 flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1 hover:bg-white/15 active:bg-white/20"
+    >
+      {inner}
+    </Link>
+  ) : (
+    <div className="mb-2 flex min-w-0 items-center gap-3 px-2 pt-2">{inner}</div>
   );
 }
 
-/** Main sections, then team pages the signed-in person can use. */
+/** Game day, team and team settings sections, then the signed-in person's account. */
 function MenuLinks({ tab, onPick }: { tab: Tab; onPick?: () => void }) {
   const data = useAppData();
   const { mode } = useStoreState();
@@ -210,52 +238,149 @@ function MenuLinks({ tab, onPick }: { tab: Tab; onPick?: () => void }) {
   const perms = data ? permissionsFor(data.me.role, data.team.optionedAt !== null) : null;
   // Coaches (and owners) and managers; stays true on an optioned team, unlike editTeam.
   const staff = !!data && (isCoach(data.me.role) || data.me.role === "manager");
-  const clubs = useMyClubs();
-  // Families linked to a player import that player's box scores.
-  const hasKids = !!data && data.guardians.some((g) => g.userId === myUserId(data));
   const pathname = usePathname();
-  const team: { href: string; label: string; show: boolean }[] = [
-    { href: "/club", label: clubs?.length === 1 ? clubs[0]!.name : "Club", show: !!clubs?.length },
-    { href: "/members", label: "Coaches & parents", show: signedIn },
-    { href: "/my-stats", label: "My player's stats", show: hasKids },
-    { href: "/season/rules", label: "Fair play rules", show: true },
-    { href: "/team-look", label: "Team colors & logo", show: !!perms?.editTeam },
-    { href: "/uniforms", label: "Uniforms", show: staff },
-    { href: "/groupme", label: "GroupMe", show: signedIn && !!perms?.editTeam },
-  ];
+  const settings = [
+    { href: "/members", label: "Coaches & parents", show: signedIn, also: [] as string[] },
+    { href: "/season/rules", label: "Fair play rules", show: true, also: [] },
+    {
+      href: "/team-look",
+      label: "Colors, logo & uniforms",
+      show: !!perms?.editTeam,
+      also: ["/uniforms"],
+    },
+    {
+      href: "/groupme",
+      label: "GroupMe & game day posts",
+      show: signedIn && !!perms?.editTeam,
+      also: [],
+    },
+  ].filter((x) => x.show);
+  const isOn = (x: { href: string; also: string[] }) =>
+    pathname === x.href || x.also.includes(pathname);
+  const onSetting = settings.some(isOn);
   const item = (current: boolean) =>
     `flex h-14 items-center rounded-lg px-3 text-lg font-bold lg:h-12 ${
       current ? "bg-white text-[var(--team)]" : "text-white/90 hover:bg-white/15 active:bg-white/20"
     }`;
-  return (
+  const groupTitle = "mt-4 mb-1 px-3 text-sm font-bold tracking-wide text-white/60 uppercase";
+  const section = (title: string, tabs: MenuTab[]) => (
     <>
-      {TABS.filter((t) => !t.staffOnly || staff).map((t) => (
-        <Link
-          key={t.id}
-          href={t.href}
-          onClick={onPick}
-          aria-current={t.id === tab ? "page" : undefined}
-          className={item(t.id === tab && !team.some((x) => x.href === pathname))}
-        >
-          {t.label}
-        </Link>
-      ))}
-      <p className="mt-5 mb-1 px-3 text-sm font-bold tracking-wide text-white/60 uppercase">Team</p>
-      {team
-        .filter((x) => x.show)
-        .map((x) => (
+      <p className={groupTitle}>{title}</p>
+      {tabs
+        .filter((t) => !t.staffOnly || staff)
+        .map((t) => (
           <Link
-            key={x.href}
-            href={x.href}
+            key={t.id}
+            href={t.href}
             onClick={onPick}
-            aria-current={pathname === x.href ? "page" : undefined}
-            className={item(pathname === x.href)}
+            aria-current={t.id === tab && !onSetting ? "page" : undefined}
+            className={item(t.id === tab && !onSetting)}
           >
-            {x.label}
+            {t.label}
           </Link>
         ))}
-      {signedIn && <SyncButton />}
     </>
+  );
+  return (
+    <>
+      {section("Game day", GAME_DAY)}
+      {section("Team", TEAM)}
+      {settings.length > 0 && (
+        <>
+          <p className={groupTitle}>Team settings</p>
+          {settings.map((x) => (
+            <Link
+              key={x.href}
+              href={x.href}
+              onClick={onPick}
+              aria-current={isOn(x) ? "page" : undefined}
+              className={item(isOn(x))}
+            >
+              {x.label}
+            </Link>
+          ))}
+        </>
+      )}
+      {signedIn && <AccountMenu tab={tab} onPick={onPick} />}
+    </>
+  );
+}
+
+/** My RallyCap: the person's initials in a circle; opens their profile, teams and clubs. */
+function AccountMenu({ tab, onPick }: { tab: Tab; onPick?: () => void }) {
+  const me = useMe();
+  const data = useAppData();
+  const clubs = useMyClubs();
+  const teamClubs = useMyTeamClubs();
+  const pathname = usePathname();
+  const [open, setOpen] = useState(tab === "account" || tab === "club");
+  // Families linked to a player import that player's box scores.
+  const hasKids = !!data && data.guardians.some((g) => g.userId === myUserId(data));
+  const links = [
+    { href: "/profile", label: "My profile", show: true },
+    { href: "/my-teams", label: "My teams", show: true },
+    {
+      href: "/my-clubs",
+      label: "My clubs",
+      show: (clubs?.length ?? 0) > 0 || (teamClubs?.length ?? 0) > 0,
+    },
+    { href: "/my-stats", label: "My player's stats", show: hasKids },
+  ].filter((x) => x.show);
+  const current = (href: string) =>
+    pathname === href || (href === "/my-clubs" && pathname.startsWith("/club"));
+
+  return (
+    <div className="mt-auto border-t-2 border-white/15 pt-3">
+      <button
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        className="flex min-h-14 w-full items-center gap-3 rounded-lg px-2 text-left hover:bg-white/15 active:bg-white/20"
+      >
+        <span
+          aria-hidden="true"
+          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-lg font-black text-[var(--team)]"
+        >
+          {initials(me)}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-base leading-tight font-bold">
+            {me?.name ?? me?.email ?? "My RallyCap"}
+          </span>
+          <span className="block text-xs font-semibold tracking-wide text-white/60 uppercase">
+            My RallyCap
+          </span>
+        </span>
+        <span aria-hidden="true" className="text-white/70">
+          {open ? "▾" : "▴"}
+        </span>
+      </button>
+      {open && (
+        <div className="mt-1 flex flex-col">
+          {links.map((x) => (
+            <Link
+              key={x.href}
+              href={x.href}
+              onClick={onPick}
+              aria-current={current(x.href) ? "page" : undefined}
+              className={`flex h-12 items-center rounded-lg px-3 text-base font-bold ${
+                current(x.href)
+                  ? "bg-white text-[var(--team)]"
+                  : "text-white/90 hover:bg-white/15 active:bg-white/20"
+              }`}
+            >
+              {x.label}
+            </Link>
+          ))}
+          <SyncButton />
+          <button
+            onClick={() => void signOut()}
+            className="flex min-h-12 items-center rounded-lg px-3 text-left text-base font-semibold text-white/80 hover:bg-white/15 active:bg-white/20"
+          >
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -278,7 +403,7 @@ function SyncButton() {
       onClick={() => void sync()}
       disabled={status === "syncing"}
       aria-live="polite"
-      className="mt-auto flex min-h-12 items-center rounded-lg px-3 pt-4 text-left text-base font-semibold text-white/80 hover:bg-white/15 active:bg-white/20"
+      className="flex min-h-12 items-center rounded-lg px-3 text-left text-base font-semibold text-white/80 hover:bg-white/15 active:bg-white/20"
     >
       {label}
     </button>

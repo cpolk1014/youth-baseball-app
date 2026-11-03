@@ -75,7 +75,7 @@ export function TeamSwitcher({
   );
 }
 
-function TeamList({
+export function TeamList({
   teams,
   currentTeamId,
   onPick,

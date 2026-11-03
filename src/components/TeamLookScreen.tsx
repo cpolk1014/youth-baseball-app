@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type CSSProperties } from "react";
 import { permissionsFor } from "@/lib/data/permissions";
 import { removeLogo, saveTeamLook, uploadLogo, useAppData } from "@/lib/data/store";
@@ -87,6 +88,18 @@ export function TeamLookScreen() {
         <p className="text-lg">Coaches and managers set the team&apos;s colors and logo.</p>
       ) : (
         <div className="flex flex-col gap-6">
+          <Link
+            href="/uniforms"
+            className="flex min-h-14 items-center justify-between gap-3 rounded-xl border-2 border-slate-200 bg-white px-4 active:bg-slate-50"
+          >
+            <span>
+              <span className="block text-base font-bold">Uniform combos</span>
+              <span className="block text-sm text-slate-600">
+                Shirt, pants, hat, belt and socks for each game
+              </span>
+            </span>
+            <span className="shrink-0 font-semibold text-[var(--team)]">Open ›</span>
+          </Link>
           {club && (club.logoPath || club.colors.length > 0) && (
             <section className="flex items-center gap-3 rounded-xl border-2 border-slate-200 bg-white p-3">
               <TeamBadge name={club.name} colors={club.colors} logoPath={club.logoPath} size={48} />

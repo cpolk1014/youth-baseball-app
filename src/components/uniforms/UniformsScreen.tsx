@@ -48,7 +48,7 @@ function Uniforms({ data }: { data: AppData }) {
     <AppShell
       title="Uniforms"
       subtitle={data.team.name}
-      backHref="/roster"
+      backHref="/team-look"
       tab="roster"
       action={
         canEdit && (

@@ -24,6 +24,12 @@ export function ClubScreen() {
   const { mode } = useStoreState();
   const clubs = useMyClubs();
   const [clubId, setClubId] = useState<string | null>(null);
+  // From My Clubs: /club?club=<id> opens that club.
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get("club");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the address
+    if (wanted) setClubId(wanted);
+  }, []);
   const club = clubs?.find((c) => c.id === clubId) ?? clubs?.[0] ?? null;
 
   const shell = (children: React.ReactNode, subtitle?: string) => (

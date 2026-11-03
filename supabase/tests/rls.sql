@@ -1281,4 +1281,16 @@ set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 select pg_temp.expect((select count(*) from public.team_pass) = 0 and (select count(*) from public.purchase) = 0, 'outsiders see no passes or purchases');
 reset role;
+-- ── my name ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.set_my_name('  Craig   Polk ');
+select pg_temp.expect((select bool_and(display_name = 'Craig Polk') from public.member where user_id = 'aaaaaaaa-0000-4000-8000-000000000001'), 'my name is set on every team I''m on');
+select pg_temp.expect((select count(*) from public.member where user_id <> 'aaaaaaaa-0000-4000-8000-000000000001' and display_name = 'Craig Polk') = 0, 'nobody else''s name changes');
+do $$ begin
+  perform public.set_my_name('   ');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when raise_exception then raise notice 'ok: a name can''t be blank';
+end $$;
+reset role;
 \echo ALL RLS TESTS PASSED

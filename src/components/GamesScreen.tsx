@@ -13,7 +13,7 @@ import {
   whenText,
 } from "@/lib/data/game";
 import { permissionsFor } from "@/lib/data/permissions";
-import { newId, saveGame, signOut, useAppData, useStoreState } from "@/lib/data/store";
+import { newId, saveGame, useAppData, useStoreState } from "@/lib/data/store";
 import type { AppData, Game } from "@/lib/data/types";
 import { validateLineup } from "@/lib/rules/validate";
 import { AppShell, Loading } from "./AppShell";
@@ -27,7 +27,7 @@ import { TeamSwitcher } from "./TeamSwitcher";
 export function GamesScreen() {
   const data = useAppData();
   const [adding, setAdding] = useState<Game | null>(null);
-  const { mode, email } = useStoreState();
+  const { mode } = useStoreState();
   const [switching, setSwitching] = useState(false);
 
   if (!data) {
@@ -84,15 +84,6 @@ export function GamesScreen() {
         >
           + Add game
         </button>
-      )}
-
-      {mode === "supabase" && (
-        <p className="mt-8 text-center text-sm text-slate-600">
-          Signed in{email ? ` as ${email}` : ""} ·{" "}
-          <button onClick={() => void signOut()} className="h-10 font-semibold underline">
-            Sign out
-          </button>
-        </p>
       )}
 
       <TeamSwitcher
