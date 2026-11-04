@@ -80,6 +80,9 @@ export interface EventDetails {
   warnings: string[];
 }
 
+/** Screenshots read together when adding a tournament or its teams. */
+export const MAX_SCREENSHOTS = 6;
+
 /**
  * A link a coach pastes for the tournament's info, schedule or bracket: https only, no logins
  * in it, up to 500 characters. Empty means none (null); anything else unusable is "bad".

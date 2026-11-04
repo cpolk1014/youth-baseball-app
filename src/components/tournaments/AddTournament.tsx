@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { shrinkImage } from "../receiptFile";
 import type { TournamentLinks } from "@/lib/data/tournament-backend";
 import type { AppData } from "@/lib/data/types";
 import {
+  MAX_SCREENSHOTS,
   guessOurTeam,
   newTeams,
   pickDivision,
@@ -16,30 +18,44 @@ const field =
   "h-12 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
 const heading = "text-sm font-bold tracking-wide text-slate-600 uppercase";
 
-/** Read a screenshot of a tournament (its event page or team list). */
-export async function readTournament(teamId: string, file: File): Promise<EventDetails> {
+/** Screenshots are shrunk on the phone so several fit in one upload and stay readable. */
+const SCREENSHOT_MAX_SIDE = 2000;
+
+/** Read screenshots of a tournament (its event page, team list) together as one event. */
+export async function readTournament(teamId: string, files: File[]): Promise<EventDetails> {
   const form = new FormData();
   form.set("teamId", teamId);
-  form.set("file", file);
+  for (const [i, f] of files.slice(0, MAX_SCREENSHOTS).entries()) {
+    const blob = await shrinkImage(f, SCREENSHOT_MAX_SIDE);
+    form.append("file", blob, `screenshot-${i + 1}.${blob.type === "image/jpeg" ? "jpg" : "png"}`);
+  }
   const res = await fetch("/api/tournaments/read", { method: "POST", body: form });
   const json = (await res.json().catch(() => ({}))) as { event?: EventDetails; error?: string };
   if (!res.ok || !json.event) {
-    throw new Error(json.error ?? "Couldn't read the screenshot. Try again.");
+    throw new Error(json.error ?? "Couldn't read the screenshots. Try again.");
   }
   return json.event;
 }
 
-/** Add a screenshot, check what was found, add the links, save. */
+/** Add screenshots, check what was found, add the links, save. */
 export function AddTournament({ data, onSaved }: { data: AppData; onSaved: (id: string) => void }) {
+  const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [event, setEvent] = useState<EventDetails | null>(null);
 
-  const read = async (file: File) => {
+  const add = (picked: File[]) => {
+    setError(null);
+    const all = [...files, ...picked];
+    if (all.length > MAX_SCREENSHOTS) setError(`Up to ${MAX_SCREENSHOTS} screenshots at a time.`);
+    setFiles(all.slice(0, MAX_SCREENSHOTS));
+  };
+
+  const read = async () => {
     setBusy(true);
     setError(null);
     try {
-      setEvent(await readTournament(data.team.id, file));
+      setEvent(await readTournament(data.team.id, files));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -51,41 +67,83 @@ export function AddTournament({ data, onSaved }: { data: AppData; onSaved: (id: 
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center" role="status">
         <div className="size-10 animate-spin rounded-full border-4 border-slate-300 border-t-[var(--team)]" />
-        <p className="text-lg font-semibold">Reading the screenshot…</p>
+        <p className="text-lg font-semibold">
+          Reading {files.length === 1 ? "the screenshot" : `${files.length} screenshots`}…
+        </p>
         <p className="text-base text-slate-600">This takes about half a minute.</p>
       </div>
     );
   }
 
   if (event) {
-    return (
-      <Review
-        data={data}
-        event={event}
-        onBack={() => setEvent(null)}
-        onSaved={onSaved}
-        onScreenshot={(f) => void read(f)}
-      />
-    );
+    return <Review data={data} event={event} onBack={() => setEvent(null)} onSaved={onSaved} />;
   }
 
   return (
     <div className="flex flex-col gap-4">
       <p className="text-base text-slate-700">
-        Take a screenshot of the tournament&apos;s page (the top with the name, dates and city, and
-        the Teams tab if teams are listed). RallyCap fills in the details and adds the teams in your
-        division.
+        Take screenshots of the tournament&apos;s page: the top with the name, dates and city, and
+        the Teams tab if teams are listed (more than one if the list is long). RallyCap fills in the
+        details and adds the teams in your division.
       </p>
-      <ScreenshotButton onFile={(f) => void read(f)} label="Add a screenshot" primary />
+      {files.length > 0 && (
+        <ul className="grid grid-cols-3 gap-2">
+          {files.map((f, i) => (
+            <li key={`${f.name}-${f.lastModified}-${i}`} className="relative">
+              <Thumb file={f} />
+              <button
+                onClick={() => setFiles(files.filter((_, j) => j !== i))}
+                aria-label={`Remove screenshot ${i + 1}`}
+                className="absolute top-1 right-1 flex size-9 items-center justify-center rounded-full bg-slate-900/75 text-lg font-bold text-white"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {files.length < MAX_SCREENSHOTS && (
+        <ScreenshotButton
+          onFiles={add}
+          label={files.length ? "Add more screenshots" : "Add screenshots"}
+          primary={files.length === 0}
+        />
+      )}
+      {files.length > 0 && (
+        <button
+          onClick={() => void read()}
+          className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]"
+        >
+          Read {files.length === 1 ? "the screenshot" : `${files.length} screenshots`}
+        </button>
+      )}
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">
           {error}
         </p>
       )}
       <p className="text-sm text-slate-600">
-        The screenshot is sent to Claude (Anthropic&apos;s AI) to read it and isn&apos;t kept.
+        Screenshots are sent to Claude (Anthropic&apos;s AI) to read them and aren&apos;t kept.
         Nothing is saved until you confirm.
       </p>
+    </div>
+  );
+}
+
+function Thumb({ file }: { file: File }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a preview for this file
+    setSrc(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+  return (
+    <div className="aspect-[3/4] overflow-hidden rounded-lg border-2 border-slate-200 bg-slate-100">
+      {src && (
+        // eslint-disable-next-line @next/next/no-img-element -- a local preview, not a page image
+        <img src={src} alt="" className="size-full object-cover object-top" />
+      )}
     </div>
   );
 }
@@ -95,13 +153,11 @@ function Review({
   event,
   onBack,
   onSaved,
-  onScreenshot,
 }: {
   data: AppData;
   event: EventDetails;
   onBack: () => void;
   onSaved: (id: string) => void;
-  onScreenshot: (f: File) => void;
 }) {
   const [name, setName] = useState(event.name ?? "");
   const [division, setDivision] = useState(
@@ -123,9 +179,11 @@ function Review({
           That doesn&apos;t look like a tournament.
           {event.warnings.length > 0 && ` ${event.warnings.join(" ")}`}
         </p>
-        <ScreenshotButton onFile={onScreenshot} label="Try another screenshot" primary />
-        <button onClick={onBack} className="h-12 rounded-xl border-2 border-slate-400 font-bold">
-          Back
+        <button
+          onClick={onBack}
+          className="h-14 rounded-xl border-2 border-slate-400 text-lg font-bold"
+        >
+          Back to the screenshots
         </button>
       </div>
     );
@@ -356,11 +414,11 @@ export function LinkFields({
 }
 
 export function ScreenshotButton({
-  onFile,
+  onFiles,
   label,
   primary = false,
 }: {
-  onFile: (f: File) => void;
+  onFiles: (f: File[]) => void;
   label: string;
   primary?: boolean;
 }) {
@@ -372,11 +430,12 @@ export function ScreenshotButton({
       <input
         type="file"
         accept="image/*"
+        multiple
         className="sr-only"
         onChange={(e) => {
-          const f = e.target.files?.[0];
+          const picked = Array.from(e.target.files ?? []);
           e.target.value = "";
-          if (f) onFile(f);
+          if (picked.length) onFiles(picked);
         }}
       />
     </label>

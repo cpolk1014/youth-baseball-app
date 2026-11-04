@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Tournament, TournamentTeam } from "@/lib/data/tournament-backend";
 import { permissionsFor } from "@/lib/data/permissions";
 import { useAppData, useStoreState } from "@/lib/data/store";
-import { newTeams, pickDivision, teamKey } from "@/lib/tournaments/event";
+import { MAX_SCREENSHOTS, newTeams, pickDivision, teamKey } from "@/lib/tournaments/event";
 import { AppShell, Loading } from "../AppShell";
 import { Sheet } from "../Sheet";
 import {
@@ -80,22 +80,25 @@ export function TournamentScreen({ id }: { id: string }) {
     }
   };
 
-  const fromScreenshot = (file: File) =>
-    run("Reading the screenshot…", async () => {
-      const event = await readTournament(data.team.id, file);
-      const division =
-        event.divisions.find((d) => teamKey(d.name) === teamKey(t.division ?? "")) ??
-        event.divisions.find(
-          (d) => d.name === pickDivision(event.divisions, t.division ?? data.team.ageGroup),
-        ) ??
-        (event.divisions.length === 1 ? event.divisions[0] : undefined);
-      if (!division) return "No teams for this division were found in that screenshot.";
-      const fresh = newTeams(teams, division.teams);
-      await (await backend()).addTeams(t.id, fresh, "screenshot");
-      return fresh.length
-        ? `${fresh.length} team${fresh.length === 1 ? "" : "s"} added.`
-        : "No new teams in that screenshot.";
-    });
+  const fromScreenshots = (files: File[]) =>
+    run(
+      files.length === 1 ? "Reading the screenshot…" : `Reading ${files.length} screenshots…`,
+      async () => {
+        const event = await readTournament(data.team.id, files);
+        const division =
+          event.divisions.find((d) => teamKey(d.name) === teamKey(t.division ?? "")) ??
+          event.divisions.find(
+            (d) => d.name === pickDivision(event.divisions, t.division ?? data.team.ageGroup),
+          ) ??
+          (event.divisions.length === 1 ? event.divisions[0] : undefined);
+        if (!division) return "No teams for this division were found in the screenshots.";
+        const fresh = newTeams(teams, division.teams);
+        await (await backend()).addTeams(t.id, fresh, "screenshot");
+        return fresh.length
+          ? `${fresh.length} team${fresh.length === 1 ? "" : "s"} added.`
+          : "No new teams in the screenshots.";
+      },
+    );
 
   const ours = teams.find((x) => x.isUs);
   const links: [string, string][] = [];
@@ -227,8 +230,8 @@ export function TournamentScreen({ id }: { id: string }) {
         {canEdit && (
           <div className="mt-3 flex flex-col gap-2">
             <ScreenshotButton
-              onFile={(f) => void fromScreenshot(f)}
-              label="Add teams from a screenshot"
+              onFiles={(f) => void fromScreenshots(f.slice(0, MAX_SCREENSHOTS))}
+              label="Add teams from screenshots"
             />
           </div>
         )}

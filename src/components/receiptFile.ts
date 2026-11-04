@@ -6,11 +6,16 @@ import { RECEIPT_MAX_SIDE, fitWithin } from "@/lib/finance/receipt";
  * Shrink a receipt photo to a JPEG no bigger than RECEIPT_MAX_SIDE on its longest side.
  * PDFs, and images the browser can't decode, are returned unchanged.
  */
-export async function shrinkReceipt(file: File): Promise<Blob> {
+export function shrinkReceipt(file: File): Promise<Blob> {
+  return shrinkImage(file, RECEIPT_MAX_SIDE);
+}
+
+/** Shrink a photo or screenshot to a JPEG no bigger than maxSide on its longest side. */
+export async function shrinkImage(file: File, maxSide: number): Promise<Blob> {
   if (!file.type.startsWith("image/")) return file;
   try {
     const bitmap = await createImageBitmap(file);
-    const { w, h } = fitWithin(bitmap.width, bitmap.height, RECEIPT_MAX_SIDE);
+    const { w, h } = fitWithin(bitmap.width, bitmap.height, maxSide);
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;

@@ -1,11 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
+import { MAX_SCREENSHOTS } from "@/lib/tournaments/event";
 import { EventReadError, readEvent } from "@/lib/tournaments/read.server";
 import { getServerSupabase } from "@/lib/supabase/server";
 
 export const maxDuration = 120;
 
-const MAX_IMAGE = 4 * 1024 * 1024;
+// Screenshots are shrunk on the phone first; together they stay under Vercel's 4.5 MB body limit.
+const MAX_TOTAL = 4 * 1024 * 1024;
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 type ImageType = (typeof IMAGE_TYPES)[number];
 
@@ -14,8 +16,8 @@ function errorResponse(status: number, error: string) {
 }
 
 /**
- * A coach or manager reads a tournament from a screenshot of its event page or team list
- * (form: teamId, file). Returns the event's details and teams; nothing is saved until the
+ * A coach or manager reads a tournament from screenshots of its event page and team list
+ * (form: teamId, file, one per screenshot, up to 6). Returns the event's details and teams; nothing is saved until the
  * coach confirms.
  */
 export async function POST(request: NextRequest) {
@@ -30,8 +32,11 @@ export async function POST(request: NextRequest) {
 
   const form = await request.formData().catch(() => null);
   const teamId = String(form?.get("teamId") ?? "");
-  const file = form?.get("file");
-  if (!teamId || !(file instanceof File)) return errorResponse(400, "Add a screenshot.");
+  const files = (form?.getAll("file") ?? []).filter((f): f is File => f instanceof File);
+  if (!teamId || files.length === 0) return errorResponse(400, "Add a screenshot.");
+  if (files.length > MAX_SCREENSHOTS) {
+    return errorResponse(413, `Use up to ${MAX_SCREENSHOTS} screenshots at a time.`);
+  }
 
   const [{ data: roles }, { data: team }] = await Promise.all([
     supabase.from("member").select("role").eq("team_id", teamId).eq("user_id", user.id),
@@ -43,13 +48,19 @@ export async function POST(request: NextRequest) {
 
   const context = `Today is ${new Date().toISOString().slice(0, 10)}. The team adding this is ${team.name} (${team.age_group ?? "age not set"}). List every division and its teams.`;
   try {
-    if (!(IMAGE_TYPES as readonly string[]).includes(file.type)) {
-      return errorResponse(415, "Use a screenshot or photo (PNG or JPEG).");
+    if (files.some((f) => !(IMAGE_TYPES as readonly string[]).includes(f.type))) {
+      return errorResponse(415, "Use screenshots or photos (PNG or JPEG).");
     }
-    if (file.size > MAX_IMAGE)
-      return errorResponse(413, "That picture is too big. Try one under 4 MB.");
-    const data = Buffer.from(await file.arrayBuffer()).toString("base64");
-    const event = await readEvent({ data, mediaType: file.type as ImageType }, context);
+    if (files.reduce((n, f) => n + f.size, 0) > MAX_TOTAL) {
+      return errorResponse(413, "Those pictures are too big together. Try fewer at a time.");
+    }
+    const images = await Promise.all(
+      files.map(async (f) => ({
+        data: Buffer.from(await f.arrayBuffer()).toString("base64"),
+        mediaType: f.type as ImageType,
+      })),
+    );
+    const event = await readEvent(images, context);
     return NextResponse.json({ event });
   } catch (error) {
     if (error instanceof EventReadError) return errorResponse(422, error.message);
