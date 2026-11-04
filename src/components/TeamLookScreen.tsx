@@ -100,17 +100,25 @@ export function TeamLookScreen() {
             </span>
             <span className="shrink-0 font-semibold text-[var(--team)]">Open ›</span>
           </Link>
-          {club && (club.logoPath || club.colors.length > 0) && (
+          {/* Club teams can take the club's colors with one tap (never its logo). */}
+          {club && club.colors.length > 0 && (
             <section className="flex items-center gap-3 rounded-xl border-2 border-slate-200 bg-white p-3">
-              <TeamBadge name={club.name} colors={club.colors} logoPath={club.logoPath} size={48} />
+              <span className="flex shrink-0 gap-1" aria-hidden="true">
+                {club.colors.slice(0, 2).map((c) => (
+                  <span
+                    key={c}
+                    className="size-10 rounded-lg border-2 border-slate-300"
+                    style={{ background: c }}
+                  />
+                ))}
+              </span>
               <p className="min-w-0 flex-1 text-base">
-                <b>{club.name}</b>&apos;s logo and colors
+                <b>{club.name}</b>&apos;s colors
               </p>
               <button
                 onClick={() => {
                   if (club.colors[0]) setMain(club.colors[0]);
                   if (club.colors[1]) setAccent(club.colors[1]);
-                  if (club.logoPath) setLogo({ path: club.logoPath, changed: true });
                 }}
                 className="h-11 shrink-0 rounded-lg bg-[var(--team)] px-3 text-base font-bold text-white"
               >

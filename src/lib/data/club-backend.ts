@@ -274,30 +274,44 @@ export async function loadClubTeam(teamId: string): Promise<AppData> {
 
 export interface ClubLook {
   name: string;
+  /** The club's main and accent colors, picked from the palette. */
   colors: string[];
   logoPath: string | null;
+  /** Colors found in what the director uploaded; the only ones the club can pick from. */
+  palette: string[];
 }
 
 export async function clubLook(clubId: string): Promise<ClubLook> {
-  const r = check<{ name: string; colors: string[] | null; logo_path: string | null }>(
+  const r = check<{
+    name: string;
+    colors: string[] | null;
+    logo_path: string | null;
+    palette: string[] | null;
+  }>(
     await getBrowserSupabase()
       .from("organization")
-      .select("name, colors, logo_path")
+      .select("name, colors, logo_path, palette")
       .eq("id", clubId)
       .single(),
   );
-  return { name: r.name, colors: r.colors ?? [], logoPath: r.logo_path };
+  return {
+    name: r.name,
+    colors: r.colors ?? [],
+    logoPath: r.logo_path,
+    palette: r.palette ?? [],
+  };
 }
 
 export async function saveClubLook(
   clubId: string,
   colors: string[],
   logoPath: string | null,
+  palette: string[],
 ): Promise<void> {
   check(
     await getBrowserSupabase()
       .from("organization")
-      .update({ colors, logo_path: logoPath })
+      .update({ colors, logo_path: logoPath, palette })
       .eq("id", clubId),
   );
 }

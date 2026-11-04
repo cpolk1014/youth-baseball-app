@@ -1176,7 +1176,7 @@ insert into public.team_groupme (team_id, bot_id) values ('00000000-0000-4000-80
   on conflict (team_id) do update set bot_id = excluded.bot_id;
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
-update public.organization set colors = '{#c8102e,#111111}', logo_path = 'club/' || (select org from club_t) || '/logo.png' where id = (select org from club_t);
+update public.organization set palette = '{#c8102e,#111111,#ffffff}', colors = '{#c8102e,#111111}', logo_path = 'club/' || (select org from club_t) || '/logo.png' where id = (select org from club_t);
 insert into storage.objects (bucket_id, name) values ('team-logos', 'club/' || (select org from club_t) || '/logo.png');
 insert into public.uniform_combo (id, organization_id, name, shirt) values ('dddddddd-0000-4000-8000-000000000030', (select org from club_t), 'White combo', 'White');
 insert into public.club_practice_plan (organization_id, title, items) values ((select org from club_t), 'Canes infield day', '[{"title": "Ground balls", "minutes": 15}]');
@@ -1388,6 +1388,17 @@ do $$ begin
 exception when insufficient_privilege then raise notice 'ok: signed-out visitors can''t start a club';
 end $$;
 reset role;
+-- ── club colors come only from the club's uploaded palette ──
+reset role;
+select set_config('request.jwt.claim.sub', '', false);
+update public.organization set palette = '{#112233,#aabbcc,#ff0000}', colors = '{#112233,#ff0000}'
+  where id = (select id from started);
+select pg_temp.expect((select colors from public.organization where id = (select id from started)) = '{#112233,#ff0000}', 'a club picks its two colors from its palette');
+do $$ begin
+  update public.organization set colors = '{#123456,#ff0000}' where id = (select id from started);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: a club color must come from its uploaded palette';
+end $$;
 -- ── game places ──
 update public.game set location = 'Traction Sports Complex', field = 'Chabills Field', location_lat = 30.2, location_lng = -92.0
   where id = 'eeeeeeee-0000-4000-8000-000000000020';

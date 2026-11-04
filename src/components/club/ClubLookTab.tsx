@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TEAM_SWATCHES, readableOnWhite, suggestPair } from "@/lib/branding/color";
+import { readableOnWhite, suggestPair } from "@/lib/branding/color";
 import type { ClubLook } from "@/lib/data/club-backend";
 import { newId } from "@/lib/data/store";
 import { cleanPieces, type UniformCombo } from "@/lib/uniforms";
@@ -24,7 +24,6 @@ export function ClubLookTab({ clubId }: { clubId: string }) {
   const [main, setMain] = useState<string | null>(null);
   const [accent, setAccent] = useState<string | null>(null);
   const [slot, setSlot] = useState<"main" | "accent">("main");
-  const [found, setFound] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -46,9 +45,11 @@ export function ClubLookTab({ clubId }: { clubId: string }) {
   }, [clubId]);
 
   if (!look) return error ? <p className="text-base text-red-700">{error}</p> : <Loading />;
+  // Colors only from what the director uploaded: no upload, no colors.
+  const palette = look.palette;
   const colors = {
-    main: main ?? look.colors[0] ?? TEAM_SWATCHES[0]!.hex,
-    accent: accent ?? look.colors[1] ?? TEAM_SWATCHES[1]!.hex,
+    main: main ?? look.colors[0] ?? null,
+    accent: accent ?? look.colors[1] ?? null,
   };
   const changed = main !== null || accent !== null;
 
@@ -65,17 +66,35 @@ export function ClubLookTab({ clubId }: { clubId: string }) {
     }
   };
 
+  /** New palette from a picture; the suggested pair becomes the club's colors. */
+  const colorsFrom = async (file: File) => {
+    const found = (await paletteFromPicture(file)).map((c) => c.toLowerCase()).slice(0, 8);
+    if (found.length === 0) throw new Error("No colors found in that picture. Try another.");
+    const pair = suggestPair(found);
+    return {
+      palette: found,
+      colors: pair ? [pair.main.toLowerCase(), pair.accent.toLowerCase()] : found.slice(0, 2),
+    };
+  };
+
   const uploadLogo = (file: File) =>
     run("Uploading logo…", async () => {
-      const palette = await paletteFromPicture(file);
-      setFound(palette);
-      const pair = suggestPair(palette);
+      const next = await colorsFrom(file);
       const m = await backend();
       const path = await m.uploadClubLogo(clubId, await squareLogo(file));
-      const next = pair ? [pair.main, pair.accent] : [colors.main, colors.accent];
-      await m.saveClubLook(clubId, next, path);
+      await m.saveClubLook(clubId, next.colors, path, next.palette);
       if (look.logoPath) await m.removeClubLogo(look.logoPath).catch(() => undefined);
-      setLook({ ...look, logoPath: path, colors: next });
+      setLook({ ...look, logoPath: path, ...next });
+      setMain(null);
+      setAccent(null);
+      setSaved(true);
+    });
+
+  const uploadPicture = (file: File) =>
+    run("Finding colors…", async () => {
+      const next = await colorsFrom(file);
+      await (await backend()).saveClubLook(clubId, next.colors, look.logoPath, next.palette);
+      setLook({ ...look, ...next });
       setMain(null);
       setAccent(null);
       setSaved(true);
@@ -83,8 +102,8 @@ export function ClubLookTab({ clubId }: { clubId: string }) {
 
   const saveColors = () =>
     run("Saving…", async () => {
-      const next = [colors.main, colors.accent];
-      await (await backend()).saveClubLook(clubId, next, look.logoPath);
+      const next = [colors.main, colors.accent].filter((c): c is string => !!c);
+      await (await backend()).saveClubLook(clubId, next, look.logoPath, palette);
       setLook({ ...look, colors: next });
       setMain(null);
       setAccent(null);
@@ -101,12 +120,14 @@ export function ClubLookTab({ clubId }: { clubId: string }) {
       <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
         <h2 className={heading}>Logo &amp; colors</h2>
         <p className="mb-3 text-base text-slate-700">
-          Club teams can use these on their Team colors &amp; logo page with one tap.
+          Club colors come from what you upload: your logo, a flyer, or any picture with your
+          colors. Club teams can use the colors (not the logo) on their Team colors &amp; logo page
+          with one tap.
         </p>
-        <div className="mb-4 flex items-center gap-3">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
           <TeamBadge
             name={look.name}
-            colors={[colors.main, colors.accent]}
+            colors={[colors.main, colors.accent].filter((c): c is string => !!c)}
             logoPath={look.logoPath}
             size={64}
           />
@@ -124,42 +145,55 @@ export function ClubLookTab({ clubId }: { clubId: string }) {
               }}
             />
           </label>
+          <label className="flex h-12 cursor-pointer items-center rounded-xl border-2 border-slate-400 bg-white px-4 text-base font-bold active:bg-slate-100">
+            Colors from a flyer or picture
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={busy !== null}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) void uploadPicture(f);
+              }}
+            />
+          </label>
         </div>
-        <div className="mb-3 grid grid-cols-2 gap-2">
-          {(["main", "accent"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setSlot(s)}
-              aria-pressed={slot === s}
-              className={`flex h-14 items-center gap-2 rounded-xl border-2 px-3 text-base font-bold ${
-                slot === s ? "border-slate-900 ring-2 ring-slate-900" : "border-slate-300"
-              }`}
-            >
-              <span
-                className="size-8 rounded-lg border-2 border-slate-300"
-                style={{ background: s === "main" ? colors.main : colors.accent }}
-              />
-              {s === "main" ? "Main" : "Accent"}
-            </button>
-          ))}
-        </div>
-        {found.length > 0 && (
-          <div className="mb-3">
-            <p className="mb-1 text-sm font-semibold text-slate-700">From the logo</p>
+        {palette.length === 0 ? (
+          <p className="rounded-xl border-2 border-dashed border-slate-300 p-3 text-base text-slate-700">
+            No club colors yet. Upload your logo or a picture of a flyer or jersey, and its colors
+            show up here to pick from. (Have a PDF? Take a screenshot of it.)
+          </p>
+        ) : (
+          <>
+            <div className="mb-3 grid grid-cols-2 gap-2">
+              {(["main", "accent"] as const).map((sl) => (
+                <button
+                  key={sl}
+                  onClick={() => setSlot(sl)}
+                  aria-pressed={slot === sl}
+                  className={`flex h-14 items-center gap-2 rounded-xl border-2 px-3 text-base font-bold ${
+                    slot === sl ? "border-slate-900 ring-2 ring-slate-900" : "border-slate-300"
+                  }`}
+                >
+                  <span
+                    className="size-8 rounded-lg border-2 border-slate-300"
+                    style={{ background: (sl === "main" ? colors.main : colors.accent) ?? "white" }}
+                  />
+                  {sl === "main" ? "Main" : "Accent"}
+                </button>
+              ))}
+            </div>
+            <p className="mb-1 text-sm font-semibold text-slate-700">Colors from your upload</p>
             <Swatches
-              colors={found}
-              selected={slot === "main" ? colors.main : colors.accent}
+              colors={palette}
+              selected={(slot === "main" ? colors.main : colors.accent) ?? ""}
               onPick={(hex) => (slot === "main" ? setMain(hex) : setAccent(hex))}
             />
-          </div>
+          </>
         )}
-        <Swatches
-          colors={TEAM_SWATCHES.map((s) => s.hex)}
-          names={TEAM_SWATCHES.map((s) => s.name)}
-          selected={slot === "main" ? colors.main : colors.accent}
-          onPick={(hex) => (slot === "main" ? setMain(hex) : setAccent(hex))}
-        />
-        {readableOnWhite(colors.main) !== colors.main.toLowerCase() && (
+        {colors.main && readableOnWhite(colors.main) !== colors.main.toLowerCase() && (
           <p className="mt-2 text-sm text-slate-600">
             A light main color is darkened a little on teams&apos; screens so text stays readable.
           </p>
