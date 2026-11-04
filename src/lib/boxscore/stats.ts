@@ -182,3 +182,20 @@ export function gameLine(g: KidGame): string {
     parts.push(`${outsToInnings(g.pitching.outs)} IP, ${g.pitching.so} K, ${g.pitching.er} ER`);
   return parts.join(", ");
 }
+
+const teamKey = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/**
+ * Whether two box scores are the same game: the same day and the same opponent, allowing for
+ * GameChanger naming it a little differently ("Lakeside Lightning 10U" vs "Lakeside
+ * Lightning"). Two games on one day against different teams (a doubleheader) stay separate.
+ */
+export function sameGame(
+  a: Pick<KidGame, "gameDate" | "opponent">,
+  b: Pick<KidGame, "gameDate" | "opponent">,
+): boolean {
+  if (a.gameDate !== b.gameDate) return false;
+  const x = teamKey(a.opponent);
+  const y = teamKey(b.opponent);
+  return !!x && !!y && (x === y || x.includes(y) || y.includes(x));
+}

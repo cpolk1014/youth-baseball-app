@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { gameLine, type GameBatting, type GamePitching, type KidGame } from "@/lib/boxscore/stats";
+import {
+  gameLine,
+  sameGame,
+  type GameBatting,
+  type GamePitching,
+  type KidGame,
+} from "@/lib/boxscore/stats";
 import { useStoreState } from "@/lib/data/store";
 import type { Player } from "@/lib/rules/types";
 
@@ -36,11 +42,18 @@ type Answer =
  */
 export function ImportBoxScore({
   kid,
+  existing = [],
+  replacing = null,
   onSave,
   onCancel,
 }: {
   kid: Player;
-  onSave: (game: Omit<KidGame, "id">) => Promise<void>;
+  /** The kid's box scores already imported, to warn before replacing one. */
+  existing?: KidGame[];
+  /** From a game's page: the box score already in for that game (replaced on save). */
+  replacing?: KidGame | null;
+  /** `replaces`: the earlier box score for the same game, which this one takes the place of. */
+  onSave: (game: Omit<KidGame, "id">, replaces: KidGame | null) => Promise<void>;
   onCancel: () => void;
 }) {
   const { mode } = useStoreState();
@@ -84,25 +97,36 @@ export function ImportBoxScore({
     }
   };
 
+  // An earlier box score for this same game (same day and opponent): saving replaces it.
+  const earlier =
+    replacing ??
+    existing.find(
+      (g) => g.playerId === kid.id && sameGame(g, { gameDate: date, opponent: opponent.trim() }),
+    ) ??
+    null;
+
   const save = async () => {
     if (answer?.status !== "found") return;
     const l = answer.line;
     setBusy("Saving…");
     setError(null);
     try {
-      await onSave({
-        playerId: kid.id,
-        gameDate: date,
-        opponent: opponent.trim(),
-        ourRuns: l.ourRuns,
-        theirRuns: l.theirRuns,
-        teamName: l.teamName,
-        boxName: l.boxName,
-        batting: l.batting,
-        pitching: l.pitching,
-        errors: l.errors,
-        positions: l.positions,
-      });
+      await onSave(
+        {
+          playerId: kid.id,
+          gameDate: date,
+          opponent: opponent.trim(),
+          ourRuns: l.ourRuns,
+          theirRuns: l.theirRuns,
+          teamName: l.teamName,
+          boxName: l.boxName,
+          batting: l.batting,
+          pitching: l.pitching,
+          errors: l.errors,
+          positions: l.positions,
+        },
+        earlier,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setBusy(null);
@@ -184,6 +208,15 @@ export function ImportBoxScore({
             />
           </label>
         </div>
+        {earlier && (
+          <p
+            role="alert"
+            className="rounded-xl border-2 border-amber-500 bg-amber-50 p-3 text-base leading-snug text-amber-950"
+          >
+            <b>You already imported this game</b> (vs {earlier.opponent}: {gameLine(earlier)}).
+            Saving replaces it with this one.
+          </p>
+        )}
         {error && (
           <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-800">
             {error}
@@ -201,7 +234,7 @@ export function ImportBoxScore({
             disabled={!ok || busy !== null}
             className="h-14 flex-[2] rounded-xl bg-[var(--team)] text-lg font-bold text-white disabled:opacity-40"
           >
-            {busy ?? "Yes, save this game"}
+            {busy ?? (earlier ? "Yes, replace it" : "Yes, save this game")}
           </button>
         </div>
       </div>

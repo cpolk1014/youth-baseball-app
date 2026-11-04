@@ -245,9 +245,12 @@ function KidStats({ data }: { data: AppData }) {
         {importing && (
           <ImportBoxScore
             kid={kid}
+            existing={mine}
             onCancel={() => setImporting(false)}
-            onSave={async (g) => {
+            onSave={async (g, replaces) => {
               await save(g, data.season.id);
+              // Same game saved under another opponent name: drop the old one.
+              if (replaces && replaces.opponent !== g.opponent) await remove(replaces.id);
               setImporting(false);
             }}
           />

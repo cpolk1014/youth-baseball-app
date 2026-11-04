@@ -11,6 +11,7 @@ import { GamesPane } from "./GamesScreen";
 import { kidsOf } from "./KidPicker";
 import { ImportBoxScore } from "./kidstats/ImportBoxScore";
 import { useKidGames } from "./kidstats/kidGames";
+import { gameLine, sameGame, type KidGame } from "@/lib/boxscore/stats";
 import { Sheet } from "./Sheet";
 import { GameUniformCard } from "./uniforms/GameUniformCard";
 import { gameUniformShown } from "@/lib/uniforms";
@@ -32,14 +33,21 @@ export function ParentGame({
   arrival: string | null;
 }) {
   const kids = kidsOf(data, myUserId(data));
-  const { games: imported, save } = useKidGames(kids.map((k) => k.id));
+  const { games: imported, save, remove } = useKidGames(kids.map((k) => k.id));
   const [importing, setImporting] = useState<Player | null>(null);
   const isFinal = game.status === "final";
   const result = gameResult(game);
   const hasUniform = gameUniformShown(game.uniform, data.uniforms) !== null;
-  // A box score for this game: same day (the opponent's name can differ in GameChanger).
-  const importedFor = (kid: Player) =>
-    imported.some((g) => g.playerId === kid.id && g.gameDate === game.date);
+  // This game's box score for a kid: same day and opponent (GameChanger may name the team a
+  // little differently); or, when the team played only this game that day, that day's one.
+  const onlyGameThatDay = data.games.filter((g) => g.date === game.date).length === 1;
+  const importedFor = (kid: Player): KidGame | null => {
+    const mine = imported.filter((g) => g.playerId === kid.id && g.gameDate === game.date);
+    return (
+      mine.find((g) => sameGame(g, { gameDate: game.date, opponent: game.opponent })) ??
+      (onlyGameThatDay && mine.length === 1 ? mine[0]! : null)
+    );
+  };
 
   return (
     <AppShell
@@ -90,30 +98,48 @@ export function ParentGame({
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {kids.map((kid) => (
-              <li key={kid.id} className="flex flex-wrap items-center gap-2">
-                <span className="min-w-0 flex-1 text-base font-semibold">
-                  {kid.name}
-                  {importedFor(kid) && (
-                    <span className="ml-2 text-sm font-bold text-green-800">✓ Imported</span>
+            {kids.map((kid) => {
+              const box = importedFor(kid);
+              return (
+                <li key={kid.id} className="flex flex-col gap-2">
+                  {box ? (
+                    <div className="rounded-xl border-2 border-green-700 bg-green-50 p-3">
+                      <p className="text-base font-bold text-green-900">
+                        ✓ {kid.name}&apos;s box score is in
+                      </p>
+                      <p className="text-base text-green-950">
+                        vs {box.opponent}: {gameLine(box)}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-base font-semibold">
+                      {kid.name}:{" "}
+                      <span className="font-normal text-slate-600">not uploaded yet</span>
+                    </p>
                   )}
-                </span>
-                {importedFor(kid) && (
-                  <Link
-                    href="/my-player"
-                    className="flex h-12 items-center rounded-xl border-2 border-slate-300 px-3 text-base font-semibold"
-                  >
-                    Stats
-                  </Link>
-                )}
-                <button
-                  onClick={() => setImporting(kid)}
-                  className="h-12 rounded-xl bg-[var(--team)] px-4 text-base font-bold text-white active:bg-[var(--team-press)]"
-                >
-                  {importedFor(kid) ? "Upload again" : "Upload box score"}
-                </button>
-              </li>
-            ))}
+                  <div className="flex gap-2">
+                    {box && (
+                      <Link
+                        href={`/my-player?player=${kid.id}`}
+                        className="flex h-12 flex-1 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-base font-semibold"
+                      >
+                        See stats
+                      </Link>
+                    )}
+                    <button
+                      onClick={() => setImporting(kid)}
+                      className={`h-12 flex-1 rounded-xl text-base font-bold ${
+                        box
+                          ? "border-2 border-slate-300 bg-white text-slate-800 active:bg-slate-100"
+                          : "bg-[var(--team)] text-white active:bg-[var(--team-press)]"
+                      }`}
+                    >
+                      {box ? "Replace it" : "Upload box score"}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
         <p className="mt-2 text-sm text-slate-600">
@@ -130,9 +156,13 @@ export function ParentGame({
         {importing && (
           <ImportBoxScore
             kid={importing}
+            existing={imported}
+            replacing={importedFor(importing)}
             onCancel={() => setImporting(null)}
-            onSave={async (g) => {
+            onSave={async (g, replaces) => {
               await save(g, data.season.id);
+              // Same game saved under another opponent name: drop the old one.
+              if (replaces && replaces.opponent !== g.opponent) await remove(replaces.id);
               setImporting(null);
             }}
           />

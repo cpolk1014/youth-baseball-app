@@ -8,6 +8,7 @@ import {
   rate,
   seasonTotals,
   type KidGame,
+  sameGame,
 } from "./stats";
 
 const game = (o: Partial<KidGame>): KidGame => ({
@@ -120,5 +121,19 @@ describe("gameLine", () => {
         }),
       ),
     ).toBe("0-2, 1.0 IP, 2 K, 0 ER");
+  });
+});
+
+describe("sameGame", () => {
+  const g = (gameDate: string, opponent: string) => ({ gameDate, opponent });
+  it("matches the same day and opponent, even if GameChanger names it a little differently", () => {
+    expect(
+      sameGame(g("2026-09-06", "Lakeside Lightning"), g("2026-09-06", "lakeside lightning 10U")),
+    ).toBe(true);
+    expect(sameGame(g("2026-09-06", "Lakeside"), g("2026-09-06", "Lakeside Lightning"))).toBe(true);
+  });
+  it("keeps doubleheaders and other days apart", () => {
+    expect(sameGame(g("2026-09-06", "Lakeside"), g("2026-09-06", "Northside"))).toBe(false);
+    expect(sameGame(g("2026-09-06", "Lakeside"), g("2026-09-07", "Lakeside"))).toBe(false);
   });
 });
