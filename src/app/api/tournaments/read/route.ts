@@ -5,6 +5,7 @@ import {
   EventReadError,
   readEvent,
   readSchedule,
+  readScores,
   readTiebreak,
 } from "@/lib/tournaments/read.server";
 import { getServerSupabase } from "@/lib/supabase/server";
@@ -24,7 +25,8 @@ function errorResponse(status: number, error: string) {
  * A coach or manager reads screenshots (form: teamId, file, one per screenshot, up to 6):
  * a new tournament's event page and team list (returns { event }), or, with tournamentId,
  * that tournament's pool schedule and bracket (returns { schedule }), or, with kind
- * "tiebreak", an organization's tie-break rules (returns { rules }). Nothing is saved
+ * "tiebreak", an organization's tie-break rules (returns { rules }), or, with kind "scores" and
+ * tournamentId (anyone on the team), final scores (returns { scores }). Nothing is saved
  * until the coach confirms.
  */
 export async function POST(request: NextRequest) {
@@ -51,8 +53,12 @@ export async function POST(request: NextRequest) {
     supabase.from("member").select("role").eq("team_id", teamId).eq("user_id", user.id),
     supabase.from("team").select("name,age_group,optioned_at").eq("id", teamId).maybeSingle(),
   ]);
-  const canAdd = (roles ?? []).some((r) => ["owner", "coach", "manager"].includes(r.role));
-  if (!canAdd || !team) return errorResponse(403, "Only coaches and managers can add tournaments.");
+  // Anyone on the team can read scores; the rest is for coaches and managers.
+  const allowed =
+    kind === "scores"
+      ? (roles ?? []).length > 0 && !!tournamentId
+      : (roles ?? []).some((r) => ["owner", "coach", "manager"].includes(r.role));
+  if (!allowed || !team) return errorResponse(403, "Only coaches and managers can do that.");
   if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up first.");
 
   const today = new Date().toISOString().slice(0, 10);
@@ -100,6 +106,9 @@ export async function POST(request: NextRequest) {
           `Today is ${today}. These are a tournament organization's rules; list the tie-breakers in order.`,
         ),
       });
+    }
+    if (kind === "scores" && scheduleContext) {
+      return NextResponse.json({ scores: await readScores(images, scheduleContext) });
     }
     if (scheduleContext) {
       return NextResponse.json({ schedule: await readSchedule(images, scheduleContext) });

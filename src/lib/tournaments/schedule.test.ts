@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   byDay,
   cleanSchedule,
+  cleanScores,
+  matchScores,
   findTeamGame,
   gameKey,
   matchSchedule,
@@ -10,6 +12,7 @@ import {
   teamIdFor,
   winner,
   type SavedGame,
+  type ScoredGame,
   type ScheduleGame,
 } from "./schedule";
 
@@ -247,5 +250,114 @@ describe("winner", () => {
     expect(winner({ scoreHome: 8, scoreAway: 1 })).toBe("home");
     expect(winner({ scoreHome: 3, scoreAway: 3 })).toBe("tie");
     expect(winner({ scoreHome: null, scoreAway: null })).toBeNull();
+  });
+});
+
+describe("scores from screenshots", () => {
+  const savedGames: ScoredGame[] = [
+    {
+      id: "s1",
+      gameNo: "1",
+      date: "2026-11-14",
+      home: "LA Mariners",
+      away: "Mandeville Revolution",
+      gameId: null,
+      scoreHome: null,
+      scoreAway: null,
+      locked: false,
+    },
+    {
+      id: "s2",
+      gameNo: "2",
+      date: "2026-11-14",
+      home: "RBI Academy",
+      away: "Bomb Squad",
+      gameId: null,
+      scoreHome: 0,
+      scoreAway: 5,
+      locked: false,
+    },
+    {
+      id: "s3",
+      gameNo: "3",
+      date: "2026-11-14",
+      home: "Bats",
+      away: "Cubs",
+      gameId: null,
+      scoreHome: 1,
+      scoreAway: 0,
+      locked: true,
+    },
+    {
+      id: "s4",
+      gameNo: "4",
+      date: "2026-11-14",
+      home: "Knights",
+      away: "Saints",
+      gameId: "g1",
+      scoreHome: null,
+      scoreAway: null,
+      locked: false,
+    },
+    {
+      id: "s5",
+      gameNo: "5",
+      date: "2026-11-14",
+      home: "Bomb Squad",
+      away: "Saints",
+      gameId: null,
+      scoreHome: 13,
+      scoreAway: 0,
+      locked: false,
+    },
+  ];
+
+  it("checks what Claude read", () => {
+    expect(
+      cleanScores({
+        games: [
+          { game_no: "G1", date: "2026-11-14", home: "A", away: "B", score_home: 5, score_away: 7 },
+          { game_no: "2", date: "x", home: "A", away: "", score_home: 1, score_away: 0 },
+          { game_no: "3", date: null, home: "A", away: "B", score_home: 120, score_away: 0 },
+        ],
+        warnings: [],
+      }).games,
+    ).toEqual([
+      { gameNo: "1", date: "2026-11-14", home: "A", away: "B", scoreHome: 5, scoreAway: 7 },
+    ]);
+  });
+
+  it("matches games and sorts out new, changed, same, locked and our own", () => {
+    const { updates, unmatched } = matchScores(savedGames, [
+      {
+        gameNo: "1",
+        date: null,
+        home: "LA Mariners",
+        away: "Mandeville Revolution",
+        scoreHome: 5,
+        scoreAway: 7,
+      },
+      // Listed the other way round, with no game number.
+      {
+        gameNo: null,
+        date: null,
+        home: "Bomb Squad",
+        away: "RBI Academy",
+        scoreHome: 6,
+        scoreAway: 0,
+      },
+      { gameNo: "3", date: null, home: "Bats", away: "Cubs", scoreHome: 2, scoreAway: 0 },
+      { gameNo: "4", date: null, home: "Knights", away: "Saints", scoreHome: 3, scoreAway: 1 },
+      { gameNo: "5", date: null, home: "Bomb Squad", away: "Saints", scoreHome: 13, scoreAway: 0 },
+      { gameNo: "9", date: null, home: "Nobody", away: "Else", scoreHome: 1, scoreAway: 0 },
+    ]);
+    expect(updates).toEqual([
+      { id: "s1", scoreHome: 5, scoreAway: 7, status: "new", was: null },
+      { id: "s2", scoreHome: 0, scoreAway: 6, status: "changed", was: [0, 5] },
+      { id: "s3", scoreHome: 2, scoreAway: 0, status: "locked", was: [1, 0] },
+      { id: "s4", scoreHome: 3, scoreAway: 1, status: "ours", was: null },
+      { id: "s5", scoreHome: 13, scoreAway: 0, status: "same", was: null },
+    ]);
+    expect(unmatched.map((u) => u.home)).toEqual(["Nobody"]);
   });
 });

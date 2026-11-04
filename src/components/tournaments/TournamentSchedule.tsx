@@ -16,13 +16,16 @@ import {
   byDay,
   findTeamGame,
   matchSchedule,
+  matchScores,
   ourSide,
   placeOf,
   teamGameFor,
   teamIdFor,
   time12,
   winner,
+  type ReadScore,
   type Schedule,
+  type ScoreUpdate,
   type ScheduleGame,
   type ScheduleMatch,
 } from "@/lib/tournaments/schedule";
@@ -69,6 +72,7 @@ export function TournamentSchedule({
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [scoring, setScoring] = useState<TournamentGame | null>(null);
+  const [scoreShots, setScoreShots] = useState(false);
   const ourName = teams.find((t) => t.isUs)?.name ?? null;
   const canScore = data.team.optionedAt === null;
 
@@ -118,14 +122,42 @@ export function TournamentSchedule({
           {error}
         </p>
       )}
-      {canEdit && (
-        <button
-          onClick={() => setImporting(true)}
-          className="mt-3 h-12 w-full rounded-xl bg-[var(--team)] text-base font-bold text-white active:bg-[var(--team-press)] md:w-auto md:px-6"
-        >
-          {games?.length ? "Update the schedule" : "Add the schedule"}
-        </button>
-      )}
+      <div className="mt-3 flex flex-col gap-2 md:flex-row">
+        {canScore && !!games?.length && (
+          <button
+            onClick={() => setScoreShots(true)}
+            className="h-12 rounded-xl border-2 border-[var(--team)] bg-white px-6 text-base font-bold text-[var(--team)]"
+          >
+            Update scores from screenshots
+          </button>
+        )}
+        {canEdit && (
+          <button
+            onClick={() => setImporting(true)}
+            className="h-12 rounded-xl bg-[var(--team)] px-6 text-base font-bold text-white active:bg-[var(--team-press)]"
+          >
+            {games?.length ? "Update the schedule" : "Add the schedule"}
+          </button>
+        )}
+      </div>
+      <Sheet
+        open={scoreShots}
+        title="Update scores from screenshots"
+        onClose={() => setScoreShots(false)}
+      >
+        {scoreShots && games && (
+          <ScoresImport
+            data={data}
+            tournament={tournament}
+            games={games}
+            canEdit={canEdit}
+            onSaved={() => {
+              setScoreShots(false);
+              void load();
+            }}
+          />
+        )}
+      </Sheet>
       <Sheet
         open={importing}
         title={games?.length ? "Update the schedule" : "Add the schedule"}
@@ -462,6 +494,231 @@ export async function saveScheduleGames({
   }
   if (teamGames.length) await importSchedule([], teamGames);
   await (await backend()).saveGames(tournament.id, writes);
+}
+
+/** Screenshots of results → scores matched to our games list → check → save. */
+function ScoresImport({
+  data,
+  tournament,
+  games,
+  canEdit,
+  onSaved,
+}: {
+  data: AppData;
+  tournament: Tournament;
+  games: TournamentGame[];
+  canEdit: boolean;
+  onSaved: () => void;
+}) {
+  const [files, setFiles] = useState<File[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [read, setRead] = useState<{
+    updates: ScoreUpdate[];
+    unmatched: ReadScore[];
+    warnings: string[];
+  } | null>(null);
+  const [skip, setSkip] = useState<Set<string>>(new Set());
+
+  const readThem = async () => {
+    setBusy(
+      files.length === 1 ? "Reading the screenshot…" : `Reading ${files.length} screenshots…`,
+    );
+    setError(null);
+    try {
+      const { scores } = await sendScreenshots<{
+        scores?: { games: ReadScore[]; warnings: string[] };
+      }>({ teamId: data.team.id, tournamentId: tournament.id, kind: "scores" }, files);
+      if (!scores) throw new Error("Couldn't read the screenshots. Try again.");
+      setRead({ ...matchScores(games, scores.games), warnings: scores.warnings });
+      setSkip(new Set());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (busy) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-8 text-center" role="status">
+        <div className="size-10 animate-spin rounded-full border-4 border-slate-300 border-t-[var(--team)]" />
+        <p className="text-lg font-semibold">{busy}</p>
+      </div>
+    );
+  }
+
+  if (!read) {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-base text-slate-700">
+          Screenshot the tournament&apos;s schedule or bracket with scores on it. RallyCap reads the
+          final scores and matches them to the games here; you check them before they&apos;re saved.
+        </p>
+        {files.length > 0 && (
+          <ul className="grid grid-cols-3 gap-2">
+            {files.map((f, i) => (
+              <li key={`${f.name}-${f.lastModified}-${i}`} className="relative">
+                <Thumb file={f} />
+                <button
+                  onClick={() => setFiles(files.filter((_, j) => j !== i))}
+                  aria-label={`Remove screenshot ${i + 1}`}
+                  className="absolute top-1 right-1 flex size-9 items-center justify-center rounded-full bg-slate-900/75 text-lg font-bold text-white"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {files.length < MAX_SCREENSHOTS && (
+          <ScreenshotButton
+            onFiles={(picked) => setFiles([...files, ...picked].slice(0, MAX_SCREENSHOTS))}
+            label={files.length ? "Add more screenshots" : "Add screenshots"}
+            primary={files.length === 0}
+          />
+        )}
+        {files.length > 0 && (
+          <button
+            onClick={() => void readThem()}
+            className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]"
+          >
+            Read the scores
+          </button>
+        )}
+        {error && (
+          <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">
+            {error}
+          </p>
+        )}
+        <p className="text-sm text-slate-600">
+          Screenshots are sent to Claude (Anthropic&apos;s AI) to read them and aren&apos;t kept.
+        </p>
+      </div>
+    );
+  }
+
+  const byId = new Map(games.map((g) => [g.id, g]));
+  // Coaches can change locked scores; nobody changes our own games here.
+  const saveable = read.updates.filter(
+    (u) => u.status === "new" || u.status === "changed" || (u.status === "locked" && canEdit),
+  );
+  const chosen = saveable.filter((u) => !skip.has(u.id));
+  const skipped = read.updates.filter((u) => !saveable.includes(u));
+
+  const save = async () => {
+    setBusy("Saving scores…");
+    setError(null);
+    try {
+      const b = await backend();
+      for (const u of chosen) await b.reportScore(u.id, u.scoreHome, u.scoreAway);
+      onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      {read.warnings.length > 0 && (
+        <ul className="rounded-xl border-2 border-amber-500 bg-amber-50 p-3 text-base text-amber-950">
+          {read.warnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
+      )}
+      {saveable.length === 0 ? (
+        <p className="text-base text-slate-700">No new scores in these screenshots.</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {saveable.map((u) => {
+            const g = byId.get(u.id)!;
+            const on = !skip.has(u.id);
+            return (
+              <li key={u.id}>
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-slate-200 bg-white p-3">
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={() => {
+                      const next = new Set(skip);
+                      if (on) next.add(u.id);
+                      else next.delete(u.id);
+                      setSkip(next);
+                    }}
+                    className="mt-1 size-5 shrink-0 accent-[var(--team)]"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-slate-600">
+                      {u.status === "new"
+                        ? "New"
+                        : u.status === "locked"
+                          ? "Locked: fix it"
+                          : "Changed"}{" "}
+                      · {gameLabel(g)}
+                    </span>
+                    <span className="flex justify-between gap-2 text-base">
+                      <span className={u.scoreHome > u.scoreAway ? "font-bold" : ""}>{g.home}</span>
+                      <span className="font-bold tabular-nums">{u.scoreHome}</span>
+                    </span>
+                    <span className="flex justify-between gap-2 text-base">
+                      <span className={u.scoreAway > u.scoreHome ? "font-bold" : ""}>{g.away}</span>
+                      <span className="font-bold tabular-nums">{u.scoreAway}</span>
+                    </span>
+                    {u.was && (
+                      <span className="block text-sm font-semibold text-amber-800">
+                        Was {u.was[0]}–{u.was[1]}
+                      </span>
+                    )}
+                  </span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {(skipped.length > 0 || read.unmatched.length > 0) && (
+        <div className="text-sm text-slate-600">
+          {skipped.filter((u) => u.status === "same").length > 0 && (
+            <p>{skipped.filter((u) => u.status === "same").length} already up to date.</p>
+          )}
+          {skipped.some((u) => u.status === "ours") && (
+            <p>Our own games are scored on the game page, by marking them final.</p>
+          )}
+          {skipped.some((u) => u.status === "locked") && (
+            <p>Scores the coach locked weren&apos;t changed.</p>
+          )}
+          {read.unmatched.length > 0 && (
+            <p>
+              Not on this schedule: {read.unmatched.map((u) => `${u.home} vs ${u.away}`).join(", ")}
+              .
+            </p>
+          )}
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">
+          {error}
+        </p>
+      )}
+      <div className="sticky bottom-0 -mx-4 flex gap-3 bg-white px-4 pt-2 pb-1">
+        <button
+          onClick={() => setRead(null)}
+          className="h-14 flex-1 rounded-xl border-2 border-slate-400 text-lg font-bold"
+        >
+          Back
+        </button>
+        <button
+          onClick={() => void save()}
+          disabled={chosen.length === 0}
+          className="h-14 flex-[2] rounded-xl bg-green-700 text-lg font-bold text-white disabled:opacity-40"
+        >
+          Save {chosen.length} score{chosen.length === 1 ? "" : "s"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 type ImportPick =

@@ -3,7 +3,14 @@
 // Never import from client code.
 import Anthropic from "@anthropic-ai/sdk";
 import { EVENT_JSON_SCHEMA, cleanEvent, type EventDetails } from "./event";
-import { SCHEDULE_JSON_SCHEMA, cleanSchedule, type Schedule } from "./schedule";
+import {
+  SCHEDULE_JSON_SCHEMA,
+  SCORES_JSON_SCHEMA,
+  cleanSchedule,
+  cleanScores,
+  type ReadScore,
+  type Schedule,
+} from "./schedule";
 import { TIEBREAK_JSON_SCHEMA, cleanRules, type ReadRules } from "./tiebreak";
 
 export class EventReadError extends Error {}
@@ -18,6 +25,8 @@ const EVENT_PROMPT = `You read screenshots of youth baseball tournament pages (e
 const SCHEDULE_PROMPT = `You read screenshots of a youth baseball tournament's pool play schedule and bracket and list every game. Several screenshots are parts of the same schedule: combine them, listing each game once. For each game give its game number if shown, whether it's pool play or bracket, the pool (just the letter or name, e.g. "A"), the bracket round if shown, the date (YYYY-MM-DD; use the tournament's dates when the screenshot shows only a weekday), the start time (24-hour HH:MM), the park or complex (venue) and the field within it, and the two sides. Write team names exactly as shown. Bracket games whose teams aren't known yet keep their placeholders as shown (e.g. "1st Pool A", "Winner Game 7", "Seed 3"). Only list games for the division asked about when the schedule shows several divisions. Don't guess anything that isn't shown; put anything unclear in warnings.`;
 
 const TIEBREAK_PROMPT = `You read screenshots of a youth baseball tournament organization's rules and pull out how pool play standings and bracket seeding are decided, as an ordered list of tie-breakers for teams with the same record. Use only these criteria: head_to_head (results among the tied teams), runs_allowed (fewest total), run_diff (best total run differential), runs_scored (most total), runs_allowed_avg, run_diff_avg, runs_scored_avg (per game, when the rules say per game or average), coin_flip. When a rule caps runs per game (e.g. "max 8 runs per game" or a run rule margin used for differential), put that number in cap. Keep each rule's own words in text. Leave out rules that aren't tie-breakers. If a tie-breaker doesn't fit any criterion, use the closest one and say so in warnings. Set restart to true unless the rules say tied teams continue down the list after a team is separated.`;
+
+const SCORES_PROMPT = `You read screenshots of a youth baseball tournament's results (a schedule with scores, a bracket with scores, or a results list) and list every game that shows a final score. For each give its game number if shown, the date if shown (YYYY-MM-DD), the two teams exactly as shown (the first-listed team as home), and each team's runs. Skip games without a score. Standings tables show only records, not games: list nothing from them and say so in warnings. Don't guess anything that isn't shown.`;
 
 /** One read of screenshots with structured output (streamed: schedules can be long). */
 async function readScreenshots(
@@ -71,5 +80,15 @@ export async function readSchedule(images: ScreenshotImage[], context: string): 
 export async function readTiebreak(images: ScreenshotImage[], context: string): Promise<ReadRules> {
   return cleanRules(
     await readScreenshots(images, TIEBREAK_PROMPT, TIEBREAK_JSON_SCHEMA, context, 8000),
+  );
+}
+
+/** Read final scores from screenshots of the tournament's results. */
+export async function readScores(
+  images: ScreenshotImage[],
+  context: string,
+): Promise<{ games: ReadScore[]; warnings: string[] }> {
+  return cleanScores(
+    await readScreenshots(images, SCORES_PROMPT, SCORES_JSON_SCHEMA, context, 16000),
   );
 }

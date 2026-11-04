@@ -336,3 +336,130 @@ export function parsePlaceholder(name: string): Placeholder | null {
   if (m) return { kind: m[1]!.toLowerCase().startsWith("w") ? "winner" : "loser", gameNo: m[2]! };
   return null;
 }
+
+// ── Scores from screenshots (anyone on the team) ──
+
+export const SCORES_JSON_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["games", "warnings"],
+  properties: {
+    games: {
+      type: "array",
+      description: "Only games that show a final score.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["game_no", "date", "home", "away", "score_home", "score_away"],
+        properties: {
+          game_no: { type: ["string", "null"] },
+          date: { type: ["string", "null"], description: "YYYY-MM-DD" },
+          home: { type: "string", description: "The first-listed team, exactly as shown." },
+          away: { type: "string" },
+          score_home: { type: "integer", description: "Runs for the first-listed team." },
+          score_away: { type: "integer" },
+        },
+      },
+    },
+    warnings: { type: "array", items: { type: "string" } },
+  },
+} as const;
+
+export interface ReadScore {
+  gameNo: string | null;
+  date: string | null;
+  home: string;
+  away: string;
+  scoreHome: number;
+  scoreAway: number;
+}
+
+/** What came back from Claude, checked: both teams and both scores (0–99). */
+export function cleanScores(raw: unknown): { games: ReadScore[]; warnings: string[] } {
+  const r = (raw ?? {}) as { games?: unknown; warnings?: unknown };
+  const games: ReadScore[] = [];
+  for (const g of Array.isArray(r.games) ? r.games : []) {
+    const x = (g ?? {}) as Record<string, unknown>;
+    const home = str(x.home, 120);
+    const away = str(x.away, 120);
+    const ok = (n: unknown): n is number =>
+      typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 99;
+    if (!home || !away || !ok(x.score_home) || !ok(x.score_away)) continue;
+    games.push({
+      gameNo: str(x.game_no, 20)?.replace(/^(game|g)\s*#?\s*/i, "") || null,
+      date: typeof x.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x.date) ? x.date : null,
+      home,
+      away,
+      scoreHome: x.score_home,
+      scoreAway: x.score_away,
+    });
+  }
+  const warnings = Array.isArray(r.warnings)
+    ? r.warnings.flatMap((w) => str(w, 300) ?? []).slice(0, 10)
+    : [];
+  return { games: games.slice(0, 200), warnings };
+}
+
+export interface ScoredGame {
+  id: string;
+  gameNo: string | null;
+  date: string | null;
+  home: string;
+  away: string;
+  gameId: string | null;
+  scoreHome: number | null;
+  scoreAway: number | null;
+  locked: boolean;
+}
+
+export interface ScoreUpdate {
+  id: string;
+  /** Scores for the saved game's own home and away sides. */
+  scoreHome: number;
+  scoreAway: number;
+  status: "new" | "changed" | "same" | "locked" | "ours";
+  /** The score it had before (changed games). */
+  was: [number, number] | null;
+}
+
+/**
+ * Match scores read from screenshots to the tournament's games: by game number when both
+ * teams agree, else by the two teams (and the day when there's more than one such game).
+ * Scores are turned around when the screenshot lists the teams the other way.
+ */
+export function matchScores(
+  saved: ScoredGame[],
+  read: ReadScore[],
+): { updates: ScoreUpdate[]; unmatched: ReadScore[] } {
+  const updates: ScoreUpdate[] = [];
+  const unmatched: ReadScore[] = [];
+  const used = new Set<string>();
+  const sides = (a: string, b: string) => [teamKey(a), teamKey(b)].sort().join("|");
+  for (const r of read) {
+    const key = sides(r.home, r.away);
+    const candidates = saved.filter((s) => !used.has(s.id) && sides(s.home, s.away) === key);
+    const s =
+      candidates.find((c) => r.gameNo && c.gameNo && teamKey(c.gameNo) === teamKey(r.gameNo)) ??
+      (candidates.length === 1
+        ? candidates[0]
+        : candidates.find((c) => r.date && c.date === r.date));
+    if (!s) {
+      unmatched.push(r);
+      continue;
+    }
+    used.add(s.id);
+    const flipped = teamKey(s.home) !== teamKey(r.home);
+    const scoreHome = flipped ? r.scoreAway : r.scoreHome;
+    const scoreAway = flipped ? r.scoreHome : r.scoreAway;
+    const had = s.scoreHome !== null && s.scoreAway !== null;
+    const same = had && s.scoreHome === scoreHome && s.scoreAway === scoreAway;
+    updates.push({
+      id: s.id,
+      scoreHome,
+      scoreAway,
+      status: s.gameId ? "ours" : same ? "same" : s.locked ? "locked" : had ? "changed" : "new",
+      was: had && !same ? [s.scoreHome!, s.scoreAway!] : null,
+    });
+  }
+  return { updates, unmatched };
+}
