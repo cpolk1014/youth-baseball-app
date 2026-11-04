@@ -23,6 +23,9 @@ const USER_AGENT = "RallyCap/1.0 (+https://www.rallycap.team; tournament team li
 
 export class EventReadError extends Error {}
 
+export const BLOCKED =
+  "That site doesn't let RallyCap read its pages. Take a screenshot of the team list and use it instead.";
+
 /** Fetch one page, refusing private hosts at every redirect, with size and time limits. */
 async function fetchPage(start: string): Promise<string> {
   let href = start;
@@ -41,6 +44,10 @@ async function fetchPage(start: string): Promise<string> {
     if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
       href = new URL(res.headers.get("location")!, url).toString();
       continue;
+    }
+    if ([401, 403, 429, 503].includes(res.status)) {
+      // Usually bot protection (Cloudflare and the like) refusing servers; we don't get around it.
+      throw new EventReadError(BLOCKED);
     }
     if (!res.ok) throw new EventReadError(`The event page answered ${res.status}.`);
     const type = res.headers.get("content-type") ?? "";

@@ -57,7 +57,13 @@ export function AddTournament({ data, onSaved }: { data: AppData; onSaved: (id: 
     setBusy(label);
     setError(null);
     try {
-      setRead(await readTournament(data.team.id, input));
+      const r = await readTournament(data.team.id, input);
+      // A screenshot after a link the site wouldn't let us read: keep the link on the
+      // tournament (Open the event page, and the weekly check tries it again).
+      if ("file" in input && !r.url && /^https:\/\/\S+$/i.test(link.trim())) {
+        r.url = link.trim().slice(0, 500);
+      }
+      setRead(r);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
