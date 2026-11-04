@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { permissionsFor } from "@/lib/data/permissions";
@@ -26,8 +26,7 @@ import { toast } from "./shell/Toast";
 import { Shortcut } from "./shell/useShortcut";
 import { AppShell, Loading } from "./AppShell";
 import { kidsOf } from "./KidPicker";
-import { detectPlatform, isPhoneOrTablet } from "@/lib/places/maps";
-import { formatPhone, telUrl } from "@/lib/phone/phone";
+import { Phone, useCanCall } from "./phone";
 import { PlayerForm, Toggle } from "./PlayerForm";
 import { Sheet } from "./Sheet";
 
@@ -565,35 +564,4 @@ function useTeamFamilies(teamId: string | undefined): Map<string, FamilyMember[]
     };
   }, [teamId]);
   return families;
-}
-
-const noSubscription = () => () => {};
-
-/** Whether this device can place a call (phones and tablets). */
-function useCanCall(): boolean {
-  return useSyncExternalStore(
-    noSubscription,
-    () =>
-      isPhoneOrTablet(
-        detectPlatform(navigator.userAgent, navigator.maxTouchPoints),
-        navigator.userAgent,
-      ),
-    () => false,
-  );
-}
-
-/** A parent's cell: a tap-to-call link on phones and tablets, plain text on computers. */
-function Phone({ phone, callable }: { phone: string; callable: boolean }) {
-  const shown = formatPhone(phone);
-  return callable ? (
-    <a
-      href={telUrl(phone)}
-      onClick={(e) => e.stopPropagation()}
-      className="font-semibold whitespace-nowrap text-[var(--team)] underline"
-    >
-      {shown}
-    </a>
-  ) : (
-    <span className="whitespace-nowrap text-slate-700 tabular-nums">{shown}</span>
-  );
 }

@@ -171,3 +171,11 @@ export async function teamFamilies(teamId: string): Promise<Map<string, FamilyMe
   }
   return byPlayer;
 }
+
+/** Cell phones of a team's members who added one (team members only). */
+export async function teamPhones(teamId: string): Promise<Map<string, string>> {
+  const rows = check<{ user_id: string; phone: string }[]>(
+    await getBrowserSupabase().rpc("team_phones", { p_team_id: teamId }),
+  );
+  return new Map(rows.map((r) => [r.user_id, r.phone]));
+}

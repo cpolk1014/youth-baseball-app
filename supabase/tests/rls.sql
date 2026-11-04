@@ -1361,6 +1361,11 @@ select pg_temp.expect(
 update public.profile set phone = '+15045550000' where user_id = 'aaaaaaaa-0000-4000-8000-000000000001';
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 select pg_temp.expect((select count(*) from public.team_families('00000000-0000-4000-8000-000000000001') where phone is not null) = 0, 'people not on the team see no phones');
+select pg_temp.expect((select count(*) from public.team_phones('00000000-0000-4000-8000-000000000001')) = 0, 'people not on the team see no member phones');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect(
+  (select phone from public.team_phones('00000000-0000-4000-8000-000000000001') where user_id = 'aaaaaaaa-0000-4000-8000-000000000001') = '+13375550123',
+  'a parent sees a coach''s cell on Coaches & parents');
 reset role;
 reset role;
 select pg_temp.expect((select phone from public.profile where user_id = 'aaaaaaaa-0000-4000-8000-000000000001') = '+13375550123', 'nobody else can change your phone');

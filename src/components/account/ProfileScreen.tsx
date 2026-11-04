@@ -195,8 +195,8 @@ export function ProfileScreen() {
             className="h-12 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none"
           />
           <span className="text-sm text-slate-600">
-            Your teams see it on the roster by your player&apos;s name, so families and coaches can
-            call or text you.
+            Your teams see it on Coaches &amp; parents and on the roster by your player&apos;s name,
+            so families and coaches can call or text you.
           </span>
           <div className="flex gap-2">
             {phone !== null && phone.trim() !== "" && cleanPhone(phone) !== phoneSaved && (

@@ -25,6 +25,7 @@ import { ClubSection } from "./club/ClubSection";
 import { AppShell, Loading } from "./AppShell";
 import { KidsForm, kidsOf } from "./KidPicker";
 import { Sheet } from "./Sheet";
+import { Phone, useCanCall, useTeamPhones } from "./phone";
 import { VenmoMark, useVenmoUsers } from "./venmo";
 
 const INVITE_ROLES: { role: MemberRole; label: string; hint: string }[] = [
@@ -61,6 +62,8 @@ export function MembersScreen() {
   const [confirmName, setConfirmName] = useState("");
   const [kidsFor, setKidsForMember] = useState<Member | null>(null);
   const venmoUsers = useVenmoUsers(mode === "supabase" ? data?.team.id : undefined);
+  const phones = useTeamPhones(mode === "supabase" ? data?.team.id : undefined);
+  const callable = useCanCall();
   // Back from a Venmo button whose handle was removed.
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("venmo") !== "unavailable") return;
@@ -171,6 +174,11 @@ export function MembersScreen() {
                       <span className="font-normal text-slate-500"> (you)</span>
                     )}
                   </span>
+                  {phones.get(m.userId) && (
+                    <span className="block text-base">
+                      <Phone phone={phones.get(m.userId)!} callable={callable && !isMe} />
+                    </span>
+                  )}
                   {(!perms.manageMembers || m.role === "owner") && (
                     <span className="block text-sm text-slate-600">
                       {ROLE_LABEL[m.role]}
