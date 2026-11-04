@@ -185,14 +185,15 @@ export async function setLinks(id: string, links: TournamentLinks): Promise<void
   );
 }
 
+/** Add teams to a tournament's list; returns the new rows. */
 export async function addTeams(
   tournamentId: string,
   teams: EventTeam[],
   source: "link" | "screenshot" | "manual",
   ourTeam: string | null = null,
-): Promise<void> {
-  if (teams.length === 0) return;
-  check(
+): Promise<{ id: string; name: string }[]> {
+  if (teams.length === 0) return [];
+  return check<{ id: string; name: string }[]>(
     await getBrowserSupabase()
       .from("tournament_team")
       .insert(
@@ -204,7 +205,8 @@ export async function addTeams(
           is_us: t.name === ourTeam,
           source,
         })),
-      ),
+      )
+      .select("id,name"),
   );
 }
 

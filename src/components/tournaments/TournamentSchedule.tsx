@@ -11,13 +11,14 @@ import type {
 import { defaultFieldPlayers } from "@/lib/data/game";
 import { importSchedule, newId } from "@/lib/data/store";
 import type { AppData, Game } from "@/lib/data/types";
-import { MAX_SCREENSHOTS } from "@/lib/tournaments/event";
+import { MAX_SCREENSHOTS, teamKey } from "@/lib/tournaments/event";
 import {
   byDay,
   findTeamGame,
   matchSchedule,
   matchScores,
   ourSide,
+  parsePlaceholder,
   placeOf,
   teamGameFor,
   teamIdFor,
@@ -461,6 +462,25 @@ export async function saveScheduleGames({
   ourName: string | null;
   items: { id?: string; g: ScheduleGame; linked: string | null }[];
 }): Promise<void> {
+  // Teams on the schedule but not on the tournament's team list join it.
+  const listed = new Set(teams.map((x) => teamKey(x.name)));
+  const missing = new Map<string, string>();
+  for (const { g } of items) {
+    for (const name of [g.home, g.away]) {
+      const k = teamKey(name);
+      if (k && !listed.has(k) && !parsePlaceholder(name)) missing.set(k, name.trim());
+    }
+  }
+  const added = missing.size
+    ? await (
+        await backend()
+      ).addTeams(
+        tournament.id,
+        [...missing.values()].map((name) => ({ name, hometown: null, classLabel: null })),
+        "screenshot",
+      )
+    : [];
+  const allTeams = [...teams, ...added];
   const taken = new Set(saved.flatMap((s) => (s.gameId ? [s.gameId] : [])));
   const teamGames: Game[] = [];
   const writes: GameWrite[] = [];
@@ -487,8 +507,8 @@ export async function saveScheduleGames({
     writes.push({
       id,
       game: g,
-      homeTeamId: teamIdFor(g.home, teams),
-      awayTeamId: teamIdFor(g.away, teams),
+      homeTeamId: teamIdFor(g.home, allTeams),
+      awayTeamId: teamIdFor(g.away, allTeams),
       gameId,
     });
   }

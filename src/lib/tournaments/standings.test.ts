@@ -128,6 +128,19 @@ describe("standings", () => {
     expect(t!.rows[0]).toMatchObject({ seed: 1, seedTo: 2, open: "coin" });
   });
 
+  it("counts teams on the schedule that aren't on the tournament's team list", () => {
+    const [t] = standings({
+      teams: teams.slice(0, 1),
+      games: [g("Aces", "Bats", [5, 1]), g("Cubs", "Seed 4", [2, 3])],
+      rules: [],
+      restart: true,
+      seeding: "overall",
+    });
+    // Bats is only on the schedule; "Seed 4" is a placeholder, so that game doesn't count.
+    expect(order(t!.rows)).toEqual(["Aces", "Bats"]);
+    expect(t!.rows[1]!.teamId).toBe("name:bats");
+  });
+
   it("seeds within each pool", () => {
     const tables = standings({
       teams,

@@ -40,13 +40,24 @@ const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 const field =
   "h-12 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-base focus:border-[var(--team)] focus:outline-none";
 const backend = () => import("@/lib/data/tournament-backend");
-const seedText = (r: Pick<StandingRow, "seed" | "seedTo">) =>
-  r.seedTo > r.seed ? `${r.seed}–${r.seedTo}` : String(r.seed);
 const OPEN_TEXT: Record<NonNullable<StandingRow["open"]>, string> = {
   runs: "Tied: depends on runs",
   coin: "Tied: coin flip",
   tied: "Still tied",
 };
+const names = (list: string[]) =>
+  list.length <= 1 ? (list[0] ?? "") : `${list.slice(0, -1).join(", ")} and ${list.at(-1)}`;
+
+/** Why a team sits where it does, in plain words. */
+function howText(r: StandingRow, rows: StandingRow[]): string {
+  const others = names(
+    rows.filter((x) => x.seed === r.seed && x.teamId !== r.teamId).map((x) => x.name),
+  );
+  if (r.open === "coin") return `Tied with ${others}; a coin flip decides`;
+  if (r.open === "tied") return `Tied with ${others}; the tie-breakers don't separate them`;
+  if (r.open === "runs") return `Tied with ${others}; runs will decide`;
+  return r.decidedBy ? `Tie broken by ${r.decidedBy.toLowerCase()}` : "";
+}
 
 /** Standings from the pool games, the tie-breakers behind them, what-ifs and seeding. */
 export function TournamentStandings({
@@ -144,35 +155,6 @@ export function TournamentStandings({
         🕘 What time do we play tomorrow?
       </button>
 
-      <div className="mb-3 rounded-lg bg-slate-50 p-3">
-        <p className="text-base font-semibold">
-          Tie-breakers: {ruleSet ? ruleSet.name : "not set"}
-        </p>
-        {ruleSet ? (
-          <ol className="mt-1 list-decimal pl-5 text-sm text-slate-700">
-            {ruleSet.rules.map((c, i) => (
-              <li key={i}>{describeCriterion(c)}</li>
-            ))}
-          </ol>
-        ) : (
-          <p className="text-sm text-slate-600">
-            Teams are ranked by record; ties stay ties until the tournament&apos;s tie-break rules
-            are added.
-          </p>
-        )}
-        <p className="mt-1 text-sm text-slate-600">
-          Seeds {t.seeding === "pool" ? "within each pool" : "across all pool games"}.
-        </p>
-        {canEdit && (
-          <button
-            onClick={() => setSheet("rules")}
-            className="mt-2 h-11 rounded-lg border-2 border-slate-400 bg-white px-4 text-base font-bold"
-          >
-            {ruleSet ? "Change tie-breakers" : "Add tie-breakers"}
-          </button>
-        )}
-      </div>
-
       {t.seedsLockedAt && t.seeds ? (
         <>
           <p className="mb-2 text-base font-semibold">
@@ -238,12 +220,24 @@ export function TournamentStandings({
       ) : (
         <>
           <p className="mb-2 text-sm text-slate-600">
-            {scored} of {pool.length} pool games scored
-            {left.length ? "" : ". Pool play is done."}
+            {scored === 0
+              ? `No scores yet. Standings start when the first of the ${pool.length} pool games is scored.`
+              : `${scored} of ${pool.length} pool games scored${left.length ? "" : ". Pool play is done."}`}
           </p>
           {tables.map((tb) => (
-            <StandingsTable key={tb.pool ?? "all"} pool={tb.pool} rows={tb.rows} usId={us?.id} />
+            <StandingsTable
+              key={tb.pool ?? "all"}
+              pool={tb.pool}
+              rows={tb.rows}
+              usId={us?.id}
+              started={scored > 0}
+            />
           ))}
+          {scored > 0 && (
+            <p className="text-sm text-slate-600">
+              T-2 means tied for 2nd. RS: runs scored. RA: runs allowed.
+            </p>
+          )}
           <div className="mt-3 flex flex-col gap-2 md:flex-row">
             {canEdit && scored > 0 && (
               <button
@@ -256,6 +250,40 @@ export function TournamentStandings({
           </div>
         </>
       )}
+      <details
+        open={!ruleSet && canEdit}
+        className="mt-3 rounded-lg bg-slate-50 p-3 [&_summary::-webkit-details-marker]:hidden"
+      >
+        <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 text-base font-semibold">
+          <span>Tie-breakers: {ruleSet ? ruleSet.name : "not added yet"}</span>
+          <span aria-hidden className="text-slate-500">
+            ▾
+          </span>
+        </summary>
+        {ruleSet ? (
+          <ol className="mt-1 list-decimal pl-5 text-sm text-slate-700">
+            {ruleSet.rules.map((c, i) => (
+              <li key={i}>{describeCriterion(c)}</li>
+            ))}
+          </ol>
+        ) : (
+          <p className="text-sm text-slate-600">
+            Teams are ranked by record; ties stay ties until the tournament&apos;s tie-break rules
+            are added.
+          </p>
+        )}
+        <p className="mt-1 text-sm text-slate-600">
+          Seeds {t.seeding === "pool" ? "within each pool" : "across all pool games"}.
+        </p>
+        {canEdit && (
+          <button
+            onClick={() => setSheet("rules")}
+            className="mt-2 h-11 rounded-lg border-2 border-slate-400 bg-white px-4 text-base font-bold"
+          >
+            {ruleSet ? "Change tie-breakers" : "Add tie-breakers"}
+          </button>
+        )}
+      </details>
       {busy && (
         <p role="status" className="mt-2 text-base font-semibold text-slate-700">
           {busy}
@@ -356,51 +384,56 @@ function StandingsTable({
   pool,
   rows,
   usId,
+  started,
 }: {
   pool: string | null;
   rows: StandingRow[];
   usId?: string;
+  started: boolean;
 }) {
+  const shown = started ? rows : [...rows].sort((a, b) => a.name.localeCompare(b.name));
   return (
-    <div className="mb-3 overflow-x-auto">
+    <div className="mb-2 overflow-x-auto">
       {pool && <h3 className="mb-1 text-base font-bold">Pool {pool}</h3>}
       <table className="w-full text-left text-base">
         <thead>
           <tr className="border-b-2 border-slate-200 text-sm text-slate-600">
-            <th className="py-1 pr-2">#</th>
+            <th className="w-12 py-1 pr-2">Seed</th>
             <th className="py-1 pr-2">Team</th>
             <th className="py-1 pr-2 text-center">W-L</th>
             <th className="py-1 pr-2 text-center">RS</th>
             <th className="py-1 pr-2 text-center">RA</th>
-            <th className="hidden py-1 sm:table-cell">How</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr
-              key={r.teamId}
-              className={`border-b border-slate-100 align-top ${r.teamId === usId ? "bg-[var(--team)]/5 font-bold" : ""}`}
-            >
-              <td className="py-2 pr-2 tabular-nums">{seedText(r)}</td>
-              <td className="py-2 pr-2">
-                {r.name}
-                {(r.decidedBy || r.open) && (
-                  <span className="block text-xs font-normal text-slate-600 sm:hidden">
-                    {r.open ? OPEN_TEXT[r.open] : r.decidedBy}
-                  </span>
-                )}
-              </td>
-              <td className="py-2 pr-2 text-center tabular-nums">
-                {r.w}-{r.l}
-                {r.t ? `-${r.t}` : ""}
-              </td>
-              <td className="py-2 pr-2 text-center tabular-nums">{r.rs ?? "–"}</td>
-              <td className="py-2 pr-2 text-center tabular-nums">{r.ra ?? "–"}</td>
-              <td className="hidden py-2 text-sm font-normal text-slate-600 sm:table-cell">
-                {r.open ? OPEN_TEXT[r.open] : (r.decidedBy ?? "")}
-              </td>
-            </tr>
-          ))}
+          {shown.map((r) => {
+            const how = started ? howText(r, rows) : "";
+            return (
+              <tr
+                key={r.teamId}
+                className={`border-b border-slate-100 align-top ${r.teamId === usId ? "bg-[var(--team)]/5 font-bold" : ""}`}
+              >
+                <td className="py-2 pr-2 tabular-nums">
+                  {!started ? "–" : r.seedTo > r.seed ? `T-${r.seed}` : r.seed}
+                </td>
+                <td className="py-2 pr-2">
+                  {r.name}
+                  {r.teamId === usId && <span className="font-normal text-slate-600"> (us)</span>}
+                  {how && <span className="block text-sm font-normal text-slate-600">{how}</span>}
+                </td>
+                <td className="py-2 pr-2 text-center tabular-nums">
+                  {r.w}-{r.l}
+                  {r.t ? `-${r.t}` : ""}
+                </td>
+                <td className="py-2 pr-2 text-center tabular-nums">
+                  {started ? (r.rs ?? "–") : "–"}
+                </td>
+                <td className="py-2 pr-2 text-center tabular-nums">
+                  {started ? (r.ra ?? "–") : "–"}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

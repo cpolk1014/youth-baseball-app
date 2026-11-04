@@ -60,14 +60,21 @@ export interface StandingRow {
   open: "runs" | "coin" | "tied" | null;
 }
 
-/** The team a side of a game is (null for placeholders like "1st Pool A"). */
+/**
+ * The team a side of a game is: one on the tournament's team list, or else the name on the
+ * schedule (so a team missing from the list still counts). Null for placeholders like
+ * "1st Pool A" or "Winner Game 7".
+ */
 export function sideTeam(name: string, id: string | null, teams: STeam[]): STeam | null {
   if (id) {
     const t = teams.find((x) => x.id === id);
     if (t) return t;
   }
   const k = teamKey(name);
-  return teams.find((x) => teamKey(x.name) === k) ?? null;
+  const listed = teams.find((x) => teamKey(x.name) === k);
+  if (listed) return listed;
+  if (!k || parsePlaceholder(name)) return null;
+  return { id: `name:${k}`, name: name.trim() };
 }
 
 /** Each team's pool games (scored, or picked in a what-if). */
