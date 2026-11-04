@@ -25,12 +25,20 @@ export type MenuTab = {
   staffOnly?: boolean;
   /** Hidden from parents (other kids' playing time). */
   notParents?: boolean;
+  /** Only once the team has a tournament. */
+  needsTournament?: boolean;
 };
 
 /** The menu's sections, grouped by what people are doing. */
 export const GAME_DAY: MenuTab[] = [
+  {
+    id: "tournaments",
+    href: "/tournaments",
+    label: "Tournaments",
+    icon: "trophy",
+    needsTournament: true,
+  },
   { id: "games", href: "/games", label: "Games", icon: "games" },
-  { id: "tournaments", href: "/tournaments", label: "Tournaments", icon: "trophy" },
   { id: "pa", href: "/pa", label: "Gameday PA", icon: "pa" },
 ];
 export const TEAM: MenuTab[] = [
@@ -49,7 +57,10 @@ export function visibleTabs(tabs: MenuTab[], data: AppData | null): MenuTab[] {
   // Coaches (and owners) and managers; stays true on an optioned team, unlike editTeam.
   const staff = !!data && (isCoach(data.me.role) || data.me.role === "manager");
   return tabs.filter(
-    (t) => (!t.staffOnly || staff) && (!t.notParents || data?.me.role !== "parent"),
+    (t) =>
+      (!t.staffOnly || staff) &&
+      (!t.notParents || data?.me.role !== "parent") &&
+      (!t.needsTournament || (data?.tournamentCount ?? 0) > 0),
   );
 }
 

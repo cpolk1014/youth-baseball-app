@@ -199,4 +199,6 @@ export interface AppData {
   groupme: { botId: string; groupName: string | null } | null;
   /** The team's uniform combos (everyone sees them; coaches and managers edit). */
   uniforms: UniformCombo[];
+  /** How many tournaments the team has (the menu shows Tournaments once there's one). */
+  tournamentCount?: number;
 }

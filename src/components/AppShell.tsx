@@ -342,7 +342,7 @@ function itemClass(variant: Variant, current: boolean, collapsed = false) {
   }`;
 }
 
-/** Game day, team and team settings sections, then the signed-in person's account. */
+/** Play Ball, team and team settings sections, then the signed-in person's account. */
 function MenuLinks({
   tab,
   onPick,
@@ -406,7 +406,7 @@ function MenuLinks({
           {link(HOME, tab === "home")}
         </div>
       )}
-      {section("Game day", GAME_DAY)}
+      {section("Play Ball", GAME_DAY)}
       {section("Team", TEAM)}
       {settings.length > 0 && !parent && (
         <>

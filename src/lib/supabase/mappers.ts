@@ -54,6 +54,8 @@ export interface TeamRows {
   groupme: { bot_id: string; group_name: string | null } | null;
   /** Missing in older callers (tests): no combos. */
   uniforms?: UniformComboRow[];
+  /** Missing in older callers (tests): none. */
+  tournamentCount?: number;
   /** The signed-in user. */
   userId: string;
   myTeams: TeamSummary[];
@@ -416,6 +418,7 @@ export function appDataFromRows(
       ? { botId: rows.groupme.bot_id, groupName: rows.groupme.group_name }
       : null,
     uniforms: (rows.uniforms ?? []).map(uniformFromRow),
+    tournamentCount: rows.tournamentCount ?? 0,
     team: {
       id: rows.team.id,
       name: rows.team.name,

@@ -415,6 +415,13 @@ export function saveGame(game: Game): void {
   );
 }
 
+/** Keep the menu's Tournaments item in step after adding or deleting one. */
+export function setTournamentCount(count: number): void {
+  if (data && (data.tournamentCount ?? 0) !== count) {
+    update((d) => ({ ...d, tournamentCount: count }));
+  }
+}
+
 export function setCoachPitch(coachPitch: boolean): void {
   update(
     (d) => ({ ...d, team: { ...d.team, coachPitch } }),

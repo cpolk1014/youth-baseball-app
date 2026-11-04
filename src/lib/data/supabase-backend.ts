@@ -210,6 +210,10 @@ export async function loadFromSupabase(
   const groupme = check<{ bot_id: string; group_name: string | null } | null>(
     await sb.from("team_groupme").select("bot_id,group_name").eq("team_id", team.id).maybeSingle(),
   );
+  const { count: tournamentCount } = await sb
+    .from("tournament")
+    .select("id", { count: "exact", head: true })
+    .eq("team_id", team.id);
   const uniforms = check<UniformComboRow[]>(
     await sb
       .from("uniform_combo")
@@ -259,6 +263,7 @@ export async function loadFromSupabase(
         financeSummary,
         groupme,
         uniforms,
+        tournamentCount: tournamentCount ?? 0,
         userId: user?.id ?? "",
         myTeams,
       },

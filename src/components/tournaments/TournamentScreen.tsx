@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { Tournament, TournamentGame, TournamentTeam } from "@/lib/data/tournament-backend";
 import { permissionsFor } from "@/lib/data/permissions";
-import { useAppData, useStoreState } from "@/lib/data/store";
+import { setTournamentCount, useAppData, useStoreState } from "@/lib/data/store";
 import { MAX_SCREENSHOTS, newTeams, pickDivision, teamKey } from "@/lib/tournaments/event";
 import { AppShell, Loading } from "../AppShell";
 import { Sheet } from "../Sheet";
@@ -330,6 +330,7 @@ export function TournamentScreen({ id }: { id: string }) {
             onClick={() =>
               void (async () => {
                 await (await backend()).deleteTournament(t.id);
+                setTournamentCount(Math.max(0, (data.tournamentCount ?? 1) - 1));
                 router.push("/tournaments");
               })()
             }

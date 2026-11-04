@@ -94,6 +94,14 @@ export function GamesScreen() {
           + Add game
         </button>
       )}
+      {canEdit && mode === "supabase" && !data.tournamentCount && (
+        <Link
+          href="/tournaments"
+          className="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-xl text-base font-semibold text-[var(--team)] underline"
+        >
+          🏆 Playing in a tournament? Add it
+        </Link>
+      )}
 
       <TeamSwitcher
         open={switching}

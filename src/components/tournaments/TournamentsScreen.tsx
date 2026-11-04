@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Tournament } from "@/lib/data/tournament-backend";
 import { permissionsFor } from "@/lib/data/permissions";
-import { useAppData, useStoreState } from "@/lib/data/store";
+import { setTournamentCount, useAppData, useStoreState } from "@/lib/data/store";
 import { AppShell, Loading } from "../AppShell";
 import { Sheet } from "../Sheet";
 import { AddTournament } from "./AddTournament";
@@ -35,7 +35,11 @@ export function TournamentsScreen() {
     import("@/lib/data/tournament-backend")
       .then((m) => m.listTournaments(teamId))
       .then(
-        (l) => current && setList(l),
+        (l) => {
+          if (!current) return;
+          setList(l);
+          setTournamentCount(l.length);
+        },
         (e: unknown) => current && setError(e instanceof Error ? e.message : String(e)),
       );
     return () => {
@@ -111,6 +115,7 @@ export function TournamentsScreen() {
             data={data}
             onSaved={(id) => {
               setAdding(false);
+              setTournamentCount((list?.length ?? 0) + 1);
               router.push(`/tournaments/${id}`);
             }}
           />
