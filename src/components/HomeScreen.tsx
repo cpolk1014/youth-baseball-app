@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { coachTodos, comingUp, lineupStatus, seasonRecord, type Todo } from "@/lib/dashboard";
 import { gameRuns } from "@/lib/charts";
 import {
@@ -22,6 +22,7 @@ import { formatCents, shortDate } from "@/lib/finance/money";
 import { homeworkStatus } from "@/lib/plays/homework";
 import { resolveRuleConfig } from "@/lib/rules/config";
 import { seasonSummary } from "@/lib/season/summary";
+import { detectPlatform, isPhoneOrTablet, openInLinks } from "@/lib/places/maps";
 import { gameUniformShown } from "@/lib/uniforms";
 import { AppShell, Loading } from "./AppShell";
 import { RunsChart } from "./charts/Charts";
@@ -134,6 +135,7 @@ function NextGame({ game, data, today }: { game: Game; data: AppData; today: str
   const out = lineup?.absent?.length ?? 0;
   const uniform = gameUniformShown(game.uniform, data.uniforms);
   const arrive = arriveBy(game, data.team.gameDay ? data.team.gameDay.arriveMinutes : null);
+  const parent = data.me.role === "parent";
   return (
     <section className="flex h-full flex-col gap-4 rounded-2xl bg-[var(--team)] p-5 text-white shadow-sm md:flex-row md:items-center md:p-6">
       <div className="flex min-w-0 flex-1 items-center gap-4">
@@ -157,13 +159,17 @@ function NextGame({ game, data, today }: { game: Game; data: AppData; today: str
         </div>
       </div>
       <div className="grid shrink-0 grid-cols-2 gap-2 md:w-80">
-        <Fact label="Lineup" value={status.text} />
-        <Fact
-          label="Players"
-          value={out > 0 ? `${roster - out} of ${roster} here` : `All ${roster}`}
-        />
+        {/* Families don't need the lineup's status or the head count. */}
+        {!parent && <Fact label="Lineup" value={status.text} />}
+        {!parent && (
+          <Fact
+            label="Players"
+            value={out > 0 ? `${roster - out} of ${roster} here` : `All ${roster}`}
+          />
+        )}
         <Fact label="Arrive by" value={arrive ?? "—"} />
         <Fact label="Uniform" value={uniform ? (uniform.name ?? "Custom") : "Not set"} />
+        {parent && <Directions game={game} />}
         <Link
           href={`/games/${game.id}`}
           className="col-span-2 flex h-11 items-center justify-center rounded-xl bg-white text-base font-bold text-[var(--team)] hover:bg-slate-100"
@@ -172,6 +178,45 @@ function NextGame({ game, data, today }: { game: Game; data: AppData; today: str
         </Link>
       </div>
     </section>
+  );
+}
+
+/** Directions in this device's maps app (Apple Maps on iPhone, Google Maps elsewhere). */
+function Directions({ game }: { game: Game }) {
+  const [href, setHref] = useState<string | null>(null);
+  useEffect(() => {
+    if (!game.location) return;
+    const platform = detectPlatform(navigator.userAgent, navigator.maxTouchPoints);
+    const first = openInLinks(
+      {
+        name: game.location,
+        address: game.locationAddress ?? null,
+        lat: game.locationLat ?? null,
+        lng: game.locationLng ?? null,
+        placeId: game.locationPlaceId ?? null,
+      },
+      platform,
+      isPhoneOrTablet(platform, navigator.userAgent),
+    )[0];
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- this device's maps app
+    setHref(first?.href ?? null);
+  }, [
+    game.location,
+    game.locationAddress,
+    game.locationLat,
+    game.locationLng,
+    game.locationPlaceId,
+  ]);
+  if (!game.location || !href) return null;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="col-span-2 flex h-11 items-center justify-center gap-2 rounded-xl border-2 border-white/70 text-base font-bold text-white hover:bg-white/10"
+    >
+      Directions ↗
+    </a>
   );
 }
 
