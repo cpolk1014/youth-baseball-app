@@ -7,6 +7,7 @@ import { myUserId } from "@/lib/data/store";
 import type { AppData, Game } from "@/lib/data/types";
 import { AppShell } from "./AppShell";
 import { GamePlaceCard } from "./GamePlaceCard";
+import { TournamentTag } from "./tournaments/TournamentTag";
 import { GamesPane } from "./GamesScreen";
 import { kidsOf } from "./KidPicker";
 import { ImportBoxScore } from "./kidstats/ImportBoxScore";
@@ -74,6 +75,8 @@ export function ParentGame({
       {!isFinal && arrival && (
         <p className="mb-3 rounded-xl bg-white px-3 py-2 text-lg font-bold">Arrive by {arrival}</p>
       )}
+
+      <TournamentTag gameId={game.id} />
 
       <GamePlaceCard game={game} />
 

@@ -1,10 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { MAX_SCREENSHOTS } from "@/lib/tournaments/event";
-import { EventReadError, readEvent } from "@/lib/tournaments/read.server";
+import { EventReadError, readEvent, readSchedule } from "@/lib/tournaments/read.server";
 import { getServerSupabase } from "@/lib/supabase/server";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 // Screenshots are shrunk on the phone first; together they stay under Vercel's 4.5 MB body limit.
 const MAX_TOTAL = 4 * 1024 * 1024;
@@ -16,9 +16,10 @@ function errorResponse(status: number, error: string) {
 }
 
 /**
- * A coach or manager reads a tournament from screenshots of its event page and team list
- * (form: teamId, file, one per screenshot, up to 6). Returns the event's details and teams; nothing is saved until the
- * coach confirms.
+ * A coach or manager reads screenshots (form: teamId, file, one per screenshot, up to 6):
+ * a new tournament's event page and team list (returns { event }), or, with tournamentId,
+ * that tournament's pool schedule and bracket (returns { schedule }). Nothing is saved
+ * until the coach confirms.
  */
 export async function POST(request: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -32,6 +33,7 @@ export async function POST(request: NextRequest) {
 
   const form = await request.formData().catch(() => null);
   const teamId = String(form?.get("teamId") ?? "");
+  const tournamentId = String(form?.get("tournamentId") ?? "");
   const files = (form?.getAll("file") ?? []).filter((f): f is File => f instanceof File);
   if (!teamId || files.length === 0) return errorResponse(400, "Add a screenshot.");
   if (files.length > MAX_SCREENSHOTS) {
@@ -46,7 +48,31 @@ export async function POST(request: NextRequest) {
   if (!canAdd || !team) return errorResponse(403, "Only coaches and managers can add tournaments.");
   if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up first.");
 
-  const context = `Today is ${new Date().toISOString().slice(0, 10)}. The team adding this is ${team.name} (${team.age_group ?? "age not set"}). List every division and its teams.`;
+  const today = new Date().toISOString().slice(0, 10);
+  const context = `Today is ${today}. The team adding this is ${team.name} (${team.age_group ?? "age not set"}). List every division and its teams.`;
+
+  let scheduleContext: string | null = null;
+  if (tournamentId) {
+    const [{ data: t }, { data: teams }] = await Promise.all([
+      supabase
+        .from("tournament")
+        .select("team_id,name,start_date,end_date,division,venues")
+        .eq("id", tournamentId)
+        .maybeSingle(),
+      supabase.from("tournament_team").select("name,is_us").eq("tournament_id", tournamentId),
+    ]);
+    if (!t || t.team_id !== teamId) return errorResponse(404, "That tournament wasn't found.");
+    const us = (teams ?? []).find((x) => x.is_us)?.name;
+    scheduleContext = [
+      `Today is ${today}. The tournament is ${t.name}, ${t.start_date ?? "dates unknown"} to ${t.end_date ?? t.start_date ?? "unknown"}.`,
+      t.division ? `List the games for the ${t.division} division.` : "",
+      t.venues?.length ? `Its parks: ${t.venues.join("; ")}.` : "",
+      teams?.length ? `Teams already known: ${teams.map((x) => x.name).join("; ")}.` : "",
+      us ? `Our team is ${us}.` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
   try {
     if (files.some((f) => !(IMAGE_TYPES as readonly string[]).includes(f.type))) {
       return errorResponse(415, "Use screenshots or photos (PNG or JPEG).");
@@ -60,6 +86,9 @@ export async function POST(request: NextRequest) {
         mediaType: f.type as ImageType,
       })),
     );
+    if (scheduleContext) {
+      return NextResponse.json({ schedule: await readSchedule(images, scheduleContext) });
+    }
     const event = await readEvent(images, context);
     return NextResponse.json({ event });
   } catch (error) {

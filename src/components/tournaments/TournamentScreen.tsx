@@ -15,6 +15,7 @@ import {
   readTournament,
   type LinkInputs,
 } from "./AddTournament";
+import { TournamentSchedule } from "./TournamentSchedule";
 import { tournamentWhen } from "./TournamentsScreen";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
@@ -122,9 +123,7 @@ export function TournamentScreen({ id }: { id: string }) {
         {t.venues.length > 0 && (
           <p className="mt-1 text-sm text-slate-600">Fields: {t.venues.join(", ")}</p>
         )}
-        <p className="mt-2 text-sm text-slate-600">
-          Schedule, scores and standings come next: the pool schedule and bracket from a screenshot.
-        </p>
+        <p className="mt-2 text-sm text-slate-600">Scores, standings and what-ifs come next.</p>
       </section>
 
       <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
@@ -169,6 +168,8 @@ export function TournamentScreen({ id }: { id: string }) {
           </button>
         )}
       </section>
+
+      <TournamentSchedule data={data} tournament={t} teams={teams} canEdit={canEdit} />
 
       <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
         <h2 className={heading}>Teams ({teams.length})</h2>

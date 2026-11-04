@@ -46,6 +46,7 @@ import { Sheet } from "./Sheet";
 import { useTeamStats } from "./stats/statsData";
 import { ViolationList } from "./ViolationList";
 import { GamePlaceCard } from "./GamePlaceCard";
+import { TournamentTag } from "./tournaments/TournamentTag";
 import { GameUniformCard } from "./uniforms/GameUniformCard";
 import { WhyLineup } from "./WhyLineup";
 
@@ -276,6 +277,8 @@ export function GameScreen({ gameId }: { gameId: string }) {
       {!isFinal && arrival && (
         <p className="mb-3 rounded-xl bg-white px-3 py-2 text-lg font-bold">Arrive by {arrival}</p>
       )}
+
+      <TournamentTag gameId={game.id} />
 
       <GamePlaceCard game={game} />
 

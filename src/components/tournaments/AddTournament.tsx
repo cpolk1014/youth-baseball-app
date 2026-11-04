@@ -21,20 +21,28 @@ const heading = "text-sm font-bold tracking-wide text-slate-600 uppercase";
 /** Screenshots are shrunk on the phone so several fit in one upload and stay readable. */
 const SCREENSHOT_MAX_SIDE = 2000;
 
-/** Read screenshots of a tournament (its event page, team list) together as one event. */
-export async function readTournament(teamId: string, files: File[]): Promise<EventDetails> {
+/** Shrink and send screenshots to the read route; returns its JSON. */
+export async function sendScreenshots<T>(
+  fields: Record<string, string>,
+  files: File[],
+): Promise<T> {
   const form = new FormData();
-  form.set("teamId", teamId);
+  for (const [k, v] of Object.entries(fields)) form.set(k, v);
   for (const [i, f] of files.slice(0, MAX_SCREENSHOTS).entries()) {
     const blob = await shrinkImage(f, SCREENSHOT_MAX_SIDE);
     form.append("file", blob, `screenshot-${i + 1}.${blob.type === "image/jpeg" ? "jpg" : "png"}`);
   }
   const res = await fetch("/api/tournaments/read", { method: "POST", body: form });
-  const json = (await res.json().catch(() => ({}))) as { event?: EventDetails; error?: string };
-  if (!res.ok || !json.event) {
-    throw new Error(json.error ?? "Couldn't read the screenshots. Try again.");
-  }
-  return json.event;
+  const json = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) throw new Error(json.error ?? "Couldn't read the screenshots. Try again.");
+  return json;
+}
+
+/** Read screenshots of a tournament (its event page, team list) together as one event. */
+export async function readTournament(teamId: string, files: File[]): Promise<EventDetails> {
+  const { event } = await sendScreenshots<{ event?: EventDetails }>({ teamId }, files);
+  if (!event) throw new Error("Couldn't read the screenshots. Try again.");
+  return event;
 }
 
 /** Add screenshots, check what was found, add the links, save. */
@@ -130,7 +138,7 @@ export function AddTournament({ data, onSaved }: { data: AppData; onSaved: (id: 
   );
 }
 
-function Thumb({ file }: { file: File }) {
+export function Thumb({ file }: { file: File }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     const url = URL.createObjectURL(file);

@@ -2,6 +2,7 @@
 // sees them; coaches and managers change them. Loaded on the Tournaments pages only.
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import type { EventDetails, EventTeam } from "@/lib/tournaments/event";
+import type { SavedGame, ScheduleGame } from "@/lib/tournaments/schedule";
 
 export interface Tournament {
   id: string;
@@ -211,4 +212,123 @@ export async function setOurTeam(tournamentId: string, teamId: string | null): P
 
 export async function deleteTournament(id: string): Promise<void> {
   check(await getBrowserSupabase().from("tournament").delete().eq("id", id));
+}
+
+// ── Phase 2: the schedule ──
+
+const GAME_COLS =
+  "id,game_no,stage,pool,round,game_date,start_time,venue,field,home,away,home_team_id,away_team_id,game_id";
+
+interface GameRow {
+  id: string;
+  game_no: string | null;
+  stage: "pool" | "bracket";
+  pool: string | null;
+  round: string | null;
+  game_date: string | null;
+  start_time: string | null;
+  venue: string | null;
+  field: string | null;
+  home: string;
+  away: string;
+  home_team_id: string | null;
+  away_team_id: string | null;
+  game_id: string | null;
+}
+
+export interface TournamentGame extends SavedGame {
+  homeTeamId: string | null;
+  awayTeamId: string | null;
+}
+
+export async function listGames(tournamentId: string): Promise<TournamentGame[]> {
+  const rows = check<GameRow[]>(
+    await getBrowserSupabase()
+      .from("tournament_game")
+      .select(GAME_COLS)
+      .eq("tournament_id", tournamentId),
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    gameNo: r.game_no,
+    stage: r.stage,
+    pool: r.pool,
+    round: r.round,
+    date: r.game_date,
+    startTime: r.start_time ? r.start_time.slice(0, 5) : null,
+    venue: r.venue,
+    field: r.field,
+    home: r.home,
+    away: r.away,
+    homeTeamId: r.home_team_id,
+    awayTeamId: r.away_team_id,
+    gameId: r.game_id,
+  }));
+}
+
+export interface GameWrite {
+  /** Set to update a saved game; left out to add one. */
+  id?: string;
+  game: ScheduleGame;
+  homeTeamId: string | null;
+  awayTeamId: string | null;
+  gameId: string | null;
+}
+
+/** Add and update tournament games (team games must already be saved). */
+export async function saveGames(tournamentId: string, writes: GameWrite[]): Promise<void> {
+  const sb = getBrowserSupabase();
+  const row = (w: GameWrite) => ({
+    tournament_id: tournamentId,
+    game_no: w.game.gameNo,
+    stage: w.game.stage,
+    pool: w.game.pool,
+    round: w.game.round,
+    game_date: w.game.date,
+    start_time: w.game.startTime,
+    venue: w.game.venue,
+    field: w.game.field,
+    home: w.game.home,
+    away: w.game.away,
+    home_team_id: w.homeTeamId,
+    away_team_id: w.awayTeamId,
+    game_id: w.gameId,
+    updated_at: new Date().toISOString(),
+  });
+  const adds = writes.filter((w) => !w.id);
+  if (adds.length) check(await sb.from("tournament_game").insert(adds.map(row)));
+  for (const w of writes.filter((x) => x.id)) {
+    check(await sb.from("tournament_game").update(row(w)).eq("id", w.id!));
+  }
+}
+
+export async function removeGame(id: string): Promise<void> {
+  check(await getBrowserSupabase().from("tournament_game").delete().eq("id", id));
+}
+
+/** The tournament a team game belongs to, for the game page. */
+export async function tournamentForGame(gameId: string): Promise<{
+  tournamentId: string;
+  name: string;
+  game: Pick<ScheduleGame, "gameNo" | "stage" | "pool" | "round">;
+} | null> {
+  const r = check<{
+    game_no: string | null;
+    stage: "pool" | "bracket";
+    pool: string | null;
+    round: string | null;
+    tournament: { id: string; name: string } | null;
+  } | null>(
+    await getBrowserSupabase()
+      .from("tournament_game")
+      .select("game_no,stage,pool,round,tournament(id,name)")
+      .eq("game_id", gameId)
+      .maybeSingle(),
+  );
+  if (!r?.tournament) return null;
+  return {
+    tournamentId: r.tournament.id,
+    name: r.tournament.name,
+    game: { gameNo: r.game_no, stage: r.stage, pool: r.pool, round: r.round },
+  };
 }

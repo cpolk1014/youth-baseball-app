@@ -1437,6 +1437,31 @@ end $$;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- not on the team
 select pg_temp.expect((select count(*) from public.tournament_team where tournament_id = (select id from trn)) = 0, 'people not on the team see nothing');
 reset role;
+-- ── tournament games (phase 2): the schedule; our games link to team games ──
+reset role;
+insert into public.game (id, season_id, game_date, opponent) values
+  ('00000000-0000-4000-8000-00000000a001', '00000000-0000-4000-8000-000000000101', '2026-10-17', 'Tsunami 14u');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- manager
+insert into public.tournament_game (tournament_id, game_no, stage, pool, game_date, start_time, field, home, away, game_id) values
+  ((select id from trn), '1', 'pool', 'A', '2026-10-17', '09:00', 'Field 2', 'Rattlers', 'Tsunami 14u', '00000000-0000-4000-8000-00000000a001'),
+  ((select id from trn), '7', 'bracket', null, '2026-10-18', '13:00', null, '1st Pool A', '2nd Pool B', null);
+select pg_temp.expect((select count(*) from public.tournament_game where tournament_id = (select id from trn)) = 2, 'a manager adds the schedule, linking our game');
+do $$ begin
+  insert into public.tournament_game (tournament_id, home, away, game_id)
+  values ((select id from trn), 'Rattlers', 'Cubs', 'eeeeeeee-0000-4000-8000-000000000020');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a tournament game can''t link another team''s game';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+select pg_temp.expect((select count(*) from public.tournament_game where tournament_id = (select id from trn)) = 2, 'parents see the schedule');
+update public.tournament_game set field = 'Field 9' where tournament_id = (select id from trn);
+select pg_temp.expect((select count(*) from public.tournament_game where field = 'Field 9') = 0, 'parents can''t change the schedule');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- not on the team
+select pg_temp.expect((select count(*) from public.tournament_game where tournament_id = (select id from trn)) = 0, 'people not on the team don''t see the schedule');
+reset role;
+delete from public.game where id = '00000000-0000-4000-8000-00000000a001';
+select pg_temp.expect((select count(*) from public.tournament_game where tournament_id = (select id from trn) and game_id is null) = 2, 'deleting a team game keeps its tournament game, unlinked');
 -- ── game places ──
 update public.game set location = 'Traction Sports Complex', field = 'Chabills Field', location_lat = 30.2, location_lng = -92.0
   where id = 'eeeeeeee-0000-4000-8000-000000000020';
