@@ -1,0 +1,1012 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import type { Tournament, TournamentGame, TournamentTeam } from "@/lib/data/tournament-backend";
+import type { AppData } from "@/lib/data/types";
+import { MAX_SCREENSHOTS } from "@/lib/tournaments/event";
+import { ourSide, placeOf, time12 } from "@/lib/tournaments/schedule";
+import {
+  bracketFills,
+  ordinal,
+  outlook,
+  remainingPoolGames,
+  seedingMessage,
+  seedsFrom,
+  standings,
+  type Pick as WinPick,
+  type Seed,
+  type StandingRow,
+  type StandingsInput,
+} from "@/lib/tournaments/standings";
+import {
+  CRITERIA,
+  CRITERION_LABEL,
+  RUN_CRITERIA,
+  describeCriterion,
+  type Criterion,
+  type ReadRules,
+  type RuleSet,
+} from "@/lib/tournaments/tiebreak";
+import { GroupMePost } from "../GroupMePost";
+import { Sheet } from "../Sheet";
+import { ScreenshotButton, Thumb, sendScreenshots } from "./AddTournament";
+import { dayLabel, gameLabel, saveScheduleGames } from "./TournamentSchedule";
+
+const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
+const field =
+  "h-12 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-base focus:border-[var(--team)] focus:outline-none";
+const backend = () => import("@/lib/data/tournament-backend");
+const seedText = (r: Pick<StandingRow, "seed" | "seedTo">) =>
+  r.seedTo > r.seed ? `${r.seed}–${r.seedTo}` : String(r.seed);
+const range = ([a, b]: [number, number]) => (a === b ? ordinal(a) : `${ordinal(a)}–${ordinal(b)}`);
+const OPEN_TEXT: Record<NonNullable<StandingRow["open"]>, string> = {
+  runs: "Tied: depends on runs",
+  coin: "Tied: coin flip",
+  tied: "Still tied",
+};
+
+/** Standings from the pool games, the tie-breakers behind them, what-ifs and seeding. */
+export function TournamentStandings({
+  data,
+  tournament: t,
+  teams,
+  games,
+  canEdit,
+  onChanged,
+}: {
+  data: AppData;
+  tournament: Tournament;
+  teams: TournamentTeam[];
+  games: TournamentGame[] | null;
+  canEdit: boolean;
+  onChanged: () => Promise<void>;
+}) {
+  const [sets, setSets] = useState<RuleSet[] | null>(null);
+  const [sheet, setSheet] = useState<"rules" | "whatif" | "lock" | "post" | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const teamId = data.team.id;
+
+  const loadSets = async () => setSets(await (await backend()).listRuleSets(teamId));
+  useEffect(() => {
+    let current = true;
+    backend()
+      .then((b) => b.listRuleSets(teamId))
+      .then(
+        (s) => current && setSets(s),
+        () => current && setSets([]),
+      );
+    return () => {
+      current = false;
+    };
+  }, [teamId]);
+
+  const ruleSet = sets?.find((s) => s.id === t.tiebreakSetId) ?? null;
+  const us = teams.find((x) => x.isUs) ?? null;
+  const input: StandingsInput | null = useMemo(
+    () =>
+      games && {
+        teams: teams.map((x) => ({ id: x.id, name: x.name })),
+        games,
+        rules: ruleSet?.rules ?? [],
+        restart: ruleSet?.restart ?? true,
+        seeding: t.seeding,
+      },
+    [games, teams, ruleSet, t.seeding],
+  );
+  const tables = useMemo(() => (input ? standings(input) : []), [input]);
+  const outlookForUs = useMemo(
+    () => (input && us && !t.seedsLockedAt ? outlook(input, us.id) : null),
+    [input, us, t.seedsLockedAt],
+  );
+  const fills = useMemo(
+    () => (games && t.seeds ? bracketFills(games, t.seeds) : []),
+    [games, t.seeds],
+  );
+
+  if (!games || !input) return null;
+  const pool = games.filter((g) => g.stage === "pool");
+  if (pool.length === 0) return null;
+  const left = remainingPoolGames(games, input.teams);
+  const scored = pool.filter((g) => g.scoreHome !== null).length;
+
+  const run = async (label: string, fn: () => Promise<void>) => {
+    setBusy(label);
+    setError(null);
+    try {
+      await fn();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const fillBracket = (seeds: Seed[]) =>
+    saveScheduleGames({
+      data,
+      tournament: t,
+      teams,
+      saved: games,
+      ourName: us?.name ?? null,
+      items: bracketFills(games, seeds).flatMap((f) => {
+        const g = games.find((x) => x.id === f.id);
+        return g ? [{ id: g.id, g: { ...g, home: f.home, away: f.away }, linked: g.gameId }] : [];
+      }),
+    });
+
+  return (
+    <section className="rounded-xl border-2 border-slate-200 bg-white p-4 md:col-span-2">
+      <h2 className={heading}>Standings</h2>
+
+      <div className="mb-3 rounded-lg bg-slate-50 p-3">
+        <p className="text-base font-semibold">
+          Tie-breakers: {ruleSet ? ruleSet.name : "not set"}
+        </p>
+        {ruleSet ? (
+          <ol className="mt-1 list-decimal pl-5 text-sm text-slate-700">
+            {ruleSet.rules.map((c, i) => (
+              <li key={i}>{describeCriterion(c)}</li>
+            ))}
+          </ol>
+        ) : (
+          <p className="text-sm text-slate-600">
+            Teams are ranked by record; ties stay ties until the tournament&apos;s tie-break rules
+            are added.
+          </p>
+        )}
+        <p className="mt-1 text-sm text-slate-600">
+          Seeds {t.seeding === "pool" ? "within each pool" : "across all pool games"}.
+        </p>
+        {canEdit && (
+          <button
+            onClick={() => setSheet("rules")}
+            className="mt-2 h-11 rounded-lg border-2 border-slate-400 bg-white px-4 text-base font-bold"
+          >
+            {ruleSet ? "Change tie-breakers" : "Add tie-breakers"}
+          </button>
+        )}
+      </div>
+
+      {t.seedsLockedAt && t.seeds ? (
+        <>
+          <p className="mb-2 text-base font-semibold">
+            🔒 Seeds locked{" "}
+            {new Date(t.seedsLockedAt).toLocaleString("en-US", {
+              weekday: "short",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </p>
+          <ol className="flex flex-col divide-y divide-slate-100">
+            {t.seeds.map((s) => (
+              <li
+                key={s.teamId}
+                className={`flex items-center gap-3 py-2 ${s.teamId === us?.id ? "font-bold text-[var(--team)]" : ""}`}
+              >
+                <span className="w-10 text-lg font-bold tabular-nums">
+                  {s.pool ? `${s.pool}${s.seed}` : s.seed}
+                </span>
+                <span className="text-base">{s.name}</span>
+              </li>
+            ))}
+          </ol>
+          {canEdit && (
+            <div className="mt-3 flex flex-col gap-2 md:flex-row">
+              {fills.length > 0 && (
+                <button
+                  onClick={() =>
+                    void run("Filling in the bracket…", async () => {
+                      await fillBracket(t.seeds!);
+                      await onChanged();
+                    })
+                  }
+                  disabled={busy !== null}
+                  className="h-12 rounded-xl bg-[var(--team)] px-4 text-base font-bold text-white disabled:opacity-40"
+                >
+                  Fill in the bracket ({fills.length} game{fills.length === 1 ? "" : "s"})
+                </button>
+              )}
+              {data.groupme && (
+                <button
+                  onClick={() => setSheet("post")}
+                  className="h-12 rounded-xl border-2 border-slate-400 bg-white px-4 text-base font-bold"
+                >
+                  Post seeds to GroupMe
+                </button>
+              )}
+              <button
+                onClick={() =>
+                  void run("Unlocking…", async () => {
+                    await (await backend()).lockSeeds(t.id, null);
+                    await onChanged();
+                  })
+                }
+                disabled={busy !== null}
+                className="h-12 rounded-xl border-2 border-slate-300 bg-white px-4 text-base font-semibold disabled:opacity-40"
+              >
+                Unlock the seeds
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="mb-2 text-sm text-slate-600">
+            {scored} of {pool.length} pool games scored
+            {left.length ? "" : ". Pool play is done."}
+          </p>
+          {tables.map((tb) => (
+            <StandingsTable key={tb.pool ?? "all"} pool={tb.pool} rows={tb.rows} usId={us?.id} />
+          ))}
+          {outlookForUs && us && (
+            <div className="mt-3 rounded-lg border-2 border-[var(--team)] p-3">
+              <p className="text-base font-bold">
+                {outlookForUs.best === outlookForUs.worst
+                  ? `We've locked up the ${ordinal(outlookForUs.best)} seed.`
+                  : `We can still finish ${range([outlookForUs.best, outlookForUs.worst])}.`}
+              </p>
+              {outlookForUs.ours.map((o) => {
+                const g = games.find((x) => x.id === o.gameId)!;
+                const opp = ourSide(g, us.name)?.opponent ?? "";
+                return (
+                  <p key={o.gameId} className="text-base text-slate-700">
+                    vs {opp} ({time12(g.startTime)}): win → {range(o.ifWin)}, lose →{" "}
+                    {range(o.ifLose)}
+                  </p>
+                );
+              })}
+              {ruleSet?.rules.some((c) => RUN_CRITERIA.has(c.type)) && (
+                <p className="mt-1 text-sm text-slate-600">
+                  Ranges count wins and losses only; runs can settle ties inside them.
+                </p>
+              )}
+            </div>
+          )}
+          <div className="mt-3 flex flex-col gap-2 md:flex-row">
+            {left.length > 0 && (
+              <button
+                onClick={() => setSheet("whatif")}
+                className="h-12 rounded-xl border-2 border-slate-400 bg-white px-4 text-base font-bold"
+              >
+                What if…
+              </button>
+            )}
+            {canEdit && scored > 0 && (
+              <button
+                onClick={() => setSheet("lock")}
+                className="h-12 rounded-xl bg-[var(--team)] px-4 text-base font-bold text-white"
+              >
+                Lock the seeds
+              </button>
+            )}
+          </div>
+        </>
+      )}
+      {busy && (
+        <p role="status" className="mt-2 text-base font-semibold text-slate-700">
+          {busy}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="mt-2 text-base font-semibold text-red-700">
+          {error}
+        </p>
+      )}
+
+      <Sheet open={sheet === "rules"} title="Tie-breakers" onClose={() => setSheet(null)}>
+        {sheet === "rules" && sets && (
+          <RulesSheet
+            data={data}
+            tournament={t}
+            sets={sets}
+            onSaved={async () => {
+              await loadSets();
+              await onChanged();
+              setSheet(null);
+            }}
+          />
+        )}
+      </Sheet>
+      <Sheet open={sheet === "whatif"} title="What if…" onClose={() => setSheet(null)}>
+        {sheet === "whatif" && <WhatIf input={input} left={left} usId={us?.id} />}
+      </Sheet>
+      <Sheet open={sheet === "lock"} title="Lock the seeds" onClose={() => setSheet(null)}>
+        {sheet === "lock" && (
+          <LockSeeds
+            tables={tables}
+            unscored={left.length}
+            usId={us?.id}
+            onLock={async (seeds) => {
+              await (await backend()).lockSeeds(t.id, seeds);
+              await fillBracket(seeds);
+              await onChanged();
+              setSheet(data.groupme ? "post" : null);
+            }}
+          />
+        )}
+      </Sheet>
+      <Sheet open={sheet === "post"} title="Post the seeds" onClose={() => setSheet(null)}>
+        {sheet === "post" && t.seeds && (
+          <GroupMePost
+            rows={10}
+            initialText={seedingMessage({
+              tournament: t.name,
+              seeds: t.seeds,
+              rows: tables.flatMap((x) => x.rows),
+              ourId: us?.id ?? null,
+              next: nextGameFor(games, us?.name ?? null),
+            })}
+            onSent={() => setSheet(null)}
+          />
+        )}
+      </Sheet>
+    </section>
+  );
+}
+
+/** Our first bracket game with a known opponent, for the post. */
+function nextGameFor(games: TournamentGame[], ourName: string | null) {
+  const g = games
+    .filter((x) => x.stage === "bracket" && x.scoreHome === null && ourSide(x, ourName))
+    .sort(
+      (a, b) =>
+        (a.date ?? "").localeCompare(b.date ?? "") ||
+        (a.startTime ?? "").localeCompare(b.startTime ?? ""),
+    )[0];
+  if (!g) return null;
+  const day = g.date
+    ? new Date(`${g.date}T12:00`).toLocaleDateString("en-US", { weekday: "short" })
+    : "";
+  return {
+    when: [day, g.startTime ? time12(g.startTime) : null].filter(Boolean).join(" "),
+    place: placeOf(g) || null,
+    opponent: ourSide(g, ourName)!.opponent,
+  };
+}
+
+function StandingsTable({
+  pool,
+  rows,
+  usId,
+}: {
+  pool: string | null;
+  rows: StandingRow[];
+  usId?: string;
+}) {
+  return (
+    <div className="mb-3 overflow-x-auto">
+      {pool && <h3 className="mb-1 text-base font-bold">Pool {pool}</h3>}
+      <table className="w-full text-left text-base">
+        <thead>
+          <tr className="border-b-2 border-slate-200 text-sm text-slate-600">
+            <th className="py-1 pr-2">#</th>
+            <th className="py-1 pr-2">Team</th>
+            <th className="py-1 pr-2 text-center">W-L</th>
+            <th className="py-1 pr-2 text-center">RS</th>
+            <th className="py-1 pr-2 text-center">RA</th>
+            <th className="hidden py-1 sm:table-cell">How</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr
+              key={r.teamId}
+              className={`border-b border-slate-100 align-top ${r.teamId === usId ? "bg-[var(--team)]/5 font-bold" : ""}`}
+            >
+              <td className="py-2 pr-2 tabular-nums">{seedText(r)}</td>
+              <td className="py-2 pr-2">
+                {r.name}
+                {(r.decidedBy || r.open) && (
+                  <span className="block text-xs font-normal text-slate-600 sm:hidden">
+                    {r.open ? OPEN_TEXT[r.open] : r.decidedBy}
+                  </span>
+                )}
+              </td>
+              <td className="py-2 pr-2 text-center tabular-nums">
+                {r.w}-{r.l}
+                {r.t ? `-${r.t}` : ""}
+              </td>
+              <td className="py-2 pr-2 text-center tabular-nums">{r.rs ?? "–"}</td>
+              <td className="py-2 pr-2 text-center tabular-nums">{r.ra ?? "–"}</td>
+              <td className="hidden py-2 text-sm font-normal text-slate-600 sm:table-cell">
+                {r.open ? OPEN_TEXT[r.open] : (r.decidedBy ?? "")}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Pick winners for the games left and see where everyone would land. */
+function WhatIf({
+  input,
+  left,
+  usId,
+}: {
+  input: StandingsInput;
+  left: TournamentGame[];
+  usId?: string;
+}) {
+  const [picks, setPicks] = useState<Map<string, WinPick>>(new Map());
+  const tables = useMemo(() => standings({ ...input, picks }), [input, picks]);
+  const pick = (id: string, p: WinPick) => {
+    const next = new Map(picks);
+    if (next.get(id) === p) next.delete(id);
+    else next.set(id, p);
+    setPicks(next);
+  };
+  const btn = (on: boolean) =>
+    `min-h-12 flex-1 rounded-xl border-2 px-2 py-1 text-base font-semibold ${on ? "border-[var(--team)] bg-[var(--team)] text-white" : "border-slate-300 bg-white"}`;
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-base text-slate-700">
+        Tap who wins each game left. Nothing is saved; it&apos;s only a look ahead.
+      </p>
+      <ul className="flex flex-col gap-3">
+        {left.map((g) => (
+          <li key={g.id}>
+            <p className="mb-1 text-sm font-semibold text-slate-600">
+              {dayLabel(g.date)}, {time12(g.startTime)} · {gameLabel(g)}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => pick(g.id, "home")}
+                aria-pressed={picks.get(g.id) === "home"}
+                className={btn(picks.get(g.id) === "home")}
+              >
+                {g.home} win
+              </button>
+              <button
+                onClick={() => pick(g.id, "away")}
+                aria-pressed={picks.get(g.id) === "away"}
+                className={btn(picks.get(g.id) === "away")}
+              >
+                {g.away} win
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {picks.size > 0 && (
+        <button onClick={() => setPicks(new Map())} className="self-start text-base underline">
+          Clear my picks
+        </button>
+      )}
+      <div>
+        <h3 className={heading}>Then the standings would be</h3>
+        {tables.map((tb) => (
+          <StandingsTable key={tb.pool ?? "all"} pool={tb.pool} rows={tb.rows} usId={usId} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Check the order (move teams still tied), then lock. */
+function LockSeeds({
+  tables,
+  unscored,
+  usId,
+  onLock,
+}: {
+  tables: { pool: string | null; rows: StandingRow[] }[];
+  unscored: number;
+  usId?: string;
+  onLock: (seeds: Seed[]) => Promise<void>;
+}) {
+  const [seeds, setSeeds] = useState<Seed[]>(() => seedsFrom(tables));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const rows = new Map(tables.flatMap((t) => t.rows).map((r) => [r.teamId, r]));
+
+  const move = (i: number, d: -1 | 1) => {
+    const j = i + d;
+    if (j < 0 || j >= seeds.length || seeds[i]!.pool !== seeds[j]!.pool) return;
+    const next = [...seeds];
+    [next[i], next[j]] = [next[j]!, next[i]!];
+    setSeeds(
+      next.map((s, k) => ({ ...s, seed: k - next.findIndex((x) => x.pool === s.pool) + 1 })),
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      {unscored > 0 && (
+        <p className="rounded-xl border-2 border-amber-500 bg-amber-50 p-3 text-base">
+          {unscored} pool game{unscored === 1 ? " has" : "s have"} no score yet. Lock anyway only if
+          the tournament has posted its seeds.
+        </p>
+      )}
+      <p className="text-base text-slate-700">
+        Check the order against the tournament&apos;s seeds. Teams still tied (a coin flip, say) can
+        be moved. Locking fills in the bracket and adds our bracket games to Games.
+      </p>
+      <ol className="flex flex-col gap-1">
+        {seeds.map((s, i) => {
+          const r = rows.get(s.teamId);
+          return (
+            <li
+              key={s.teamId}
+              className={`flex items-center gap-2 rounded-lg border-2 px-2 py-1 ${s.teamId === usId ? "border-[var(--team)]" : "border-slate-200"}`}
+            >
+              <span className="w-10 text-lg font-bold tabular-nums">
+                {s.pool ? `${s.pool}${s.seed}` : s.seed}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-semibold">{s.name}</span>
+                {r?.open && (
+                  <span className="block text-xs text-amber-800">{OPEN_TEXT[r.open]}</span>
+                )}
+              </span>
+              <button
+                onClick={() => move(i, -1)}
+                aria-label={`Move ${s.name} up`}
+                className="size-11 rounded-lg border-2 border-slate-300 text-lg"
+              >
+                ↑
+              </button>
+              <button
+                onClick={() => move(i, 1)}
+                aria-label={`Move ${s.name} down`}
+                className="size-11 rounded-lg border-2 border-slate-300 text-lg"
+              >
+                ↓
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      {error && (
+        <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">
+          {error}
+        </p>
+      )}
+      <button
+        onClick={() => {
+          setBusy(true);
+          setError(null);
+          onLock(seeds).catch((e: unknown) => {
+            setError(e instanceof Error ? e.message : String(e));
+            setBusy(false);
+          });
+        }}
+        disabled={busy}
+        className="h-14 rounded-xl bg-green-700 text-lg font-bold text-white disabled:opacity-40"
+      >
+        {busy ? "Locking…" : "Lock these seeds"}
+      </button>
+    </div>
+  );
+}
+
+/** Pick a saved rule set (or read new rules from a screenshot) and how teams are seeded. */
+function RulesSheet({
+  data,
+  tournament: t,
+  sets,
+  onSaved,
+}: {
+  data: AppData;
+  tournament: Tournament;
+  sets: RuleSet[];
+  onSaved: () => Promise<void>;
+}) {
+  const [chosen, setChosen] = useState<string | null>(t.tiebreakSetId);
+  const [seeding, setSeeding] = useState(t.seeding);
+  const [editing, setEditing] = useState<(Omit<RuleSet, "id"> & { id?: string }) | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const org = (t.organization ?? "").toLowerCase();
+  const sorted = [...sets].sort(
+    (a, b) =>
+      Number((b.organization ?? "").toLowerCase() === org) -
+        Number((a.organization ?? "").toLowerCase() === org) || a.name.localeCompare(b.name),
+  );
+
+  const save = async (fn: () => Promise<void>) => {
+    setBusy("Saving…");
+    setError(null);
+    try {
+      await fn();
+      await onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(null);
+    }
+  };
+
+  const read = async () => {
+    setBusy("Reading the rules…");
+    setError(null);
+    try {
+      const { rules } = await sendScreenshots<{ rules?: ReadRules }>(
+        { teamId: data.team.id, kind: "tiebreak" },
+        files,
+      );
+      if (!rules) throw new Error("Couldn't read the rules. Try again.");
+      const organization = rules.organization ?? t.organization;
+      setEditing({
+        name: `${organization ?? "Tournament"} Tiebreak`.slice(0, 60),
+        organization,
+        rules: rules.rules,
+        restart: rules.restart,
+        notes: rules.notes,
+      });
+      if (rules.seeding) setSeeding(rules.seeding);
+      setWarnings(rules.warnings);
+      setFiles([]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (busy) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-8 text-center" role="status">
+        <div className="size-10 animate-spin rounded-full border-4 border-slate-300 border-t-[var(--team)]" />
+        <p className="text-lg font-semibold">{busy}</p>
+      </div>
+    );
+  }
+
+  if (editing) {
+    return (
+      <RulesEditor
+        value={editing}
+        warnings={warnings}
+        seeding={seeding}
+        onSeeding={setSeeding}
+        error={error}
+        onChange={setEditing}
+        onBack={() => setEditing(null)}
+        onSave={() =>
+          void save(async () => {
+            const b = await backend();
+            const id = await b.saveRuleSet(data.team.id, editing);
+            await b.setTournamentRules(t.id, { tiebreakSetId: id, seeding });
+          })
+        }
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {sorted.length > 0 && (
+        <section>
+          <h3 className={heading}>Your saved rules</h3>
+          <ul className="flex flex-col gap-2">
+            {sorted.map((s) => (
+              <li key={s.id}>
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 bg-white p-3 ${chosen === s.id ? "border-[var(--team)]" : "border-slate-200"}`}
+                >
+                  <input
+                    type="radio"
+                    name="ruleset"
+                    checked={chosen === s.id}
+                    onChange={() => setChosen(s.id)}
+                    className="mt-1 size-5 accent-[var(--team)]"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-base font-bold">{s.name}</span>
+                    <span className="block text-sm text-slate-600">
+                      {[s.organization, s.rules.map((c) => CRITERION_LABEL[c.type]).join(" → ")]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <SeedingChoice value={seeding} onChange={setSeeding} />
+      {sorted.length > 0 && (
+        <div className="flex gap-2">
+          <button
+            onClick={() =>
+              void save(async () =>
+                (await backend()).setTournamentRules(t.id, { tiebreakSetId: chosen, seeding }),
+              )
+            }
+            className="h-14 flex-[2] rounded-xl bg-green-700 text-lg font-bold text-white"
+          >
+            Use these
+          </button>
+          {chosen && (
+            <button
+              onClick={() => {
+                const s = sets.find((x) => x.id === chosen);
+                if (s) setEditing(s);
+              }}
+              className="h-14 flex-1 rounded-xl border-2 border-slate-400 text-base font-bold"
+            >
+              Edit
+            </button>
+          )}
+        </div>
+      )}
+
+      <section className="flex flex-col gap-2 border-t-2 border-slate-100 pt-3">
+        <h3 className={heading}>New rules from a screenshot</h3>
+        <p className="text-base text-slate-700">
+          Screenshot the tournament&apos;s tie-breaker rules (often on its Rules tab). You&apos;ll
+          name them, like “2D Tiebreak”, and can use them again at that organization&apos;s other
+          tournaments.
+        </p>
+        {files.length > 0 && (
+          <ul className="grid grid-cols-3 gap-2">
+            {files.map((f, i) => (
+              <li key={`${f.name}-${i}`} className="relative">
+                <Thumb file={f} />
+                <button
+                  onClick={() => setFiles(files.filter((_, j) => j !== i))}
+                  aria-label={`Remove screenshot ${i + 1}`}
+                  className="absolute top-1 right-1 flex size-9 items-center justify-center rounded-full bg-slate-900/75 text-lg font-bold text-white"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {files.length < MAX_SCREENSHOTS && (
+          <ScreenshotButton
+            onFiles={(f) => setFiles([...files, ...f].slice(0, MAX_SCREENSHOTS))}
+            label={files.length ? "Add more screenshots" : "Add screenshots of the rules"}
+            primary={sorted.length === 0 && files.length === 0}
+          />
+        )}
+        {files.length > 0 && (
+          <button
+            onClick={() => void read()}
+            className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white"
+          >
+            Read the rules
+          </button>
+        )}
+        <button
+          onClick={() =>
+            setEditing({
+              name: `${t.organization ?? "Tournament"} Tiebreak`.slice(0, 60),
+              organization: t.organization,
+              rules: [{ type: "head_to_head", cap: null, text: "" }],
+              restart: true,
+              notes: null,
+            })
+          }
+          className="self-start text-base underline"
+        >
+          Or type them in
+        </button>
+      </section>
+      {error && (
+        <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function SeedingChoice({
+  value,
+  onChange,
+}: {
+  value: "overall" | "pool";
+  onChange: (v: "overall" | "pool") => void;
+}) {
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-1 text-base font-semibold">How teams are seeded</legend>
+      {(
+        [
+          ["overall", "Across all pool games (Seed 1, 2, 3…)"],
+          ["pool", "Within each pool (1st Pool A, 2nd Pool A…)"],
+        ] as const
+      ).map(([v, label]) => (
+        <label key={v} className="flex min-h-11 cursor-pointer items-center gap-3">
+          <input
+            type="radio"
+            name="seeding"
+            checked={value === v}
+            onChange={() => onChange(v)}
+            className="size-5 accent-[var(--team)]"
+          />
+          <span className="text-base">{label}</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+/** Name the rules and check each tie-breaker, in order. */
+function RulesEditor({
+  value,
+  warnings,
+  seeding,
+  onSeeding,
+  error,
+  onChange,
+  onBack,
+  onSave,
+}: {
+  value: Omit<RuleSet, "id"> & { id?: string };
+  warnings: string[];
+  seeding: "overall" | "pool";
+  onSeeding: (v: "overall" | "pool") => void;
+  error: string | null;
+  onChange: (v: Omit<RuleSet, "id"> & { id?: string }) => void;
+  onBack: () => void;
+  onSave: () => void;
+}) {
+  const setRule = (i: number, c: Criterion | null) => {
+    const rules = [...value.rules];
+    if (c) rules[i] = c;
+    else rules.splice(i, 1);
+    onChange({ ...value, rules });
+  };
+  const move = (i: number, d: -1 | 1) => {
+    const j = i + d;
+    if (j < 0 || j >= value.rules.length) return;
+    const rules = [...value.rules];
+    [rules[i], rules[j]] = [rules[j]!, rules[i]!];
+    onChange({ ...value, rules });
+  };
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  return (
+    <div className="flex flex-col gap-4">
+      {warnings.length > 0 && (
+        <ul className="rounded-xl border-2 border-amber-500 bg-amber-50 p-3 text-base text-amber-950">
+          {warnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
+      )}
+      <label className="flex flex-col gap-1">
+        <span className="text-base font-semibold">Name</span>
+        <input
+          value={value.name}
+          onChange={(e) => onChange({ ...value, name: e.target.value })}
+          maxLength={60}
+          className={field}
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-base font-semibold">Organization</span>
+        <input
+          value={value.organization ?? ""}
+          onChange={(e) => onChange({ ...value, organization: e.target.value || null })}
+          maxLength={80}
+          placeholder="2D Sports, USSSA, Perfect Game…"
+          className={field}
+        />
+      </label>
+      <section>
+        <h3 className={heading}>Tie-breakers, in order</h3>
+        <ol className="flex flex-col gap-2">
+          {value.rules.map((c, i) => (
+            <li key={i} className="rounded-xl border-2 border-slate-200 p-2">
+              <div className="flex items-center gap-2">
+                <span className="w-6 text-base font-bold">{i + 1}.</span>
+                <select
+                  value={c.type}
+                  onChange={(e) =>
+                    setRule(i, {
+                      ...c,
+                      type: e.target.value as Criterion["type"],
+                      cap: RUN_CRITERIA.has(e.target.value as Criterion["type"]) ? c.cap : null,
+                    })
+                  }
+                  className="h-11 min-w-0 flex-1 rounded-lg border-2 border-slate-300 bg-white px-2 text-base"
+                >
+                  {CRITERIA.map((x) => (
+                    <option key={x} value={x}>
+                      {CRITERION_LABEL[x]}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => move(i, -1)}
+                  aria-label="Move up"
+                  className="size-11 rounded-lg border-2 border-slate-300"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={() => move(i, 1)}
+                  aria-label="Move down"
+                  className="size-11 rounded-lg border-2 border-slate-300"
+                >
+                  ↓
+                </button>
+                <button
+                  onClick={() => setRule(i, null)}
+                  aria-label="Remove"
+                  className="size-11 rounded-lg text-xl text-slate-500"
+                >
+                  ×
+                </button>
+              </div>
+              {RUN_CRITERIA.has(c.type) && (
+                <label className="mt-2 flex items-center gap-2 pl-8 text-sm">
+                  Most runs counted a game
+                  <input
+                    inputMode="numeric"
+                    value={c.cap ?? ""}
+                    onChange={(e) => {
+                      const n = Number(e.target.value.replace(/\D/g, ""));
+                      setRule(i, { ...c, cap: n > 0 && n <= 99 ? n : null });
+                    }}
+                    placeholder="no cap"
+                    className="h-10 w-20 rounded-lg border-2 border-slate-300 px-2"
+                  />
+                </label>
+              )}
+              {c.text && <p className="mt-1 pl-8 text-sm text-slate-600">“{c.text}”</p>}
+            </li>
+          ))}
+        </ol>
+        {value.rules.length < 12 && (
+          <button
+            onClick={() =>
+              onChange({
+                ...value,
+                rules: [...value.rules, { type: "runs_allowed", cap: null, text: "" }],
+              })
+            }
+            className="mt-2 h-11 rounded-lg border-2 border-dashed border-slate-400 px-4 text-base font-semibold"
+          >
+            + Add a tie-breaker
+          </button>
+        )}
+      </section>
+      <label className="flex cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          checked={value.restart}
+          onChange={(e) => onChange({ ...value, restart: e.target.checked })}
+          className="mt-1 size-5 accent-[var(--team)]"
+        />
+        <span className="text-base">
+          When three or more are tied and one is separated, the rest start over at the first
+          tie-breaker (the usual rule)
+        </span>
+      </label>
+      <SeedingChoice value={seeding} onChange={onSeeding} />
+      {(error ?? localError) && (
+        <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">
+          {error ?? localError}
+        </p>
+      )}
+      <div className="sticky bottom-0 -mx-4 flex gap-3 bg-white px-4 pt-2 pb-1">
+        <button
+          onClick={onBack}
+          className="h-14 flex-1 rounded-xl border-2 border-slate-400 text-lg font-bold"
+        >
+          Back
+        </button>
+        <button
+          onClick={() => {
+            if (!value.name.trim()) return setLocalError("Give the rules a name.");
+            setLocalError(null);
+            onSave();
+          }}
+          className="h-14 flex-[2] rounded-xl bg-green-700 text-lg font-bold text-white"
+        >
+          Save and use
+        </button>
+      </div>
+    </div>
+  );
+}

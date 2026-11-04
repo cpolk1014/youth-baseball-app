@@ -4,6 +4,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { EVENT_JSON_SCHEMA, cleanEvent, type EventDetails } from "./event";
 import { SCHEDULE_JSON_SCHEMA, cleanSchedule, type Schedule } from "./schedule";
+import { TIEBREAK_JSON_SCHEMA, cleanRules, type ReadRules } from "./tiebreak";
 
 export class EventReadError extends Error {}
 
@@ -15,6 +16,8 @@ export type ScreenshotImage = {
 const EVENT_PROMPT = `You read screenshots of youth baseball tournament pages (event headers, team lists) and pull out the event's details and every team in each division (age group). Several screenshots are parts of the same event: combine them, listing each team once. Divisions are age groups (e.g. "8u", "14U"); a class or level shown under an age group (e.g. "AA", "Major") is not its own division: put it in each team's class_label with the age (e.g. "8u AA"). Use the age group names as shown. Give each team's name exactly as shown and its hometown if shown. List only teams actually shown; don't guess. Dates are YYYY-MM-DD. If the picture isn't of a tournament, set is_event to false. Put anything unclear (teams hidden behind a login, divisions without teams yet) in warnings.`;
 
 const SCHEDULE_PROMPT = `You read screenshots of a youth baseball tournament's pool play schedule and bracket and list every game. Several screenshots are parts of the same schedule: combine them, listing each game once. For each game give its game number if shown, whether it's pool play or bracket, the pool (just the letter or name, e.g. "A"), the bracket round if shown, the date (YYYY-MM-DD; use the tournament's dates when the screenshot shows only a weekday), the start time (24-hour HH:MM), the park or complex (venue) and the field within it, and the two sides. Write team names exactly as shown. Bracket games whose teams aren't known yet keep their placeholders as shown (e.g. "1st Pool A", "Winner Game 7", "Seed 3"). Only list games for the division asked about when the schedule shows several divisions. Don't guess anything that isn't shown; put anything unclear in warnings.`;
+
+const TIEBREAK_PROMPT = `You read screenshots of a youth baseball tournament organization's rules and pull out how pool play standings and bracket seeding are decided, as an ordered list of tie-breakers for teams with the same record. Use only these criteria: head_to_head (results among the tied teams), runs_allowed (fewest total), run_diff (best total run differential), runs_scored (most total), runs_allowed_avg, run_diff_avg, runs_scored_avg (per game, when the rules say per game or average), coin_flip. When a rule caps runs per game (e.g. "max 8 runs per game" or a run rule margin used for differential), put that number in cap. Keep each rule's own words in text. Leave out rules that aren't tie-breakers. If a tie-breaker doesn't fit any criterion, use the closest one and say so in warnings. Set restart to true unless the rules say tied teams continue down the list after a team is separated.`;
 
 /** One read of screenshots with structured output (streamed: schedules can be long). */
 async function readScreenshots(
@@ -61,5 +64,12 @@ export async function readEvent(images: ScreenshotImage[], context: string): Pro
 export async function readSchedule(images: ScreenshotImage[], context: string): Promise<Schedule> {
   return cleanSchedule(
     await readScreenshots(images, SCHEDULE_PROMPT, SCHEDULE_JSON_SCHEMA, context, 32000),
+  );
+}
+
+/** Read screenshots of an organization's tie-break rules. */
+export async function readTiebreak(images: ScreenshotImage[], context: string): Promise<ReadRules> {
+  return cleanRules(
+    await readScreenshots(images, TIEBREAK_PROMPT, TIEBREAK_JSON_SCHEMA, context, 8000),
   );
 }

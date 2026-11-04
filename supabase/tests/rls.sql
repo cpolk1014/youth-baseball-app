@@ -1509,6 +1509,39 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007
 update public.game set status = 'scheduled' where id = '00000000-0000-4000-8000-00000000a002';
 select pg_temp.expect((select score_home is null from public.tournament_game where game_id = '00000000-0000-4000-8000-00000000a002'), 'reopening our game clears its tournament score');
 reset role;
+-- ── tie-breakers (phase 4): named rule sets per team; seeds lock on the tournament ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- manager
+insert into public.tiebreak_rule_set (id, team_id, name, organization, rules) values
+  ('00000000-0000-4000-8000-00000000b001', '00000000-0000-4000-8000-000000000001', '2D Tiebreak', '2D Sports',
+   '[{"type":"head_to_head","text":"Head to head"},{"type":"runs_allowed","text":"Fewest runs allowed"}]');
+update public.tournament set tiebreak_set_id = '00000000-0000-4000-8000-00000000b001', seeding = 'overall',
+  seeds = '[{"teamId":"x","seed":1}]', seeds_locked_at = now() where id = (select id from trn);
+select pg_temp.expect((select tiebreak_set_id is not null and seeds_locked_at is not null from public.tournament where id = (select id from trn)), 'a manager saves tie-break rules, uses them and locks the seeds');
+do $$ begin
+  insert into public.tiebreak_rule_set (team_id, name) values ('00000000-0000-4000-8000-000000000001', ' 2d tiebreak ');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when unique_violation then raise notice 'ok: rule set names are unique per team';
+end $$;
+reset role;
+insert into public.tiebreak_rule_set (id, team_id, name) values
+  ('00000000-0000-4000-8000-00000000b002', 'eeeeeeee-0000-4000-8000-000000000010', 'Other team rules');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- manager
+do $$ begin
+  update public.tournament set tiebreak_set_id = '00000000-0000-4000-8000-00000000b002' where id = (select id from trn);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: a tournament can''t use another team''s rules';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+select pg_temp.expect((select count(*) from public.tiebreak_rule_set where team_id = '00000000-0000-4000-8000-000000000001') = 1, 'parents see the team''s tie-break rules');
+update public.tiebreak_rule_set set name = 'Hacked' where id = '00000000-0000-4000-8000-00000000b001';
+update public.tournament set seeds_locked_at = null where id = (select id from trn);
+select pg_temp.expect((select name from public.tiebreak_rule_set where id = '00000000-0000-4000-8000-00000000b001') = '2D Tiebreak', 'parents can''t change tie-break rules');
+select pg_temp.expect((select seeds_locked_at is not null from public.tournament where id = (select id from trn)), 'parents can''t unlock seeds');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- not on the team
+select pg_temp.expect((select count(*) from public.tiebreak_rule_set where team_id = '00000000-0000-4000-8000-000000000001') = 0, 'people not on the team don''t see its tie-break rules');
+reset role;
 -- ── game places ──
 update public.game set location = 'Traction Sports Complex', field = 'Chabills Field', location_lat = 30.2, location_lng = -92.0
   where id = 'eeeeeeee-0000-4000-8000-000000000020';

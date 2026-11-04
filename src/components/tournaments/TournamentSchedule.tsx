@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import type {
   GameWrite,
   Tournament,
@@ -32,7 +32,7 @@ import { ScreenshotButton, Thumb, sendScreenshots } from "./AddTournament";
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 const backend = () => import("@/lib/data/tournament-backend");
 
-const dayLabel = (d: string | null) =>
+export const dayLabel = (d: string | null) =>
   d
     ? new Date(`${d}T12:00`).toLocaleDateString("en-US", {
         weekday: "long",
@@ -41,7 +41,7 @@ const dayLabel = (d: string | null) =>
       })
     : "Date not set";
 
-const gameLabel = (g: Pick<ScheduleGame, "gameNo" | "stage" | "pool" | "round">) =>
+export const gameLabel = (g: Pick<ScheduleGame, "gameNo" | "stage" | "pool" | "round">) =>
   [
     g.gameNo ? `Game ${g.gameNo}` : null,
     g.stage === "pool" ? (g.pool ? `Pool ${g.pool}` : "Pool play") : (g.round ?? "Bracket"),
@@ -56,27 +56,24 @@ export function TournamentSchedule({
   tournament,
   teams,
   canEdit,
+  games,
+  onChanged,
 }: {
   data: AppData;
   tournament: Tournament;
   teams: TournamentTeam[];
   canEdit: boolean;
+  games: TournamentGame[] | null;
+  onChanged: () => Promise<void>;
 }) {
-  const [games, setGames] = useState<TournamentGame[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [scoring, setScoring] = useState<TournamentGame | null>(null);
   const ourName = teams.find((t) => t.isUs)?.name ?? null;
   const canScore = data.team.optionedAt === null;
 
-  const load = useCallback(async () => {
-    setGames(await (await backend()).listGames(tournament.id));
-  }, [tournament.id]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading this section's data
-    load().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-  }, [load]);
+  const load = () =>
+    onChanged().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
 
   const scored = games?.filter((g) => g.scoreHome !== null).length ?? 0;
 
@@ -413,6 +410,60 @@ function Stepper({
   );
 }
 
+/**
+ * Save tournament games (new or changed); ours also become team games, or update the
+ * linked one (lineup kept). Team games are saved first so the links hold.
+ */
+export async function saveScheduleGames({
+  data,
+  tournament,
+  teams,
+  saved,
+  ourName,
+  items,
+}: {
+  data: AppData;
+  tournament: Tournament;
+  teams: TournamentTeam[];
+  saved: TournamentGame[];
+  ourName: string | null;
+  items: { id?: string; g: ScheduleGame; linked: string | null }[];
+}): Promise<void> {
+  const taken = new Set(saved.flatMap((s) => (s.gameId ? [s.gameId] : [])));
+  const teamGames: Game[] = [];
+  const writes: GameWrite[] = [];
+  for (const { id, g, linked } of items) {
+    let gameId = linked;
+    const side = ourSide(g, ourName);
+    if (side) {
+      const existing = gameId
+        ? (data.games.find((x) => x.id === gameId) ?? null)
+        : findTeamGame(g, side.opponent, data.games, taken);
+      const tg = teamGameFor(g, side.opponent, {
+        existing,
+        id: newId(),
+        seasonId: data.season.id,
+        fieldPlayers: defaultFieldPlayers(data.team.coachPitch),
+        venues: tournament.venues,
+      });
+      if (tg) {
+        teamGames.push(tg);
+        gameId = tg.id;
+        taken.add(tg.id);
+      }
+    }
+    writes.push({
+      id,
+      game: g,
+      homeTeamId: teamIdFor(g.home, teams),
+      awayTeamId: teamIdFor(g.away, teams),
+      gameId,
+    });
+  }
+  if (teamGames.length) await importSchedule([], teamGames);
+  await (await backend()).saveGames(tournament.id, writes);
+}
+
 type ImportPick =
   { kind: "add"; g: ScheduleGame } | { kind: "change"; id: string; g: ScheduleGame };
 
@@ -539,44 +590,15 @@ function ScheduleImport({
     setBusy("Saving…");
     setError(null);
     try {
-      const taken = new Set(saved.flatMap((s) => (s.gameId ? [s.gameId] : [])));
-      const teamGames: Game[] = [];
-      const writes: GameWrite[] = [];
-      const plan = (id: string | undefined, g: ScheduleGame, linked: string | null) => {
-        let gameId = linked;
-        const side = ourSide(g, ourName);
-        if (side) {
-          const existing = gameId
-            ? (data.games.find((x) => x.id === gameId) ?? null)
-            : findTeamGame(g, side.opponent, data.games, taken);
-          const tg = teamGameFor(g, side.opponent, {
-            existing,
-            id: newId(),
-            seasonId: data.season.id,
-            fieldPlayers: defaultFieldPlayers(data.team.coachPitch),
-            venues: tournament.venues,
-          });
-          if (tg) {
-            teamGames.push(tg);
-            gameId = tg.id;
-            taken.add(tg.id);
-          }
-        }
-        writes.push({
-          id,
-          game: g,
-          homeTeamId: teamIdFor(g.home, teams),
-          awayTeamId: teamIdFor(g.away, teams),
-          gameId,
-        });
-      };
-      for (const p of chosen) {
-        if (p.kind === "add") plan(undefined, p.g, null);
-        else plan(p.id, p.g, saved.find((s) => s.id === p.id)?.gameId ?? null);
-      }
-      for (const s of toLink) plan(s.id, s, null);
-      if (teamGames.length) await importSchedule([], teamGames);
-      await (await backend()).saveGames(tournament.id, writes);
+      const items = [
+        ...chosen.map((p) =>
+          p.kind === "add"
+            ? { g: p.g, linked: null }
+            : { id: p.id, g: p.g, linked: saved.find((s) => s.id === p.id)?.gameId ?? null },
+        ),
+        ...toLink.map((s) => ({ id: s.id, g: s as ScheduleGame, linked: null })),
+      ];
+      await saveScheduleGames({ data, tournament, teams, saved, ourName, items });
       onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

@@ -3,6 +3,8 @@
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import type { EventDetails, EventTeam } from "@/lib/tournaments/event";
 import type { SavedGame, ScheduleGame } from "@/lib/tournaments/schedule";
+import type { Seed } from "@/lib/tournaments/standings";
+import { rulesFromJson, type Criterion, type RuleSet } from "@/lib/tournaments/tiebreak";
 
 export interface Tournament {
   id: string;
@@ -18,6 +20,11 @@ export interface Tournament {
   venues: string[];
   division: string | null;
   teamCount: number;
+  tiebreakSetId: string | null;
+  seeding: "overall" | "pool";
+  /** Locked seeds, in order (null until the coach locks them). */
+  seeds: Seed[] | null;
+  seedsLockedAt: string | null;
 }
 
 export interface TournamentTeam {
@@ -43,10 +50,14 @@ interface Row {
   venues: string[] | null;
   division: string | null;
   tournament_team?: { count: number }[];
+  tiebreak_set_id: string | null;
+  seeding: "overall" | "pool";
+  seeds: Seed[] | null;
+  seeds_locked_at: string | null;
 }
 
 const COLS =
-  "id,team_id,name,organization,info_url,schedule_url,bracket_url,start_date,end_date,city,venues,division,tournament_team(count)";
+  "id,team_id,name,organization,info_url,schedule_url,bracket_url,start_date,end_date,city,venues,division,tiebreak_set_id,seeding,seeds,seeds_locked_at,tournament_team(count)";
 
 const fromRow = (r: Row): Tournament => ({
   id: r.id,
@@ -62,6 +73,10 @@ const fromRow = (r: Row): Tournament => ({
   venues: r.venues ?? [],
   division: r.division,
   teamCount: r.tournament_team?.[0]?.count ?? 0,
+  tiebreakSetId: r.tiebreak_set_id,
+  seeding: r.seeding,
+  seeds: r.seeds,
+  seedsLockedAt: r.seeds_locked_at,
 });
 
 function check<T>(r: { data: unknown; error: { message: string } | null }): T {
@@ -366,4 +381,72 @@ export async function tournamentForGame(gameId: string): Promise<{
     name: r.tournament.name,
     game: { gameNo: r.game_no, stage: r.stage, pool: r.pool, round: r.round },
   };
+}
+
+// ── Phase 4: tie-breakers and seeding ──
+
+export async function listRuleSets(teamId: string): Promise<RuleSet[]> {
+  const rows = check<
+    {
+      id: string;
+      name: string;
+      organization: string | null;
+      rules: unknown;
+      restart: boolean;
+      notes: string | null;
+    }[]
+  >(
+    await getBrowserSupabase()
+      .from("tiebreak_rule_set")
+      .select("id,name,organization,rules,restart,notes")
+      .eq("team_id", teamId)
+      .order("name"),
+  );
+  return rows.map((r) => ({ ...r, rules: rulesFromJson(r.rules) }));
+}
+
+/** Save a named rule set (new, or changes to one) and return its id. */
+export async function saveRuleSet(
+  teamId: string,
+  set: Omit<RuleSet, "id"> & { id?: string },
+): Promise<string> {
+  const id = set.id ?? crypto.randomUUID();
+  const row = {
+    id,
+    team_id: teamId,
+    name: set.name.trim().slice(0, 60),
+    organization: set.organization?.trim().slice(0, 80) || null,
+    rules: set.rules.map((c: Criterion) => ({ type: c.type, cap: c.cap, text: c.text })),
+    restart: set.restart,
+    notes: set.notes?.trim().slice(0, 1000) || null,
+  };
+  check(await getBrowserSupabase().from("tiebreak_rule_set").upsert(row));
+  return id;
+}
+
+export async function deleteRuleSet(id: string): Promise<void> {
+  check(await getBrowserSupabase().from("tiebreak_rule_set").delete().eq("id", id));
+}
+
+/** Which rules a tournament uses, and whether it seeds overall or within each pool. */
+export async function setTournamentRules(
+  id: string,
+  input: { tiebreakSetId: string | null; seeding: "overall" | "pool" },
+): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("tournament")
+      .update({ tiebreak_set_id: input.tiebreakSetId, seeding: input.seeding })
+      .eq("id", id),
+  );
+}
+
+/** Lock the seeds (or unlock, with null). */
+export async function lockSeeds(id: string, seeds: Seed[] | null): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("tournament")
+      .update({ seeds, seeds_locked_at: seeds ? new Date().toISOString() : null })
+      .eq("id", id),
+  );
 }

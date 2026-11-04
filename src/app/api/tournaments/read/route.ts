@@ -1,7 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { MAX_SCREENSHOTS } from "@/lib/tournaments/event";
-import { EventReadError, readEvent, readSchedule } from "@/lib/tournaments/read.server";
+import {
+  EventReadError,
+  readEvent,
+  readSchedule,
+  readTiebreak,
+} from "@/lib/tournaments/read.server";
 import { getServerSupabase } from "@/lib/supabase/server";
 
 export const maxDuration = 300;
@@ -18,7 +23,8 @@ function errorResponse(status: number, error: string) {
 /**
  * A coach or manager reads screenshots (form: teamId, file, one per screenshot, up to 6):
  * a new tournament's event page and team list (returns { event }), or, with tournamentId,
- * that tournament's pool schedule and bracket (returns { schedule }). Nothing is saved
+ * that tournament's pool schedule and bracket (returns { schedule }), or, with kind
+ * "tiebreak", an organization's tie-break rules (returns { rules }). Nothing is saved
  * until the coach confirms.
  */
 export async function POST(request: NextRequest) {
@@ -34,6 +40,7 @@ export async function POST(request: NextRequest) {
   const form = await request.formData().catch(() => null);
   const teamId = String(form?.get("teamId") ?? "");
   const tournamentId = String(form?.get("tournamentId") ?? "");
+  const kind = String(form?.get("kind") ?? "");
   const files = (form?.getAll("file") ?? []).filter((f): f is File => f instanceof File);
   if (!teamId || files.length === 0) return errorResponse(400, "Add a screenshot.");
   if (files.length > MAX_SCREENSHOTS) {
@@ -52,7 +59,7 @@ export async function POST(request: NextRequest) {
   const context = `Today is ${today}. The team adding this is ${team.name} (${team.age_group ?? "age not set"}). List every division and its teams.`;
 
   let scheduleContext: string | null = null;
-  if (tournamentId) {
+  if (tournamentId && kind !== "tiebreak") {
     const [{ data: t }, { data: teams }] = await Promise.all([
       supabase
         .from("tournament")
@@ -86,6 +93,14 @@ export async function POST(request: NextRequest) {
         mediaType: f.type as ImageType,
       })),
     );
+    if (kind === "tiebreak") {
+      return NextResponse.json({
+        rules: await readTiebreak(
+          images,
+          `Today is ${today}. These are a tournament organization's rules; list the tie-breakers in order.`,
+        ),
+      });
+    }
     if (scheduleContext) {
       return NextResponse.json({ schedule: await readSchedule(images, scheduleContext) });
     }

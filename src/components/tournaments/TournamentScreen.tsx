@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import type { Tournament, TournamentTeam } from "@/lib/data/tournament-backend";
+import type { Tournament, TournamentGame, TournamentTeam } from "@/lib/data/tournament-backend";
 import { permissionsFor } from "@/lib/data/permissions";
 import { useAppData, useStoreState } from "@/lib/data/store";
 import { MAX_SCREENSHOTS, newTeams, pickDivision, teamKey } from "@/lib/tournaments/event";
@@ -16,6 +16,7 @@ import {
   type LinkInputs,
 } from "./AddTournament";
 import { TournamentSchedule } from "./TournamentSchedule";
+import { TournamentStandings } from "./TournamentStandings";
 import { tournamentWhen } from "./TournamentsScreen";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
@@ -28,6 +29,7 @@ export function TournamentScreen({ id }: { id: string }) {
   const router = useRouter();
   const [t, setT] = useState<Tournament | null>(null);
   const [teams, setTeams] = useState<TournamentTeam[]>([]);
+  const [games, setGames] = useState<TournamentGame[] | null>(null);
   const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -36,11 +38,13 @@ export function TournamentScreen({ id }: { id: string }) {
   const [editLinks, setEditLinks] = useState<LinkInputs | null>(null);
 
   const load = useCallback(async () => {
-    const r = await (await backend()).getTournament(id);
+    const b = await backend();
+    const [r, g] = await Promise.all([b.getTournament(id), b.listGames(id)]);
     if (!r) setMissing(true);
     else {
       setT(r.tournament);
       setTeams(r.teams);
+      setGames(g);
     }
   }, [id]);
 
@@ -169,7 +173,23 @@ export function TournamentScreen({ id }: { id: string }) {
         )}
       </section>
 
-      <TournamentSchedule data={data} tournament={t} teams={teams} canEdit={canEdit} />
+      <TournamentStandings
+        data={data}
+        tournament={t}
+        teams={teams}
+        games={games}
+        canEdit={canEdit}
+        onChanged={load}
+      />
+
+      <TournamentSchedule
+        data={data}
+        tournament={t}
+        teams={teams}
+        canEdit={canEdit}
+        games={games}
+        onChanged={load}
+      />
 
       <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
         <h2 className={heading}>Teams ({teams.length})</h2>

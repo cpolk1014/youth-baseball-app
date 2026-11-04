@@ -183,8 +183,15 @@ export function matchSchedule(saved: SavedGame[], found: ScheduleGame[]): Schedu
       continue;
     }
     used.add(s.id);
-    const changes = describeChanges(s, g);
-    if (changes.length) changed.push({ saved: s, next: g, changes });
+    // A bracket side already filled with a team stays filled when the new screenshot still
+    // shows the placeholder ("Seed 3").
+    const next = {
+      ...g,
+      home: parsePlaceholder(g.home) && !parsePlaceholder(s.home) ? s.home : g.home,
+      away: parsePlaceholder(g.away) && !parsePlaceholder(s.away) ? s.away : g.away,
+    };
+    const changes = describeChanges(s, next);
+    if (changes.length) changed.push({ saved: s, next, changes });
     else unchanged.push(s);
   }
   return { added, changed, unchanged, notShown: saved.filter((s) => !used.has(s.id)) };
@@ -301,4 +308,31 @@ export function winner(g: {
 }): "home" | "away" | "tie" | null {
   if (g.scoreHome === null || g.scoreAway === null) return null;
   return g.scoreHome > g.scoreAway ? "home" : g.scoreHome < g.scoreAway ? "away" : "tie";
+}
+
+export type Placeholder =
+  | { kind: "seed"; n: number }
+  | { kind: "pool"; pool: string; n: number }
+  | { kind: "winner" | "loser"; gameNo: string };
+
+/**
+ * A bracket side that isn't a team yet: "Seed 3", "3rd Seed", "#3", "1st Pool A", "Pool A #1",
+ * "A1", "Winner Game 7", "W7", "Loser of G5". Null for a team name.
+ */
+export function parsePlaceholder(name: string): Placeholder | null {
+  const s = name.trim().replace(/\s+/g, " ");
+  let m =
+    /^(?:#\s*)?(\d{1,2})\s*(?:st|nd|rd|th)?\s*seed$/i.exec(s) ??
+    /^seed\s*#?\s*(\d{1,2})$/i.exec(s) ??
+    /^#\s*(\d{1,2})$/.exec(s);
+  if (m) return { kind: "seed", n: Number(m[1]) };
+  m = /^(\d{1,2})\s*(?:st|nd|rd|th)?\s*(?:place\s*)?(?:in\s*)?pool\s+([a-z0-9]{1,10})$/i.exec(s);
+  if (m) return { kind: "pool", pool: m[2]!, n: Number(m[1]) };
+  m =
+    /^pool\s+([a-z0-9]{1,10})\s*(?:#|no\.?)?\s*(\d{1,2})$/i.exec(s) ??
+    /^([a-km-vx-z])\s?(\d{1,2})$/i.exec(s);
+  if (m) return { kind: "pool", pool: m[1]!, n: Number(m[2]) };
+  m = /^(winner|loser|w|l)\s*(?:of\s*)?(?:game|g)?\s*#?\s*(\d{1,3})$/i.exec(s);
+  if (m) return { kind: m[1]!.toLowerCase().startsWith("w") ? "winner" : "loser", gameNo: m[2]! };
+  return null;
 }
