@@ -9,6 +9,7 @@ import type { Practice } from "@/lib/data/types";
 import { formatPracticeWhen } from "@/lib/practice/format";
 import { planMinutes } from "@/lib/practice/schedule";
 import { AppShell, Loading } from "./AppShell";
+import { AiPracticePlan } from "./AiPracticePlan";
 import { ImportSchedule } from "./ImportSchedule";
 import { PracticeForm, ScheduleBuilder } from "./PracticeForms";
 import { Sheet } from "./Sheet";
@@ -19,6 +20,7 @@ export function PracticesScreen() {
   const [building, setBuilding] = useState(false);
   const [showPast, setShowPast] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [planning, setPlanning] = useState(false);
   const { mode } = useStoreState();
 
   if (!data) {
@@ -90,6 +92,18 @@ export function PracticesScreen() {
         </button>
       )}
 
+      {canEdit && mode === "supabase" && upcoming.some((p) => !p.canceled) && (
+        <button
+          onClick={() => setPlanning(true)}
+          className="mb-4 flex min-h-14 w-full flex-col items-start justify-center rounded-xl border-2 border-[var(--team)] bg-white px-4 py-2 text-left active:bg-slate-50"
+        >
+          <span className="text-lg font-bold text-[var(--team)]">✨ Plan practices with AI</span>
+          <span className="text-sm text-slate-600">
+            Describe your goals; get drills and plays for every practice.
+          </span>
+        </button>
+      )}
+
       {upcoming.length === 0 ? (
         <p className="rounded-xl border-2 border-slate-200 bg-white p-4 text-base text-slate-700">
           {canEdit
@@ -140,6 +154,12 @@ export function PracticesScreen() {
 
       <Sheet open={importing} title="Import a schedule" onClose={() => setImporting(false)}>
         {importing && <ImportSchedule data={data} onClose={() => setImporting(false)} />}
+      </Sheet>
+
+      <Sheet open={planning} title="Plan practices with AI" onClose={() => setPlanning(false)}>
+        {planning && (
+          <AiPracticePlan data={data} upcoming={upcoming} onClose={() => setPlanning(false)} />
+        )}
       </Sheet>
 
       <Sheet open={building} title="Build season schedule" onClose={() => setBuilding(false)}>
