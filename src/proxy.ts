@@ -11,7 +11,6 @@ const PUBLIC_PATHS = [
   "/sw.js",
   "/api/stripe/webhook",
   // Vercel Cron's weekly tournament check (checks CRON_SECRET itself).
-  "/api/tournaments/check",
 ];
 
 /** Refresh the Supabase session cookie and send signed-out users to /login. */

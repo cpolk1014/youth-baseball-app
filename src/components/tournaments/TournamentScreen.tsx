@@ -8,13 +8,19 @@ import { useAppData, useStoreState } from "@/lib/data/store";
 import { newTeams, pickDivision, teamKey } from "@/lib/tournaments/event";
 import { AppShell, Loading } from "../AppShell";
 import { Sheet } from "../Sheet";
-import { ScreenshotButton, readTournament } from "./AddTournament";
+import {
+  LinkFields,
+  ScreenshotButton,
+  checkLinks,
+  readTournament,
+  type LinkInputs,
+} from "./AddTournament";
 import { tournamentWhen } from "./TournamentsScreen";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 const backend = () => import("@/lib/data/tournament-backend");
 
-/** One tournament: its details and the teams in our division, kept up to date weekly. */
+/** One tournament: its details, links for the team, and the teams in our division. */
 export function TournamentScreen({ id }: { id: string }) {
   const data = useAppData();
   const { mode } = useStoreState();
@@ -26,6 +32,7 @@ export function TournamentScreen({ id }: { id: string }) {
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editLinks, setEditLinks] = useState<LinkInputs | null>(null);
 
   const load = useCallback(async () => {
     const r = await (await backend()).getTournament(id);
@@ -73,21 +80,9 @@ export function TournamentScreen({ id }: { id: string }) {
     }
   };
 
-  const checkNow = () =>
-    run("Checking the event page…", async () => {
-      const res = await fetch("/api/tournaments/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tournamentId: t.id }),
-      });
-      const json = (await res.json().catch(() => ({}))) as { note?: string; error?: string };
-      if (!res.ok) throw new Error(json.error ?? "Couldn't check right now.");
-      return json.note;
-    });
-
   const fromScreenshot = (file: File) =>
     run("Reading the screenshot…", async () => {
-      const { event } = await readTournament(data.team.id, { file });
+      const event = await readTournament(data.team.id, file);
       const division =
         event.divisions.find((d) => teamKey(d.name) === teamKey(t.division ?? "")) ??
         event.divisions.find(
@@ -103,17 +98,15 @@ export function TournamentScreen({ id }: { id: string }) {
     });
 
   const ours = teams.find((x) => x.isUs);
+  const links: [string, string][] = [];
+  for (const [label, href] of [
+    ["Tournament info", t.infoUrl],
+    ["Tournament schedule", t.scheduleUrl],
+    ["Tournament bracket", t.bracketUrl],
+  ] as const) {
+    if (href) links.push([label, href]);
+  }
   const others = teams.filter((x) => !x.isUs);
-  const checked = t.checkedAt
-    ? new Date(t.checkedAt).toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-      })
-    : null;
-  const today = new Date().toISOString().slice(0, 10);
-  const stillChecking = !!t.url && (!t.startDate || t.startDate > today);
-
   return shell(
     <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:items-start">
       <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
@@ -126,26 +119,52 @@ export function TournamentScreen({ id }: { id: string }) {
         {t.venues.length > 0 && (
           <p className="mt-1 text-sm text-slate-600">Fields: {t.venues.join(", ")}</p>
         )}
-        {t.url && (
-          <a
-            href={t.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-block font-semibold text-[var(--team)] underline"
-          >
-            Open the event page
-          </a>
-        )}
-        <p className="mt-3 rounded-lg bg-slate-50 p-2 text-sm text-slate-700">
-          {stillChecking
-            ? `We check the event page every Monday for new teams until the tournament starts.${checked ? ` Last checked ${checked}${t.checkNote ? `: ${t.checkNote}` : "."}` : ""}`
-            : t.url
-              ? "The tournament has started, so the weekly check has stopped."
-              : "Added from a screenshot. Add another screenshot when more teams sign up."}
-        </p>
         <p className="mt-2 text-sm text-slate-600">
           Schedule, scores and standings come next: the pool schedule and bracket from a screenshot.
         </p>
+      </section>
+
+      <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
+        <h2 className={heading}>Links</h2>
+        {links.length === 0 ? (
+          <p className="text-base text-slate-700">
+            {canEdit
+              ? "Add the tournament's info, schedule and bracket pages so parents can open them here."
+              : "No links yet."}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {links.map(([label, href]) => (
+              <li key={label}>
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-h-12 items-center justify-between gap-2 rounded-xl border-2 border-slate-200 px-3 py-2 text-base font-semibold text-[var(--team)] active:bg-slate-50"
+                >
+                  {label}
+                  <span aria-hidden className="text-slate-400">
+                    ↗
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+        {canEdit && (
+          <button
+            onClick={() =>
+              setEditLinks({
+                info: t.infoUrl ?? "",
+                schedule: t.scheduleUrl ?? "",
+                bracket: t.bracketUrl ?? "",
+              })
+            }
+            className="mt-3 h-12 w-full rounded-xl border-2 border-slate-400 bg-white text-base font-bold active:bg-slate-100"
+          >
+            {links.length ? "Edit links" : "Add links"}
+          </button>
+        )}
       </section>
 
       <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
@@ -171,7 +190,6 @@ export function TournamentScreen({ id }: { id: string }) {
                   <span className="block text-base font-semibold">{x.name}</span>
                   <span className="block text-sm text-slate-600">
                     {[x.hometown, x.classLabel].filter(Boolean).join(" · ")}
-                    {x.source === "weekly" && " · added by the weekly check"}
                   </span>
                 </span>
                 {canEdit && (
@@ -208,15 +226,6 @@ export function TournamentScreen({ id }: { id: string }) {
 
         {canEdit && (
           <div className="mt-3 flex flex-col gap-2">
-            {t.url && (
-              <button
-                onClick={() => void checkNow()}
-                disabled={busy !== null}
-                className="h-12 rounded-xl bg-[var(--team)] text-base font-bold text-white disabled:opacity-40"
-              >
-                Check for new teams now
-              </button>
-            )}
             <ScreenshotButton
               onFile={(f) => void fromScreenshot(f)}
               label="Add teams from a screenshot"
@@ -248,6 +257,35 @@ export function TournamentScreen({ id }: { id: string }) {
           Delete tournament
         </button>
       )}
+      <Sheet open={editLinks !== null} title="Tournament links" onClose={() => setEditLinks(null)}>
+        {editLinks && (
+          <div className="flex flex-col gap-4">
+            <LinkFields value={editLinks} onChange={setEditLinks} />
+            {error && (
+              <p role="alert" className="text-base font-semibold text-red-700">
+                {error}
+              </p>
+            )}
+            <button
+              onClick={() => {
+                const checked = checkLinks(editLinks);
+                if (typeof checked === "string") {
+                  setError(checked);
+                  return;
+                }
+                void run("Saving…", async () => {
+                  await (await backend()).setLinks(t.id, checked);
+                  setEditLinks(null);
+                });
+              }}
+              disabled={busy !== null}
+              className="h-14 rounded-xl bg-green-700 text-lg font-bold text-white disabled:opacity-40"
+            >
+              Save links
+            </button>
+          </div>
+        )}
+      </Sheet>
       <Sheet
         open={confirmDelete}
         title="Delete this tournament?"

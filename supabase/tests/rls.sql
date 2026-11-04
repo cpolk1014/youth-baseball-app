@@ -1405,7 +1405,7 @@ set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- manager
 create temp table trn as
   with t as (
-    insert into public.tournament (team_id, name, url, start_date, end_date, division)
+    insert into public.tournament (team_id, name, info_url, start_date, end_date, division)
     values ('00000000-0000-4000-8000-000000000001', 'Caleb Easterling Memorial',
       'https://youth.2dsports.org/events/x', '2026-10-17', '2026-10-18', '14u')
     returning id)
@@ -1418,8 +1418,17 @@ do $$ begin
   raise exception 'should have failed' using errcode = 'T0001';
 exception when unique_violation then raise notice 'ok: a team is only listed once';
 end $$;
+update public.tournament set schedule_url = 'https://example.com/schedule', bracket_url = 'https://example.com/bracket' where id = (select id from trn);
+select pg_temp.expect((select bracket_url from public.tournament where id = (select id from trn)) = 'https://example.com/bracket', 'a manager adds the schedule and bracket links');
+do $$ begin
+  update public.tournament set schedule_url = 'javascript:alert(1)' where id = (select id from trn);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: tournament links must be https';
+end $$;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
 select pg_temp.expect((select count(*) from public.tournament where id = (select id from trn)) = 1, 'parents see the tournament');
+update public.tournament set bracket_url = 'https://example.com/other' where id = (select id from trn);
+select pg_temp.expect((select bracket_url from public.tournament where id = (select id from trn)) = 'https://example.com/bracket', 'parents can''t change the links');
 do $$ begin
   insert into public.tournament_team (tournament_id, name) values ((select id from trn), 'Sneaky Sox');
   raise exception 'should have failed' using errcode = 'T0001';

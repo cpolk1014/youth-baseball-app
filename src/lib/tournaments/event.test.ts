@@ -1,83 +1,25 @@
 import { describe, expect, it } from "vitest";
-import {
-  cleanEvent,
-  eventPages,
-  guessOurTeam,
-  htmlToText,
-  isPrivateAddress,
-  newTeams,
-  pickDivision,
-  safeEventUrl,
-  teamKey,
-} from "./event";
+import { cleanEvent, guessOurTeam, newTeams, pickDivision, teamKey, tournamentLink } from "./event";
 
-describe("htmlToText", () => {
-  it("keeps the readable text, one line per block, without scripts or styles", () => {
-    const text = htmlToText(
-      `<html><head><style>.x{color:red}</style><script>var a = "<p>no</p>";</script></head>
-       <body><h1>Caleb Easterling&nbsp;Memorial</h1><div class="panel-heading"><a href="/t/1">Tsunami 14u</a>
-       <span>Gonzales, LA</span> | (14u AA )</div><p>Tom &amp; Jerry&#39;s</p><!-- hidden --></body></html>`,
+describe("tournamentLink", () => {
+  it("keeps https links, adds https:// when left off, and treats blank as none", () => {
+    expect(tournamentLink(" https://youth.2dsports.org/public/events/x ")).toBe(
+      "https://youth.2dsports.org/public/events/x",
     );
-    expect(text).toBe(
-      "Caleb Easterling Memorial\nTsunami 14u Gonzales, LA | (14u AA )\nTom & Jerry's",
-    );
+    expect(tournamentLink("youth.2dsports.org/x")).toBe("https://youth.2dsports.org/x");
+    expect(tournamentLink("  ")).toBeNull();
   });
-});
-
-describe("safeEventUrl", () => {
-  it("accepts public https links and drops the #fragment", () => {
-    expect(safeEventUrl("https://youth.2dsports.org/events/x/teams#top")?.toString()).toBe(
-      "https://youth.2dsports.org/events/x/teams",
-    );
-  });
-
-  it("refuses links it shouldn't fetch", () => {
+  it("refuses links that aren't plain https web links", () => {
     for (const bad of [
-      "http://youth.2dsports.org/events/x",
-      "https://localhost/x",
-      "https://127.0.0.1/x",
-      "https://10.0.0.5/x",
-      "https://192.168.1.10/x",
-      "https://intranet/x",
-      "https://user:pw@example.com/x",
-      "https://example.com:8443/x",
-      "https://[::1]/x",
-      "ftp://example.com",
-      "not a link",
+      "http://example.com",
+      "javascript:alert(1)",
+      "https://user:pw@example.com",
+      "https://localhost",
+      "not a link at all",
+      `https://example.com/${"a".repeat(500)}`,
     ]) {
-      expect(safeEventUrl(bad), bad).toBeNull();
+      expect(tournamentLink(bad)).toBe("bad");
     }
-  });
-});
-
-describe("isPrivateAddress", () => {
-  it("spots private and local addresses", () => {
-    for (const ip of [
-      "10.1.2.3",
-      "127.0.0.1",
-      "192.168.0.1",
-      "172.20.1.1",
-      "169.254.169.254",
-      "::1",
-      "fd00::1",
-      "::ffff:10.0.0.1",
-    ]) {
-      expect(isPrivateAddress(ip), ip).toBe(true);
-    }
-    expect(isPrivateAddress("104.21.3.4")).toBe(false);
-    expect(isPrivateAddress("2606:4700::1111")).toBe(false);
-  });
-});
-
-describe("eventPages", () => {
-  it("reads the event and its /teams page, or just the teams page if that's the link", () => {
-    expect(eventPages(new URL("https://a.org/events/x/"))).toEqual([
-      "https://a.org/events/x",
-      "https://a.org/events/x/teams",
-    ]);
-    expect(eventPages(new URL("https://a.org/events/x/teams"))).toEqual([
-      "https://a.org/events/x/teams",
-    ]);
   });
 });
 

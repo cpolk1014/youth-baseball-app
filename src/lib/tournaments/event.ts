@@ -1,7 +1,5 @@
-// Tournaments, phase 1: reading an event's page or screenshot into its details and the
-// teams in each division, and working out which teams are new (pure: no I/O).
-
-export const MAX_PAGE_TEXT = 60_000;
+// Tournaments, phase 1: reading a screenshot of an event into its details and the teams in
+// each division, working out which teams are new, and checking the links coaches add (pure).
 
 export const EVENT_JSON_SCHEMA = {
   type: "object",
@@ -82,89 +80,24 @@ export interface EventDetails {
   warnings: string[];
 }
 
-const ENTITIES: Record<string, string> = {
-  amp: "&",
-  lt: "<",
-  gt: ">",
-  quot: '"',
-  apos: "'",
-  nbsp: " ",
-  "#39": "'",
-};
-
-/** A page's readable text: no scripts or styles, one line per block, capped in length. */
-export function htmlToText(html: string): string {
-  return html
-    .replace(/\s+/g, " ") // the page's own line breaks don't matter; tags decide
-    .replace(/<(script|style|noscript|svg|template|iframe)\b[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<!--[\s\S]*?-->/g, " ")
-    .replace(
-      /<\/?(p|div|li|tr|h[1-6]|br|section|article|header|footer|table|ul|ol|a|td|th|span)\b[^>]*>/gi,
-      (m) => (/^<\/?(span|a|td|th)/i.test(m) ? " " : "\n"),
-    )
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&(#\d+|#x[0-9a-f]+|\w+);/gi, (m, e: string) => {
-      const k = e.toLowerCase();
-      if (ENTITIES[k]) return ENTITIES[k]!;
-      if (k.startsWith("#x")) return String.fromCodePoint(parseInt(k.slice(2), 16));
-      if (k.startsWith("#")) return String.fromCodePoint(Number(k.slice(1)));
-      return m;
-    })
-    .split("\n")
-    .map((l) => l.replace(/[ \t\f\v\r]+/g, " ").trim())
-    .filter(Boolean)
-    .join("\n")
-    .slice(0, MAX_PAGE_TEXT);
-}
-
-const PRIVATE_HOST =
-  /^(localhost|.*\.local|.*\.internal|0\.0\.0\.0|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1\]?$|\[?f[cd][0-9a-f]{2}:)/i;
-
 /**
- * An event link we're willing to fetch: https on a public host name (no IP addresses,
- * no local or private names, no logins in the link). Null if not.
+ * A link a coach pastes for the tournament's info, schedule or bracket: https only, no logins
+ * in it, up to 500 characters. Empty means none (null); anything else unusable is "bad".
  */
-export function safeEventUrl(input: string): URL | null {
+export function tournamentLink(input: string): string | null | "bad" {
+  const v = input.trim();
+  if (!v) return null;
   let url: URL;
   try {
-    url = new URL(input.trim());
+    url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`);
   } catch {
-    return null;
+    return "bad";
   }
-  if (url.protocol !== "https:" || url.username || url.password) return null;
-  if (url.port && url.port !== "443") return null;
-  const host = url.hostname.toLowerCase();
-  if (!host.includes(".") || PRIVATE_HOST.test(host)) return null;
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(host) || host.startsWith("[")) return null;
-  url.hash = "";
-  return url;
-}
-
-/** Whether a resolved address is private, local or otherwise not on the public internet. */
-export function isPrivateAddress(ip: string): boolean {
-  const v4 = /^(\d+)\.(\d+)\.\d+\.\d+$/.exec(ip);
-  if (v4) {
-    const [a, b] = [Number(v4[1]), Number(v4[2])];
-    return (
-      a === 0 ||
-      a === 10 ||
-      a === 127 ||
-      (a === 169 && b === 254) ||
-      (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168) ||
-      (a === 100 && b >= 64 && b <= 127) ||
-      a >= 224
-    );
+  if (url.protocol !== "https:" || url.username || url.password || !url.hostname.includes(".")) {
+    return "bad";
   }
-  const v6 = ip.toLowerCase();
-  if (v6.startsWith("::ffff:")) return isPrivateAddress(v6.slice(7));
-  return v6 === "::1" || v6 === "::" || /^f[cd]/.test(v6) || /^fe[89ab]/.test(v6);
-}
-
-/** Pages to read for an event: the link, and its /teams page when the link is the event. */
-export function eventPages(url: URL): string[] {
-  const base = url.toString().replace(/\/+$/, "");
-  return /\/teams$/i.test(url.pathname.replace(/\/+$/, "")) ? [base] : [base, `${base}/teams`];
+  const out = url.toString();
+  return out.length <= 500 ? out : "bad";
 }
 
 const str = (v: unknown, max: number) =>

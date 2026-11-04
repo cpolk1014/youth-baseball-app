@@ -71,7 +71,9 @@ export function TournamentsScreen() {
           className="mb-4 flex min-h-14 w-full flex-col items-start justify-center rounded-xl bg-[var(--team)] px-4 py-2 text-left text-white active:bg-[var(--team-press)]"
         >
           <span className="text-lg font-bold">+ Add a tournament</span>
-          <span className="text-sm text-white/80">Paste the event link; we find the teams.</span>
+          <span className="text-sm text-white/80">
+            From a screenshot of the event; we add the teams.
+          </span>
         </button>
       )}
       {list === null ? (

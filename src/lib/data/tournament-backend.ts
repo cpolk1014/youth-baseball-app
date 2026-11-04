@@ -8,14 +8,14 @@ export interface Tournament {
   teamId: string;
   name: string;
   organization: string | null;
-  url: string | null;
+  infoUrl: string | null;
+  scheduleUrl: string | null;
+  bracketUrl: string | null;
   startDate: string | null;
   endDate: string | null;
   city: string | null;
   venues: string[];
   division: string | null;
-  checkedAt: string | null;
-  checkNote: string | null;
   teamCount: number;
 }
 
@@ -33,33 +33,33 @@ interface Row {
   team_id: string;
   name: string;
   organization: string | null;
-  url: string | null;
+  info_url: string | null;
+  schedule_url: string | null;
+  bracket_url: string | null;
   start_date: string | null;
   end_date: string | null;
   city: string | null;
   venues: string[] | null;
   division: string | null;
-  checked_at: string | null;
-  check_note: string | null;
   tournament_team?: { count: number }[];
 }
 
 const COLS =
-  "id,team_id,name,organization,url,start_date,end_date,city,venues,division,checked_at,check_note,tournament_team(count)";
+  "id,team_id,name,organization,info_url,schedule_url,bracket_url,start_date,end_date,city,venues,division,tournament_team(count)";
 
 const fromRow = (r: Row): Tournament => ({
   id: r.id,
   teamId: r.team_id,
   name: r.name,
   organization: r.organization,
-  url: r.url,
+  infoUrl: r.info_url,
+  scheduleUrl: r.schedule_url,
+  bracketUrl: r.bracket_url,
   startDate: r.start_date,
   endDate: r.end_date,
   city: r.city,
   venues: r.venues ?? [],
   division: r.division,
-  checkedAt: r.checked_at,
-  checkNote: r.check_note,
   teamCount: r.tournament_team?.[0]?.count ?? 0,
 });
 
@@ -115,7 +115,13 @@ export async function getTournament(
   };
 }
 
-/** Save a tournament read from its link or a screenshot, with the division's teams. */
+export interface TournamentLinks {
+  infoUrl: string | null;
+  scheduleUrl: string | null;
+  bracketUrl: string | null;
+}
+
+/** Save a tournament read from a screenshot, with the division's teams and any links. */
 export async function createTournament(input: {
   teamId: string;
   seasonId: string | null;
@@ -124,8 +130,7 @@ export async function createTournament(input: {
   division: string | null;
   teams: EventTeam[];
   ourTeam: string | null;
-  url: string | null;
-  pageHash: string | null;
+  links: TournamentLinks;
 }): Promise<string> {
   const sb = getBrowserSupabase();
   const id = crypto.randomUUID();
@@ -136,20 +141,32 @@ export async function createTournament(input: {
       season_id: input.seasonId,
       name: input.name.trim().slice(0, 120),
       organization: input.event.organization,
-      url: input.url,
+      info_url: input.links.infoUrl,
+      schedule_url: input.links.scheduleUrl,
+      bracket_url: input.links.bracketUrl,
       start_date: input.event.startDate,
       end_date: input.event.endDate,
       city: input.event.city,
       venues: input.event.venues,
       division: input.division,
-      // The first read counts as this week's check.
-      checked_at: input.url ? new Date().toISOString() : null,
-      page_hash: input.pageHash,
-      check_note: input.url ? `${input.teams.length} teams found.` : null,
     }),
   );
-  await addTeams(id, input.teams, input.url ? "link" : "screenshot", input.ourTeam);
+  await addTeams(id, input.teams, "screenshot", input.ourTeam);
   return id;
+}
+
+/** Coaches set or clear the info, schedule and bracket links. */
+export async function setLinks(id: string, links: TournamentLinks): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("tournament")
+      .update({
+        info_url: links.infoUrl,
+        schedule_url: links.scheduleUrl,
+        bracket_url: links.bracketUrl,
+      })
+      .eq("id", id),
+  );
 }
 
 export async function addTeams(
