@@ -466,3 +466,28 @@ export function matchScores(
   }
   return { updates, unmatched };
 }
+
+/** Today's date (YYYY-MM-DD) where the team plays. */
+export function todayIn(timeZone: string, now = new Date()): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", { timeZone }).format(now);
+  } catch {
+    return now.toISOString().slice(0, 10);
+  }
+}
+
+/**
+ * The tournament's game days: its dates, or else the first and last day on its schedule.
+ * "before" / "on" / "after" today, and the first day (null when nothing has a date yet).
+ */
+export function gameDays(
+  tournament: { startDate: string | null; endDate: string | null },
+  games: { date: string | null }[],
+  today: string,
+): { when: "before" | "on" | "after" | "unknown"; first: string | null } {
+  const dates = games.flatMap((g) => (g.date ? [g.date] : [])).sort();
+  const first = tournament.startDate ?? dates[0] ?? null;
+  const last = tournament.endDate ?? dates.at(-1) ?? first;
+  if (!first || !last) return { when: "unknown", first: null };
+  return { when: today < first ? "before" : today > last ? "after" : "on", first };
+}

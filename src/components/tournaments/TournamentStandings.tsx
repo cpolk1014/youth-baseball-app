@@ -4,7 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import type { Tournament, TournamentGame, TournamentTeam } from "@/lib/data/tournament-backend";
 import type { AppData } from "@/lib/data/types";
 import { MAX_SCREENSHOTS } from "@/lib/tournaments/event";
-import { ourSide, parsePlaceholder, placeOf, time12 } from "@/lib/tournaments/schedule";
+import {
+  gameDays,
+  ourSide,
+  parsePlaceholder,
+  placeOf,
+  time12,
+  todayIn,
+} from "@/lib/tournaments/schedule";
 import {
   bySlot,
   describeTerm,
@@ -120,6 +127,7 @@ export function TournamentStandings({
   const pool = games.filter((g) => g.stage === "pool");
   if (pool.length === 0) return null;
   const left = remainingPoolGames(games, input.teams);
+  const days = gameDays(t, games, todayIn(data.team.gameDay?.timezone ?? "America/Chicago"));
   const scored = pool.filter((g) => g.scoreHome !== null).length;
 
   const run = async (label: string, fn: () => Promise<void>) => {
@@ -150,12 +158,25 @@ export function TournamentStandings({
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white p-4 md:col-span-2">
       <h2 className={heading}>Standings</h2>
-      <button
-        onClick={() => setSheet("tomorrow")}
-        className="mb-3 flex min-h-14 w-full items-center justify-center rounded-xl bg-[var(--team)] px-4 text-lg font-bold text-white active:bg-[var(--team-press)] md:w-auto"
-      >
-        🕘 What time do we play tomorrow?
-      </button>
+      <div className="mb-3">
+        <button
+          onClick={() => setSheet("tomorrow")}
+          disabled={days.when !== "on"}
+          aria-describedby="play-times-help"
+          className="flex min-h-14 w-full items-center justify-center rounded-xl bg-[var(--team)] px-4 text-lg font-bold text-white active:bg-[var(--team-press)] disabled:bg-slate-300 disabled:text-slate-600 md:w-auto"
+        >
+          🕘 What time do we play tomorrow?
+        </button>
+        {days.when !== "on" && (
+          <p id="play-times-help" className="mt-1 text-sm text-slate-600">
+            {days.when === "before"
+              ? `Available on game day (${new Date(`${days.first}T12:00`).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}), as scores come in.`
+              : days.when === "after"
+                ? "The tournament is over."
+                : "Available on game day, once the tournament's dates or schedule are in."}
+          </p>
+        )}
+      </div>
 
       {t.seedsLockedAt && t.seeds ? (
         <>

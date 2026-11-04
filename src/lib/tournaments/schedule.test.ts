@@ -5,10 +5,12 @@ import {
   cleanScores,
   matchScores,
   findTeamGame,
+  gameDays,
   gameKey,
   matchSchedule,
   ourSide,
   teamGameFor,
+  todayIn,
   teamIdFor,
   winner,
   type SavedGame,
@@ -359,5 +361,31 @@ describe("scores from screenshots", () => {
       { id: "s5", scoreHome: 13, scoreAway: 0, status: "same", was: null },
     ]);
     expect(unmatched.map((u) => u.home)).toEqual(["Nobody"]);
+  });
+});
+
+describe("game days", () => {
+  const t = { startDate: "2026-11-14", endDate: "2026-11-15" };
+  it("knows whether today is a tournament day", () => {
+    expect(gameDays(t, [], "2026-11-13")).toEqual({ when: "before", first: "2026-11-14" });
+    expect(gameDays(t, [], "2026-11-14").when).toBe("on");
+    expect(gameDays(t, [], "2026-11-15").when).toBe("on");
+    expect(gameDays(t, [], "2026-11-16").when).toBe("after");
+  });
+  it("falls back to the schedule's days, and says when it can't tell", () => {
+    const none = { startDate: null, endDate: null };
+    expect(
+      gameDays(
+        none,
+        [{ date: "2026-11-15" }, { date: "2026-11-14" }, { date: null }],
+        "2026-11-15",
+      ),
+    ).toEqual({ when: "on", first: "2026-11-14" });
+    expect(gameDays(none, [], "2026-11-15")).toEqual({ when: "unknown", first: null });
+  });
+  it("reads today in the team's time zone", () => {
+    // 1 AM UTC on the 15th is still the evening of the 14th in Chicago.
+    expect(todayIn("America/Chicago", new Date("2026-11-15T01:00:00Z"))).toBe("2026-11-14");
+    expect(todayIn("Not/AZone", new Date("2026-11-15T01:00:00Z"))).toBe("2026-11-15");
   });
 });
