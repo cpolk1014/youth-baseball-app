@@ -217,7 +217,7 @@ export async function deleteTournament(id: string): Promise<void> {
 // ── Phase 2: the schedule ──
 
 const GAME_COLS =
-  "id,game_no,stage,pool,round,game_date,start_time,venue,field,home,away,home_team_id,away_team_id,game_id";
+  "id,game_no,stage,pool,round,game_date,start_time,venue,field,home,away,home_team_id,away_team_id,game_id,score_home,score_away,reported_by,reported_at,locked";
 
 interface GameRow {
   id: string;
@@ -234,11 +234,21 @@ interface GameRow {
   home_team_id: string | null;
   away_team_id: string | null;
   game_id: string | null;
+  score_home: number | null;
+  score_away: number | null;
+  reported_by: string | null;
+  reported_at: string | null;
+  locked: boolean;
 }
 
 export interface TournamentGame extends SavedGame {
   homeTeamId: string | null;
   awayTeamId: string | null;
+  scoreHome: number | null;
+  scoreAway: number | null;
+  reportedBy: string | null;
+  reportedAt: string | null;
+  locked: boolean;
 }
 
 export async function listGames(tournamentId: string): Promise<TournamentGame[]> {
@@ -263,6 +273,11 @@ export async function listGames(tournamentId: string): Promise<TournamentGame[]>
     homeTeamId: r.home_team_id,
     awayTeamId: r.away_team_id,
     gameId: r.game_id,
+    scoreHome: r.score_home,
+    scoreAway: r.score_away,
+    reportedBy: r.reported_by,
+    reportedAt: r.reported_at,
+    locked: r.locked,
   }));
 }
 
@@ -300,6 +315,26 @@ export async function saveGames(tournamentId: string, writes: GameWrite[]): Prom
   for (const w of writes.filter((x) => x.id)) {
     check(await sb.from("tournament_game").update(row(w)).eq("id", w.id!));
   }
+}
+
+/** Anyone on the team reports (or clears, with nulls) the score of a game we're not in. */
+export async function reportScore(
+  id: string,
+  home: number | null,
+  away: number | null,
+): Promise<void> {
+  check(
+    await getBrowserSupabase().rpc("report_tournament_score", {
+      p_id: id,
+      p_home: home,
+      p_away: away,
+    }),
+  );
+}
+
+/** Coaches and managers lock a score so only they can change it. */
+export async function setScoreLocked(id: string, locked: boolean): Promise<void> {
+  check(await getBrowserSupabase().from("tournament_game").update({ locked }).eq("id", id));
 }
 
 export async function removeGame(id: string): Promise<void> {

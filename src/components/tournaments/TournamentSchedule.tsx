@@ -21,6 +21,7 @@ import {
   teamGameFor,
   teamIdFor,
   time12,
+  winner,
   type Schedule,
   type ScheduleGame,
   type ScheduleMatch,
@@ -48,7 +49,8 @@ const gameLabel = (g: Pick<ScheduleGame, "gameNo" | "stage" | "pool" | "round">)
     .filter(Boolean)
     .join(" · ");
 
-/** The tournament's games by day, ours highlighted; coaches add or update from screenshots. */
+/** The tournament's games by day, ours highlighted; coaches add or update from screenshots,
+ * and anyone on the team reports scores of the games we're not in. */
 export function TournamentSchedule({
   data,
   tournament,
@@ -63,7 +65,9 @@ export function TournamentSchedule({
   const [games, setGames] = useState<TournamentGame[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [scoring, setScoring] = useState<TournamentGame | null>(null);
   const ourName = teams.find((t) => t.isUs)?.name ?? null;
+  const canScore = data.team.optionedAt === null;
 
   const load = useCallback(async () => {
     setGames(await (await backend()).listGames(tournament.id));
@@ -74,15 +78,7 @@ export function TournamentSchedule({
     load().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   }, [load]);
 
-  const remove = async (id: string) => {
-    setError(null);
-    try {
-      await (await backend()).removeGame(id);
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  };
+  const scored = games?.filter((g) => g.scoreHome !== null).length ?? 0;
 
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white p-4 md:col-span-2">
@@ -97,6 +93,12 @@ export function TournamentSchedule({
         </p>
       ) : (
         <div className="flex flex-col gap-4">
+          {canScore && scored < games.length && (
+            <p className="text-sm text-slate-600">
+              Tap a game to enter its final score. Anyone on the team can help keep scores up to
+              date.
+            </p>
+          )}
           {byDay(games).map((d) => (
             <div key={d.date ?? "none"}>
               <h3 className="mb-1 text-base font-bold">{dayLabel(d.date)}</h3>
@@ -106,7 +108,7 @@ export function TournamentSchedule({
                     key={g.id}
                     g={g}
                     ours={!!ourSide(g, ourName)}
-                    onRemove={canEdit ? () => void remove(g.id) : undefined}
+                    onOpen={canScore || canEdit ? () => setScoring(g) : undefined}
                   />
                 ))}
               </ul>
@@ -146,54 +148,268 @@ export function TournamentSchedule({
           />
         )}
       </Sheet>
+      <Sheet
+        open={scoring !== null}
+        title={scoring ? gameLabel(scoring) : "Score"}
+        onClose={() => setScoring(null)}
+      >
+        {scoring && (
+          <ScoreSheet
+            key={scoring.id}
+            data={data}
+            g={scoring}
+            ours={!!ourSide(scoring, ourName)}
+            canEdit={canEdit}
+            canScore={canScore}
+            onDone={() => {
+              setScoring(null);
+              void load();
+            }}
+          />
+        )}
+      </Sheet>
     </section>
   );
 }
 
-function GameRow({
-  g,
-  ours,
-  onRemove,
-}: {
-  g: TournamentGame;
-  ours: boolean;
-  onRemove?: () => void;
-}) {
+function GameRow({ g, ours, onOpen }: { g: TournamentGame; ours: boolean; onOpen?: () => void }) {
+  const won = winner(g);
+  const side = (name: string, score: number | null, isWinner: boolean) => (
+    <span className="flex items-baseline justify-between gap-2">
+      <span className={`min-w-0 text-base ${isWinner ? "font-bold" : "font-semibold"}`}>
+        {name}
+      </span>
+      {score !== null && (
+        <span className={`shrink-0 text-lg tabular-nums ${isWinner ? "font-bold" : ""}`}>
+          {score}
+        </span>
+      )}
+    </span>
+  );
   const body = (
     <>
-      <p className="text-sm font-semibold text-slate-600">
-        {time12(g.startTime)} · {gameLabel(g)}
-      </p>
-      <p className="text-base font-bold">
-        {g.home} <span className="font-normal text-slate-500">vs</span> {g.away}
-      </p>
-      {placeOf(g) && <p className="text-sm text-slate-600">{placeOf(g)}</p>}
+      <span className="flex items-center justify-between gap-2 text-sm font-semibold text-slate-600">
+        <span>
+          {time12(g.startTime)} · {gameLabel(g)}
+        </span>
+        {won ? (
+          <span className="text-slate-500">Final{g.locked ? " · 🔒" : ""}</span>
+        ) : (
+          ours && <span className="text-[var(--team)]">Our game</span>
+        )}
+      </span>
+      {side(g.home, g.scoreHome, won === "home")}
+      {side(g.away, g.scoreAway, won === "away")}
+      {placeOf(g) && <span className="block text-sm text-slate-600">{placeOf(g)}</span>}
     </>
   );
+  const box = `block w-full rounded-xl border-2 p-3 text-left ${ours ? "border-[var(--team)] bg-[var(--team)]/5" : "border-slate-200"}`;
   return (
-    <li
-      className={`flex items-start gap-2 rounded-xl border-2 p-3 ${ours ? "border-[var(--team)] bg-[var(--team)]/5" : "border-slate-200"}`}
-    >
-      {ours && g.gameId ? (
-        <Link href={`/games/${g.gameId}`} className="min-w-0 flex-1">
+    <li>
+      {onOpen ? (
+        <button onClick={onOpen} className={`${box} active:bg-slate-50`}>
           {body}
-          <span className="mt-1 block text-sm font-semibold text-[var(--team)]">
-            Our game: lineup and details →
-          </span>
-        </Link>
-      ) : (
-        <div className="min-w-0 flex-1">{body}</div>
-      )}
-      {onRemove && (
-        <button
-          onClick={onRemove}
-          aria-label={`Remove ${gameLabel(g)}`}
-          className="flex size-10 shrink-0 items-center justify-center rounded-lg text-xl text-slate-400 hover:bg-slate-100"
-        >
-          ×
         </button>
+      ) : (
+        <div className={box}>{body}</div>
       )}
     </li>
+  );
+}
+
+/** Enter or fix a game's final score; coaches also lock it or remove the game. */
+function ScoreSheet({
+  data,
+  g,
+  ours,
+  canEdit,
+  canScore,
+  onDone,
+}: {
+  data: AppData;
+  g: TournamentGame;
+  ours: boolean;
+  canEdit: boolean;
+  canScore: boolean;
+  onDone: () => void;
+}) {
+  const [home, setHome] = useState(g.scoreHome ?? 0);
+  const [away, setAway] = useState(g.scoreAway ?? 0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+
+  const run = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+      onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
+
+  const reporter = g.reportedBy
+    ? g.reportedBy === data.me.userId
+      ? "you"
+      : (data.members.find((m) => m.userId === g.reportedBy)?.displayName ?? "someone on the team")
+    : null;
+  const when = g.reportedAt
+    ? new Date(g.reportedAt).toLocaleString("en-US", {
+        weekday: "short",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
+  const editable = canScore && !ours && (!g.locked || canEdit);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-base text-slate-700">
+        {dayLabel(g.date)}, {time12(g.startTime)}
+        {placeOf(g) ? ` · ${placeOf(g)}` : ""}
+      </p>
+
+      {ours ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-base text-slate-700">
+            This is our game. Its score comes from the game page: the coach marks it final with the
+            score, and it shows here.
+          </p>
+          {g.gameId && (
+            <Link
+              href={`/games/${g.gameId}`}
+              className="flex h-14 items-center justify-center rounded-xl bg-[var(--team)] text-lg font-bold text-white"
+            >
+              Open our game
+            </Link>
+          )}
+        </div>
+      ) : editable ? (
+        <>
+          <Stepper label={g.home} value={home} onChange={setHome} />
+          <Stepper label={g.away} value={away} onChange={setAway} />
+          <button
+            onClick={() => void run(async () => (await backend()).reportScore(g.id, home, away))}
+            disabled={busy}
+            className="h-14 rounded-xl bg-green-700 text-lg font-bold text-white disabled:opacity-40"
+          >
+            {g.scoreHome === null ? "Save final score" : "Save corrected score"}
+          </button>
+        </>
+      ) : (
+        <p className="rounded-xl bg-slate-50 p-3 text-base">
+          {g.scoreHome !== null
+            ? `Final: ${g.home} ${g.scoreHome}, ${g.away} ${g.scoreAway}.`
+            : "No score yet."}
+          {g.locked && " The coach locked this score."}
+        </p>
+      )}
+
+      {reporter && !ours && (
+        <p className="text-sm text-slate-600">
+          Entered by {reporter}
+          {when ? ` · ${when}` : ""}
+          {g.locked ? " · locked by the coach" : ""}
+        </p>
+      )}
+
+      {canEdit && !ours && (
+        <div className="flex flex-col gap-2 border-t-2 border-slate-100 pt-3">
+          {g.scoreHome !== null && (
+            <button
+              onClick={() =>
+                void run(async () => (await backend()).setScoreLocked(g.id, !g.locked))
+              }
+              disabled={busy}
+              className="h-12 rounded-xl border-2 border-slate-400 bg-white text-base font-bold disabled:opacity-40"
+            >
+              {g.locked ? "Unlock the score" : "Lock the score (only coaches can change it)"}
+            </button>
+          )}
+          {g.scoreHome !== null && (
+            <button
+              onClick={() => void run(async () => (await backend()).reportScore(g.id, null, null))}
+              disabled={busy}
+              className="h-12 rounded-xl border-2 border-slate-300 bg-white text-base font-semibold disabled:opacity-40"
+            >
+              Clear the score
+            </button>
+          )}
+        </div>
+      )}
+      {canEdit &&
+        (confirmRemove ? (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setConfirmRemove(false)}
+              className="h-12 rounded-xl border-2 border-slate-400 font-bold"
+            >
+              Keep it
+            </button>
+            <button
+              onClick={() => void run(async () => (await backend()).removeGame(g.id))}
+              disabled={busy}
+              className="h-12 rounded-xl bg-red-700 font-bold text-white disabled:opacity-40"
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmRemove(true)}
+            className="h-12 rounded-xl border-2 border-red-200 bg-white text-base font-semibold text-red-700"
+          >
+            Remove this game from the schedule
+            {ours ? " (the team game stays)" : ""}
+          </button>
+        ))}
+      {error && (
+        <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Big minus / number / plus, for one thumb in the bleachers. */
+function Stepper({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (n: number) => void;
+}) {
+  const btn =
+    "flex size-14 shrink-0 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-3xl font-bold active:bg-slate-100 disabled:opacity-30";
+  return (
+    <div className="flex items-center gap-3">
+      <span className="min-w-0 flex-1 text-lg font-semibold">{label}</span>
+      <button
+        onClick={() => onChange(Math.max(0, value - 1))}
+        disabled={value === 0}
+        aria-label={`${label}: one less run`}
+        className={btn}
+      >
+        −
+      </button>
+      <span className="w-12 text-center text-3xl font-bold tabular-nums" aria-live="polite">
+        {value}
+      </span>
+      <button
+        onClick={() => onChange(Math.min(99, value + 1))}
+        disabled={value === 99}
+        aria-label={`${label}: one more run`}
+        className={btn}
+      >
+        +
+      </button>
+    </div>
   );
 }
 

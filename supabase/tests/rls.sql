@@ -1462,6 +1462,53 @@ select pg_temp.expect((select count(*) from public.tournament_game where tournam
 reset role;
 delete from public.game where id = '00000000-0000-4000-8000-00000000a001';
 select pg_temp.expect((select count(*) from public.tournament_game where tournament_id = (select id from trn) and game_id is null) = 2, 'deleting a team game keeps its tournament game, unlinked');
+-- ── tournament scores (phase 3): parents report other games; coaches correct and lock ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+select public.report_tournament_score((select id from public.tournament_game where tournament_id = (select id from trn) and game_no = '7'), 5, 3);
+select pg_temp.expect((select score_home = 5 and score_away = 3 and reported_by = 'aaaaaaaa-0000-4000-8000-000000000002' from public.tournament_game where game_no = '7' and tournament_id = (select id from trn)), 'a parent reports a score');
+do $$ begin
+  perform public.report_tournament_score((select id from public.tournament_game where tournament_id = (select id from trn) and game_no = '7'), 5, null);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when invalid_parameter_value then raise notice 'ok: a score needs both sides';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- manager
+update public.tournament_game set locked = true where tournament_id = (select id from trn) and game_no = '7';
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+do $$ begin
+  perform public.report_tournament_score((select id from public.tournament_game where tournament_id = (select id from trn) and game_no = '7'), 9, 9);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents can''t change a locked score';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- manager
+select public.report_tournament_score((select id from public.tournament_game where tournament_id = (select id from trn) and game_no = '7'), 4, 3);
+select pg_temp.expect((select score_home from public.tournament_game where game_no = '7' and tournament_id = (select id from trn)) = 4, 'a manager corrects a locked score');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- not on the team
+do $$ begin
+  perform public.report_tournament_score((select id from public.tournament_game where tournament_id = (select id from trn) and game_no = '7'), 1, 0);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: people not on the team can''t report scores';
+end $$;
+-- Our own game: scored on the team game, copied here.
+reset role;
+insert into public.game (id, season_id, game_date, opponent) values
+  ('00000000-0000-4000-8000-00000000a002', '00000000-0000-4000-8000-000000000101', '2026-10-17', 'Tsunami 14u');
+update public.tournament_game set game_id = '00000000-0000-4000-8000-00000000a002', home = 'Tsunami 14u', away = 'Rattlers'
+  where tournament_id = (select id from trn) and game_no = '1';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- manager
+update public.game set status = 'final', score_us = 6, score_them = 2 where id = '00000000-0000-4000-8000-00000000a002';
+select pg_temp.expect((select score_home = 2 and score_away = 6 from public.tournament_game where game_id = '00000000-0000-4000-8000-00000000a002'), 'our final score copies to the tournament game, on our side');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+do $$ begin
+  perform public.report_tournament_score((select id from public.tournament_game where game_id = '00000000-0000-4000-8000-00000000a002'), 1, 0);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when invalid_parameter_value then raise notice 'ok: our games are scored on the game page';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- manager
+update public.game set status = 'scheduled' where id = '00000000-0000-4000-8000-00000000a002';
+select pg_temp.expect((select score_home is null from public.tournament_game where game_id = '00000000-0000-4000-8000-00000000a002'), 'reopening our game clears its tournament score');
+reset role;
 -- ── game places ──
 update public.game set location = 'Traction Sports Complex', field = 'Chabills Field', location_lat = 30.2, location_lng = -92.0
   where id = 'eeeeeeee-0000-4000-8000-000000000020';

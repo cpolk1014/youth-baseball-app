@@ -293,3 +293,12 @@ export function findTeamGame(
     ) ?? null
   );
 }
+
+/** Who won a scored game (null until it has a score). */
+export function winner(g: {
+  scoreHome: number | null;
+  scoreAway: number | null;
+}): "home" | "away" | "tie" | null {
+  if (g.scoreHome === null || g.scoreAway === null) return null;
+  return g.scoreHome > g.scoreAway ? "home" : g.scoreHome < g.scoreAway ? "away" : "tie";
+}

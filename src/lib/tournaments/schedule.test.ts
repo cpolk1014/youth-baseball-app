@@ -8,6 +8,7 @@ import {
   ourSide,
   teamGameFor,
   teamIdFor,
+  winner,
   type SavedGame,
   type ScheduleGame,
 } from "./schedule";
@@ -237,5 +238,14 @@ describe("team games", () => {
     ];
     expect(findTeamGame(game(), "Tsunami 14u", games, new Set())?.id).toBe("a");
     expect(findTeamGame(game(), "Tsunami 14u", games, new Set(["a"]))).toBeNull();
+  });
+});
+
+describe("winner", () => {
+  it("says who won once there's a score", () => {
+    expect(winner({ scoreHome: 5, scoreAway: 7 })).toBe("away");
+    expect(winner({ scoreHome: 8, scoreAway: 1 })).toBe("home");
+    expect(winner({ scoreHome: 3, scoreAway: 3 })).toBe("tie");
+    expect(winner({ scoreHome: null, scoreAway: null })).toBeNull();
   });
 });
