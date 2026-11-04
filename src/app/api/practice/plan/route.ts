@@ -22,7 +22,7 @@ For each practice:
 - Optionally pick up to 3 plays from the play library (by id) to walk through as situations, when they suit the team's age and the day's focus. Leave them out for very young teams early in the season.
 - Write a coach note of one or two sentences: the teammate lesson of the day or the fun twist.
 
-Plan for the ages given. For young players (8 and under): short drills (5-10 minutes), lots of movement, small groups and stations so nobody waits in a long line, simple language, and plenty of praise. Keep every kid active and getting reps; rotate kids through every position over the season. Build fundamentals in a sensible order and revisit them; don't cram everything into one practice.
+Plan for the team's age: the request says how practice should look at that age, and the coach's goals add to it. Keep every kid active and getting reps (stations and small groups beat long lines at every age); rotate kids through every position over the season unless the coach says otherwise. Build skills in a sensible order and revisit them; don't cram everything into one practice.
 
 When the coach wants competition, make it feel like a win for everyone: kids against their own best score, the whole team against the coach or a team goal, points the team earns together. Never single out a loser, never use running or exercise as punishment.
 

@@ -75,6 +75,33 @@ export interface SeasonPlan {
   practices: PlannedPractice[];
 }
 
+/** 7 from "7U", "7u", "7 & under" or "Under 7"; null when the age group doesn't say. */
+export function ageFromGroup(ageGroup: string | null | undefined): number | null {
+  const m = /(\d{1,2})/.exec(ageGroup ?? "");
+  const age = m ? Number(m[1]) : NaN;
+  return age >= 4 && age <= 18 ? age : null;
+}
+
+/**
+ * How practice should look at this age, sent with the request so a 13U plan differs from a
+ * 7U one. Unknown ages get a note to go by what the coach wrote.
+ */
+export function ageGuidance(age: number | null): string {
+  if (age === null) {
+    return "The team's age isn't set: go by the coach's description, and keep it simple and active if unsure.";
+  }
+  if (age <= 8) {
+    return `Ages ${age}U (8 and under): short drills (5-10 minutes), lots of movement, small groups and stations so nobody waits in a line of more than 3, simple language, games and imagination (animals, missions), plenty of praise. Fundamentals first: ready position, catching with two hands, throwing to a target, running the bases the right way, where to go on a ground ball. Very few situations, and only simple ones.`;
+  }
+  if (age <= 10) {
+    return `Ages ${age}U (9-10): drills of 10-15 minutes in small groups. Build sound throwing, fielding and swing mechanics, and start situational play (force outs, where to throw with runners on, backing up, cutoffs). Introduce kid-pitch basics and catching (stance, receiving, blocking) with low pitch counts. Keep it competitive and fun, with plenty of reps for everyone.`;
+  }
+  if (age <= 12) {
+    return `Ages ${age}U (11-12): drills of 10-20 minutes. More team defense (cutoffs and relays, bunt coverage, first-and-third, rundowns), signs and baserunning reads (leads, steals, tagging up). Pitchers and catchers get regular, low-count bullpen work with proper warm-up and rest. Hitters do more live and machine work and learn an approach at the plate. Explain the why behind each drill.`;
+  }
+  return `Ages ${age}U (13-14): full situational defense on the bigger field, pickoffs and holding runners, defensive signs and communication. Pitchers throw bullpens with tracked pitch counts and arm care (warm-up, rest days, no throwing through pain). Hitters see live pitching and work on an approach by count. Add age-appropriate conditioning and agility, give players more responsibility (leading warm-ups, captains), and keep practices efficient and game-like.`;
+}
+
 /** How long a practice runs, for fitting the drills to it. */
 export function practiceLength(p: Pick<Practice, "startTime" | "endTime">): number {
   return practiceMinutes(p.startTime, p.endTime) ?? DEFAULT_MINUTES;
@@ -100,6 +127,9 @@ export function planRequestText(input: {
 }): string {
   const lines = [
     `Team: ${input.teamName}${input.ageGroup ? ` (${input.ageGroup})` : ""}, ${input.coachPitch ? "coach pitch" : "kid pitch"}, ${input.activePlayers} players.`,
+    "",
+    "How practice should look at this age:",
+    ageGuidance(ageFromGroup(input.ageGroup)),
     "",
     "The coach's goals for the season:",
     cleanPrompt(input.goals),

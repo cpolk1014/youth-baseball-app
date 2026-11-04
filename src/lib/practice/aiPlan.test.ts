@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Practice } from "@/lib/data/types";
-import { applyPlan, cleanPlan, planRequestText, practiceLength } from "./aiPlan";
+import {
+  ageFromGroup,
+  ageGuidance,
+  applyPlan,
+  cleanPlan,
+  planRequestText,
+  practiceLength,
+} from "./aiPlan";
 
 const practice = (id: string, extra: Partial<Practice> = {}): Practice => ({
   id,
@@ -141,5 +148,37 @@ describe("applyPlan", () => {
     expect(updated.plan).toHaveLength(1);
     expect(updated.plays).toEqual(["rundown"]);
     expect(updated.notes).toBe("Bring helmets\n\nTheme: Rally caps on\nCelebrate effort.");
+  });
+});
+
+describe("age guidance", () => {
+  it("reads the age from the team's age group", () => {
+    expect(ageFromGroup("7U")).toBe(7);
+    expect(ageFromGroup("13u")).toBe(13);
+    expect(ageFromGroup("Under 10")).toBe(10);
+    expect(ageFromGroup("Varsity")).toBeNull();
+    expect(ageFromGroup(null)).toBeNull();
+  });
+
+  it("gives each age band its own coaching approach", () => {
+    expect(ageGuidance(7)).toContain("8 and under");
+    expect(ageGuidance(9)).toContain("(9-10)");
+    expect(ageGuidance(12)).toContain("(11-12)");
+    expect(ageGuidance(13)).toContain("(13-14)");
+    expect(ageGuidance(13)).toContain("pitch counts");
+    expect(ageGuidance(null)).toContain("isn't set");
+  });
+
+  it("goes in the request, so a 13U plan differs from a 7U one", () => {
+    const base = {
+      teamName: "T",
+      coachPitch: false,
+      activePlayers: 12,
+      goals: "Win the right way.",
+      practices: [],
+      plays: [],
+    };
+    expect(planRequestText({ ...base, ageGroup: "13U" })).toContain("Ages 13U (13-14)");
+    expect(planRequestText({ ...base, ageGroup: "7U" })).toContain("Ages 7U (8 and under)");
   });
 });
