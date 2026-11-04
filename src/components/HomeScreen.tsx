@@ -434,6 +434,7 @@ function MoneyCard({ data, today }: { data: AppData; today: string }) {
   );
   const owed = ledgers.reduce((n, l) => n + Math.max(0, l.balanceCents), 0);
   const overdue = ledgers.reduce((n, l) => n + l.overdueCents, 0);
+  const paid = ledgers.reduce((n, l) => n + Math.max(0, l.paidCents), 0);
   const nextDue = ledgers
     .map((l) => l.nextDue)
     .filter((n) => n !== null)
@@ -456,7 +457,62 @@ function MoneyCard({ data, today }: { data: AppData; today: string }) {
           </p>
         </>
       )}
+      {paid + owed > 0 && <OwedPaidBars paid={paid} owed={owed} overdue={overdue} />}
     </Card>
+  );
+}
+
+const PAID = "#0ca30c";
+const OWED = "#ec835a";
+const OVERDUE = "#d03b3b";
+
+/**
+ * Two bars, paid vs. still owed: amounts on top, names underneath. The overdue part of what's
+ * owed is red at the bottom of its bar.
+ */
+function OwedPaidBars({ paid, owed, overdue }: { paid: number; owed: number; overdue: number }) {
+  const max = Math.max(1, paid, owed);
+  const px = (cents: number) => (cents / max) * 140;
+  const late = Math.min(overdue, owed);
+  return (
+    <div
+      role="img"
+      aria-label={`Paid ${formatCents(paid)}, still owed ${formatCents(owed)}${late ? `, ${formatCents(late)} of it overdue` : ""}`}
+      className="mt-5 flex flex-1 flex-col justify-end"
+    >
+      <div className="flex items-end justify-center gap-10 border-b border-slate-300">
+        <div className="flex w-24 flex-col items-center">
+          <span className="mb-1 text-sm font-bold text-slate-800 tabular-nums">
+            {formatCents(paid)}
+          </span>
+          <span
+            className="w-14 rounded-t-md"
+            style={{ height: `${Math.max(3, px(paid))}px`, background: PAID }}
+          />
+        </div>
+        <div className="flex w-24 flex-col items-center">
+          <span className="mb-1 text-sm font-bold text-slate-800 tabular-nums">
+            {formatCents(owed)}
+          </span>
+          <span className="flex w-14 flex-col overflow-hidden rounded-t-md">
+            <span
+              style={{ height: `${Math.max(owed ? 3 : 0, px(owed - late))}px`, background: OWED }}
+            />
+            {late > 0 && <span style={{ height: `${px(late)}px`, background: OVERDUE }} />}
+          </span>
+        </div>
+      </div>
+      <div className="mt-1.5 flex justify-center gap-10 text-sm font-semibold text-slate-600">
+        <span className="w-24 text-center">Paid</span>
+        <span className="w-24 text-center">Still owed</span>
+      </div>
+      {late > 0 && (
+        <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-slate-600">
+          <span aria-hidden="true" className="size-3 rounded-sm" style={{ background: OVERDUE }} />
+          {formatCents(late)} overdue
+        </p>
+      )}
+    </div>
   );
 }
 
