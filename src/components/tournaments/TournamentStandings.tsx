@@ -4,16 +4,20 @@ import { useEffect, useMemo, useState } from "react";
 import type { Tournament, TournamentGame, TournamentTeam } from "@/lib/data/tournament-backend";
 import type { AppData } from "@/lib/data/types";
 import { MAX_SCREENSHOTS } from "@/lib/tournaments/event";
-import { ourSide, placeOf, time12 } from "@/lib/tournaments/schedule";
+import { ourSide, parsePlaceholder, placeOf, time12 } from "@/lib/tournaments/schedule";
+import {
+  describeTerm,
+  firstGameForSeed,
+  scenarios,
+  type Scenarios,
+} from "@/lib/tournaments/scenarios";
 import {
   bracketFills,
   ordinal,
-  outlook,
   remainingPoolGames,
   seedingMessage,
   seedsFrom,
   standings,
-  type Pick as WinPick,
   type Seed,
   type StandingRow,
   type StandingsInput,
@@ -30,7 +34,7 @@ import {
 import { GroupMePost } from "../GroupMePost";
 import { Sheet } from "../Sheet";
 import { ScreenshotButton, Thumb, sendScreenshots } from "./AddTournament";
-import { dayLabel, gameLabel, saveScheduleGames } from "./TournamentSchedule";
+import { saveScheduleGames } from "./TournamentSchedule";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 const field =
@@ -38,7 +42,6 @@ const field =
 const backend = () => import("@/lib/data/tournament-backend");
 const seedText = (r: Pick<StandingRow, "seed" | "seedTo">) =>
   r.seedTo > r.seed ? `${r.seed}–${r.seedTo}` : String(r.seed);
-const range = ([a, b]: [number, number]) => (a === b ? ordinal(a) : `${ordinal(a)}–${ordinal(b)}`);
 const OPEN_TEXT: Record<NonNullable<StandingRow["open"]>, string> = {
   runs: "Tied: depends on runs",
   coin: "Tied: coin flip",
@@ -62,7 +65,7 @@ export function TournamentStandings({
   onChanged: () => Promise<void>;
 }) {
   const [sets, setSets] = useState<RuleSet[] | null>(null);
-  const [sheet, setSheet] = useState<"rules" | "whatif" | "lock" | "post" | null>(null);
+  const [sheet, setSheet] = useState<"rules" | "tomorrow" | "lock" | "post" | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const teamId = data.team.id;
@@ -95,10 +98,6 @@ export function TournamentStandings({
     [games, teams, ruleSet, t.seeding],
   );
   const tables = useMemo(() => (input ? standings(input) : []), [input]);
-  const outlookForUs = useMemo(
-    () => (input && us && !t.seedsLockedAt ? outlook(input, us.id) : null),
-    [input, us, t.seedsLockedAt],
-  );
   const fills = useMemo(
     () => (games && t.seeds ? bracketFills(games, t.seeds) : []),
     [games, t.seeds],
@@ -138,6 +137,12 @@ export function TournamentStandings({
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white p-4 md:col-span-2">
       <h2 className={heading}>Standings</h2>
+      <button
+        onClick={() => setSheet("tomorrow")}
+        className="mb-3 flex min-h-14 w-full items-center justify-center rounded-xl bg-[var(--team)] px-4 text-lg font-bold text-white active:bg-[var(--team-press)] md:w-auto"
+      >
+        🕘 What time do we play tomorrow?
+      </button>
 
       <div className="mb-3 rounded-lg bg-slate-50 p-3">
         <p className="text-base font-semibold">
@@ -239,39 +244,7 @@ export function TournamentStandings({
           {tables.map((tb) => (
             <StandingsTable key={tb.pool ?? "all"} pool={tb.pool} rows={tb.rows} usId={us?.id} />
           ))}
-          {outlookForUs && us && (
-            <div className="mt-3 rounded-lg border-2 border-[var(--team)] p-3">
-              <p className="text-base font-bold">
-                {outlookForUs.best === outlookForUs.worst
-                  ? `We've locked up the ${ordinal(outlookForUs.best)} seed.`
-                  : `We can still finish ${range([outlookForUs.best, outlookForUs.worst])}.`}
-              </p>
-              {outlookForUs.ours.map((o) => {
-                const g = games.find((x) => x.id === o.gameId)!;
-                const opp = ourSide(g, us.name)?.opponent ?? "";
-                return (
-                  <p key={o.gameId} className="text-base text-slate-700">
-                    vs {opp} ({time12(g.startTime)}): win → {range(o.ifWin)}, lose →{" "}
-                    {range(o.ifLose)}
-                  </p>
-                );
-              })}
-              {ruleSet?.rules.some((c) => RUN_CRITERIA.has(c.type)) && (
-                <p className="mt-1 text-sm text-slate-600">
-                  Ranges count wins and losses only; runs can settle ties inside them.
-                </p>
-              )}
-            </div>
-          )}
           <div className="mt-3 flex flex-col gap-2 md:flex-row">
-            {left.length > 0 && (
-              <button
-                onClick={() => setSheet("whatif")}
-                className="h-12 rounded-xl border-2 border-slate-400 bg-white px-4 text-base font-bold"
-              >
-                What if…
-              </button>
-            )}
             {canEdit && scored > 0 && (
               <button
                 onClick={() => setSheet("lock")}
@@ -308,8 +281,22 @@ export function TournamentStandings({
           />
         )}
       </Sheet>
-      <Sheet open={sheet === "whatif"} title="What if…" onClose={() => setSheet(null)}>
-        {sheet === "whatif" && <WhatIf input={input} left={left} usId={us?.id} />}
+      <Sheet
+        open={sheet === "tomorrow"}
+        title="What time do we play tomorrow?"
+        onClose={() => setSheet(null)}
+      >
+        {sheet === "tomorrow" && (
+          <PlayTimes
+            input={input}
+            games={games}
+            tournament={t}
+            us={us}
+            ourPool={tables.flatMap((x) => x.rows).find((r) => r.teamId === us?.id)?.pool ?? null}
+            teamCount={tables.reduce((n, x) => Math.max(n, x.rows.length), 0)}
+            note={`Based on ${scored} of ${pool.length} pool games scored${ruleSet ? ` and the ${ruleSet.name} tie-breakers` : " (no tie-breakers added yet, so ties stay ties)"}.`}
+          />
+        )}
       </Sheet>
       <Sheet open={sheet === "lock"} title="Lock the seeds" onClose={() => setSheet(null)}>
         {sheet === "lock" && (
@@ -416,71 +403,6 @@ function StandingsTable({
           ))}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-/** Pick winners for the games left and see where everyone would land. */
-function WhatIf({
-  input,
-  left,
-  usId,
-}: {
-  input: StandingsInput;
-  left: TournamentGame[];
-  usId?: string;
-}) {
-  const [picks, setPicks] = useState<Map<string, WinPick>>(new Map());
-  const tables = useMemo(() => standings({ ...input, picks }), [input, picks]);
-  const pick = (id: string, p: WinPick) => {
-    const next = new Map(picks);
-    if (next.get(id) === p) next.delete(id);
-    else next.set(id, p);
-    setPicks(next);
-  };
-  const btn = (on: boolean) =>
-    `min-h-12 flex-1 rounded-xl border-2 px-2 py-1 text-base font-semibold ${on ? "border-[var(--team)] bg-[var(--team)] text-white" : "border-slate-300 bg-white"}`;
-  return (
-    <div className="flex flex-col gap-4">
-      <p className="text-base text-slate-700">
-        Tap who wins each game left. Nothing is saved; it&apos;s only a look ahead.
-      </p>
-      <ul className="flex flex-col gap-3">
-        {left.map((g) => (
-          <li key={g.id}>
-            <p className="mb-1 text-sm font-semibold text-slate-600">
-              {dayLabel(g.date)}, {time12(g.startTime)} · {gameLabel(g)}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => pick(g.id, "home")}
-                aria-pressed={picks.get(g.id) === "home"}
-                className={btn(picks.get(g.id) === "home")}
-              >
-                {g.home} win
-              </button>
-              <button
-                onClick={() => pick(g.id, "away")}
-                aria-pressed={picks.get(g.id) === "away"}
-                className={btn(picks.get(g.id) === "away")}
-              >
-                {g.away} win
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-      {picks.size > 0 && (
-        <button onClick={() => setPicks(new Map())} className="self-start text-base underline">
-          Clear my picks
-        </button>
-      )}
-      <div>
-        <h3 className={heading}>Then the standings would be</h3>
-        {tables.map((tb) => (
-          <StandingsTable key={tb.pool ?? "all"} pool={tb.pool} rows={tb.rows} usId={usId} />
-        ))}
-      </div>
     </div>
   );
 }
@@ -1007,6 +929,173 @@ function RulesEditor({
           Save and use
         </button>
       </div>
+    </div>
+  );
+}
+
+/** "the 5 seed", "the winner of Game 3", or the team's name. */
+function sideWords(name: string): string {
+  const p = parsePlaceholder(name);
+  if (!p) return name;
+  if (p.kind === "seed") return `the #${p.n} seed`;
+  if (p.kind === "pool") return `the ${ordinal(p.n)} in Pool ${p.pool}`;
+  return `the ${p.kind} of Game ${p.gameNo}`;
+}
+
+const when = (g: { date: string | null; startTime: string | null }) =>
+  [
+    g.date ? new Date(`${g.date}T12:00`).toLocaleDateString("en-US", { weekday: "short" }) : null,
+    g.startTime ? time12(g.startTime) : "time TBD",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+/** Every seed we can still get, the first bracket game for it, and what has to happen. */
+function PlayTimes({
+  input,
+  games,
+  tournament: t,
+  us,
+  ourPool,
+  teamCount,
+  note,
+}: {
+  input: StandingsInput;
+  games: TournamentGame[];
+  tournament: Tournament;
+  us: TournamentTeam | null;
+  ourPool: string | null;
+  teamCount: number;
+  note: string;
+}) {
+  const [result, setResult] = useState<Scenarios | null>(null);
+  const usId = us?.id;
+  useEffect(() => {
+    if (!usId || t.seedsLockedAt) return;
+    // Let the sheet open first; trying every outcome can take a moment.
+    const timer = setTimeout(() => setResult(scenarios(input, usId)), 30);
+    return () => clearTimeout(timer);
+  }, [input, usId, t.seedsLockedAt]);
+
+  if (!us) {
+    return (
+      <p className="text-base">
+        Mark your team first: tap “That&apos;s us” on it in the tournament&apos;s team list.
+      </p>
+    );
+  }
+  const pool = t.seeding === "pool" ? ourPool : null;
+  const slot = (seed: number) => {
+    const f = firstGameForSeed(games, seed, pool);
+    return (
+      <p key={seed} className="text-base">
+        <span className="font-bold">{f ? when(f.game) : "Time not on the bracket yet"}</span>
+        {f && (
+          <span className="text-slate-700">
+            {placeOf(f.game) ? ` · ${placeOf(f.game)}` : ""} · vs {sideWords(f.opponent)}
+          </span>
+        )}
+      </p>
+    );
+  };
+  const seedName = (n: number) => (pool ? `${ordinal(n)} in Pool ${pool}` : `#${n} seed`);
+
+  if (t.seedsLockedAt && t.seeds) {
+    const mine = t.seeds.find((s) => s.teamId === us.id);
+    const next = games
+      .filter((g) => g.stage === "bracket" && g.scoreHome === null && ourSide(g, us.name))
+      .sort(
+        (a, b) =>
+          (a.date ?? "").localeCompare(b.date ?? "") ||
+          (a.startTime ?? "").localeCompare(b.startTime ?? ""),
+      )[0];
+    return (
+      <div className="flex flex-col gap-2">
+        {mine && <p className="text-lg font-bold">We&apos;re the {seedName(mine.seed)}.</p>}
+        {next ? (
+          <p className="text-base">
+            <span className="font-bold">{when(next)}</span>
+            {placeOf(next) ? ` · ${placeOf(next)}` : ""} · vs{" "}
+            {sideWords(ourSide(next, us.name)!.opponent)}
+          </p>
+        ) : mine ? (
+          slot(mine.seed)
+        ) : null}
+      </div>
+    );
+  }
+
+  if (!result) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-8 text-center" role="status">
+        <div className="size-10 animate-spin rounded-full border-4 border-slate-300 border-t-[var(--team)]" />
+        <p className="text-lg font-semibold">Working out every way it could go…</p>
+      </div>
+    );
+  }
+
+  if (result.tooMany) {
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-base text-slate-700">
+          It&apos;s early: {result.remaining} pool games are left, so any of these is still
+          possible. Check back as scores come in.
+        </p>
+        <ul className="flex flex-col gap-2">
+          {Array.from({ length: teamCount }, (_, i) => i + 1).map((n) => (
+            <li key={n} className="rounded-xl border-2 border-slate-200 p-3">
+              <p className="text-sm font-semibold text-slate-600">{seedName(n)}</p>
+              {slot(n)}
+            </li>
+          ))}
+        </ul>
+        <p className="text-sm text-slate-600">{note}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-base text-slate-700">
+        {result.outcomes.length === 1
+          ? "It's settled."
+          : `${result.outcomes.length} ways it can go, with ${result.remaining} pool game${result.remaining === 1 ? "" : "s"} left:`}
+      </p>
+      <ul className="flex flex-col gap-3">
+        {result.outcomes.map((o) => {
+          const seeds = Array.from({ length: o.seedTo - o.seed + 1 }, (_, i) => o.seed + i);
+          const shown = o.terms.slice(0, 4);
+          return (
+            <li
+              key={`${o.seed}-${o.seedTo}-${o.open}`}
+              className="rounded-xl border-2 border-[var(--team)] p-3"
+            >
+              <p className="text-lg font-bold">
+                {seeds.length === 1
+                  ? seedName(o.seed)
+                  : `${seeds.map(seedName).join(" or ")} (${o.open === "coin" ? "coin flip" : "tie the rules don't break"})`}
+              </p>
+              {seeds.map((n) => slot(n))}
+              <p className="mt-2 text-sm font-bold tracking-wide text-slate-600 uppercase">If</p>
+              <ul className="flex flex-col gap-1">
+                {shown.map((term, i) => (
+                  <li key={i} className="text-base">
+                    {i > 0 && <span className="font-semibold text-slate-500">or </span>}
+                    {describeTerm(term, games, input, us.id)}
+                  </li>
+                ))}
+              </ul>
+              {o.terms.length > shown.length && (
+                <p className="text-sm text-slate-600">
+                  …or {o.terms.length - shown.length} other way
+                  {o.terms.length - shown.length === 1 ? "" : "s"}
+                </p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="text-sm text-slate-600">{note}</p>
     </div>
   );
 }

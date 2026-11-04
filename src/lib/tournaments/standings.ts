@@ -255,67 +255,6 @@ export function remainingPoolGames<T extends SGame>(games: T[], teams: STeam[]):
   );
 }
 
-export const MAX_OUTLOOK_GAMES = 10;
-
-export interface Outlook {
-  remaining: number;
-  best: number;
-  worst: number;
-  /** For each of our remaining games: our best and worst seed if we win, and if we lose. */
-  ours: { gameId: string; ifWin: [number, number]; ifLose: [number, number] }[];
-}
-
-/**
- * Every way the remaining pool games could go (who wins; runs unknown), and the seeds we
- * could finish with. Null when there are too many games left to say, or we're not in it.
- */
-export function outlook(input: StandingsInput, ourId: string): Outlook | null {
-  const left = remainingPoolGames(input.games, input.teams);
-  if (left.length > MAX_OUTLOOK_GAMES) return null;
-  const ourGames = left.filter((g) =>
-    [sideTeam(g.home, g.homeTeamId, input.teams), sideTeam(g.away, g.awayTeamId, input.teams)].some(
-      (t) => t?.id === ourId,
-    ),
-  );
-  let best = Infinity;
-  let worst = -Infinity;
-  const per = new Map(
-    ourGames.map((g) => [g.id, { win: [Infinity, -Infinity], lose: [Infinity, -Infinity] }]),
-  );
-  for (let mask = 0; mask < 1 << left.length; mask++) {
-    const picks = new Map<string, Pick>(
-      left.map((g, i) => [g.id, mask & (1 << i) ? "home" : "away"] as const),
-    );
-    const tables = standings({ ...input, picks });
-    const row = tables.flatMap((t) => t.rows).find((r) => r.teamId === ourId);
-    if (!row) return null;
-    best = Math.min(best, row.seed);
-    worst = Math.max(worst, row.seedTo);
-    for (const g of ourGames) {
-      const home = sideTeam(g.home, g.homeTeamId, input.teams)?.id === ourId;
-      const won = (picks.get(g.id) === "home") === home;
-      const p = per.get(g.id)!;
-      const range = won ? p.win : p.lose;
-      range[0] = Math.min(range[0]!, row.seed);
-      range[1] = Math.max(range[1]!, row.seedTo);
-    }
-  }
-  if (!Number.isFinite(best)) return null;
-  return {
-    remaining: left.length,
-    best,
-    worst,
-    ours: ourGames.map((g) => {
-      const p = per.get(g.id)!;
-      return {
-        gameId: g.id,
-        ifWin: [p.win[0]!, p.win[1]!] as [number, number],
-        ifLose: [p.lose[0]!, p.lose[1]!] as [number, number],
-      };
-    }),
-  };
-}
-
 export interface Seed {
   teamId: string;
   name: string;

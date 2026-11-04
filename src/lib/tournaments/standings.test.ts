@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { matchSchedule, parsePlaceholder, type SavedGame } from "./schedule";
 import {
   bracketFills,
-  outlook,
   resolveSide,
   seedingMessage,
   seedsFrom,
@@ -156,38 +155,6 @@ describe("standings", () => {
     // Aces and Cubs are both 1-0; runs allowed can't be known for Cubs yet.
     expect(t!.rows[0]).toMatchObject({ seed: 1, seedTo: 2, open: "runs" });
     expect(t!.rows.find((r) => r.name === "Cubs")!.rs).toBeNull();
-  });
-});
-
-describe("outlook", () => {
-  it("gives our best and worst seed, and what each of our games means", () => {
-    const games = [
-      g("Aces", "Bats", [5, 1]),
-      g("Cubs", "Dogs", [5, 1]),
-      g("Aces", "Cubs", null),
-      g("Bats", "Dogs", null),
-    ];
-    const o = outlook(
-      {
-        teams,
-        games,
-        rules: [rule("head_to_head"), rule("runs_allowed")],
-        restart: true,
-        seeding: "overall",
-      },
-      "A",
-    )!;
-    expect(o.remaining).toBe(2);
-    expect(o.ours).toHaveLength(1);
-    // Win: 2-0, alone at the top. Lose: 1-1, tied with the Bats/Dogs winner → 2nd or 3rd.
-    expect(o.ours[0]!.ifWin).toEqual([1, 1]);
-    expect(o.ours[0]!.ifLose).toEqual([2, 3]);
-    expect([o.best, o.worst]).toEqual([1, 3]);
-  });
-
-  it("gives up when too many games are left", () => {
-    const games = Array.from({ length: 11 }, () => g("Aces", "Bats", null));
-    expect(outlook({ teams, games, rules: [], restart: true, seeding: "overall" }, "A")).toBeNull();
   });
 });
 
