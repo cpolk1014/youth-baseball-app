@@ -29,6 +29,13 @@ export interface MyClub {
 }
 
 /** Clubs the signed-in user runs. */
+/** Start a club (free); you become its director. Returns the club's id. */
+export async function startMyClub(name: string): Promise<string> {
+  const { data, error } = await getBrowserSupabase().rpc("start_my_club", { p_name: name });
+  if (error) throw new Error(error.message);
+  return data as string;
+}
+
 export async function myClubs(): Promise<MyClub[]> {
   const sb = getBrowserSupabase();
   const user = (await sb.auth.getUser()).data.user;

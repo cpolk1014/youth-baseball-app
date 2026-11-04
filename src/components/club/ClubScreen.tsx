@@ -146,18 +146,76 @@ function StartClub() {
       </p>
     );
   }
+  return <StartClubForm />;
+}
+
+/** Name the club and it's yours (free); team codes are bought from the club page later. */
+function StartClubForm() {
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const start = async () => {
+    if (!name.trim()) {
+      setError("Give your club a name.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const id = await (await import("@/lib/data/club-backend")).startMyClub(name);
+      forgetMyClubs();
+      window.location.replace(`/club?club=${id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl border-2 border-slate-200 bg-white p-4 text-base">
         <p className="text-lg font-bold">Start a club</p>
         <p className="mt-1 text-slate-700">
-          Running several teams? Pay {dollars(CLUB_PRICE_CENTS)} per team for the season and get one
-          code per team. Head coaches enter their code, and you can see every team&apos;s lineups,
-          playing time and stats (view only), share your logo, uniforms and practice plans, and post
-          to all your teams&apos; GroupMe groups.
+          Running several teams? Starting a club is free. Set up your club&apos;s logo, colors,
+          uniforms and practice plans now. When you&apos;re ready to bring teams in, buy a code for
+          each team ({dollars(CLUB_PRICE_CENTS)} per team for the season); head coaches enter it,
+          and you can see every team&apos;s lineups, playing time and stats (view only) and post to
+          all your teams&apos; GroupMe groups.
         </p>
       </div>
-      <BuyCodes />
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void start();
+        }}
+        className="flex flex-col gap-3 rounded-xl border-2 border-slate-200 bg-white p-4"
+      >
+        <label className="flex flex-col gap-1">
+          <span className="text-base font-semibold">Club name</span>
+          <input
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setError(null);
+            }}
+            maxLength={80}
+            placeholder="Traction Canes"
+            className="h-12 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none"
+          />
+        </label>
+        {error && (
+          <p role="alert" className="text-base font-semibold text-red-700">
+            {error}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={busy}
+          className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white disabled:opacity-50"
+        >
+          {busy ? "Starting…" : "Start my club"}
+        </button>
+        <p className="text-sm text-slate-600">You&apos;ll be its director. No payment needed.</p>
+      </form>
     </div>
   );
 }
@@ -262,8 +320,19 @@ function ClubDashboard({ clubId, clubName }: { clubId: string; clubName: string 
 
       {teams.length === 0 ? (
         <p className="mb-4 rounded-xl border-2 border-dashed border-slate-300 bg-white p-4 text-base">
-          No teams have joined yet. Give each head coach one code (below); they enter it on Coaches
-          &amp; parents in their team.
+          {thisSeason.length === 0 ? (
+            <>
+              <b>Welcome to your club.</b> Set up your logo, colors and uniforms on <b>Look</b>, and
+              practice plans and homework on <b>Library</b>. When you&apos;re ready to bring teams
+              in, buy a code for each team below and give each head coach theirs; they enter it on
+              Coaches &amp; parents.
+            </>
+          ) : (
+            <>
+              No teams have joined yet. Give each head coach one code (below); they enter it on
+              Coaches &amp; parents in their team.
+            </>
+          )}
         </p>
       ) : (
         <ul className="mb-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">

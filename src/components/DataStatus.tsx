@@ -113,7 +113,7 @@ function StartClubPrompt() {
       <span>
         <span className="block text-lg font-bold">Running a club?</span>
         <span className="block text-base text-slate-700">
-          Start a club for all your teams. You don&apos;t need a team of your own.
+          Start a club for all your teams, free. You don&apos;t need a team of your own.
         </span>
       </span>
       <span aria-hidden="true" className="text-2xl text-slate-400">

@@ -1369,6 +1369,25 @@ select pg_temp.expect(
 reset role;
 reset role;
 select pg_temp.expect((select phone from public.profile where user_id = 'aaaaaaaa-0000-4000-8000-000000000001') = '+13375550123', 'nobody else can change your phone');
+-- ── starting a club is free: anyone signed in becomes its director ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+create temp table started as select public.start_my_club('  Bayou   Baseball Club ') as id;
+select pg_temp.expect((select name from public.organization where id = (select id from started)) = 'Bayou Baseball Club', 'anyone signed in can start a club (name tidied)');
+select pg_temp.expect(public.is_club_admin((select id from started)), 'and becomes its director');
+do $$ begin
+  perform public.start_my_club('   ');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when raise_exception then raise notice 'ok: a club needs a name';
+end $$;
+reset role;
+do $$ begin
+  set local role anon;
+  perform public.start_my_club('Sneaky Club');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: signed-out visitors can''t start a club';
+end $$;
+reset role;
 -- ── game places ──
 update public.game set location = 'Traction Sports Complex', field = 'Chabills Field', location_lat = 30.2, location_lng = -92.0
   where id = 'eeeeeeee-0000-4000-8000-000000000020';
