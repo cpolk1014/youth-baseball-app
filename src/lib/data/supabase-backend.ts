@@ -147,7 +147,7 @@ export async function loadFromSupabase(
     await sb
       .from("practice")
       .select(
-        "id,season_id,practice_date,start_time,end_time,location,focus,notes,plan,canceled,plays",
+        "id,season_id,practice_date,start_time,end_time,location,focus,notes,plan,canceled,plays,field,location_address,location_lat,location_lng,location_place_id",
       )
       .eq("season_id", season.id),
   );

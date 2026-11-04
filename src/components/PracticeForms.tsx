@@ -1,5 +1,7 @@
 "use client";
 
+import { PlaceSearch } from "./PlaceSearch";
+import type { GamePlace } from "@/lib/places/maps";
 import { useState } from "react";
 import { localDateString } from "@/lib/data/game";
 import type { Practice } from "@/lib/data/types";
@@ -117,20 +119,84 @@ function Buttons({
   );
 }
 
+const NO_PLACE: GamePlace = { name: "", address: null, lat: null, lng: null, placeId: null };
+
+/** A practice's place fields from the search and the field box (map details only for a pick). */
+function placeFields(place: GamePlace, fieldName: string) {
+  const name = place.name.trim();
+  return {
+    location: name || null,
+    field: fieldName.trim() || null,
+    locationAddress: name ? place.address : null,
+    locationLat: name ? place.lat : null,
+    locationLng: name ? place.lng : null,
+    locationPlaceId: name ? place.placeId : null,
+  };
+}
+
+/** Location (searched on Google Maps, recent places first) and the field, as on games. */
+function PlaceInputs({
+  place,
+  onPlace,
+  fieldName,
+  onFieldName,
+  recent,
+}: {
+  place: GamePlace;
+  onPlace: (p: GamePlace) => void;
+  fieldName: string;
+  onFieldName: (f: string) => void;
+  recent: GamePlace[];
+}) {
+  return (
+    <>
+      <div className="flex flex-col gap-1">
+        <span className={label}>
+          Location <span className="font-normal">(optional)</span>
+        </span>
+        <PlaceSearch value={place} recent={recent} onChange={onPlace} className={field} />
+      </div>
+      <label className="flex flex-col gap-1">
+        <span className={label}>
+          Field <span className="font-normal">(optional)</span>
+        </span>
+        <input
+          value={fieldName}
+          onChange={(e) => onFieldName(e.target.value)}
+          maxLength={60}
+          autoComplete="off"
+          placeholder="e.g. Chabills Field"
+          className={field}
+        />
+      </label>
+    </>
+  );
+}
+
 /** Add or edit one practice's date, time, field and focus. */
 export function PracticeForm({
   practice,
+  recentPlaces = [],
   onSave,
   onCancel,
 }: {
   practice: Practice;
+  /** Places the team has played or practiced, offered first when typing a location. */
+  recentPlaces?: GamePlace[];
   onSave: (p: Practice) => void;
   onCancel: () => void;
 }) {
   const [date, setDate] = useState(practice.date);
   const [start, setStart] = useState(practice.startTime ?? "");
   const [end, setEnd] = useState(practice.endTime ?? "");
-  const [location, setLocation] = useState(practice.location ?? "");
+  const [place, setPlace] = useState<GamePlace>({
+    name: practice.location ?? "",
+    address: practice.locationAddress ?? null,
+    lat: practice.locationLat ?? null,
+    lng: practice.locationLng ?? null,
+    placeId: practice.locationPlaceId ?? null,
+  });
+  const [fieldName, setFieldName] = useState(practice.field ?? "");
   const [focus, setFocus] = useState(practice.focus);
   const badTimes = start !== "" && end !== "" && practiceMinutes(start, end) === null;
   const valid = /^\d{4}-\d{2}-\d{2}$/.test(date) && !badTimes;
@@ -145,7 +211,7 @@ export function PracticeForm({
           date,
           startTime: start || null,
           endTime: end || null,
-          location: location.trim() || null,
+          ...placeFields(place, fieldName),
           focus,
         });
       }}
@@ -166,17 +232,13 @@ export function PracticeForm({
           End time must be after the start.
         </p>
       )}
-      <label className="flex flex-col gap-1">
-        <span className={label}>
-          Field / location <span className="font-normal">(optional)</span>
-        </span>
-        <input
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          maxLength={80}
-          className={field}
-        />
-      </label>
+      <PlaceInputs
+        place={place}
+        onPlace={setPlace}
+        fieldName={fieldName}
+        onFieldName={setFieldName}
+        recent={recentPlaces}
+      />
       <FocusPicker value={focus} onChange={setFocus} />
       <Buttons onCancel={onCancel} submit="Save" disabled={!valid} />
     </form>
@@ -190,8 +252,10 @@ export function ScheduleBuilder({
   onCreate,
   onCancel,
   newId,
+  recentPlaces = [],
 }: {
   seasonId: string;
+  recentPlaces?: GamePlace[];
   /** Dates that already have a practice; they're skipped. */
   existingDates: Set<string>;
   onCreate: (practices: Practice[]) => void;
@@ -205,7 +269,8 @@ export function ScheduleBuilder({
   const [weekdays, setWeekdays] = useState<number[]>([2, 4]);
   const [start, setStart] = useState("18:00");
   const [end, setEnd] = useState("19:30");
-  const [location, setLocation] = useState("");
+  const [place, setPlace] = useState<GamePlace>(NO_PLACE);
+  const [fieldName, setFieldName] = useState("");
 
   const dates = generatePracticeDates({ start: startDate, end: endDate, weekdays }).filter(
     (d) => !existingDates.has(d),
@@ -226,7 +291,7 @@ export function ScheduleBuilder({
             date,
             startTime: start || null,
             endTime: end || null,
-            location: location.trim() || null,
+            ...placeFields(place, fieldName),
             focus: null,
             notes: null,
             plan: [],
@@ -284,17 +349,13 @@ export function ScheduleBuilder({
           End time must be after the start.
         </p>
       )}
-      <label className="flex flex-col gap-1">
-        <span className={label}>
-          Field / location <span className="font-normal">(optional)</span>
-        </span>
-        <input
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          maxLength={80}
-          className={field}
-        />
-      </label>
+      <PlaceInputs
+        place={place}
+        onPlace={setPlace}
+        fieldName={fieldName}
+        onFieldName={setFieldName}
+        recent={recentPlaces}
+      />
       <p className="rounded-lg bg-slate-100 p-3 text-base" role="status">
         {dates.length === 0
           ? "No new practice dates in that range."

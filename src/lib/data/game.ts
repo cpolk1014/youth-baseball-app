@@ -195,15 +195,21 @@ export function formatClock(hhmm: string): string {
   return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 }
 
+/** Where a game or practice is (the parts a place card and search use). */
+export type PlaceFields = Pick<
+  Game,
+  "location" | "field" | "locationAddress" | "locationLat" | "locationLng" | "locationPlaceId"
+>;
+
 /** "Traction Sports Complex · Chabills Field" (either part may be missing). */
 export function placeLabel(game: Pick<Game, "location" | "field">): string | null {
   return [game.location?.trim(), game.field?.trim()].filter(Boolean).join(" · ") || null;
 }
 
 /** Places this team has played, newest first, for picking again (no search needed). */
-export function recentPlaces(games: Game[]): GamePlace[] {
+export function recentPlaces(items: (PlaceFields & { date: string })[]): GamePlace[] {
   const seen = new Map<string, GamePlace>();
-  for (const g of [...games].sort((a, b) => b.date.localeCompare(a.date))) {
+  for (const g of [...items].sort((a, b) => b.date.localeCompare(a.date))) {
     const name = g.location?.trim();
     if (!name || seen.has(name.toLowerCase())) continue;
     seen.set(name.toLowerCase(), {

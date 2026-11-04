@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { localDateString } from "@/lib/data/game";
+import { localDateString, placeLabel, recentPlaces } from "@/lib/data/game";
 import { permissionsFor } from "@/lib/data/permissions";
 import { addPractices, newId, savePractice, useAppData, useStoreState } from "@/lib/data/store";
 import type { Practice } from "@/lib/data/types";
@@ -128,6 +128,7 @@ export function PracticesScreen() {
         {adding && (
           <PracticeForm
             practice={adding}
+            recentPlaces={recentPlaces([...data.games, ...data.practices])}
             onCancel={() => setAdding(null)}
             onSave={(p) => {
               savePractice(p);
@@ -145,6 +146,7 @@ export function PracticesScreen() {
         {building && (
           <ScheduleBuilder
             seasonId={data.season.id}
+            recentPlaces={recentPlaces([...data.games, ...data.practices])}
             existingDates={new Set(data.practices.map((p) => p.date))}
             newId={newId}
             onCancel={() => setBuilding(false)}
@@ -183,7 +185,7 @@ function PracticeCard({ practice: p }: { practice: Practice }) {
             </span>
           ) : null}
         </div>
-        {p.location && <p className="text-base text-slate-700">{p.location}</p>}
+        {placeLabel(p) && <p className="text-base text-slate-700">{placeLabel(p)}</p>}
         <p className="mt-1 text-sm font-semibold text-slate-600">
           {p.plan.length
             ? `${p.plan.length} drill${p.plan.length === 1 ? "" : "s"} · ${minutes} min planned`

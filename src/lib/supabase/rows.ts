@@ -58,6 +58,11 @@ export interface PracticeRow {
   plan: { id: string; title: string; minutes: number; notes?: string }[];
   canceled: boolean;
   plays: string[];
+  field?: string | null;
+  location_address?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
+  location_place_id?: string | null;
 }
 
 export interface PlayAssignmentRow {

@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { placeLabel } from "@/lib/data/game";
-import type { Game } from "@/lib/data/types";
+import { placeLabel, type PlaceFields } from "@/lib/data/game";
+
 import { MapAppIcon } from "./MapAppIcon";
 import { detectPlatform, isPhoneOrTablet, openInLinks, type GamePlace } from "@/lib/places/maps";
 
 /** The browser key for showing maps (Maps Embed API only, locked to RallyCap's site). */
 const EMBED_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY ?? "";
 
-/** Where the game is: location and field, the address, a map, and "Open in…" for this device. */
-export function GamePlaceCard({ game }: { game: Game }) {
+/**
+ * Where a game (or practice) is: location and field, the address, a map, and "Open in…" for
+ * this device.
+ */
+export function GamePlaceCard({ game }: { game: PlaceFields }) {
   const [links, setLinks] = useState<{ app: string; href: string }[]>([]);
   const [online, setOnline] = useState(true);
   const place: GamePlace = {

@@ -90,6 +90,12 @@ export interface Practice {
   canceled: boolean;
   /** Ids of library plays ("situations") to work on at this practice. */
   plays: string[];
+  /** Like a game's: the field, and map details of a location picked from Google Maps. */
+  field?: string | null;
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
+  locationPlaceId?: string | null;
 }
 
 /** A parent (team member) linked to one of the team's kids. */

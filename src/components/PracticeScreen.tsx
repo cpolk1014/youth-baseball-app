@@ -14,6 +14,8 @@ import { AppShell, Loading } from "./AppShell";
 import { useClubLibrary } from "./club/useClubLibrary";
 import { PlayPicker } from "./PlayPicker";
 import { PracticeForm } from "./PracticeForms";
+import { GamePlaceCard } from "./GamePlaceCard";
+import { placeLabel, recentPlaces } from "@/lib/data/game";
 import { QuizButton, quizNames } from "./QuizButton";
 import { Sheet } from "./Sheet";
 
@@ -56,7 +58,7 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
   return (
     <AppShell
       title={formatPracticeWhen(practice)}
-      subtitle={practice.location ?? "Practice"}
+      subtitle={placeLabel(practice) ?? "Practice"}
       backHref="/practices"
       tab="practice"
     >
@@ -71,9 +73,6 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-600">Focus</p>
             <p className="text-lg font-bold">{practice.focus ?? "Not set"}</p>
-            {practice.location && (
-              <p className="mt-1 text-base text-slate-700">{practice.location}</p>
-            )}
           </div>
           {canEdit && (
             <button
@@ -85,6 +84,8 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
           )}
         </div>
       </section>
+
+      <GamePlaceCard game={practice} />
 
       <section className="mb-4">
         <div className="mb-2 flex items-baseline justify-between">
@@ -299,6 +300,7 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
         {panel === "edit" && (
           <PracticeForm
             practice={practice}
+            recentPlaces={recentPlaces([...data.games, ...data.practices])}
             onCancel={() => setPanel(null)}
             onSave={(p) => {
               savePractice(p);

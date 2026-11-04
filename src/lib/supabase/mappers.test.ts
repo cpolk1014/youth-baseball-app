@@ -9,6 +9,7 @@ import {
   lineupToRpcArgs,
   playerFromRow,
   playerToRow,
+  practiceFromRow,
   practiceToRow,
   summarizeMyTeams,
   type TeamRows,
@@ -268,5 +269,44 @@ describe("supabase mappers", () => {
       { id: "t2", name: "Rattlers", ageGroup: "10U", role: "coach", optioned: false },
       { id: "t1", name: "Storm", ageGroup: "10U", role: "parent", optioned: true },
     ]);
+  });
+});
+
+describe("practice places", () => {
+  const base = {
+    id: "p1",
+    seasonId: "s",
+    date: "2026-11-10",
+    startTime: "17:30",
+    endTime: "19:00",
+    location: "Traction Sports Complex",
+    focus: null,
+    notes: null,
+    plan: [],
+    canceled: false,
+    plays: [],
+  };
+
+  it("saves and loads the field and map details picked from Google Maps", () => {
+    const row = practiceToRow({
+      ...base,
+      field: "Field 3",
+      locationAddress: "100 Main St",
+      locationLat: 30.2,
+      locationLng: -92.0,
+      locationPlaceId: "abc",
+    });
+    expect(row).toMatchObject({
+      field: "Field 3",
+      location_address: "100 Main St",
+      location_lat: 30.2,
+      location_lng: -92.0,
+      location_place_id: "abc",
+    });
+    expect(practiceFromRow(row)).toMatchObject({ field: "Field 3", locationPlaceId: "abc" });
+  });
+
+  it("leaves the map columns alone when they're unknown (e.g. an imported practice)", () => {
+    expect(practiceToRow(base)).not.toHaveProperty("location_address");
   });
 });

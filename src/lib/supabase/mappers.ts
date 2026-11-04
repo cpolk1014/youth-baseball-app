@@ -96,6 +96,11 @@ export function practiceFromRow(r: PracticeRow): Practice {
     plan: r.plan,
     canceled: r.canceled,
     plays: r.plays ?? [],
+    field: r.field ?? null,
+    locationAddress: r.location_address ?? null,
+    locationLat: r.location_lat ?? null,
+    locationLng: r.location_lng ?? null,
+    locationPlaceId: r.location_place_id ?? null,
   };
 }
 
@@ -112,6 +117,16 @@ export function practiceToRow(p: Practice): PracticeRow {
     plan: p.plan,
     canceled: p.canceled,
     plays: p.plays,
+    // Saved together with the location (left out when unknown, e.g. an imported practice).
+    ...(p.locationAddress !== undefined
+      ? {
+          field: p.field ?? null,
+          location_address: p.locationAddress,
+          location_lat: p.locationLat ?? null,
+          location_lng: p.locationLng ?? null,
+          location_place_id: p.locationPlaceId ?? null,
+        }
+      : {}),
   };
 }
 
