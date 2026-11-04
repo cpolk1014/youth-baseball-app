@@ -443,14 +443,17 @@ function AccountMenu({
   const rail = variant === "rail";
   // Families linked to a player import that player's box scores.
   const hasKids = !!data && data.guardians.some((g) => g.userId === myUserId(data));
+  const inAClub = (clubs?.length ?? 0) > 0 || (teamClubs?.length ?? 0) > 0;
   const links = [
     { href: "/profile", label: "My profile", show: true },
     { href: "/my-teams", label: "My teams", show: true },
     {
       href: "/my-clubs",
       label: "My clubs",
-      show: (clubs?.length ?? 0) > 0 || (teamClubs?.length ?? 0) > 0,
+      show: inAClub,
     },
+    // Anyone can start a club on their own (it opens the club page's Start a club).
+    { href: "/club", label: "Start a club", show: clubs !== null && !inAClub },
     { href: "/my-player", label: myPlayerLabel(data), show: hasKids },
   ].filter((x) => x.show);
   const current = (href: string) =>

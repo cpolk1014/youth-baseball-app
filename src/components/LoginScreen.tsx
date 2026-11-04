@@ -94,6 +94,19 @@ export function LoginScreen() {
       <p className="mt-1 mb-6 text-lg text-slate-700">
         Run your travel team. Fair lineups, every game.
       </p>
+      {next() === "/club" ? (
+        <p className="-mt-4 mb-6 rounded-xl bg-green-50 p-3 text-base font-semibold text-green-900">
+          Starting a club: sign in (or create your account) below and you&apos;ll set up your club
+          next.
+        </p>
+      ) : (
+        <p className="-mt-4 mb-6 text-base text-slate-700">
+          Running a club with several teams?{" "}
+          <a href="/login?next=%2Fclub" className="font-semibold text-[var(--team)] underline">
+            Start a club
+          </a>
+        </p>
+      )}
 
       {!isSupabaseConfigured ? (
         <p className="rounded-xl border-2 border-amber-500 bg-amber-50 p-4 text-base">

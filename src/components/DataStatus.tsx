@@ -33,6 +33,7 @@ export function DataStatus({ children }: { children: ReactNode }) {
       <>
         <ClubLink />
         <TeamSetup hasTeam={status.team !== null} />
+        <StartClubPrompt />
       </>
     );
   }
@@ -97,6 +98,28 @@ export function DataStatus({ children }: { children: ReactNode }) {
       <KidsPrompt />
       {children}
     </>
+  );
+}
+
+/** New here and running a club, not one team? Start the club instead (no team needed). */
+function StartClubPrompt() {
+  const clubs = useMyClubs();
+  if (clubs === null || clubs.length > 0) return null;
+  return (
+    <Link
+      href="/club"
+      className="mt-6 flex items-center justify-between gap-3 rounded-xl border-2 border-slate-300 bg-white p-4 active:bg-slate-50"
+    >
+      <span>
+        <span className="block text-lg font-bold">Running a club?</span>
+        <span className="block text-base text-slate-700">
+          Start a club for all your teams. You don&apos;t need a team of your own.
+        </span>
+      </span>
+      <span aria-hidden="true" className="text-2xl text-slate-400">
+        ›
+      </span>
+    </Link>
   );
 }
 
