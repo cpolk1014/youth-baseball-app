@@ -430,6 +430,7 @@ export function appDataFromRows(
             id: rows.team.organization.id,
             name: rows.team.organization.name,
             colors: (rows.team.organization.colors ?? []).filter(isHex),
+            palette: (rows.team.organization.palette ?? []).filter(isHex),
             logoPath: rows.team.organization.logo_path,
           }
         : null,

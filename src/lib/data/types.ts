@@ -23,7 +23,14 @@ export interface Team {
   /** Game day: arrival and the automatic GroupMe post. */
   gameDay?: GameDaySettings;
   /** The club the team belongs to (its look is offered to the team). */
-  club?: { id: string; name: string; colors: string[]; logoPath: string | null } | null;
+  club?: {
+    id: string;
+    name: string;
+    colors: string[];
+    /** Every color from the club's upload, for club teams to pick from. */
+    palette?: string[];
+    logoPath: string | null;
+  } | null;
 }
 
 export interface GameDaySettings {

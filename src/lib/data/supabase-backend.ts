@@ -70,7 +70,7 @@ export async function loadFromSupabase(
     sb
       .from("team")
       .select(
-        "id,name,age_group,coach_pitch,optioned_at,colors,logo_path,timezone,arrive_minutes,game_post_mode,game_post_hours,game_post_days,game_post_time,organization_id,organization:organization_id(id,name,colors,logo_path)",
+        "id,name,age_group,coach_pitch,optioned_at,colors,logo_path,timezone,arrive_minutes,game_post_mode,game_post_hours,game_post_days,game_post_time,organization_id,organization:organization_id(id,name,colors,logo_path,palette)",
       )
       .order("created_at")
       // The untyped client thinks the joined club is a list; it's one row (or null).

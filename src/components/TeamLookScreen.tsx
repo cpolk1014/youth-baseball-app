@@ -25,6 +25,7 @@ export function TeamLookScreen() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [clubOpen, setClubOpen] = useState(false);
 
   if (!data) {
     return (
@@ -43,6 +44,14 @@ export function TeamLookScreen() {
     setSaved(false);
   };
   const darkened = readableOnWhite(colors.main) !== colors.main.toLowerCase();
+  const club = data.team.club;
+  const clubPalette = club
+    ? [...new Set([...club.colors, ...(club.palette ?? [])].map((c) => c.toLowerCase()))]
+    : [];
+  // Shown after "Use them", or when the team already wears the club's colors.
+  const showClub =
+    clubOpen ||
+    (!!data.team.colors?.[0] && clubPalette.includes(data.team.colors[0].toLowerCase()));
 
   const fromPicture = async (file: File | undefined, alsoLogo: boolean) => {
     if (!file) return;
@@ -80,7 +89,6 @@ export function TeamLookScreen() {
   };
 
   const preview = themeVars([colors.main, colors.accent]) as CSSProperties;
-  const club = data.team.club;
 
   return (
     <AppShell title="Team colors & logo" subtitle={data.team.name} backHref="/roster" tab="roster">
@@ -119,6 +127,8 @@ export function TeamLookScreen() {
                 onClick={() => {
                   if (club.colors[0]) setMain(club.colors[0]);
                   if (club.colors[1]) setAccent(club.colors[1]);
+                  setClubOpen(true);
+                  setSaved(false);
                 }}
                 className="h-11 shrink-0 rounded-lg bg-[var(--team)] px-3 text-base font-bold text-white"
               >
@@ -229,6 +239,23 @@ export function TeamLookScreen() {
                 </button>
               ))}
             </div>
+
+            {/* After "Use them": the club's colors to pick main and accent from. */}
+            {club && showClub && clubPalette.length > 0 && (
+              <div className="mb-3 rounded-xl border-2 border-[var(--team)] bg-white p-3">
+                <p className="mb-1 text-sm font-bold tracking-wide text-slate-600 uppercase">
+                  Club colors
+                </p>
+                <p className="mb-2 text-sm text-slate-600">
+                  {club.name}&apos;s colors. Tap Main or Accent above, then a color.
+                </p>
+                <Swatches
+                  colors={clubPalette}
+                  selected={slot === "main" ? colors.main : colors.accent}
+                  onPick={pick}
+                />
+              </div>
+            )}
 
             <label className="mb-3 flex h-14 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-400 bg-white text-base font-bold active:bg-slate-50">
               <span aria-hidden="true">🎨</span> Get colors from a picture

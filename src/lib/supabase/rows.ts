@@ -16,6 +16,8 @@ export interface TeamRow {
     id: string;
     name: string;
     colors: string[] | null;
+    /** Colors found in the director's upload (older loads may not have it). */
+    palette?: string[] | null;
     logo_path: string | null;
   } | null;
   timezone?: string;
