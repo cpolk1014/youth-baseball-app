@@ -176,6 +176,7 @@ describe("the bracket", () => {
     expect(parsePlaceholder("Seed 3")).toEqual({ kind: "seed", n: 3 });
     expect(parsePlaceholder("3rd Seed")).toEqual({ kind: "seed", n: 3 });
     expect(parsePlaceholder("#10")).toEqual({ kind: "seed", n: 10 });
+    expect(parsePlaceholder("8")).toEqual({ kind: "seed", n: 8 });
     expect(parsePlaceholder("1st Pool A")).toEqual({ kind: "pool", pool: "A", n: 1 });
     expect(parsePlaceholder("Pool B #2")).toEqual({ kind: "pool", pool: "B", n: 2 });
     expect(parsePlaceholder("A1")).toEqual({ kind: "pool", pool: "A", n: 1 });

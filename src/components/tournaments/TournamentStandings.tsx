@@ -6,9 +6,11 @@ import type { AppData } from "@/lib/data/types";
 import { MAX_SCREENSHOTS } from "@/lib/tournaments/event";
 import { ourSide, parsePlaceholder, placeOf, time12 } from "@/lib/tournaments/schedule";
 import {
+  bySlot,
   describeTerm,
   firstGameForSeed,
   scenarios,
+  termSize,
   type Scenarios,
 } from "@/lib/tournaments/scenarios";
 import {
@@ -322,6 +324,7 @@ export function TournamentStandings({
             us={us}
             ourPool={tables.flatMap((x) => x.rows).find((r) => r.teamId === us?.id)?.pool ?? null}
             teamCount={tables.reduce((n, x) => Math.max(n, x.rows.length), 0)}
+            scored={scored}
             note={`Based on ${scored} of ${pool.length} pool games scored${ruleSet ? ` and the ${ruleSet.name} tie-breakers` : " (no tie-breakers added yet, so ties stay ties)"}.`}
           />
         )}
@@ -983,7 +986,10 @@ const when = (g: { date: string | null; startTime: string | null }) =>
     .filter(Boolean)
     .join(" ");
 
-/** Every seed we can still get, the first bracket game for it, and what has to happen. */
+/** Show a way to get somewhere only when it's short enough to read in the bleachers. */
+const MAX_CONDITIONS = 3;
+
+/** Every bracket game we could play first, when, as which seed, and what has to happen. */
 function PlayTimes({
   input,
   games,
@@ -991,6 +997,7 @@ function PlayTimes({
   us,
   ourPool,
   teamCount,
+  scored,
   note,
 }: {
   input: StandingsInput;
@@ -999,16 +1006,18 @@ function PlayTimes({
   us: TournamentTeam | null;
   ourPool: string | null;
   teamCount: number;
+  scored: number;
   note: string;
 }) {
   const [result, setResult] = useState<Scenarios | null>(null);
   const usId = us?.id;
+  const started = scored > 0;
   useEffect(() => {
-    if (!usId || t.seedsLockedAt) return;
+    if (!usId || t.seedsLockedAt || !started) return;
     // Let the sheet open first; trying every outcome can take a moment.
     const timer = setTimeout(() => setResult(scenarios(input, usId)), 30);
     return () => clearTimeout(timer);
-  }, [input, usId, t.seedsLockedAt]);
+  }, [input, usId, t.seedsLockedAt, started]);
 
   if (!us) {
     return (
@@ -1018,21 +1027,19 @@ function PlayTimes({
     );
   }
   const pool = t.seeding === "pool" ? ourPool : null;
-  const slot = (seed: number) => {
-    const f = firstGameForSeed(games, seed, pool);
-    return (
-      <p key={seed} className="text-base">
-        <span className="font-bold">{f ? when(f.game) : "Time not on the bracket yet"}</span>
-        {f && (
-          <span className="text-slate-700">
-            {placeOf(f.game) ? ` · ${placeOf(f.game)}` : ""} · vs {sideWords(f.opponent)}
-          </span>
-        )}
-      </p>
-    );
-  };
+  const hasBracket = games.some((g) => g.stage === "bracket");
   const seedName = (n: number) => (pool ? `${ordinal(n)} in Pool ${pool}` : `#${n} seed`);
+  const seedList = (seeds: number[]) =>
+    pool
+      ? names(seeds.map((n) => ordinal(n))).replace(/ and /, " or ") + ` in Pool ${pool}`
+      : `#${names(seeds.map(String)).replace(/ and /, " or #").replace(/, /g, ", #")} seed`;
+  const noBracket = !hasBracket && (
+    <p className="rounded-xl border-2 border-amber-500 bg-amber-50 p-3 text-base">
+      Add the bracket to see game times: a coach adds it with “Update the schedule”.
+    </p>
+  );
 
+  // Seeds locked: just our game.
   if (t.seedsLockedAt && t.seeds) {
     const mine = t.seeds.find((s) => s.teamId === us.id);
     const next = games
@@ -1042,22 +1049,70 @@ function PlayTimes({
           (a.date ?? "").localeCompare(b.date ?? "") ||
           (a.startTime ?? "").localeCompare(b.startTime ?? ""),
       )[0];
+    const slot = mine ? firstGameForSeed(games, mine.seed, pool) : null;
+    const game = next ?? slot?.game ?? null;
     return (
       <div className="flex flex-col gap-2">
-        {mine && <p className="text-lg font-bold">We&apos;re the {seedName(mine.seed)}.</p>}
-        {next ? (
-          <p className="text-base">
-            <span className="font-bold">{when(next)}</span>
-            {placeOf(next) ? ` · ${placeOf(next)}` : ""} · vs{" "}
-            {sideWords(ourSide(next, us.name)!.opponent)}
+        <p className="text-xl font-bold">
+          {mine ? `We're the ${seedName(mine.seed)}` : "Seeds are locked"}
+          {game ? `: ${when(game)}` : "."}
+        </p>
+        {game && (
+          <p className="text-base text-slate-700">
+            {placeOf(game) || "Field TBD"} · vs{" "}
+            {sideWords(next ? ourSide(next, us.name)!.opponent : slot!.opponent)}
           </p>
-        ) : mine ? (
-          slot(mine.seed)
-        ) : null}
+        )}
+        {!game && noBracket}
       </div>
     );
   }
 
+  // Every slot a seed could land in (the preview before scores, or when it's early).
+  const allSlots = () => {
+    const seen = new Map<string, { game: TournamentGame | null; seeds: number[] }>();
+    for (let n = 1; n <= teamCount; n++) {
+      const f = firstGameForSeed(games, n, pool);
+      const key = f ? f.game.id : `seed-${n}`;
+      const s = seen.get(key) ?? { game: f?.game ?? null, seeds: [] };
+      s.seeds.push(n);
+      seen.set(key, s);
+    }
+    return [...seen.values()]
+      .filter((s) => s.game)
+      .sort(
+        (a, b) =>
+          (a.game!.date ?? "").localeCompare(b.game!.date ?? "") ||
+          (a.game!.startTime ?? "").localeCompare(b.game!.startTime ?? ""),
+      );
+  };
+  const preview = (intro: string) => (
+    <div className="flex flex-col gap-3">
+      <p className="text-lg font-bold">{intro}</p>
+      {hasBracket ? (
+        <>
+          <p className="text-base text-slate-700">Any of these is possible for now:</p>
+          <ul className="flex flex-col gap-2">
+            {allSlots().map((s) => (
+              <li key={s.game!.id} className="rounded-xl border-2 border-slate-200 p-3">
+                <p className="text-base font-bold">
+                  {when(s.game!)}
+                  {placeOf(s.game!) ? ` · ${placeOf(s.game!)}` : ""}
+                </p>
+                <p className="text-sm text-slate-600">as the {seedList(s.seeds)}</p>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        noBracket
+      )}
+    </div>
+  );
+
+  if (!started) {
+    return preview("Pool play hasn't started yet. Check back once games are being scored.");
+  }
   if (!result) {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center" role="status">
@@ -1066,68 +1121,82 @@ function PlayTimes({
       </div>
     );
   }
-
   if (result.tooMany) {
-    return (
-      <div className="flex flex-col gap-3">
-        <p className="text-base text-slate-700">
-          It&apos;s early: {result.remaining} pool games are left, so any of these is still
-          possible. Check back as scores come in.
-        </p>
-        <ul className="flex flex-col gap-2">
-          {Array.from({ length: teamCount }, (_, i) => i + 1).map((n) => (
-            <li key={n} className="rounded-xl border-2 border-slate-200 p-3">
-              <p className="text-sm font-semibold text-slate-600">{seedName(n)}</p>
-              {slot(n)}
-            </li>
-          ))}
-        </ul>
-        <p className="text-sm text-slate-600">{note}</p>
-      </div>
+    return preview(
+      `It's early: ${result.remaining} pool games are left. Check back as more scores come in.`,
     );
   }
 
+  const best = Math.min(...result.outcomes.map((o) => o.seed));
+  const worst = Math.max(...result.outcomes.map((o) => o.seedTo));
+  const slots = bySlot(result.outcomes, games, pool);
+  const summary =
+    best === worst
+      ? `We're the ${seedName(best)}${slots[0]?.game ? `: ${when(slots[0].game)}` : "."}`
+      : `We can finish anywhere from ${pool ? `${ordinal(best)} to ${ordinal(worst)} in Pool ${pool}` : `#${best} to #${worst}`}.`;
+
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-base text-slate-700">
-        {result.outcomes.length === 1
-          ? "It's settled."
-          : `${result.outcomes.length} ways it can go, with ${result.remaining} pool game${result.remaining === 1 ? "" : "s"} left:`}
-      </p>
-      <ul className="flex flex-col gap-3">
-        {result.outcomes.map((o) => {
-          const seeds = Array.from({ length: o.seedTo - o.seed + 1 }, (_, i) => o.seed + i);
-          const shown = o.terms.slice(0, 4);
-          return (
-            <li
-              key={`${o.seed}-${o.seedTo}-${o.open}`}
-              className="rounded-xl border-2 border-[var(--team)] p-3"
-            >
-              <p className="text-lg font-bold">
-                {seeds.length === 1
-                  ? seedName(o.seed)
-                  : `${seeds.map(seedName).join(" or ")} (${o.open === "coin" ? "coin flip" : "tie the rules don't break"})`}
-              </p>
-              {seeds.map((n) => slot(n))}
-              <p className="mt-2 text-sm font-bold tracking-wide text-slate-600 uppercase">If</p>
-              <ul className="flex flex-col gap-1">
-                {shown.map((term, i) => (
-                  <li key={i} className="text-base">
-                    {i > 0 && <span className="font-semibold text-slate-500">or </span>}
-                    {describeTerm(term, games, input, us.id)}
-                  </li>
-                ))}
-              </ul>
-              {o.terms.length > shown.length && (
-                <p className="text-sm text-slate-600">
-                  …or {o.terms.length - shown.length} other way
-                  {o.terms.length - shown.length === 1 ? "" : "s"}
-                </p>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+      <p className="text-xl font-bold">{summary}</p>
+      {noBracket}
+      {best !== worst && (
+        <ul className="flex flex-col gap-3">
+          {slots.map((s) => {
+            const texts = [
+              ...new Set(
+                s.terms
+                  .filter((term) => termSize(term) <= MAX_CONDITIONS)
+                  .sort((a, b) => termSize(a) - termSize(b))
+                  .map((term) => describeTerm(term, games, input, us.id)),
+              ),
+            ];
+            const long = s.terms.some((term) => termSize(term) > MAX_CONDITIONS);
+            const shown = texts.slice(0, 3);
+            return (
+              <li
+                key={s.game?.id ?? `seed-${s.seeds[0]}`}
+                className="rounded-xl border-2 border-[var(--team)] p-3"
+              >
+                {s.game ? (
+                  <>
+                    <p className="text-lg font-bold">
+                      {when(s.game)}
+                      {placeOf(s.game) ? ` · ${placeOf(s.game)}` : ""}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      as the {seedList(s.seeds)}
+                      {s.opponent ? `, vs ${sideWords(s.opponent)}` : ""}
+                      {s.coin ? " (a coin flip may decide)" : ""}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-lg font-bold">
+                    {seedList(s.seeds)}
+                    {s.coin ? " (a coin flip may decide)" : ""}
+                  </p>
+                )}
+                <ul className="mt-2 flex flex-col gap-1">
+                  {shown.map((text, i) => (
+                    <li key={text} className="text-base">
+                      <span className="font-semibold text-slate-500">
+                        {i === 0 ? "If " : "or "}
+                      </span>
+                      {text.charAt(0).toLowerCase() + text.slice(1)}
+                    </li>
+                  ))}
+                  {(long || texts.length > shown.length) && (
+                    <li className="text-base text-slate-600">
+                      {shown.length
+                        ? "or other combinations of results"
+                        : "Depends on several other games"}
+                    </li>
+                  )}
+                </ul>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <p className="text-sm text-slate-600">{note}</p>
     </div>
   );

@@ -326,6 +326,9 @@ export function parsePlaceholder(name: string): Placeholder | null {
     /^seed\s*#?\s*(\d{1,2})$/i.exec(s) ??
     /^#\s*(\d{1,2})$/.exec(s);
   if (m) return { kind: "seed", n: Number(m[1]) };
+  // A bracket side that's only a number (seed numbers printed on empty lines).
+  m = /^(\d{1,2})$/.exec(s);
+  if (m) return { kind: "seed", n: Number(m[1]) };
   m = /^(\d{1,2})\s*(?:st|nd|rd|th)?\s*(?:place\s*)?(?:in\s*)?pool\s+([a-z0-9]{1,10})$/i.exec(s);
   if (m) return { kind: "pool", pool: m[2]!, n: Number(m[1]) };
   m =

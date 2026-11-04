@@ -296,19 +296,21 @@ export function describeTerm(
         : sideTeam(g.away, g.awayTeamId, input.teams);
     return { name: t?.name ?? (side === "home" ? g.home : g.away), us: t?.id === ourId };
   };
-  const parts: string[] = [];
+  // Our own games first, then the rest.
+  const parts: { text: string; us: boolean }[] = [];
   for (const w of term.wins) {
     const g = games.find((x) => x.id === w.gameId);
     if (!g) continue;
     const win = name(g, w.winner);
     const lose = name(g, w.winner === "home" ? "away" : "home");
-    parts.push(
-      win.us
+    parts.push({
+      text: win.us
         ? `we beat ${lose.name}`
         : lose.us
           ? `we lose to ${win.name}`
           : `${win.name} beat ${lose.name}`,
-    );
+      us: win.us || lose.us,
+    });
   }
   for (const r of term.runs) {
     const g = games.find((x) => x.id === r.gameId);
@@ -329,15 +331,81 @@ export function describeTerm(
       : lose.us
         ? `we lose to ${win.name}`
         : `${win.name} beat ${lose.name}`;
+    const us = win.us || lose.us;
     if (r.kind === "margin") {
-      parts.push(`${subject} by ${range(unit)}`);
+      parts.push({ text: `${subject} by ${range(unit)}`, us });
     } else if (r.kind === "loserRuns") {
-      parts.push(`${subject}, with ${lose.us ? "us" : lose.name} scoring ${range(unit)}`);
+      parts.push({
+        text: `${subject}, with ${lose.us ? "us" : lose.name} scoring ${range(unit)}`,
+        us,
+      });
     } else {
-      parts.push(`${subject}, with ${win.us ? "us" : win.name} scoring ${range(unit)}`);
+      parts.push({
+        text: `${subject}, with ${win.us ? "us" : win.name} scoring ${range(unit)}`,
+        us,
+      });
     }
   }
-  if (term.dependsOnRuns) parts.push("then runs decide it");
-  const text = parts.join(", and ");
+  if (term.dependsOnRuns) parts.push({ text: "then runs decide it", us: false });
+  const ordered = [...parts.filter((p) => p.us), ...parts.filter((p) => !p.us)];
+  const text = ordered.map((p) => p.text).join(", and ");
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** How many things have to happen for this way (short ones are worth showing). */
+export function termSize(term: Term): number {
+  return term.wins.length + term.runs.length + (term.dependsOnRuns ? 1 : 0);
+}
+
+export interface Slot<T> {
+  /** The bracket game (null when the bracket isn't in yet: one slot per seed). */
+  game: T | null;
+  seeds: number[];
+  /** Who we'd play, for a single seed. */
+  opponent: string | null;
+  /** Any of these gets us here. */
+  terms: Term[];
+  /** A coin flip (or an unbreakable tie) decides between this slot and another. */
+  coin: boolean;
+}
+
+/** Outcomes grouped by the bracket game they lead to, earliest first. */
+export function bySlot<T extends SGame & { date: string | null; startTime: string | null }>(
+  outcomes: Outcome[],
+  games: T[],
+  pool: string | null,
+): Slot<T>[] {
+  const slots = new Map<string, Slot<T> & { opponents: Set<string> }>();
+  for (const o of outcomes) {
+    for (let n = o.seed; n <= o.seedTo; n++) {
+      const f = firstGameForSeed(games, n, pool);
+      const key = f ? f.game.id : `seed-${n}`;
+      const slot = slots.get(key) ?? {
+        game: f?.game ?? null,
+        seeds: [],
+        opponent: null,
+        opponents: new Set<string>(),
+        terms: [],
+        coin: false,
+      };
+      if (!slot.seeds.includes(n)) slot.seeds.push(n);
+      if (f) slot.opponents.add(f.opponent);
+      slot.terms.push(...o.terms);
+      if (o.seedTo > o.seed) slot.coin = true;
+      slots.set(key, slot);
+    }
+  }
+  return [...slots.values()]
+    .map(({ opponents, ...s }) => ({
+      ...s,
+      seeds: s.seeds.sort((a, b) => a - b),
+      opponent: opponents.size === 1 ? [...opponents][0]! : null,
+    }))
+    .sort(
+      (a, b) =>
+        Number(!a.game) - Number(!b.game) ||
+        (a.game?.date ?? "").localeCompare(b.game?.date ?? "") ||
+        (a.game?.startTime ?? "").localeCompare(b.game?.startTime ?? "") ||
+        a.seeds[0]! - b.seeds[0]!,
+    );
 }

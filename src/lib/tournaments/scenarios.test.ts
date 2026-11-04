@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeTerm, firstGameForSeed, scenarios } from "./scenarios";
+import { bySlot, describeTerm, firstGameForSeed, scenarios } from "./scenarios";
 import type { SGame, STeam, StandingsInput } from "./standings";
 import type { Criterion } from "./tiebreak";
 
@@ -112,5 +112,34 @@ describe("what time do we play tomorrow", () => {
     expect(firstGameForSeed(games, 1, null)?.opponent).toBe("Winner Game 3");
     expect(firstGameForSeed(games, 2, "B")?.game.id).toBe("b4");
     expect(firstGameForSeed(games, 9, null)).toBeNull();
+  });
+});
+
+describe("grouped for parents", () => {
+  const pool = () => [g("g1", "Aces", "Cubs", [5, 1]), g("g2", "Bats", "Dogs", [4, 2])];
+
+  it("puts our own game first in a condition", () => {
+    const i = input(
+      [...pool(), g("g3", "Cubs", "Dogs", null), g("g4", "Aces", "Bats", null)],
+      [rule("head_to_head")],
+    );
+    expect(words(i, scenarios(i, "A"))[1]).toEqual(["2", ["We lose to Bats, and Cubs beat Dogs"]]);
+  });
+
+  it("groups seeds that share a bracket game, earliest first", () => {
+    const i = input(
+      [...pool(), g("g3", "Aces", "Bats", null), g("g4", "Cubs", "Dogs", null)],
+      [rule("head_to_head")],
+    );
+    const games = [
+      ...i.games.map((x) => ({ ...x, date: "2026-11-14", startTime: "09:00" })),
+      g("b1", "2", "3", null, { stage: "bracket", date: "2026-11-15", startTime: "09:00" }),
+      g("b2", "1", "4", null, { stage: "bracket", date: "2026-11-15", startTime: "11:00" }),
+    ];
+    const slots = bySlot(scenarios(i, "A").outcomes, games, null);
+    expect(slots.map((s) => [s.game?.id ?? null, s.seeds, s.opponent, s.coin])).toEqual([
+      ["b1", [2, 3], null, true],
+      ["b2", [1], "4", false],
+    ]);
   });
 });
