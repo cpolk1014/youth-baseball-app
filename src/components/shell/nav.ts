@@ -6,6 +6,7 @@ import type { IconName } from "./NavIcon";
 export type Tab =
   | "home"
   | "games"
+  | "tournaments"
   | "pa"
   | "practice"
   | "plays"
@@ -29,6 +30,7 @@ export type MenuTab = {
 /** The menu's sections, grouped by what people are doing. */
 export const GAME_DAY: MenuTab[] = [
   { id: "games", href: "/games", label: "Games", icon: "games" },
+  { id: "tournaments", href: "/tournaments", label: "Tournaments", icon: "trophy" },
   { id: "pa", href: "/pa", label: "Gameday PA", icon: "pa" },
 ];
 export const TEAM: MenuTab[] = [

@@ -21,6 +21,8 @@ const PATHS = {
   expand: "M9 6l6 6-6 6",
   practiceDay: "M4 19h16M7 19V9l5-4 5 4v10",
   player: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 21a7 7 0 0 1 14 0",
+  trophy:
+    "M8 4h8v5a4 4 0 0 1-8 0V4ZM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 21h6M10 17h4v4h-4z",
 } as const;
 
 export type IconName = keyof typeof PATHS;

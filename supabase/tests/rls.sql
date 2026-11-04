@@ -1399,6 +1399,35 @@ do $$ begin
   raise exception 'should have failed' using errcode = 'T0001';
 exception when check_violation then raise notice 'ok: a club color must come from its uploaded palette';
 end $$;
+-- ── tournaments (phase 1): each team's own copy; coaches edit, the team sees ──
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- manager
+create temp table trn as
+  with t as (
+    insert into public.tournament (team_id, name, url, start_date, end_date, division)
+    values ('00000000-0000-4000-8000-000000000001', 'Caleb Easterling Memorial',
+      'https://youth.2dsports.org/events/x', '2026-10-17', '2026-10-18', '14u')
+    returning id)
+  select id from t;
+insert into public.tournament_team (tournament_id, name, is_us) values
+  ((select id from trn), 'Tsunami 14u', false), ((select id from trn), 'Rattlers', true);
+select pg_temp.expect((select count(*) from public.tournament_team where tournament_id = (select id from trn)) = 2, 'a manager adds a tournament and its teams');
+do $$ begin
+  insert into public.tournament_team (tournament_id, name) values ((select id from trn), ' tsunami 14U ');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when unique_violation then raise notice 'ok: a team is only listed once';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+select pg_temp.expect((select count(*) from public.tournament where id = (select id from trn)) = 1, 'parents see the tournament');
+do $$ begin
+  insert into public.tournament_team (tournament_id, name) values ((select id from trn), 'Sneaky Sox');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents can''t add tournament teams';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- not on the team
+select pg_temp.expect((select count(*) from public.tournament_team where tournament_id = (select id from trn)) = 0, 'people not on the team see nothing');
+reset role;
 -- ── game places ──
 update public.game set location = 'Traction Sports Complex', field = 'Chabills Field', location_lat = 30.2, location_lng = -92.0
   where id = 'eeeeeeee-0000-4000-8000-000000000020';
