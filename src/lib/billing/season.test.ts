@@ -29,3 +29,20 @@ describe("seasons", () => {
     expect(dollars(12900)).toBe("$129");
   });
 });
+
+describe("family add-on prices", () => {
+  it("has the six plans at their prices, with codes to share", async () => {
+    const { FAMILY_OPTIONS, FAMILY_FROM_CENTS, familyOption } = await import("./family");
+    expect(FAMILY_OPTIONS.map((o) => [o.scope, o.plan, o.cents, o.shares])).toEqual([
+      ["one", "solo", 1000, 0],
+      ["one", "partner", 1500, 1],
+      ["one", "blended", 3000, 3],
+      ["multi", "solo", 1500, 0],
+      ["multi", "partner", 2000, 1],
+      ["multi", "blended", 4000, 3],
+    ]);
+    expect(FAMILY_FROM_CENTS).toBe(1000);
+    expect(familyOption("partner", "multi")?.cents).toBe(2000);
+    expect(familyOption("gold", "multi")).toBeNull();
+  });
+});

@@ -12,6 +12,7 @@ import { GamesPane } from "./GamesScreen";
 import { kidsOf } from "./KidPicker";
 import { ImportBoxScore } from "./kidstats/ImportBoxScore";
 import { useKidGames } from "./kidstats/kidGames";
+import { useFamilyPasses } from "./kidstats/familyPass";
 import { gameLine, sameGame, type KidGame } from "@/lib/boxscore/stats";
 import { Sheet } from "./Sheet";
 import { GameUniformCard } from "./uniforms/GameUniformCard";
@@ -34,7 +35,11 @@ export function ParentGame({
   arrival: string | null;
 }) {
   const kids = kidsOf(data, myUserId(data));
-  const { games: imported, save, remove } = useKidGames(kids.map((k) => k.id));
+  const { games: imported, kidTeams, save, remove } = useKidGames(kids.map((k) => k.id));
+  // Box score stats are a family add-on; without a pass, Upload goes to My player to unlock.
+  const fam = useFamilyPasses();
+  const unlocked = (kid: Player) =>
+    fam.covers(kidTeams.find((r) => r.playerId === kid.id)?.athleteId ?? null);
   const [importing, setImporting] = useState<Player | null>(null);
   const isFinal = game.status === "final";
   const result = gameResult(game);
@@ -134,16 +139,26 @@ export function ParentGame({
                         See stats
                       </Link>
                     )}
-                    <button
-                      onClick={() => setImporting(kid)}
-                      className={`h-12 flex-1 rounded-xl text-base font-bold ${
-                        box
-                          ? "border-2 border-slate-300 bg-white text-slate-800 active:bg-slate-100"
-                          : "bg-[var(--team)] text-white active:bg-[var(--team-press)]"
-                      }`}
-                    >
-                      {box ? "Replace it" : "Upload box score"}
-                    </button>
+                    {unlocked(kid) || fam.loading ? (
+                      <button
+                        onClick={() => setImporting(kid)}
+                        disabled={fam.loading}
+                        className={`h-12 flex-1 rounded-xl text-base font-bold disabled:opacity-50 ${
+                          box
+                            ? "border-2 border-slate-300 bg-white text-slate-800 active:bg-slate-100"
+                            : "bg-[var(--team)] text-white active:bg-[var(--team-press)]"
+                        }`}
+                      >
+                        {box ? "Replace it" : "Upload box score"}
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/my-player?player=${kid.id}`}
+                        className="flex h-12 flex-1 items-center justify-center rounded-xl bg-[var(--team)] text-base font-bold text-white"
+                      >
+                        🔒 Unlock box scores
+                      </Link>
+                    )}
                   </div>
                 </li>
               );

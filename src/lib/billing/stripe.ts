@@ -18,18 +18,22 @@ export function getStripe(): Stripe {
 
 /** What we put on a Checkout session, and read back when Stripe says it was paid. */
 export interface PurchaseMeta {
-  kind: "club" | "team";
+  kind: "club" | "team" | "family";
   buyer: string;
   season: string;
   quantity: string;
   clubId?: string;
   clubName?: string;
   teamId?: string;
+  /** Family add-on: solo | partner | blended, one | multi, and the kid for "one". */
+  plan?: string;
+  scope?: string;
+  athleteId?: string;
 }
 
 export interface Fulfillment {
   session: string;
-  kind: "club" | "team";
+  kind: "club" | "team" | "family";
   buyer: string;
   clubId: string | null;
   clubName: string | null;
@@ -37,6 +41,9 @@ export interface Fulfillment {
   quantity: number;
   season: string;
   amountCents: number;
+  plan: string | null;
+  scope: string | null;
+  athleteId: string | null;
 }
 
 /**
@@ -53,7 +60,7 @@ export function purchaseFromEvent(event: Stripe.Event): Fulfillment | null {
   const s = event.data.object as Stripe.Checkout.Session;
   if (s.payment_status !== "paid") return null;
   const m = (s.metadata ?? {}) as Partial<PurchaseMeta>;
-  if ((m.kind !== "club" && m.kind !== "team") || !m.buyer || !m.season) {
+  if ((m.kind !== "club" && m.kind !== "team" && m.kind !== "family") || !m.buyer || !m.season) {
     throw new Error(`Checkout ${s.id} is missing RallyCap details.`);
   }
   return {
@@ -66,6 +73,9 @@ export function purchaseFromEvent(event: Stripe.Event): Fulfillment | null {
     quantity: Number(m.quantity) || 1,
     season: m.season,
     amountCents: s.amount_total ?? 0,
+    plan: m.plan || null,
+    scope: m.scope || null,
+    athleteId: m.athleteId || null,
   };
 }
 

@@ -4,7 +4,7 @@ import { getAdminSupabase } from "@/lib/supabase/admin";
 
 /**
  * Stripe tells us a checkout was paid; we record it once (codes for a club, a season pass
- * for a team). Signed by Stripe (STRIPE_WEBHOOK_SECRET); anything else is refused. A
+ * for a team, a family's stats pass). Signed by Stripe (STRIPE_WEBHOOK_SECRET); anything else is refused. A
  * failure returns 500 so Stripe retries.
  */
 export async function POST(request: NextRequest) {
@@ -23,6 +23,20 @@ export async function POST(request: NextRequest) {
   try {
     const p = purchaseFromEvent(event);
     if (!p) return NextResponse.json({ received: true });
+    if (p.kind === "family") {
+      // A family's box score stats pass (and its share codes).
+      const { error } = await getAdminSupabase().rpc("fulfill_family_purchase", {
+        p_session: p.session,
+        p_buyer: p.buyer,
+        p_plan: p.plan,
+        p_scope: p.scope,
+        p_athlete: p.athleteId,
+        p_season: p.season,
+        p_amount: p.amountCents,
+      });
+      if (error) throw new Error(error.message);
+      return NextResponse.json({ received: true });
+    }
     const { error } = await getAdminSupabase().rpc("fulfill_purchase", {
       p_session: p.session,
       p_kind: p.kind,

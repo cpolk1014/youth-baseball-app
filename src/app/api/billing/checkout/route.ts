@@ -6,6 +6,7 @@ import {
   seasonEnds,
   seasonsOnSale,
 } from "@/lib/billing/season";
+import { familyOption } from "@/lib/billing/family";
 import { getStripe, stripeProblem, type PurchaseMeta } from "@/lib/billing/stripe";
 import { getServerSupabase } from "@/lib/supabase/server";
 
@@ -15,7 +16,8 @@ function errorResponse(status: number, error: string) {
 
 /**
  * Start paying for a season: a club's team codes ($99 each; a new club for a first-time
- * buyer) or one team's season ($129). Returns Stripe Checkout's URL; nothing is recorded
+ * buyer), one team's season ($129), or a family's box score stats (one player or all of
+ * theirs; just them, with a partner, or a blended family). Returns Stripe Checkout's URL; nothing is recorded
  * until Stripe confirms the payment (see /api/stripe/webhook).
  */
 export async function POST(request: NextRequest) {
@@ -27,7 +29,14 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const kind = body?.kind;
-  const season = typeof body?.season === "string" ? body.season : "";
+  // Families buy the newest season on sale (in June and July that's next season, so a pass
+  // bought then doesn't run out on July 31).
+  const season =
+    kind === "family"
+      ? seasonsOnSale(new Date()).at(-1)!
+      : typeof body?.season === "string"
+        ? body.season
+        : "";
   if (!seasonsOnSale(new Date()).includes(season)) {
     return errorResponse(400, "That season isn't on sale.");
   }
@@ -87,6 +96,28 @@ export async function POST(request: NextRequest) {
     unit = TEAM_PRICE_CENTS;
     name = team.name;
     back = "/members";
+  } else if (kind === "family") {
+    const option = familyOption(body?.plan, body?.scope);
+    if (!option) return errorResponse(400, "Pick a plan.");
+    meta.kind = "family";
+    meta.plan = option.plan;
+    meta.scope = option.scope;
+    if (option.scope === "one") {
+      // The kid has to be the buyer's own (their record, which follows them to any team).
+      const playerId = typeof body?.playerId === "string" ? body.playerId : "";
+      const { data: kids } = await supabase.rpc("my_athletes");
+      const kid = (
+        (kids ?? []) as { athlete_id: string; name: string; player_id: string | null }[]
+      ).find((k) => k.player_id === playerId);
+      if (!kid) return errorResponse(403, "Pick one of your own players.");
+      meta.athleteId = kid.athlete_id;
+      name = `${kid.name}'s stats`;
+    } else {
+      name = "Stats for all my players";
+    }
+    unit = option.cents;
+    back = "/my-player";
+    if (typeof body?.playerId === "string") back += `?player=${encodeURIComponent(body.playerId)}`;
   } else {
     return errorResponse(400, "Something's missing. Reload and try again.");
   }
@@ -103,7 +134,10 @@ export async function POST(request: NextRequest) {
             currency: "usd",
             unit_amount: unit,
             product_data: {
-              name: `RallyCap ${season} season${kind === "club" ? " (club team)" : ""}`,
+              name:
+                kind === "family"
+                  ? `RallyCap player stats, ${season} season`
+                  : `RallyCap ${season} season${kind === "club" ? " (club team)" : ""}`,
               description: `${name}. Runs through ${new Date(`${seasonEnds(season)}T12:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`,
             },
           },
@@ -113,7 +147,7 @@ export async function POST(request: NextRequest) {
       client_reference_id: user.id,
       metadata: { ...meta },
       payment_intent_data: { metadata: { ...meta } },
-      success_url: `${origin}${back}?paid=1`,
+      success_url: `${origin}${back}${back.includes("?") ? "&" : "?"}paid=1`,
       cancel_url: `${origin}${back}`,
     });
     if (!session.url) return errorResponse(502, "Stripe didn't return a checkout page. Try again.");

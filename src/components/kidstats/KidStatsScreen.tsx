@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ERA_INNINGS,
   gameLine,
@@ -16,6 +16,8 @@ import { kidsOf } from "../KidPicker";
 import { Sheet } from "../Sheet";
 import { ImportBoxScore } from "./ImportBoxScore";
 import { KidTeams } from "./KidTeams";
+import { ShareCodes, UpgradeOptions, useFamilyPasses } from "./familyPass";
+import { StatsTeaser } from "./StatsTeaser";
 import { KidWalkup } from "./KidWalkup";
 import { SharePlayerCard } from "./SharePlayerCard";
 import { StrikeChart, TrendChart } from "../charts/Charts";
@@ -59,6 +61,16 @@ function KidStats({ data }: { data: AppData }) {
   const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState<KidGame | null>(null);
   const [sharing, setSharing] = useState(false);
+  const fam = useFamilyPasses();
+  const [upgrading, setUpgrading] = useState(false);
+  // Back from Stripe: the payment lands a moment later, so check again for a few seconds.
+  const [justPaid] = useState(() => new URLSearchParams(window.location.search).has("paid"));
+  const { reload } = fam;
+  useEffect(() => {
+    if (!justPaid) return;
+    const timers = [2000, 5000, 10000].map((ms) => setTimeout(reload, ms));
+    return () => timers.forEach(clearTimeout);
+  }, [justPaid, reload]);
   // The years picked, per kid (opens on this year when there's more than one).
   const [pickBy, setPickBy] = useState<Record<string, YearPick>>({});
   const today = useToday();
@@ -87,6 +99,9 @@ function KidStats({ data }: { data: AppData }) {
     (g) => g.playerId === kid.id || (athlete !== null && g.athleteId === athlete),
   );
   const teamCount = new Set(mine.map((g) => g.teamName ?? "")).size;
+  // Box score stats are a family add-on (a pass for this kid, from any parent in the family).
+  const unlocked = fam.covers(athlete);
+  const myPass = fam.passes?.find((p) => athlete && p.athletes.includes(athlete)) ?? null;
   const year = Number((today || "2026").slice(0, 4));
   const years = yearsOf(mine);
   const pick = pickBy[kid.id] ?? defaultYears(years, year);
@@ -125,8 +140,19 @@ function KidStats({ data }: { data: AppData }) {
         </div>
       )}
 
+      {justPaid && (
+        <p
+          role="status"
+          className="mb-4 rounded-xl bg-green-50 p-3 text-base font-semibold text-green-900"
+        >
+          {unlocked
+            ? `Thanks! ${kid.name.split(" ")[0]}'s stats are unlocked for the season.`
+            : "Thanks! Finishing up your payment…"}
+        </p>
+      )}
+
       <button
-        onClick={() => setImporting(true)}
+        onClick={() => (unlocked ? setImporting(true) : setUpgrading(true))}
         className="mb-4 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[var(--team)] text-lg font-bold text-white"
       >
         + Import a box score
@@ -143,8 +169,17 @@ function KidStats({ data }: { data: AppData }) {
         split={split}
       />
 
-      {loading ? (
+      {myPass && <ShareCodes pass={myPass} />}
+
+      {loading || fam.loading ? (
         <Loading />
+      ) : !unlocked ? (
+        <StatsTeaser
+          kid={kid}
+          year={year}
+          onUpgrade={() => setUpgrading(true)}
+          redeem={fam.redeem}
+        />
       ) : error ? (
         <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-800">
           Couldn&apos;t load stats ({error}).
@@ -308,6 +343,14 @@ function KidStats({ data }: { data: AppData }) {
             })}
           />
         )}
+      </Sheet>
+
+      <Sheet
+        open={upgrading}
+        title={`Unlock ${kid.name.split(" ")[0]}'s stats`}
+        onClose={() => setUpgrading(false)}
+      >
+        {upgrading && <UpgradeOptions kids={kids} kid={kid} />}
       </Sheet>
 
       <Sheet open={importing} title="Import a box score" onClose={() => setImporting(false)}>

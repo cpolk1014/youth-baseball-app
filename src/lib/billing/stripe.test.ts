@@ -41,6 +41,32 @@ describe("Stripe payment notices", () => {
       quantity: 26,
       season: "2026-27",
       amountCents: 257400,
+      plan: null,
+      scope: null,
+      athleteId: null,
+    });
+  });
+
+  it("records a family's stats pass", () => {
+    const e = signedEvent("checkout.session.completed", {
+      payment_status: "paid",
+      amount_total: 3000,
+      metadata: {
+        kind: "family",
+        buyer: "u2",
+        season: "2026-27",
+        quantity: "1",
+        plan: "blended",
+        scope: "one",
+        athleteId: "a1",
+      },
+    });
+    expect(purchaseFromEvent(e)).toMatchObject({
+      kind: "family",
+      plan: "blended",
+      scope: "one",
+      athleteId: "a1",
+      amountCents: 3000,
     });
   });
 

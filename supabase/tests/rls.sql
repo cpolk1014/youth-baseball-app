@@ -1058,6 +1058,43 @@ select pg_temp.expect(public.send_due_game_posts() = 0, 'a game day posted by ha
 update public.team set game_post_mode = 'off' where id = 'eeeeeeee-0000-4000-8000-000000000010';
 delete from public.game_post_log where team_id = 'eeeeeeee-0000-4000-8000-000000000010';
 select pg_temp.expect(public.send_due_game_posts() = 0, 'nothing posts when game day posts are off');
+-- ── family passes: importing box scores is a family add-on ──
+reset role;
+insert into public.game (id, season_id, game_date, opponent) values
+  ('00000000-0000-4000-8000-00000000c009', '00000000-0000-4000-8000-000000000101', '2026-06-21', 'No Pass Yet');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+do $$ begin
+  insert into public.player_game_stat (player_id, game_id, game_date, opponent, batting)
+    values ('00000000-0000-4000-8000-000000001003', '00000000-0000-4000-8000-00000000c009', '2026-06-21', 'x', '{"ab": 1}');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: importing a box score needs a family pass';
+end $$;
+select pg_temp.expect(not public.family_access((select athlete_id from public.player where id = '00000000-0000-4000-8000-000000001003')), 'no pass, no access');
+reset role;
+create temp table fam_kid as select athlete_id from public.player where id = '00000000-0000-4000-8000-000000001003';
+grant select on fam_kid to authenticated;
+-- A blended-family pass for all of parent 0002's kids (comped from the SQL Editor), far ahead.
+select public.grant_family_pass('aaaaaaaa-0000-4000-8000-000000000002', 'blended', 'multi', null, '2098-99');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect(public.family_access((select athlete_id from public.player where id = '00000000-0000-4000-8000-000000001003')), 'the pass covers the buyer''s kids');
+select pg_temp.expect((select jsonb_array_length(codes) from public.my_family_access() where plan = 'blended') = 3, 'a blended family pass comes with 3 codes to share');
+create temp table fam_code as select (select codes->0->>'code' from public.my_family_access() where plan = 'blended') as code;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- another adult in the family
+select pg_temp.expect(not exists (select 1 from public.my_family_access()), 'others have no pass until they redeem a code');
+select public.redeem_family_code((select lower(code) from fam_code));
+select pg_temp.expect(public.family_access((select athlete_id from fam_kid)), 'a shared code gives the other adult the same kids');
+select pg_temp.expect((select jsonb_array_length(codes) from public.my_family_access()) = 0, 'only the buyer sees the codes');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- someone else
+do $$ begin
+  perform public.redeem_family_code((select code from fam_code));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when invalid_parameter_value then raise notice 'ok: a code works once';
+end $$;
+select pg_temp.expect((select count(*) from public.family_code) = 0, 'other people can''t see the codes');
+reset role;
+delete from public.game where id = '00000000-0000-4000-8000-00000000c009';
 -- ── a kid's own game stats (parent box score import) ──
 -- Parent 0002 is linked to player 1003 (from the fixtures); 1004 is someone else's kid.
 -- A box score belongs to one of the kid's team's games.

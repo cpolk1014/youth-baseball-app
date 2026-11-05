@@ -149,9 +149,16 @@ export async function POST(request: NextRequest) {
   if (!link) return errorResponse(403, "You can only import stats for your own player.");
   const { data: player } = await supabase
     .from("player")
-    .select("name, team_id, jersey_number")
+    .select("name, team_id, jersey_number, athlete_id")
     .eq("id", playerId)
     .maybeSingle();
+  // Box score stats are a family add-on: no pass for this kid, no reading (and no saving).
+  const { data: paid } = player?.athlete_id
+    ? await supabase.rpc("family_access", { p_athlete: player.athlete_id })
+    : { data: false };
+  if (!paid) {
+    return errorResponse(402, "Unlock box score stats for this player first.");
+  }
   const { data: team } = player
     ? await supabase.from("team").select("name").eq("id", player.team_id).maybeSingle()
     : { data: null };
