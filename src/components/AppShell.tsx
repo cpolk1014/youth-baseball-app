@@ -300,9 +300,7 @@ function MenuHeader({
           >
             {data.team.name}
           </span>
-          <span
-            className={`block text-xs font-semibold tracking-wide uppercase ${rail ? "text-slate-400" : "text-white/60"}`}
-          >
+          <span className={`block text-xs font-semibold tracking-wide uppercase text-white/60`}>
             {mode === "supabase" ? "Switch team ▾" : "RallyCap"}
           </span>
         </span>
@@ -462,14 +460,12 @@ function AccountMenu({
   const current = (href: string) =>
     pathname === href || (href === "/my-clubs" && pathname.startsWith("/club"));
   const plain = rail
-    ? "flex min-h-10 items-center rounded-lg px-3 text-left text-sm font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+    ? "flex min-h-10 items-center rounded-lg px-3 text-left text-sm font-semibold text-white/70 hover:bg-white/10 hover:text-white"
     : "flex min-h-12 items-center rounded-lg px-3 text-left text-base font-semibold text-white/80 hover:bg-white/10 active:bg-white/15";
   const linkClass = (on: boolean) =>
     rail
       ? `flex h-10 shrink-0 items-center gap-3 rounded-lg px-3 text-[15px] font-semibold ${
-          on
-            ? "bg-[#1B2A4A]/10 text-[#1B2A4A]"
-            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+          on ? "bg-white text-[#1B2A4A]" : "text-white/85 hover:bg-white/10 hover:text-white"
         }`
       : `flex h-12 items-center rounded-lg px-3 text-base font-bold ${
           on ? "bg-white text-[#1B2A4A]" : "text-white/90 hover:bg-white/10 active:bg-white/15"
@@ -478,22 +474,12 @@ function AccountMenu({
   return (
     <div
       className={`mt-auto ${
+        // Its own RallyCap-navy panel, apart from the team's colors.
         rail
-          ? "border-t-2 border-[#DC143C] pt-3"
-          : // Its own RallyCap-navy panel inside the team-colored menu.
-            "mt-6 rounded-2xl bg-[#1B2A4A] p-2 shadow-lg ring-1 ring-white/10"
+          ? "rounded-xl bg-[#1B2A4A] p-1.5"
+          : "mt-6 rounded-2xl bg-[#1B2A4A] p-2 shadow-lg ring-1 ring-white/10"
       }`}
     >
-      {!collapsed && (
-        // eslint-disable-next-line @next/next/no-img-element -- a small static logo
-        <img
-          src={
-            rail ? "/brand/rallycap-horizontal-color.svg" : "/brand/rallycap-horizontal-white.svg"
-          }
-          alt="RallyCap"
-          className={rail ? "-mb-1 h-12 w-auto" : "-mb-1 h-14 w-auto"}
-        />
-      )}
       <button
         // Folded rail: no room for the list, so go straight to the profile.
         onClick={() => (collapsed ? router.push("/profile") : setOpen(!open))}
@@ -502,7 +488,7 @@ function AccountMenu({
         title={collapsed ? (me?.name ?? "My RallyCap") : undefined}
         className={`flex w-full items-center gap-3 rounded-lg text-left ${
           rail
-            ? `min-h-12 px-1.5 hover:bg-slate-100 ${collapsed ? "justify-center" : ""}`
+            ? `min-h-12 px-1.5 text-white hover:bg-white/10 ${collapsed ? "justify-center" : ""}`
             : "min-h-14 px-2 text-white hover:bg-white/10 active:bg-white/15"
         }`}
       >
@@ -518,7 +504,7 @@ function AccountMenu({
           <>
             <span className="min-w-0 flex-1">
               <span
-                className={`block truncate leading-tight font-bold ${rail ? "text-sm text-slate-900" : "text-base"}`}
+                className={`block truncate leading-tight font-bold ${rail ? "text-sm" : "text-base"}`}
               >
                 {me?.name ?? me?.email ?? "My RallyCap"}
               </span>
@@ -528,7 +514,7 @@ function AccountMenu({
                 My RallyCap
               </span>
             </span>
-            <span aria-hidden="true" className={rail ? "text-slate-400" : "text-white/70"}>
+            <span aria-hidden="true" className="text-white/70">
               {open ? "▾" : "▴"}
             </span>
           </>

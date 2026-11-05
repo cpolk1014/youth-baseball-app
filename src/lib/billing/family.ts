@@ -1,4 +1,4 @@
-// Player stats (box score imports, trends, the player card): a parent's own purchase on My
+// Player stats (box score imports and trends): a parent's own purchase on My
 // profile, for a number of their kids, for one year from the day they buy. Not part of a
 // team pass or club code; another parent who wants the stats buys their own.
 

@@ -20,10 +20,9 @@ import { KidTeams } from "./KidTeams";
 import { longDate, useStatsPasses } from "./familyPass";
 import { StatsTeaser } from "./StatsTeaser";
 import { KidWalkup } from "./KidWalkup";
-import { SharePlayerCard } from "./SharePlayerCard";
 import { StrikeChart, TrendChart } from "../charts/Charts";
 import { useToday } from "../useToday";
-import { battingTrend, pitchingTrend, playerCardModel } from "@/lib/boxscore/trends";
+import { battingTrend, pitchingTrend } from "@/lib/boxscore/trends";
 import { useKidGames } from "./kidGames";
 import {
   defaultYears,
@@ -61,7 +60,6 @@ function KidStats({ data }: { data: AppData }) {
   );
   const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState<KidGame | null>(null);
-  const [sharing, setSharing] = useState(false);
   const fam = useStatsPasses();
   const router = useRouter();
   // Player stats are bought on My profile.
@@ -258,12 +256,6 @@ function KidStats({ data }: { data: AppData }) {
             <p className="mt-3 text-sm text-slate-600">
               Errors: {t.errors}. ERA is per {ERA_INNINGS} innings, a youth game.
             </p>
-            <button
-              onClick={() => setSharing(true)}
-              className="mt-3 h-12 w-full rounded-xl border-2 border-[var(--team)] bg-white text-base font-bold text-[var(--team)] active:bg-slate-100"
-            >
-              Share {kid.name.split(" ")[0]}&apos;s player card
-            </button>
           </section>
 
           <section>
@@ -309,26 +301,6 @@ function KidStats({ data }: { data: AppData }) {
           )}
         </div>
       )}
-
-      <Sheet open={sharing} title={`${kid.name}'s player card`} onClose={() => setSharing(false)}>
-        {sharing && (
-          <SharePlayerCard
-            data={data}
-            model={playerCardModel({
-              name: kid.name,
-              jersey: kid.jerseyNumber ?? null,
-              teamName: data.team.name,
-              season:
-                years.length <= 1
-                  ? data.season.name
-                  : pick === "all"
-                    ? "All years"
-                    : yearsLabel(pick),
-              totals: t,
-            })}
-          />
-        )}
-      </Sheet>
 
       <Sheet open={importing} title="Import a box score" onClose={() => setImporting(false)}>
         {importing && (

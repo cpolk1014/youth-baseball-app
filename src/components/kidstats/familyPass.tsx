@@ -116,7 +116,7 @@ function oneYear(): string {
 }
 
 /**
- * My profile: buy player stats (box score imports, trends, the player card) for a number of
+ * My profile: buy player stats (box score imports and trends) for a number of
  * kids, $10 for the first and $5 each after, for a year from today.
  */
 export function BuyPlayerStats({
@@ -176,8 +176,8 @@ export function BuyPlayerStats({
     <div className="flex flex-col gap-4">
       <p className="text-base text-slate-700">
         Import each game&apos;s GameChanger box score and watch your player&apos;s AVG, OBP, OPS and
-        pitching add up, with trends and a shareable player card. Stays with your player on every
-        team. Lasts a year from the day you buy.
+        pitching add up, with charts of how they trend. Stays with your player on every team. Lasts
+        a year from the day you buy.
       </p>
       {covered.length > 0 && (
         <ul className="flex flex-col gap-1 rounded-xl bg-green-50 p-3 text-base text-green-950">

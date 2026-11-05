@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { cleanBatting, cleanPitching, seasonTotals, type KidGame } from "./stats";
-import { battingTrend, pitchingTrend, playerCardFileName, playerCardModel } from "./trends";
+import { cleanBatting, cleanPitching, type KidGame } from "./stats";
+import { battingTrend, pitchingTrend } from "./trends";
 
 const game = (
   id: string,
@@ -51,26 +51,5 @@ describe("pitchingTrend", () => {
     expect(p.map((x) => x.gameId)).toEqual(["a", "c"]);
     expect(p[0]!.strikePct).toBeCloseTo(0.65);
     expect(p[1]!.strikePct).toBeNull();
-  });
-});
-
-describe("playerCardModel", () => {
-  it("shows the kid's rates, non-zero counts and a pitching line", () => {
-    const m = playerCardModel({
-      name: "Leo T.",
-      jersey: 5,
-      teamName: "Rattlers",
-      season: "Fall 2026",
-      totals: seasonTotals(games),
-    });
-    expect(m.jersey).toBe("#5");
-    expect(m.rates.map((r) => r.value)).toEqual([".300", ".364", ".400", ".764"]);
-    expect(m.counts).toEqual([
-      { label: "H", value: "3" },
-      { label: "2B", value: "1" },
-      { label: "BB", value: "1" },
-    ]);
-    expect(m.pitching).toBe("3.0 IP · 0.00 ERA · 4 K · 65% strikes");
-    expect(playerCardFileName("Leo T.", "Fall 2026")).toBe("leo-t-fall-2026.png");
   });
 });

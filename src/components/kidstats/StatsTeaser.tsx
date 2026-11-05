@@ -42,7 +42,7 @@ export function StatsTeaser({
             ✓ Import each game&apos;s GameChanger box score; AVG, OBP, OPS and pitching add up
           </li>
           <li>✓ Charts of how {first} is trending, game by game and year over year</li>
-          <li>✓ Stays with {first} on every team, and a shareable player card</li>
+          <li>✓ Stays with {first} on every team, year after year</li>
           <li>✓ Private: only {first}&apos;s parents see it</li>
         </ul>
         <button
