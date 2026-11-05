@@ -2,6 +2,21 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from "@/lib/supabase/config";
 
+/** The public website's pages (src/app/(site)/). */
+export const SITE_PATHS = [
+  "/welcome",
+  "/features",
+  "/ai",
+  "/pricing",
+  "/clubs",
+  "/parents",
+  "/story",
+  "/privacy",
+  "/terms",
+  "/robots.txt",
+  "/sitemap.xml",
+];
+
 const PUBLIC_PATHS = [
   "/login",
   "/auth",
@@ -10,7 +25,8 @@ const PUBLIC_PATHS = [
   "/manifest.webmanifest",
   "/sw.js",
   "/api/stripe/webhook",
-  // Vercel Cron's weekly tournament check (checks CRON_SECRET itself).
+  // The public website (anyone can read it, signed in or not).
+  ...SITE_PATHS,
 ];
 
 /** Refresh the Supabase session cookie and send signed-out users to /login. */
@@ -33,6 +49,14 @@ export async function proxy(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const path = request.nextUrl.pathname;
+  // rallycap.team for someone signed out: the public website's home page.
+  if (path === "/" && !data?.claims) {
+    const home = request.nextUrl.clone();
+    home.pathname = "/welcome";
+    const rewrite = NextResponse.rewrite(home);
+    for (const cookie of response.cookies.getAll()) rewrite.cookies.set(cookie);
+    return rewrite;
+  }
   if (data?.claims || PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) {
     return response;
   }
