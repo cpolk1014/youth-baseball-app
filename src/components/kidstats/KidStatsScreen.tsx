@@ -15,6 +15,7 @@ import { AppShell, Loading } from "../AppShell";
 import { kidsOf } from "../KidPicker";
 import { Sheet } from "../Sheet";
 import { ImportBoxScore } from "./ImportBoxScore";
+import { KidTeams } from "./KidTeams";
 import { KidWalkup } from "./KidWalkup";
 import { SharePlayerCard } from "./SharePlayerCard";
 import { StrikeChart, TrendChart } from "../charts/Charts";
@@ -52,7 +53,9 @@ function KidStats({ data }: { data: AppData }) {
     () => new URLSearchParams(window.location.search).get("player") ?? kids[0]?.id ?? null,
   );
   const kid = kids.find((k) => k.id === kidId) ?? kids[0] ?? null;
-  const { games, loading, error, save, remove } = useKidGames(kids.map((k) => k.id));
+  const { games, kidTeams, loading, error, save, remove, link, split } = useKidGames(
+    kids.map((k) => k.id),
+  );
   const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState<KidGame | null>(null);
   const [sharing, setSharing] = useState(false);
@@ -78,7 +81,12 @@ function KidStats({ data }: { data: AppData }) {
     );
   }
 
-  const mine = games.filter((g) => g.playerId === kid.id);
+  // Every team's box scores for this kid (their record follows them from team to team).
+  const athlete = kidTeams.find((r) => r.playerId === kid.id)?.athleteId ?? null;
+  const mine = games.filter(
+    (g) => g.playerId === kid.id || (athlete !== null && g.athleteId === athlete),
+  );
+  const teamCount = new Set(mine.map((g) => g.teamName ?? "")).size;
   const year = Number((today || "2026").slice(0, 4));
   const years = yearsOf(mine);
   const pick = pickBy[kid.id] ?? defaultYears(years, year);
@@ -125,6 +133,15 @@ function KidStats({ data }: { data: AppData }) {
       </button>
 
       <KidWalkup key={kid.id} data={data} kid={kid} />
+
+      <KidTeams
+        key={`teams-${kid.id}`}
+        kid={kid}
+        teamId={data.team.id}
+        kidTeams={kidTeams}
+        link={link}
+        split={split}
+      />
 
       {loading ? (
         <Loading />
@@ -252,6 +269,9 @@ function KidStats({ data }: { data: AppData }) {
                       </span>
                     </span>
                     <span className="text-base text-slate-800">{gameLine(g)}</span>
+                    {teamCount > 1 && g.teamName && (
+                      <span className="text-sm text-slate-600">for {g.teamName}</span>
+                    )}
                   </button>
                 </li>
               ))}

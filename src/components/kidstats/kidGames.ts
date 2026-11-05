@@ -12,7 +12,8 @@ const localKey = "rallycap:kid-games";
 
 interface Row {
   id: string;
-  player_id: string;
+  player_id: string | null;
+  athlete_id: string | null;
   game_id: string | null;
   game_date: string;
   opponent: string;
@@ -28,7 +29,9 @@ interface Row {
 
 const fromRow = (r: Row): KidGame => ({
   id: r.id,
-  playerId: r.player_id,
+  // A box score from a team that's since been deleted keeps only its athlete.
+  playerId: r.player_id ?? "",
+  athleteId: r.athlete_id,
   gameId: r.game_id,
   gameDate: r.game_date,
   opponent: r.opponent,
@@ -58,10 +61,21 @@ function writeLocal(games: KidGame[]) {
   }
 }
 
+/** One of the signed-in parent's kids on one team (a kid's teams share an athleteId). */
+export interface KidTeam {
+  athleteId: string;
+  name: string;
+  playerId: string | null;
+  teamId: string | null;
+  teamName: string | null;
+  seasonName: string | null;
+}
+
 export function useKidGames(playerIds: string[]) {
   const { mode } = useStoreState();
   const signedIn = mode === "supabase";
   const [games, setGames] = useState<KidGame[]>([]);
+  const [kidTeams, setKidTeams] = useState<KidTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
@@ -81,22 +95,55 @@ export function useKidGames(playerIds: string[]) {
       setLoading(false);
       return;
     }
-    getBrowserSupabase()
-      .from("player_game_stat")
-      .select(
-        "id,player_id,game_id,game_date,opponent,our_runs,their_runs,team_name,box_name,batting,pitching,errors,positions",
-      )
-      .in("player_id", ids)
-      .order("game_date", { ascending: false })
-      .then(({ data, error: e }) => {
-        if (!current) return;
-        if (e) setError(e.message);
-        else {
-          setError(null);
-          setGames(((data ?? []) as Row[]).map(fromRow));
-        }
-        setLoading(false);
-      });
+    void (async () => {
+      const sb = getBrowserSupabase();
+      // The parent's kids on every team, so last year's teams come along.
+      const teams = await sb.rpc("my_athletes");
+      const rows = (
+        (teams.data ?? []) as {
+          athlete_id: string;
+          name: string;
+          player_id: string | null;
+          team_id: string | null;
+          team_name: string | null;
+          season_name: string | null;
+        }[]
+      ).map((r) => ({
+        athleteId: r.athlete_id,
+        name: r.name,
+        playerId: r.player_id,
+        teamId: r.team_id,
+        teamName: r.team_name,
+        seasonName: r.season_name,
+      }));
+      const athletes = [
+        ...new Set(
+          rows.filter((r) => r.playerId && ids.includes(r.playerId)).map((r) => r.athleteId),
+        ),
+      ];
+      const { data, error: e } = await sb
+        .from("player_game_stat")
+        .select(
+          "id,player_id,athlete_id,game_id,game_date,opponent,our_runs,their_runs,team_name,box_name,batting,pitching,errors,positions",
+        )
+        .or(
+          [
+            `player_id.in.(${ids.join(",")})`,
+            athletes.length ? `athlete_id.in.(${athletes.join(",")})` : null,
+          ]
+            .filter(Boolean)
+            .join(","),
+        )
+        .order("game_date", { ascending: false });
+      if (!current) return;
+      setKidTeams(rows);
+      if (e) setError(e.message);
+      else {
+        setError(null);
+        setGames(((data ?? []) as Row[]).map(fromRow));
+      }
+      setLoading(false);
+    })();
     return () => {
       current = false;
     };
@@ -166,5 +213,24 @@ export function useKidGames(playerIds: string[]) {
     [signedIn, key],
   );
 
-  return { games, loading, error, save, remove };
+  /** "Same kid as on the Knights": join this team's player to that record. */
+  const link = useCallback(async (playerId: string, athleteId: string) => {
+    const { error: e } = await getBrowserSupabase().rpc("link_player_athlete", {
+      p_player_id: playerId,
+      p_athlete_id: athleteId,
+    });
+    if (e) throw new Error(e.message);
+    setVersion((v) => v + 1);
+  }, []);
+
+  /** Undo a wrong join: this team's player gets its own record again. */
+  const split = useCallback(async (playerId: string) => {
+    const { error: e } = await getBrowserSupabase().rpc("split_player_athlete", {
+      p_player_id: playerId,
+    });
+    if (e) throw new Error(e.message);
+    setVersion((v) => v + 1);
+  }, []);
+
+  return { games, kidTeams, loading, error, save, remove, link, split };
 }

@@ -1558,6 +1558,54 @@ select pg_temp.expect((select seeds_locked_at is not null from public.tournament
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- not on the team
 select pg_temp.expect((select count(*) from public.tiebreak_rule_set where team_id = '00000000-0000-4000-8000-000000000001') = 0, 'people not on the team don''t see its tie-break rules');
 reset role;
+-- ── athletes: a kid's box scores follow them from team to team ──
+-- Parent 0002 has kid 1003 on team 1 (an athlete from the fixtures' link) and is a parent
+-- on the Canes too, where the same kid plays this year.
+reset role;
+insert into public.player (id, team_id, name, jersey_number) values
+  ('00000000-0000-4000-8000-00000000e001', 'eeeeeeee-0000-4000-8000-000000000010', 'Same Kid', 7);
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+insert into public.player_guardian (player_id, user_id) values
+  ('00000000-0000-4000-8000-00000000e001', 'aaaaaaaa-0000-4000-8000-000000000002');
+select pg_temp.expect((select count(distinct athlete_id) from public.my_athletes()) >= 2, 'linking a kid gives them their own record');
+insert into public.player_game_stat (player_id, game_id, game_date, opponent, batting)
+  values ('00000000-0000-4000-8000-00000000e001', 'eeeeeeee-0000-4000-8000-000000000020', '2027-04-09', 'x', '{"ab": 3, "h": 2}');
+select public.link_player_athlete('00000000-0000-4000-8000-00000000e001',
+  (select athlete_id from public.player where id = '00000000-0000-4000-8000-000000001003'));
+select pg_temp.expect((select count(*) from public.my_athletes() where athlete_id = (select athlete_id from public.player where id = '00000000-0000-4000-8000-000000001003')) = 2, 'the same kid on two teams is one record');
+select pg_temp.expect((select count(*) from public.player_game_stat where athlete_id = (select athlete_id from public.player where id = '00000000-0000-4000-8000-000000001003')) = 1, 'their box scores move with them');
+select public.split_player_athlete('00000000-0000-4000-8000-00000000e001');
+select pg_temp.expect((select athlete_id from public.player where id = '00000000-0000-4000-8000-00000000e001') <> (select athlete_id from public.player where id = '00000000-0000-4000-8000-000000001003'), 'a wrong join can be undone');
+select pg_temp.expect((select count(*) from public.player_game_stat where athlete_id = (select athlete_id from public.player where id = '00000000-0000-4000-8000-00000000e001')) = 1, 'undoing takes that team''s box scores back');
+select public.link_player_athlete('00000000-0000-4000-8000-00000000e001',
+  (select athlete_id from public.player where id = '00000000-0000-4000-8000-000000001003'));
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- the Canes' coach
+select pg_temp.expect((select count(*) from public.player_game_stat) = 0, 'coaches don''t see a family''s box scores');
+select pg_temp.expect((select count(*) from public.athlete where id = (select athlete_id from public.player where id = '00000000-0000-4000-8000-00000000e001')) = 0, 'coaches don''t see a family''s kid records');
+do $$ begin
+  perform public.link_player_athlete('00000000-0000-4000-8000-00000000e001',
+    (select athlete_id from public.player where id = '00000000-0000-4000-8000-00000000e001'));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: only a kid''s parents can join their records';
+end $$;
+-- Leaving the Canes keeps the kid's history; so does the team being deleted.
+reset role;
+delete from public.member where team_id = 'eeeeeeee-0000-4000-8000-000000000010' and user_id = 'aaaaaaaa-0000-4000-8000-000000000002';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+select pg_temp.expect((select count(*) from public.player_game_stat where game_date = '2027-04-09') = 1, 'leaving a team keeps the kid''s box scores');
+reset role;
+delete from public.player where id = '00000000-0000-4000-8000-00000000e001';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+select pg_temp.expect((select count(*) from public.player_game_stat where game_date = '2027-04-09' and player_id is null) = 1, 'an old team going away keeps the kid''s box scores');
+-- Unlinking the kid on purpose (a wrong pick) ends access.
+delete from public.player_guardian where player_id = '00000000-0000-4000-8000-000000001003' and user_id = 'aaaaaaaa-0000-4000-8000-000000000002';
+select pg_temp.expect((select count(*) from public.player_game_stat where game_date = '2027-04-09') = 0, 'unlinking a kid ends access to their record');
+reset role;
+insert into public.player_guardian (player_id, user_id) values ('00000000-0000-4000-8000-000000001003', 'aaaaaaaa-0000-4000-8000-000000000002');
+insert into public.member (team_id, user_id, role) values ('eeeeeeee-0000-4000-8000-000000000010', 'aaaaaaaa-0000-4000-8000-000000000002', 'parent');
 -- ── game places ──
 update public.game set location = 'Traction Sports Complex', field = 'Chabills Field', location_lat = 30.2, location_lng = -92.0
   where id = 'eeeeeeee-0000-4000-8000-000000000020';

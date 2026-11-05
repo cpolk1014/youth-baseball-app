@@ -38,6 +38,8 @@ export interface KidGame {
   playerId: string;
   /** The team game it's from (null for box scores imported before games were matched). */
   gameId?: string | null;
+  /** The kid's record across teams (box scores from every team they've played for). */
+  athleteId?: string | null;
   gameDate: string;
   opponent: string;
   ourRuns: number | null;
