@@ -4,7 +4,7 @@ import { Ai, Cta, EndCta, PageHero, Section } from "@/components/site/parts";
 import { LowRisk, PricingGrid } from "@/components/site/Pricing";
 
 export const metadata: Metadata = {
-  title: { absolute: "Pricing | RallyCap: AI-Powered Youth Baseball from $0" },
+  title: { absolute: "Pricing | RallyCap: Youth Baseball's AI Assistant Coach, from $0" },
   description:
     "RallyCap's smart lineup engine is free forever. Every AI tool, plus GroupMe, team money and tournaments, is $129 a season per team, or $99 per team for clubs. 14-day free trial.",
   alternates: { canonical: "/pricing" },

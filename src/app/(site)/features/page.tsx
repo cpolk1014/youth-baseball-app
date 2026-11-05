@@ -16,7 +16,7 @@ import { WalkupScreen } from "@/components/site/mocks";
 export const metadata: Metadata = {
   title: { absolute: "Features: AI Schedules, Fair Lineups, GroupMe & Tournaments | RallyCap" },
   description:
-    "AI-powered youth baseball: AI schedule import and practice plans, a smart fair-play lineup engine, GroupMe game day posts, team money, tournaments and walk-up songs.",
+    "Youth baseball's AI assistant coach: AI schedule import and practice plans, a smart fair-play lineup engine, GroupMe game day posts, team money, tournaments and walk-up songs.",
   alternates: { canonical: "/features" },
 };
 

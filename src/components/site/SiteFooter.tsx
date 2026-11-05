@@ -14,7 +14,7 @@ export function SiteFooter() {
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element -- the logo */}
           <img src="/brand/rallycap-horizontal-white.svg" alt="RallyCap" className="h-14 w-auto" />
-          <p className="mt-3 text-lg font-bold">AI-powered youth baseball.</p>
+          <p className="mt-3 text-lg font-bold">Youth baseball&apos;s AI assistant coach.</p>
           <p className="mt-1 text-white/70">
             Built by a travel ball coach who writes code. For 7U–14U teams.
           </p>

@@ -3,7 +3,7 @@ import { Cta, Section } from "@/components/site/parts";
 import { SUPPORT_EMAIL } from "@/components/site/SiteFooter";
 
 export const metadata: Metadata = {
-  title: { absolute: "Our Story | RallyCap, AI-Powered Youth Baseball Built by a Coach" },
+  title: { absolute: "Our Story | RallyCap, the AI Assistant Coach Built by a Coach" },
   description:
     "RallyCap was built by Craig, a software developer, 7U head coach and travel ball stepdad and uncle, who put AI to work on the busywork of running a youth baseball team.",
   alternates: { canonical: "/story" },

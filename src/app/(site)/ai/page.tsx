@@ -21,7 +21,7 @@ export default function AiPage() {
     <>
       <PageHero
         eyebrow="✨ RallyCap AI"
-        title="AI-powered youth baseball."
+        title="Meet youth baseball's AI assistant coach."
         lead="AI that does the stuff you used to do at 11 p.m. Schedules, practice plans, tournament brackets, walk-up songs. It does the work, you check it, everybody thinks you're very organized."
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

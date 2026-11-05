@@ -8,7 +8,12 @@ export const metadata: Metadata = {
     siteName: "RallyCap",
     type: "website",
     images: [
-      { url: "/site/og.png", width: 1200, height: 630, alt: "RallyCap: AI-powered youth baseball" },
+      {
+        url: "/site/og.png",
+        width: 1200,
+        height: 630,
+        alt: "RallyCap: youth baseball's AI assistant coach",
+      },
     ],
   },
   twitter: { card: "summary_large_image" },

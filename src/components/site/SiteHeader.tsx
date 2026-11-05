@@ -36,7 +36,7 @@ export function SiteHeader() {
           {/* eslint-disable-next-line @next/next/no-img-element -- the logo */}
           <img src="/brand/rallycap-horizontal-color.svg" alt="RallyCap" className="h-11 w-auto" />
           <span className="hidden text-xs font-bold tracking-wide text-slate-500 uppercase 2xl:inline">
-            AI-powered youth baseball
+            Youth baseball&apos;s AI assistant coach
           </span>
         </Link>
         <nav aria-label="Site" className="ml-auto hidden items-center gap-1 lg:flex">

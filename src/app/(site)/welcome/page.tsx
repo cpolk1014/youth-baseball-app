@@ -21,7 +21,9 @@ import {
 import { LowRisk, PricingGrid } from "@/components/site/Pricing";
 
 export const metadata: Metadata = {
-  title: { absolute: "RallyCap: AI-Powered Youth Baseball | Lineups, Schedules & Tournaments" },
+  title: {
+    absolute: "RallyCap: Youth Baseball's AI Assistant Coach | Lineups, Schedules & Tournaments",
+  },
   description:
     "Snap your schedule and AI adds every game. Get practice plans for your age group and fair lineups in two minutes. Built by a travel ball coach who writes software for a living. Free 14-day trial.",
   alternates: { canonical: "/" },
@@ -74,7 +76,8 @@ export default function HomePage() {
         <div className="relative mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1fr_1.2fr]">
           <div>
             <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-sm font-bold tracking-wide ring-1 ring-white/20">
-              ✨ AI-powered youth baseball · 7U–14U
+              ✨ Youth baseball&apos;s AI assistant coach
+              <span className="hidden sm:inline"> · 7U–14U</span>
             </p>
             <h1 className="text-5xl leading-[1.02] font-black tracking-tight text-balance md:text-7xl lg:text-6xl xl:text-7xl">
               Finally, an assistant coach with no kid on the team.

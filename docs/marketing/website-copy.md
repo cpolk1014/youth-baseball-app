@@ -16,7 +16,7 @@
 
 ## Tagline
 
-**Recommended:** **RallyCap: AI-powered youth baseball.**
+**Recommended (updated 2026-11-05):** **RallyCap: Youth baseball's AI assistant coach.** (Was: AI-powered youth baseball.)
 
 Alternatives to test:
 - *The AI assistant coach for travel ball.*
@@ -489,7 +489,7 @@ Founder, RallyCap · 7U head coach
 
 | Where | Copy |
 |---|---|
-| Tagline | **AI-powered youth baseball** |
+| Tagline | **Youth baseball's AI assistant coach** |
 | Main CTA | **Start your free 14-day trial** |
 | Short CTA (phones, top bar) | **Start free trial** |
 | Club CTA | **Start a club** |
