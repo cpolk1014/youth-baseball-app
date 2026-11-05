@@ -25,10 +25,9 @@ export interface PurchaseMeta {
   clubId?: string;
   clubName?: string;
   teamId?: string;
-  /** Family add-on: solo | partner | blended, one | multi, and the kid for "one". */
-  plan?: string;
-  scope?: string;
-  athleteId?: string;
+  /** Player stats: how many kids, and the ones picked (athlete ids, comma separated). */
+  kids?: string;
+  athletes?: string;
 }
 
 export interface Fulfillment {
@@ -41,9 +40,8 @@ export interface Fulfillment {
   quantity: number;
   season: string;
   amountCents: number;
-  plan: string | null;
-  scope: string | null;
-  athleteId: string | null;
+  kids: number;
+  athletes: string[];
 }
 
 /**
@@ -73,9 +71,8 @@ export function purchaseFromEvent(event: Stripe.Event): Fulfillment | null {
     quantity: Number(m.quantity) || 1,
     season: m.season,
     amountCents: s.amount_total ?? 0,
-    plan: m.plan || null,
-    scope: m.scope || null,
-    athleteId: m.athleteId || null,
+    kids: Number(m.kids) || 0,
+    athletes: (m.athletes ?? "").split(",").filter(Boolean),
   };
 }
 

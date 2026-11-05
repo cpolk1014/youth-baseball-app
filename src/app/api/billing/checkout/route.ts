@@ -6,7 +6,7 @@ import {
   seasonEnds,
   seasonsOnSale,
 } from "@/lib/billing/season";
-import { familyOption } from "@/lib/billing/family";
+import { MAX_KIDS, statsPriceCents, validKids } from "@/lib/billing/family";
 import { getStripe, stripeProblem, type PurchaseMeta } from "@/lib/billing/stripe";
 import { getServerSupabase } from "@/lib/supabase/server";
 
@@ -29,11 +29,10 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const kind = body?.kind;
-  // Families buy the newest season on sale (in June and July that's next season, so a pass
-  // bought then doesn't run out on July 31).
+  // Player stats last a year from the day they're bought; the season is just for the record.
   const season =
     kind === "family"
-      ? seasonsOnSale(new Date()).at(-1)!
+      ? seasonsOnSale(new Date())[0]!
       : typeof body?.season === "string"
         ? body.season
         : "";
@@ -97,27 +96,28 @@ export async function POST(request: NextRequest) {
     name = team.name;
     back = "/members";
   } else if (kind === "family") {
-    const option = familyOption(body?.plan, body?.scope);
-    if (!option) return errorResponse(400, "Pick a plan.");
+    // Player stats for a number of the parent's own kids ($10, then $5 each), for a year.
+    const kids = body?.kids;
+    if (!validKids(kids)) return errorResponse(400, `Pick between 1 and ${MAX_KIDS} players.`);
+    const { data: mine } = await supabase.rpc("my_athletes");
+    const own = new Map(
+      ((mine ?? []) as { athlete_id: string; name: string }[]).map((k) => [k.athlete_id, k.name]),
+    );
+    const picked = Array.isArray(body?.athletes)
+      ? [...new Set(body.athletes.filter((a): a is string => typeof a === "string"))]
+      : [];
+    if (picked.some((a) => !own.has(a))) return errorResponse(403, "Pick your own players.");
+    if (picked.length > kids)
+      return errorResponse(400, "That's more players than you're paying for.");
     meta.kind = "family";
-    meta.plan = option.plan;
-    meta.scope = option.scope;
-    if (option.scope === "one") {
-      // The kid has to be the buyer's own (their record, which follows them to any team).
-      const playerId = typeof body?.playerId === "string" ? body.playerId : "";
-      const { data: kids } = await supabase.rpc("my_athletes");
-      const kid = (
-        (kids ?? []) as { athlete_id: string; name: string; player_id: string | null }[]
-      ).find((k) => k.player_id === playerId);
-      if (!kid) return errorResponse(403, "Pick one of your own players.");
-      meta.athleteId = kid.athlete_id;
-      name = `${kid.name}'s stats`;
-    } else {
-      name = "Stats for all my players";
-    }
-    unit = option.cents;
-    back = "/my-player";
-    if (typeof body?.playerId === "string") back += `?player=${encodeURIComponent(body.playerId)}`;
+    meta.kids = String(kids);
+    meta.athletes = picked.join(",");
+    quantity = 1;
+    unit = statsPriceCents(kids);
+    name = picked.length
+      ? `Player stats: ${picked.map((a) => own.get(a)).join(", ")}`
+      : `Player stats for ${kids} player${kids === 1 ? "" : "s"}`;
+    back = "/profile";
   } else {
     return errorResponse(400, "Something's missing. Reload and try again.");
   }
@@ -136,9 +136,11 @@ export async function POST(request: NextRequest) {
             product_data: {
               name:
                 kind === "family"
-                  ? `RallyCap player stats, ${season} season`
+                  ? "RallyCap player stats (one year)"
                   : `RallyCap ${season} season${kind === "club" ? " (club team)" : ""}`,
-              description: `${name}. Runs through ${new Date(`${seasonEnds(season)}T12:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`,
+              description: `${name}. Runs through ${new Date(
+                kind === "family" ? Date.now() + 365 * 86400000 : `${seasonEnds(season)}T12:00`,
+              ).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`,
             },
           },
         },

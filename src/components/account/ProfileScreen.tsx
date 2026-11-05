@@ -10,6 +10,13 @@ import { cleanVenmo } from "@/lib/venmo/handle";
 import { signOut, switchTeam, useAppData, useStoreState } from "@/lib/data/store";
 import { AppShell } from "../AppShell";
 import { useMyClubs } from "../club/useMyClubs";
+import {
+  BuyPlayerStats,
+  PurchasesTable,
+  useMyKids,
+  usePurchases,
+  useStatsPasses,
+} from "../kidstats/familyPass";
 import { initials, refreshMe, useMe, useMyTeamClubs } from "./useMe";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
@@ -34,6 +41,32 @@ export function ProfileScreen() {
   const [phone, setPhone] = useState<string | null>(null);
   const [phoneSaved, setPhoneSaved] = useState<string | null | undefined>(undefined);
   const [phoneMsg, setPhoneMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const myKids = useMyKids();
+  const stats = useStatsPasses();
+  const [paidAt, setPaidAt] = useState(0);
+  const purchases = usePurchases(paidAt);
+  // Back from Stripe: the payment lands a moment later, so check again for a few seconds.
+  const [justPaid] = useState(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("paid"),
+  );
+  const { reload: reloadStats } = stats;
+  // From "Unlock" on a player's page: bring Player stats into view once it's there.
+  const kidsLoaded = myKids !== null;
+  useEffect(() => {
+    if (kidsLoaded && window.location.hash === "#player-stats") {
+      document.getElementById("player-stats")?.scrollIntoView({ block: "start" });
+    }
+  }, [kidsLoaded]);
+  useEffect(() => {
+    if (!justPaid) return;
+    const timers = [2000, 5000, 10000].map((ms) =>
+      setTimeout(() => {
+        reloadStats();
+        setPaidAt(ms);
+      }, ms),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [justPaid, reloadStats]);
 
   useEffect(() => {
     if (!me?.id) return;
@@ -311,6 +344,34 @@ export function ProfileScreen() {
           </ul>
         </section>
       )}
+
+      {myKids && myKids.length > 0 && (
+        <section id="player-stats" className={`${card} scroll-mt-20`}>
+          <h2 className={heading}>Player stats</h2>
+          {justPaid && (
+            <p
+              role="status"
+              className="mb-3 rounded-xl bg-green-50 p-3 text-base font-semibold text-green-900"
+            >
+              Thanks! Your player stats are unlocking; it can take a few seconds.
+            </p>
+          )}
+          {stats.loading ? (
+            <p className="text-base text-slate-600">Loading…</p>
+          ) : (
+            <BuyPlayerStats key={stats.passes?.length ?? 0} kids={myKids} stats={stats} />
+          )}
+        </section>
+      )}
+
+      <section className={`${card} md:col-span-2`}>
+        <h2 className={heading}>My purchases</h2>
+        {purchases === null ? (
+          <p className="text-base text-slate-600">Loading…</p>
+        ) : (
+          <PurchasesTable rows={purchases} />
+        )}
+      </section>
 
       <section className={card}>
         <h2 className={heading}>My teams</h2>

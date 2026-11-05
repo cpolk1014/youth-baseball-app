@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { FAMILY_FROM_CENTS } from "@/lib/billing/family";
+import { FIRST_KID_CENTS } from "@/lib/billing/family";
 import { dollars } from "@/lib/billing/season";
 import { sampleCareer } from "@/lib/boxscore/sample";
 import { rate, seasonTotals } from "@/lib/boxscore/stats";
@@ -9,7 +9,6 @@ import { battingTrend, pitchingTrend } from "@/lib/boxscore/trends";
 import { yearsOf } from "@/lib/boxscore/years";
 import type { Player } from "@/lib/rules/types";
 import { StrikeChart, TrendChart } from "../charts/Charts";
-import { RedeemCode } from "./familyPass";
 
 /**
  * What a parent who hasn't unlocked stats sees: three made-up seasons, blurred and labeled
@@ -19,12 +18,10 @@ export function StatsTeaser({
   kid,
   year,
   onUpgrade,
-  redeem,
 }: {
   kid: Player;
   year: number;
   onUpgrade: () => void;
-  redeem: (code: string) => Promise<void>;
 }) {
   const games = useMemo(() => sampleCareer(year), [year]);
   const t = seasonTotals(games);
@@ -52,7 +49,7 @@ export function StatsTeaser({
           onClick={onUpgrade}
           className="mt-3 flex h-14 w-full items-center justify-center rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]"
         >
-          Upgrade · from {dollars(FAMILY_FROM_CENTS)} a season
+          Unlock · {dollars(FIRST_KID_CENTS)} a year
         </button>
       </section>
 
@@ -98,10 +95,6 @@ export function StatsTeaser({
           </button>
         </div>
       </div>
-
-      <section className="rounded-xl border-2 border-slate-200 bg-white p-3">
-        <RedeemCode redeem={redeem} />
-      </section>
     </div>
   );
 }

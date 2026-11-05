@@ -12,7 +12,7 @@ import { GamesPane } from "./GamesScreen";
 import { kidsOf } from "./KidPicker";
 import { ImportBoxScore } from "./kidstats/ImportBoxScore";
 import { useKidGames } from "./kidstats/kidGames";
-import { useFamilyPasses } from "./kidstats/familyPass";
+import { useStatsPasses } from "./kidstats/familyPass";
 import { gameLine, sameGame, type KidGame } from "@/lib/boxscore/stats";
 import { Sheet } from "./Sheet";
 import { GameUniformCard } from "./uniforms/GameUniformCard";
@@ -36,8 +36,8 @@ export function ParentGame({
 }) {
   const kids = kidsOf(data, myUserId(data));
   const { games: imported, kidTeams, save, remove } = useKidGames(kids.map((k) => k.id));
-  // Box score stats are a family add-on; without a pass, Upload goes to My player to unlock.
-  const fam = useFamilyPasses();
+  // Player stats are bought on My profile; without them, Upload goes there.
+  const fam = useStatsPasses();
   const unlocked = (kid: Player) =>
     fam.covers(kidTeams.find((r) => r.playerId === kid.id)?.athleteId ?? null);
   const [importing, setImporting] = useState<Player | null>(null);
@@ -153,7 +153,7 @@ export function ParentGame({
                       </button>
                     ) : (
                       <Link
-                        href={`/my-player?player=${kid.id}`}
+                        href="/profile#player-stats"
                         className="flex h-12 flex-1 items-center justify-center rounded-xl bg-[var(--team)] text-base font-bold text-white"
                       >
                         🔒 Unlock box scores

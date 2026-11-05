@@ -1,52 +1,17 @@
-// The family add-on: a kid's box score stats, for a season (Aug 1 - Jul 31). Not part of a
-// team pass or club code. Priced by who's covered and how many adults get in.
+// Player stats (box score imports, trends, the player card): a parent's own purchase on My
+// profile, for a number of their kids, for one year from the day they buy. Not part of a
+// team pass or club code; another parent who wants the stats buys their own.
 
-export type FamilyPlan = "solo" | "partner" | "blended";
-export type FamilyScope = "one" | "multi";
+export const FIRST_KID_CENTS = 1000;
+export const MORE_KID_CENTS = 500;
+export const MAX_KIDS = 10;
 
-export interface FamilyOption {
-  plan: FamilyPlan;
-  scope: FamilyScope;
-  cents: number;
-  /** Codes the buyer can share with other adults. */
-  shares: number;
-  label: string;
-  detail: string;
+/** $10 for the first kid, $5 for each one after. */
+export function statsPriceCents(kids: number): number {
+  if (!Number.isInteger(kids) || kids < 1) return 0;
+  return FIRST_KID_CENTS + MORE_KID_CENTS * (kids - 1);
 }
 
-const WHO: Record<FamilyPlan, { label: string; shares: number; detail: string }> = {
-  solo: { label: "Just me", shares: 0, detail: "For you only." },
-  partner: {
-    label: "Me and a partner",
-    shares: 1,
-    detail: "Comes with 1 code to share with another adult.",
-  },
-  blended: {
-    label: "Blended family",
-    shares: 3,
-    detail: "Comes with 3 codes to share with the other adults.",
-  },
-};
-
-const PRICES: Record<FamilyScope, Record<FamilyPlan, number>> = {
-  one: { solo: 1000, partner: 1500, blended: 3000 },
-  multi: { solo: 1500, partner: 2000, blended: 4000 },
-};
-
-export const FAMILY_OPTIONS: FamilyOption[] = (["one", "multi"] as const).flatMap((scope) =>
-  (["solo", "partner", "blended"] as const).map((plan) => ({
-    plan,
-    scope,
-    cents: PRICES[scope][plan],
-    shares: WHO[plan].shares,
-    label: WHO[plan].label,
-    detail: WHO[plan].detail,
-  })),
-);
-
-export function familyOption(plan: unknown, scope: unknown): FamilyOption | null {
-  return FAMILY_OPTIONS.find((o) => o.plan === plan && o.scope === scope) ?? null;
+export function validKids(kids: unknown): kids is number {
+  return typeof kids === "number" && Number.isInteger(kids) && kids >= 1 && kids <= MAX_KIDS;
 }
-
-/** The cheapest way in, for "from $10 a season". */
-export const FAMILY_FROM_CENTS = Math.min(...FAMILY_OPTIONS.map((o) => o.cents));
