@@ -44,7 +44,7 @@ export function ClubTeamScreen({ teamId }: { teamId: string }) {
 
   if (error || !data) {
     return (
-      <AppShell title="Club team" backHref="/club" tab="club" bare>
+      <AppShell brand title="Club team" backHref="/club" tab="club" bare>
         {error ? (
           <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-800">
             {error}
@@ -58,6 +58,7 @@ export function ClubTeamScreen({ teamId }: { teamId: string }) {
 
   return (
     <AppShell
+      brand
       title={data.team.name}
       subtitle={`${data.team.ageGroup} · ${data.season.name} · view only`}
       backHref="/club"

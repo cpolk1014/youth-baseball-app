@@ -11,6 +11,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { BRAND_CRIMSON, BRAND_NAVY } from "@/lib/branding/brand-mark";
 import { themeVars } from "@/lib/branding/theme";
 import { myUserId, signOut, syncNow, useAppData, useStoreState } from "@/lib/data/store";
 import { initials, useMe, useMyTeamClubs } from "./account/useMe";
@@ -39,6 +40,7 @@ export function AppShell({
   tab,
   action,
   bare = false,
+  brand = false,
   pane,
   children,
 }: {
@@ -51,6 +53,8 @@ export function AppShell({
   action?: ReactNode;
   /** Club pages: shown even with no team of your own (no team setup or team notices). */
   bare?: boolean;
+  /** The person's own pages (profile, teams, clubs): RallyCap's colors and logo, not a team's. */
+  brand?: boolean;
   /** Wide screens: a list beside the page (e.g. every game, next to one game). */
   pane?: ReactNode;
   children: ReactNode;
@@ -63,7 +67,7 @@ export function AppShell({
     // The team's colors, for everything inside (bars, buttons, badges).
     <div
       className="min-h-dvh lg:flex lg:bg-slate-50 print:block print:min-h-0 print:bg-white"
-      style={themeVars(data?.team.colors) as CSSProperties}
+      style={themeVars(brand ? [BRAND_NAVY, BRAND_CRIMSON] : data?.team.colors) as CSSProperties}
     >
       {/* Landscape tablets, laptops and desktops: a light side rail that can fold to icons. */}
       <nav
@@ -72,7 +76,7 @@ export function AppShell({
       >
         {/* A plain block, so the header keeps its own height in this column. */}
         <div className="shrink-0">
-          <MenuHeader variant="rail" collapsed={rail.collapsed} />
+          <MenuHeader variant="rail" collapsed={rail.collapsed} brand={brand} />
         </div>
         <MenuLinks tab={tab} variant="rail" collapsed={rail.collapsed} />
         <button
@@ -106,7 +110,13 @@ export function AppShell({
           ) : (
             <span className="w-2 lg:hidden" />
           )}
-          {!backHref && data && (
+          {!backHref && brand && (
+            <span className="mr-1 lg:hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}
+              <img src="/brand/rallycap-icon-white.svg" alt="RallyCap" className="size-10" />
+            </span>
+          )}
+          {!backHref && data && !brand && (
             <span className="mr-1 lg:hidden">
               <TeamBadge
                 name={data.team.name}
@@ -184,7 +194,7 @@ export function AppShell({
           </div>
         </main>
       </div>
-      <MenuDrawer open={menuOpen} tab={tab} onClose={() => setMenuOpen(false)} />
+      <MenuDrawer open={menuOpen} tab={tab} brand={brand} onClose={() => setMenuOpen(false)} />
       <CommandPalette state={palette} />
       <ToastHost />
       <OfflineSupport />
@@ -193,7 +203,17 @@ export function AppShell({
 }
 
 /** The menu that slides in from the right on phones and tablets. */
-function MenuDrawer({ open, tab, onClose }: { open: boolean; tab: Tab; onClose: () => void }) {
+function MenuDrawer({
+  open,
+  tab,
+  brand,
+  onClose,
+}: {
+  open: boolean;
+  tab: Tab;
+  brand: boolean;
+  onClose: () => void;
+}) {
   const panel = useRef<HTMLElement>(null);
   const close = useEffectEvent(() => onClose());
 
@@ -216,7 +236,7 @@ function MenuDrawer({ open, tab, onClose }: { open: boolean; tab: Tab; onClose: 
         className="absolute inset-y-0 right-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-[var(--team)] p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] text-white shadow-2xl outline-none"
       >
         <div className="mb-2 flex items-center justify-between gap-1">
-          <MenuHeader onPick={onClose} />
+          <MenuHeader onPick={onClose} brand={brand} />
           <button
             onClick={onClose}
             aria-label="Close menu"
@@ -263,16 +283,18 @@ function MenuHeader({
   onPick,
   variant = "drawer",
   collapsed = false,
+  brand = false,
 }: {
   onPick?: () => void;
   variant?: Variant;
   collapsed?: boolean;
+  brand?: boolean;
 }) {
   const data = useAppData();
   const { mode } = useStoreState();
   const rail = variant === "rail";
-  if (!data) {
-    // No team yet (club pages, first sign-in): the RallyCap logo.
+  if (!data || brand) {
+    // No team yet (club pages, first sign-in), or the person's own pages: the RallyCap logo.
     const src = collapsed
       ? "/brand/rallycap-icon-color.svg"
       : rail

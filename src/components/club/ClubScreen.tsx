@@ -33,7 +33,7 @@ export function ClubScreen() {
   const club = clubs?.find((c) => c.id === clubId) ?? clubs?.[0] ?? null;
 
   const shell = (children: React.ReactNode, subtitle?: string) => (
-    <AppShell title={club?.name ?? "Club"} subtitle={subtitle} tab="club" bare>
+    <AppShell brand title={club?.name ?? "Club"} subtitle={subtitle} tab="club" bare>
       {children}
     </AppShell>
   );

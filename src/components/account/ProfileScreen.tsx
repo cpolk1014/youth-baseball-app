@@ -94,7 +94,7 @@ export function ProfileScreen() {
   }, [me?.id]);
 
   const shell = (children: React.ReactNode) => (
-    <AppShell title="My profile" tab="account" bare>
+    <AppShell brand title="My profile" tab="account" bare>
       {children}
     </AppShell>
   );

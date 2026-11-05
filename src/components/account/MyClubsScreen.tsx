@@ -15,7 +15,7 @@ export function MyClubsScreen() {
   const teamClubs = useMyTeamClubs();
 
   const shell = (children: React.ReactNode) => (
-    <AppShell title="My clubs" tab="account" bare>
+    <AppShell brand title="My clubs" tab="account" bare>
       {children}
     </AppShell>
   );

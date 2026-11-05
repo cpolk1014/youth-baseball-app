@@ -16,7 +16,7 @@ export function MyTeamsScreen() {
   const teams = data?.myTeams ?? [];
 
   return (
-    <AppShell title="My teams" tab="account" bare>
+    <AppShell brand title="My teams" tab="account" bare>
       {status.kind === "loading" ? (
         <Loading />
       ) : creating || teams.length === 0 ? (
