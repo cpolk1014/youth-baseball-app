@@ -4,6 +4,28 @@
 -- hasn't paid, paid features turn read-only: everything made with them stays, nothing new
 -- (team money, GroupMe, the stats import, competitive lineups, homework, the AI tools).
 
+-- Some early teams still have colors saved as words ("navy", "gold") from before colors had
+-- to be hex codes; updating every team below would trip that rule, so tidy them first.
+update public.team set colors = (
+    select coalesce(array_agg(case lower(c)
+      when 'navy' then '#0B1F3A' when 'gold' then '#F2B705' when 'red' then '#C8102E'
+      when 'blue' then '#1D4ED8' when 'black' then '#111111' when 'white' then '#FFFFFF'
+      when 'green' then '#15803D' when 'orange' then '#EA580C' when 'maroon' then '#7F1D1D'
+      when 'purple' then '#6D28D9' when 'gray' then '#4B5563' when 'grey' then '#4B5563'
+      else c end order by i), '{}')
+    from unnest(colors) with ordinality as x(c, i)
+  )
+  where not (
+    cardinality(colors) <= 2
+    and array_to_string(colors, ',') ~ '^(#[0-9a-fA-F]{6}(,#[0-9a-fA-F]{6})?)?$'
+  );
+-- Anything still not a color: back to RallyCap's own.
+update public.team set colors = '{}'
+  where not (
+    cardinality(colors) <= 2
+    and array_to_string(colors, ',') ~ '^(#[0-9a-fA-F]{6}(,#[0-9a-fA-F]{6})?)?$'
+  );
+
 alter table public.team add column free_until date;
 alter table public.team add column free_kind text check (free_kind in ('trial', 'launch'));
 -- Teams made before the paywall: free through this season.
