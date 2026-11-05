@@ -43,7 +43,12 @@ export function ParentGame({
   // little differently); or, when the team played only this game that day, that day's one.
   const onlyGameThatDay = data.games.filter((g) => g.date === game.date).length === 1;
   const importedFor = (kid: Player): KidGame | null => {
-    const mine = imported.filter((g) => g.playerId === kid.id && g.gameDate === game.date);
+    const linked = imported.find((g) => g.playerId === kid.id && g.gameId === game.id);
+    if (linked) return linked;
+    // Older imports, saved before box scores were tied to a game.
+    const mine = imported.filter(
+      (g) => g.playerId === kid.id && !g.gameId && g.gameDate === game.date,
+    );
     return (
       mine.find((g) => sameGame(g, { gameDate: game.date, opponent: game.opponent })) ??
       (onlyGameThatDay && mine.length === 1 ? mine[0]! : null)
@@ -160,12 +165,14 @@ export function ParentGame({
           <ImportBoxScore
             kid={importing}
             existing={imported}
+            games={data.games}
+            forGame={game}
             replacing={importedFor(importing)}
             onCancel={() => setImporting(null)}
             onSave={async (g, replaces) => {
               await save(g, data.season.id);
-              // Same game saved under another opponent name: drop the old one.
-              if (replaces && replaces.opponent !== g.opponent) await remove(replaces.id);
+              // An earlier import of this game saved without it (or under another game): drop it.
+              if (replaces && replaces.gameId !== g.gameId) await remove(replaces.id);
               setImporting(null);
             }}
           />

@@ -13,6 +13,7 @@ const localKey = "rallycap:kid-games";
 interface Row {
   id: string;
   player_id: string;
+  game_id: string | null;
   game_date: string;
   opponent: string;
   our_runs: number | null;
@@ -28,6 +29,7 @@ interface Row {
 const fromRow = (r: Row): KidGame => ({
   id: r.id,
   playerId: r.player_id,
+  gameId: r.game_id,
   gameDate: r.game_date,
   opponent: r.opponent,
   ourRuns: r.our_runs,
@@ -82,7 +84,7 @@ export function useKidGames(playerIds: string[]) {
     getBrowserSupabase()
       .from("player_game_stat")
       .select(
-        "id,player_id,game_date,opponent,our_runs,their_runs,team_name,box_name,batting,pitching,errors,positions",
+        "id,player_id,game_id,game_date,opponent,our_runs,their_runs,team_name,box_name,batting,pitching,errors,positions",
       )
       .in("player_id", ids)
       .order("game_date", { ascending: false })
@@ -111,32 +113,35 @@ export function useKidGames(playerIds: string[]) {
     async (g: Omit<KidGame, "id">, seasonId: string) => {
       if (!signedIn) {
         const rest = readLocal().filter(
-          (x) =>
-            !(x.playerId === g.playerId && x.gameDate === g.gameDate && x.opponent === g.opponent),
+          (x) => !(x.playerId === g.playerId && x.gameId === g.gameId),
         );
         const next = [{ ...g, id: crypto.randomUUID() }, ...rest];
         writeLocal(next);
         setGames(next.filter((x) => key.split(",").includes(x.playerId)));
         return;
       }
-      const { error: e } = await getBrowserSupabase().from("player_game_stat").upsert(
-        {
-          player_id: g.playerId,
-          season_id: seasonId,
-          game_date: g.gameDate,
-          opponent: g.opponent,
-          our_runs: g.ourRuns,
-          their_runs: g.theirRuns,
-          team_name: g.teamName,
-          box_name: g.boxName,
-          batting: g.batting,
-          pitching: g.pitching,
-          errors: g.errors,
-          positions: g.positions,
-          imported_at: new Date().toISOString(),
-        },
-        { onConflict: "player_id,game_date,opponent" },
-      );
+      const { error: e } = await getBrowserSupabase()
+        .from("player_game_stat")
+        .upsert(
+          {
+            player_id: g.playerId,
+            game_id: g.gameId ?? null,
+            season_id: seasonId,
+            game_date: g.gameDate,
+            opponent: g.opponent,
+            our_runs: g.ourRuns,
+            their_runs: g.theirRuns,
+            team_name: g.teamName,
+            box_name: g.boxName,
+            batting: g.batting,
+            pitching: g.pitching,
+            errors: g.errors,
+            positions: g.positions,
+            imported_at: new Date().toISOString(),
+          },
+          // One box score per kid per game (the database takes the game's date and opponent).
+          { onConflict: "player_id,game_id" },
+        );
       if (e) throw new Error(`Couldn't save the game (${e.message}).`);
       setVersion((v) => v + 1);
     },

@@ -8,12 +8,13 @@ import {
   type GamePitching,
   type KidGame,
 } from "@/lib/boxscore/stats";
+import { matchBoxScore } from "@/lib/boxscore/match";
+import { formatClock } from "@/lib/data/game";
 import { useStoreState } from "@/lib/data/store";
+import type { Game } from "@/lib/data/types";
 import type { Player } from "@/lib/rules/types";
 
 const MAX_BYTES = 4 * 1024 * 1024;
-const field =
-  "h-12 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
 
 interface Found {
   teamName: string;
@@ -38,16 +39,23 @@ type Answer =
 
 /**
  * A parent picks their kid's GameChanger box score; only their kid's line comes back
- * (found by jersey number on their team's side), and they confirm it's them before saving.
+ * (found by jersey number on their team's side). It's matched to a game on the team's
+ * schedule (or refused), and they confirm the game and that it's them before saving.
  */
 export function ImportBoxScore({
   kid,
   existing = [],
   replacing = null,
+  games,
+  forGame = null,
   onSave,
   onCancel,
 }: {
   kid: Player;
+  /** The team's games; the box score has to be from one of them. */
+  games: Game[];
+  /** From a game's page: the box score has to be from this game. */
+  forGame?: Game | null;
   /** The kid's box scores already imported, to warn before replacing one. */
   existing?: KidGame[];
   /** From a game's page: the box score already in for that game (replaced on save). */
@@ -63,8 +71,7 @@ export function ImportBoxScore({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [answer, setAnswer] = useState<Answer | null>(null);
-  const [date, setDate] = useState("");
-  const [opponent, setOpponent] = useState("");
+  const [picked, setPicked] = useState<string | null>(null);
 
   const read = async (f: File, team?: string) => {
     setError(null);
@@ -86,10 +93,7 @@ export function ImportBoxScore({
       const json = (await res.json().catch(() => ({}))) as Answer & { error?: string };
       if (!res.ok) throw new Error(json.error ?? "Couldn't read the box score. Try again.");
       setAnswer(json);
-      if (json.status === "found") {
-        setDate(json.line.gameDate ?? "");
-        setOpponent(json.line.opponent ?? "");
-      }
+      setPicked(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -97,16 +101,41 @@ export function ImportBoxScore({
     }
   };
 
-  // An earlier box score for this same game (same day and opponent): saving replaces it.
+  // Which game on the schedule it's from: found, picked from a few, or none (not imported).
+  const match =
+    answer?.status === "found"
+      ? matchBoxScore(
+          {
+            gameDate: answer.line.gameDate,
+            opponent: answer.line.opponent,
+            ourRuns: answer.line.ourRuns,
+            theirRuns: answer.line.theirRuns,
+          },
+          games,
+          forGame,
+        )
+      : null;
+  const chosen =
+    match?.kind === "one"
+      ? match.game
+      : match?.kind === "pick"
+        ? (match.games.find((g) => g.id === picked) ?? null)
+        : null;
+
+  // An earlier box score for this game: saving replaces it.
   const earlier =
     replacing ??
-    existing.find(
-      (g) => g.playerId === kid.id && sameGame(g, { gameDate: date, opponent: opponent.trim() }),
-    ) ??
-    null;
+    (chosen
+      ? (existing.find(
+          (g) =>
+            g.playerId === kid.id &&
+            (g.gameId === chosen.id ||
+              (!g.gameId && sameGame(g, { gameDate: chosen.date, opponent: chosen.opponent }))),
+        ) ?? null)
+      : null);
 
   const save = async () => {
-    if (answer?.status !== "found") return;
+    if (answer?.status !== "found" || !chosen) return;
     const l = answer.line;
     setBusy("Saving…");
     setError(null);
@@ -114,8 +143,9 @@ export function ImportBoxScore({
       await onSave(
         {
           playerId: kid.id,
-          gameDate: date,
-          opponent: opponent.trim(),
+          gameId: chosen.id,
+          gameDate: chosen.date,
+          opponent: chosen.opponent,
           ourRuns: l.ourRuns,
           theirRuns: l.theirRuns,
           teamName: l.teamName,
@@ -160,7 +190,32 @@ export function ImportBoxScore({
       batting: l.batting,
       pitching: l.pitching,
     } as KidGame;
-    const ok = /^\d{4}-\d{2}-\d{2}$/.test(date) && opponent.trim().length > 0;
+    const ok = chosen !== null;
+    if (match?.kind === "none") {
+      return (
+        <div className="flex flex-col gap-4">
+          <p
+            role="alert"
+            className="rounded-xl border-2 border-amber-500 bg-amber-50 p-4 text-base"
+          >
+            <b>Not imported.</b> {match.reason} Box scores are only saved for games on the
+            team&apos;s schedule. If the game is missing, ask a coach to add it, then import again.
+          </p>
+          <button
+            onClick={() => setAnswer(null)}
+            className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white"
+          >
+            Choose a different box score
+          </button>
+          <button
+            onClick={onCancel}
+            className="h-12 text-base font-semibold text-slate-700 underline"
+          >
+            Cancel
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col gap-4">
         <div className="rounded-xl border-2 border-[var(--team)] bg-white p-3">
@@ -188,26 +243,34 @@ export function ImportBoxScore({
           )}
           {result && <p>Team result: {result}</p>}
         </div>
-        <div className="flex gap-3">
-          <label className="flex flex-[3] flex-col gap-1">
-            <span className="text-base font-semibold">Date</span>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className={field}
-            />
-          </label>
-          <label className="flex flex-[4] flex-col gap-1">
-            <span className="text-base font-semibold">Opponent</span>
-            <input
-              value={opponent}
-              onChange={(e) => setOpponent(e.target.value)}
-              maxLength={80}
-              className={field}
-            />
-          </label>
-        </div>
+        {match?.kind === "one" && (
+          <div className="rounded-xl border-2 border-slate-200 bg-white p-3">
+            <p className="text-sm font-bold tracking-wide text-slate-600 uppercase">The game</p>
+            <p className="text-lg font-bold">{gameText(match.game)}</p>
+          </div>
+        )}
+        {match?.kind === "pick" && (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-base font-semibold">
+              Which game is this box score from?
+            </legend>
+            {match.games.map((g) => (
+              <label
+                key={g.id}
+                className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border-2 bg-white px-3 py-2 ${picked === g.id ? "border-[var(--team)]" : "border-slate-200"}`}
+              >
+                <input
+                  type="radio"
+                  name="box-game"
+                  checked={picked === g.id}
+                  onChange={() => setPicked(g.id)}
+                  className="size-5 shrink-0 accent-[var(--team)]"
+                />
+                <span className="text-base font-semibold">{gameText(g)}</span>
+              </label>
+            ))}
+          </fieldset>
+        )}
         {earlier && (
           <p
             role="alert"
@@ -309,4 +372,22 @@ export function ImportBoxScore({
       </button>
     </div>
   );
+}
+
+/** "Sun, Feb 15 · 6:30 PM · vs LBC Rudy" (and the score once it's final). */
+function gameText(g: Game): string {
+  return [
+    new Date(`${g.date}T12:00`).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }),
+    g.startTime ? formatClock(g.startTime) : null,
+    `vs ${g.opponent}`,
+    g.status === "final" && g.scoreUs != null && g.scoreThem != null
+      ? `${g.scoreUs}–${g.scoreThem}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }

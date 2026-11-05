@@ -36,6 +36,8 @@ export type GamePitching = Record<PitchingKey, number>;
 export interface KidGame {
   id: string;
   playerId: string;
+  /** The team game it's from (null for box scores imported before games were matched). */
+  gameId?: string | null;
   gameDate: string;
   opponent: string;
   ourRuns: number | null;

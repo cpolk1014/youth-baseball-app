@@ -1060,20 +1060,36 @@ delete from public.game_post_log where team_id = 'eeeeeeee-0000-4000-8000-000000
 select pg_temp.expect(public.send_due_game_posts() = 0, 'nothing posts when game day posts are off');
 -- ── a kid's own game stats (parent box score import) ──
 -- Parent 0002 is linked to player 1003 (from the fixtures); 1004 is someone else's kid.
+-- A box score belongs to one of the kid's team's games.
+insert into public.game (id, season_id, game_date, opponent) values
+  ('00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-000000000101', '2026-06-20', 'LBC Rudy 13U');
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
-insert into public.player_game_stat (player_id, game_date, opponent, batting)
-  values ('00000000-0000-4000-8000-000000001003', '2026-06-20', 'LBC Rudy 13U', '{"ab": 2, "h": 1}');
-select pg_temp.expect((select count(*) from public.player_game_stat) = 1, 'parents import their own kid''s game');
 do $$ begin
   insert into public.player_game_stat (player_id, game_date, opponent, batting)
-    values ('00000000-0000-4000-8000-000000001004', '2026-06-20', 'LBC Rudy 13U', '{"ab": 3}');
+    values ('00000000-0000-4000-8000-000000001003', '2026-06-20', 'LBC Rudy 13U', '{"ab": 2}');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: a box score needs a game on the schedule';
+end $$;
+do $$ begin
+  insert into public.player_game_stat (player_id, game_id, game_date, opponent, batting)
+    values ('00000000-0000-4000-8000-000000001003', 'eeeeeeee-0000-4000-8000-000000000020', '2027-04-09', 'The Cubs', '{"ab": 2}');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: a box score can''t use another team''s game';
+end $$;
+insert into public.player_game_stat (player_id, game_id, game_date, opponent, batting)
+  values ('00000000-0000-4000-8000-000000001003', '00000000-0000-4000-8000-00000000c001', '2020-01-01', 'lbc rudy', '{"ab": 2, "h": 1}');
+select pg_temp.expect((select count(*) from public.player_game_stat) = 1, 'parents import their own kid''s game');
+select pg_temp.expect((select game_date = '2026-06-20' and opponent = 'LBC Rudy 13U' from public.player_game_stat), 'the box score takes the game''s date and opponent');
+do $$ begin
+  insert into public.player_game_stat (player_id, game_id, game_date, opponent, batting)
+    values ('00000000-0000-4000-8000-000000001004', '00000000-0000-4000-8000-00000000c001', '2026-06-20', 'LBC Rudy 13U', '{"ab": 3}');
   raise exception 'should have failed' using errcode = 'T0001';
 exception when insufficient_privilege then raise notice 'ok: parents cannot add stats for another family''s kid';
 end $$;
 do $$ begin
-  insert into public.player_game_stat (player_id, game_date, opponent, batting)
-    values ('00000000-0000-4000-8000-000000001003', '2026-06-20', 'LBC Rudy 13U', '{"ab": 3}');
+  insert into public.player_game_stat (player_id, game_id, game_date, opponent, batting)
+    values ('00000000-0000-4000-8000-000000001003', '00000000-0000-4000-8000-00000000c001', '2026-06-20', 'LBC Rudy 13U', '{"ab": 3}');
   raise exception 'should have failed' using errcode = 'T0001';
 exception when unique_violation then raise notice 'ok: the same game is stored once';
 end $$;
