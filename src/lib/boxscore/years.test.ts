@@ -16,7 +16,6 @@ describe("stats by year", () => {
   });
 
   it("picks any mix of years, or all of them", () => {
-    const years = yearsOf(games);
     let pick = toggleYear("all", 2025);
     expect(pick).toEqual([2025]);
     pick = toggleYear(pick, 2027);
