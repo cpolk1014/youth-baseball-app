@@ -6,6 +6,7 @@ import { describeCustomRule, type TeamShape } from "@/lib/rules/custom";
 import { draftToRule, type Interpretation } from "@/lib/rules/interpret";
 import type { CustomRule, RuleConfig } from "@/lib/rules/types";
 import { ruleProblems } from "./CustomRuleForm";
+import { MicField } from "@/components/Dictate";
 
 /** A coach types a rule; Claude maps it to rule types (or asks); the app checks it. */
 export function TypedRuleForm({
@@ -59,18 +60,29 @@ export function TypedRuleForm({
     <div className="flex flex-col gap-4">
       <label className="flex flex-col gap-1">
         <span className="text-base font-semibold">Type a rule</span>
-        <textarea
+        <MicField
+          multiline
           value={text}
-          onChange={(e) => {
-            setText(e.target.value);
+          maxLength={500}
+          onChange={(v) => {
+            setText(v);
             setResult(null);
             setAnswers([]);
           }}
-          rows={3}
-          maxLength={500}
-          placeholder="No kid catches more than 2 innings. Owen never pitches."
-          className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 text-lg focus:border-[var(--team)] focus:outline-none"
-        />
+        >
+          <textarea
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              setResult(null);
+              setAnswers([]);
+            }}
+            rows={3}
+            maxLength={500}
+            placeholder="No kid catches more than 2 innings. Owen never pitches."
+            className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 pr-14 text-lg focus:border-[var(--team)] focus:outline-none"
+          />
+        </MicField>
       </label>
       {!result && (
         <button

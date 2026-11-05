@@ -12,6 +12,7 @@ import {
   type SeasonPlan,
 } from "@/lib/practice/aiPlan";
 import { formatPracticeWhen } from "@/lib/practice/format";
+import { MicField } from "@/components/Dictate";
 
 const heading = "text-sm font-bold tracking-wide text-slate-600 uppercase";
 const goalsKey = (teamId: string) => `rallycap:practice-goals:${teamId}`;
@@ -138,17 +139,27 @@ export function AiPracticePlan({
       </p>
       <label className="flex flex-col gap-1">
         <span className="text-base font-semibold">Your goals for the season</span>
-        <textarea
+        <MicField
+          multiline
           value={goals}
-          onChange={(e) => {
-            setGoals(e.target.value);
+          maxLength={4000}
+          onChange={(v) => {
+            setGoals(v);
             setError(null);
           }}
-          rows={7}
-          maxLength={4000}
-          placeholder={EXAMPLE}
-          className="rounded-xl border-2 border-slate-300 bg-white p-3 text-base leading-snug focus:border-[var(--team)] focus:outline-none"
-        />
+        >
+          <textarea
+            value={goals}
+            onChange={(e) => {
+              setGoals(e.target.value);
+              setError(null);
+            }}
+            rows={7}
+            maxLength={4000}
+            placeholder={EXAMPLE}
+            className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 pr-14 text-base leading-snug focus:border-[var(--team)] focus:outline-none"
+          />
+        </MicField>
       </label>
       {!goals && (
         <button

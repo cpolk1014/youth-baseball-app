@@ -7,6 +7,7 @@ import { CATEGORY_LABEL, type SoundCategory, type TeamSound } from "@/lib/pa/typ
 import { decode, playBuffer, renderClip, stopAll } from "./engine";
 import { generate } from "./paData";
 import { Trimmer } from "./Trimmer";
+import { MicField } from "@/components/Dictate";
 
 const field =
   "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
@@ -80,13 +81,15 @@ export function SoundForm({
           <>
             <label className="flex flex-col gap-1">
               <span className="text-base font-semibold">Describe the sound</span>
-              <input
-                value={describe}
-                maxLength={120}
-                onChange={(e) => setDescribe(e.target.value)}
-                placeholder="Cartoon slide whistle going down, then a crash"
-                className={field}
-              />
+              <MicField value={describe} maxLength={120} onChange={setDescribe}>
+                <input
+                  value={describe}
+                  maxLength={120}
+                  onChange={(e) => setDescribe(e.target.value)}
+                  placeholder="Cartoon slide whistle going down, then a crash"
+                  className={`${field} pr-14`}
+                />
+              </MicField>
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-base font-semibold">About {seconds} seconds</span>

@@ -72,6 +72,7 @@ Payments are handled by **Stripe**. **We never see or store your card number.** 
 
 - **Sign-in cookies.** We use cookies only to keep you signed in. We do not use advertising or cross-site tracking cookies in the app.
 - **On your device:** to work at the field with no signal, RallyCap saves a copy of your team's information and pages on your phone or computer (browser storage and a service worker), plus small preferences such as your last open team. Signing out clears it.
+- **Dictation:** if you tap the microphone on an AI prompt box, your browser turns your speech into text using its own speech service (for example Google in Chrome or Apple in Safari), under that company's terms. RallyCap never receives or stores the audio, only the words that land in the box.
 - **Server logs:** our hosting providers keep standard logs (such as IP address, browser type, and the pages and errors requested) for security, troubleshooting and abuse prevention.
 - **Website analytics:** [We don't currently use analytics. If we add privacy-friendly analytics to our public website, we'll update this section first. We will not add session recording or advertising pixels inside the app.]
 

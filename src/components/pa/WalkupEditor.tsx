@@ -27,6 +27,7 @@ import { decode, playBuffer, playWalkup, renderClip, stopAll } from "./engine";
 import { generate, walkupPath, writeLyrics } from "./paData";
 import { Trimmer } from "./Trimmer";
 import { usePlaying } from "./usePlaying";
+import { MicField } from "@/components/Dictate";
 
 const field =
   "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
@@ -349,13 +350,15 @@ export function WalkupEditor({
                   </fieldset>
                   <label className="flex flex-col gap-1">
                     <span className="text-base font-semibold">Describe the vibe (optional)</span>
-                    <input
-                      value={vibe}
-                      maxLength={MAX_VIBE}
-                      onChange={(e) => setVibe(e.target.value)}
-                      placeholder="Slow dramatic build, then it explodes"
-                      className={field}
-                    />
+                    <MicField value={vibe} maxLength={MAX_VIBE} onChange={setVibe}>
+                      <input
+                        value={vibe}
+                        maxLength={MAX_VIBE}
+                        onChange={(e) => setVibe(e.target.value)}
+                        placeholder="Slow dramatic build, then it explodes"
+                        className={`${field} pr-14`}
+                      />
+                    </MicField>
                     <span className="text-sm text-slate-600">
                       Describe the sound, not a real song or artist.
                     </span>
@@ -407,13 +410,15 @@ export function WalkupEditor({
                   </fieldset>
                   <label className="flex flex-col gap-1">
                     <span className="text-base font-semibold">Words to sing (optional)</span>
-                    <textarea
-                      value={lyrics}
-                      rows={3}
-                      onChange={(e) => setLyrics(e.target.value)}
-                      placeholder={"Step up to the plate\nBring the heat today"}
-                      className="w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 py-2 text-lg focus:border-[var(--team)] focus:outline-none"
-                    />
+                    <MicField multiline value={lyrics} onChange={setLyrics}>
+                      <textarea
+                        value={lyrics}
+                        rows={3}
+                        onChange={(e) => setLyrics(e.target.value)}
+                        placeholder={"Step up to the plate\nBring the heat today"}
+                        className="w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 py-2 pr-14 text-lg focus:border-[var(--team)] focus:outline-none"
+                      />
+                    </MicField>
                     <span className="text-sm text-slate-600">
                       Up to {MAX_LYRIC_LINES} short lines, sung after a quick intro. Keep it clean:
                       a coach hears it before it plays.
@@ -556,13 +561,15 @@ export function WalkupEditor({
                 )}
                 <label className="flex flex-col gap-1">
                   <span className="text-base font-semibold">What the announcer says</span>
-                  <input
-                    value={script}
-                    maxLength={MAX_SCRIPT}
-                    onChange={(e) => setScript(e.target.value)}
-                    placeholder={DEFAULT_SCRIPT}
-                    className={field}
-                  />
+                  <MicField value={script} maxLength={MAX_SCRIPT} onChange={setScript}>
+                    <input
+                      value={script}
+                      maxLength={MAX_SCRIPT}
+                      onChange={(e) => setScript(e.target.value)}
+                      placeholder={DEFAULT_SCRIPT}
+                      className={`${field} pr-14`}
+                    />
+                  </MicField>
                   {scriptError ? (
                     <span className="text-sm font-semibold text-red-700">{scriptError}</span>
                   ) : (
