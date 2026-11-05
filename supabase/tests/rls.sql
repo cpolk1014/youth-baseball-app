@@ -1606,6 +1606,29 @@ select pg_temp.expect((select count(*) from public.player_game_stat where game_d
 reset role;
 insert into public.player_guardian (player_id, user_id) values ('00000000-0000-4000-8000-000000001003', 'aaaaaaaa-0000-4000-8000-000000000002');
 insert into public.member (team_id, user_id, role) values ('eeeeeeee-0000-4000-8000-000000000010', 'aaaaaaaa-0000-4000-8000-000000000002', 'parent');
+-- A coach deleting a whole team (season, games, players, parents' links) keeps every
+-- family's box scores on their kids' records.
+reset role;
+insert into public.team (id, name, age_group, created_by) values ('ffffffff-0000-4000-8000-000000000001', 'Knights 2026', '8U', null);
+insert into public.member (team_id, user_id, role) values
+  ('ffffffff-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'coach'),
+  ('ffffffff-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 'parent');
+insert into public.season (id, team_id, name) values ('ffffffff-0000-4000-8000-000000000002', 'ffffffff-0000-4000-8000-000000000001', 'Fall 2026');
+insert into public.game (id, season_id, game_date, opponent) values ('ffffffff-0000-4000-8000-000000000003', 'ffffffff-0000-4000-8000-000000000002', '2026-10-03', 'Rays');
+insert into public.player (id, team_id, name, jersey_number) values ('ffffffff-0000-4000-8000-000000000004', 'ffffffff-0000-4000-8000-000000000001', 'Kept Kid', 9);
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+insert into public.player_guardian (player_id, user_id) values ('ffffffff-0000-4000-8000-000000000004', 'aaaaaaaa-0000-4000-8000-000000000002');
+insert into public.player_game_stat (player_id, game_id, game_date, opponent, batting)
+  values ('ffffffff-0000-4000-8000-000000000004', 'ffffffff-0000-4000-8000-000000000003', '2026-10-03', 'Rays', '{"ab": 4, "h": 3}');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- the coach
+update public.team set optioned_at = now() where id = 'ffffffff-0000-4000-8000-000000000001';
+delete from public.team where id = 'ffffffff-0000-4000-8000-000000000001';
+select pg_temp.expect((select count(*) from public.team where id = 'ffffffff-0000-4000-8000-000000000001') = 0, 'a coach deletes an optioned team');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+select pg_temp.expect((select count(*) from public.player_game_stat where opponent = 'Rays' and game_date = '2026-10-03' and batting->>'h' = '3') = 1, 'the family keeps the box score after the coach deletes the team');
+select pg_temp.expect((select count(*) from public.my_athletes() where name = 'Kept Kid') = 1, 'the kid''s record stays with the family');
+reset role;
 -- ── game places ──
 update public.game set location = 'Traction Sports Complex', field = 'Chabills Field', location_lat = 30.2, location_lng = -92.0
   where id = 'eeeeeeee-0000-4000-8000-000000000020';
