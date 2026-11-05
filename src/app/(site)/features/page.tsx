@@ -11,6 +11,7 @@ import {
   Phone,
   Section,
 } from "@/components/site/parts";
+import { WalkupScreen } from "@/components/site/mocks";
 
 export const metadata: Metadata = {
   title: { absolute: "Features: AI Schedules, Fair Lineups, GroupMe & Tournaments | RallyCap" },
@@ -77,8 +78,9 @@ const GROUPS: { icon: string; title: string; items: [string, string][] }[] = [
     icon: "🎵",
     title: "Gameday PA",
     items: [
-      ["AI walk-ups and announcer,", "or upload songs and trim them on your phone."],
-      ["A soundboard", "of organ tunes and effects. Any parent can run the PA."],
+      ["Walk-up songs for every kid,", "made with AI or uploaded (see above)."],
+      ["A soundboard", "of organ tunes and effects, for the mound visit and everything after."],
+      ["Works with no signal:", "tap Get ready and every clip is saved on the phone."],
     ],
   },
   {
@@ -130,6 +132,60 @@ export default function FeaturesPage() {
           </ul>
         </div>
       </Section>
+
+      <section
+        id="walkups"
+        className="relative overflow-hidden bg-[#0F1A30] px-4 py-16 text-white sm:px-6 md:py-24"
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-32 -left-32 size-[30rem] rounded-full bg-[#7C3AED]/30 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-40 -bottom-40 size-[34rem] rounded-full bg-[#DC143C]/30 blur-3xl"
+        />
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-[1.1fr_1fr]">
+          <div>
+            <Ai>Gameday PA</Ai>
+            <h2 className="mt-4 text-4xl leading-[1.05] font-black tracking-tight text-balance md:text-6xl">
+              The walk-up song is everything.
+            </h2>
+            <p className="mt-6 text-xl leading-relaxed text-white/85">
+              Ask any 10-year-old. The batting stance is optional. The walk-up song is not. Some
+              kids spend more time picking it than practicing, and honestly? Fair.
+            </p>
+            <p className="mt-3 text-xl font-bold">RallyCap makes sure every kid has a good one.</p>
+            <ul className="mt-8 flex flex-col gap-3 text-lg text-white/85">
+              <Check light>
+                <b className="text-white">AI makes an original song</b> in the style and vibe they
+                pick, even chanting their name and number.
+              </Check>
+              <Check light>
+                <b className="text-white">AI writes the lyrics:</b> three kid-safe options from a
+                theme. Edit them, or let your kid rewrite them for the fourth time.
+              </Check>
+              <Check light>
+                <b className="text-white">A stadium announcer</b> calls “Now batting… number seven…”
+                exactly the way your family says it.
+              </Check>
+              <Check light>
+                <b className="text-white">Or upload any song</b> and trim it to the best 20 seconds,
+                right on your phone.
+              </Check>
+              <Check light>
+                <b className="text-white">Any parent can run the PA</b> from the bleachers. The
+                coach approves every walk-up, so nobody gets surprised by the lyrics.
+              </Check>
+            </ul>
+            <p className="mt-8 text-sm text-white/60">
+              Side effects may include a 9-year-old adjusting their batting gloves for the entire
+              song.
+            </p>
+          </div>
+          <WalkupScreen />
+        </div>
+      </section>
 
       <Section tone="mist">
         <FeatureRow
