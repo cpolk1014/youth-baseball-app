@@ -421,7 +421,10 @@ function MenuLinks({
   );
 }
 
-/** My RallyCap: the person's initials in a circle; opens their profile, teams and clubs. */
+/**
+ * My RallyCap: the person's own corner of the app (profile, teams, clubs, their players),
+ * in RallyCap's colors whatever team is open: it isn't about any one team.
+ */
 function AccountMenu({
   tab,
   onPick,
@@ -460,12 +463,37 @@ function AccountMenu({
     pathname === href || (href === "/my-clubs" && pathname.startsWith("/club"));
   const plain = rail
     ? "flex min-h-10 items-center rounded-lg px-3 text-left text-sm font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-    : "flex min-h-12 items-center rounded-lg px-3 text-left text-base font-semibold text-white/80 hover:bg-white/15 active:bg-white/20";
+    : "flex min-h-12 items-center rounded-lg px-3 text-left text-base font-semibold text-white/80 hover:bg-white/10 active:bg-white/15";
+  const linkClass = (on: boolean) =>
+    rail
+      ? `flex h-10 shrink-0 items-center gap-3 rounded-lg px-3 text-[15px] font-semibold ${
+          on
+            ? "bg-[#1B2A4A]/10 text-[#1B2A4A]"
+            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+        }`
+      : `flex h-12 items-center rounded-lg px-3 text-base font-bold ${
+          on ? "bg-white text-[#1B2A4A]" : "text-white/90 hover:bg-white/10 active:bg-white/15"
+        }`;
 
   return (
     <div
-      className={`mt-auto pt-3 ${rail ? "border-t border-slate-200" : "border-t-2 border-white/15"}`}
+      className={`mt-auto ${
+        rail
+          ? "border-t-2 border-[#DC143C] pt-3"
+          : // Its own RallyCap-navy panel inside the team-colored menu.
+            "mt-6 rounded-2xl bg-[#1B2A4A] p-2 shadow-lg ring-1 ring-white/10"
+      }`}
     >
+      {!collapsed && (
+        // eslint-disable-next-line @next/next/no-img-element -- a small static logo
+        <img
+          src={
+            rail ? "/brand/rallycap-horizontal-color.svg" : "/brand/rallycap-horizontal-white.svg"
+          }
+          alt="RallyCap"
+          className={rail ? "-mb-1 h-12 w-auto" : "-mb-1 h-14 w-auto"}
+        />
+      )}
       <button
         // Folded rail: no room for the list, so go straight to the profile.
         onClick={() => (collapsed ? router.push("/profile") : setOpen(!open))}
@@ -475,15 +503,13 @@ function AccountMenu({
         className={`flex w-full items-center gap-3 rounded-lg text-left ${
           rail
             ? `min-h-12 px-1.5 hover:bg-slate-100 ${collapsed ? "justify-center" : ""}`
-            : "min-h-14 px-2 hover:bg-white/15 active:bg-white/20"
+            : "min-h-14 px-2 text-white hover:bg-white/10 active:bg-white/15"
         }`}
       >
         <span
           aria-hidden="true"
-          className={`flex shrink-0 items-center justify-center rounded-full font-black ${
-            rail
-              ? "size-9 bg-[var(--team)] text-sm text-white"
-              : "size-11 bg-white text-lg text-[var(--team)]"
+          className={`flex shrink-0 items-center justify-center rounded-full bg-[#DC143C] font-black text-white ${
+            rail ? "size-9 text-sm" : "size-11 text-lg"
           }`}
         >
           {initials(me)}
@@ -516,15 +542,7 @@ function AccountMenu({
               href={x.href}
               onClick={onPick}
               aria-current={current(x.href) ? "page" : undefined}
-              className={
-                rail
-                  ? itemClass("rail", current(x.href))
-                  : `flex h-12 items-center rounded-lg px-3 text-base font-bold ${
-                      current(x.href)
-                        ? "bg-white text-[var(--team)]"
-                        : "text-white/90 hover:bg-white/15 active:bg-white/20"
-                    }`
-              }
+              className={linkClass(current(x.href))}
             >
               {x.label}
             </Link>
