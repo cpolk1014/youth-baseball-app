@@ -1600,9 +1600,18 @@ delete from public.player where id = '00000000-0000-4000-8000-00000000e001';
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
 select pg_temp.expect((select count(*) from public.player_game_stat where game_date = '2027-04-09' and player_id is null) = 1, 'an old team going away keeps the kid''s box scores');
--- Unlinking the kid on purpose (a wrong pick) ends access.
+-- A coach removing the parent's link keeps the family's access to the kid's history.
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- coach
 delete from public.player_guardian where player_id = '00000000-0000-4000-8000-000000001003' and user_id = 'aaaaaaaa-0000-4000-8000-000000000002';
-select pg_temp.expect((select count(*) from public.player_game_stat where game_date = '2027-04-09') = 0, 'unlinking a kid ends access to their record');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+select pg_temp.expect((select count(*) from public.player_game_stat where game_date = '2027-04-09') = 1, 'a coach removing a parent''s link keeps their kid''s history');
+reset role;
+insert into public.player_guardian (player_id, user_id) values ('00000000-0000-4000-8000-000000001003', 'aaaaaaaa-0000-4000-8000-000000000002');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+-- The parent unlinking the kid themselves (a wrong pick) ends their access.
+delete from public.player_guardian where player_id = '00000000-0000-4000-8000-000000001003' and user_id = 'aaaaaaaa-0000-4000-8000-000000000002';
+select pg_temp.expect((select count(*) from public.player_game_stat where game_date = '2027-04-09') = 0, 'a parent unlinking their kid themselves ends their access');
 reset role;
 insert into public.player_guardian (player_id, user_id) values ('00000000-0000-4000-8000-000000001003', 'aaaaaaaa-0000-4000-8000-000000000002');
 insert into public.member (team_id, user_id, role) values ('eeeeeeee-0000-4000-8000-000000000010', 'aaaaaaaa-0000-4000-8000-000000000002', 'parent');
