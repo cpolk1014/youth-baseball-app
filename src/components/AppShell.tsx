@@ -407,13 +407,17 @@ function MenuLinks({
   );
   // Parents have no Team settings: Coaches & parents sits under Roster instead.
   const parent = data?.me.role === "parent";
+  // Anyone linked to a kid on this team: their player's page, right after the roster.
+  const hasKids = !!data && data.guardians.some((g) => g.userId === myUserId(data));
+  const myPlayer = { href: "/my-player", label: myPlayerLabel(data), icon: "player" as IconName };
   const section = (title: string, tabs: MenuTab[]) => (
     <>
       {heading(title)}
       {visibleTabs(tabs, data).map((t) => (
         <Fragment key={t.href}>
-          {link(t, t.id === tab && !onSetting)}
+          {link(t, t.id === tab && !onSetting && pathname !== "/my-player")}
           {parent && t.id === "roster" && settings.map((x) => link(x, isOn(x)))}
+          {hasKids && t.id === "roster" && link(myPlayer, pathname === "/my-player")}
         </Fragment>
       ))}
     </>
@@ -457,15 +461,12 @@ function AccountMenu({
   collapsed: boolean;
 }) {
   const me = useMe();
-  const data = useAppData();
   const clubs = useMyClubs();
   const teamClubs = useMyTeamClubs();
   const pathname = usePathname();
   const [open, setOpen] = useState(tab === "account" || tab === "club");
   const router = useRouter();
   const rail = variant === "rail";
-  // Families linked to a player import that player's box scores.
-  const hasKids = !!data && data.guardians.some((g) => g.userId === myUserId(data));
   const inAClub = (clubs?.length ?? 0) > 0 || (teamClubs?.length ?? 0) > 0;
   const links = [
     { href: "/profile", label: "My profile", show: true },
@@ -477,7 +478,6 @@ function AccountMenu({
     },
     // Anyone can start a club on their own (it opens the club page's Start a club).
     { href: "/club", label: "Start a club", show: clubs !== null && !inAClub },
-    { href: "/my-player", label: myPlayerLabel(data), show: hasKids },
   ].filter((x) => x.show);
   const current = (href: string) =>
     pathname === href || (href === "/my-clubs" && pathname.startsWith("/club"));
