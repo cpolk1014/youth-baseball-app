@@ -1081,18 +1081,43 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002
 select pg_temp.expect(public.family_access((select athlete_id from public.player where id = '00000000-0000-4000-8000-000000001003')), 'the pass covers the buyer''s kids');
 select pg_temp.expect((select jsonb_array_length(codes) from public.my_family_access() where plan = 'blended') = 3, 'a blended family pass comes with 3 codes to share');
 create temp table fam_code as select (select codes->0->>'code' from public.my_family_access() where plan = 'blended') as code;
-select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- another adult in the family
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- not the kid's parent
 select pg_temp.expect(not exists (select 1 from public.my_family_access()), 'others have no pass until they redeem a code');
+do $$ begin
+  perform public.redeem_family_code((select code from fam_code));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a code only works for the player''s parents';
+end $$;
+-- The kid's other parent (0007), linked to the kid on the team, can use it.
+reset role;
+insert into public.player_guardian (player_id, user_id) values ('00000000-0000-4000-8000-000000001003', 'aaaaaaaa-0000-4000-8000-000000000007');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- the other parent
 select public.redeem_family_code((select lower(code) from fam_code));
-select pg_temp.expect(public.family_access((select athlete_id from fam_kid)), 'a shared code gives the other adult the same kids');
+select pg_temp.expect(public.family_access((select athlete_id from fam_kid)), 'a shared code gives the other parent the kid');
 select pg_temp.expect((select jsonb_array_length(codes) from public.my_family_access()) = 0, 'only the buyer sees the codes');
-select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- someone else
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- someone else
 do $$ begin
   perform public.redeem_family_code((select code from fam_code));
   raise exception 'should have failed' using errcode = 'T0001';
 exception when invalid_parameter_value then raise notice 'ok: a code works once';
 end $$;
 select pg_temp.expect((select count(*) from public.family_code) = 0, 'other people can''t see the codes');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- the buyer
+select pg_temp.expect((select (codes->0->>'used')::boolean from public.my_family_access() where plan = 'blended'), 'the buyer sees the code was used');
+do $$ begin
+  perform public.revoke_family_code('ZZZZZZZZ');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: only the buyer takes codes back';
+end $$;
+select public.revoke_family_code((select code from fam_code));
+select pg_temp.expect((select count(*) from public.family_code where code = (select code from fam_code)) = 0, 'a code taken back is replaced');
+select pg_temp.expect((select jsonb_array_length(codes) from public.my_family_access() where plan = 'blended') = 3, 'the buyer still has 3 codes');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- the other parent
+select pg_temp.expect(not public.family_access((select athlete_id from fam_kid)), 'taking a code back ends that person''s pass');
+reset role;
+delete from public.player_guardian where player_id = '00000000-0000-4000-8000-000000001003' and user_id = 'aaaaaaaa-0000-4000-8000-000000000007';
+delete from public.athlete_guardian where user_id = 'aaaaaaaa-0000-4000-8000-000000000007';
 reset role;
 delete from public.game where id = '00000000-0000-4000-8000-00000000c009';
 -- ── a kid's own game stats (parent box score import) ──

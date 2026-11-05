@@ -169,7 +169,7 @@ function KidStats({ data }: { data: AppData }) {
         split={split}
       />
 
-      {myPass && <ShareCodes pass={myPass} />}
+      {myPass && <ShareCodes pass={myPass} onChange={fam.reload} />}
 
       {loading || fam.loading ? (
         <Loading />

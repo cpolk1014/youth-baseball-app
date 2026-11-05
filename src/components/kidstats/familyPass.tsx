@@ -15,7 +15,7 @@ export interface FamilyPassRow {
   expiresOn: string;
   isBuyer: boolean;
   athletes: string[];
-  codes: { code: string; used: boolean }[];
+  codes: { code: string; used: boolean; usedBy?: string | null }[];
 }
 
 /** The signed-in parent's stats passes, and whether one covers a kid. */
@@ -42,7 +42,7 @@ export function useFamilyPasses() {
               expires_on: string;
               is_buyer: boolean;
               athletes: string[] | null;
-              codes: { code: string; used: boolean }[] | null;
+              codes: { code: string; used: boolean; usedBy?: string | null }[] | null;
             }[]
           ).map((r) => ({
             passId: r.pass_id,
@@ -170,6 +170,10 @@ export function RedeemCode({ redeem }: { redeem: (code: string) => Promise<void>
       <label className="text-base font-semibold" htmlFor="family-code">
         Have a code from your family?
       </label>
+      <p className="text-sm text-slate-600">
+        Codes are for the player&apos;s parents only: link yourself to your player on their team
+        first.
+      </p>
       <div className="flex gap-2">
         <input
           id="family-code"
@@ -199,12 +203,21 @@ export function RedeemCode({ redeem }: { redeem: (code: string) => Promise<void>
   );
 }
 
-/** For the parent who paid: the codes to share with the other adults. */
-export function ShareCodes({ pass }: { pass: FamilyPassRow }) {
+/** For the parent who paid: the codes to share with the player's other parents. */
+export function ShareCodes({ pass, onChange }: { pass: FamilyPassRow; onChange: () => void }) {
   const [copied, setCopied] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const takeBack = async (code: string) => {
+    setError(null);
+    const { error: e } = await getBrowserSupabase().rpc("revoke_family_code", { p_code: code });
+    setRemoving(null);
+    if (e) setError(e.message);
+    else onChange();
+  };
   if (!pass.isBuyer || pass.codes.length === 0) return null;
   const share = async (code: string) => {
-    const text = `Join me on RallyCap to see our player's stats: sign in at rallycap.team, open My player, and enter this code: ${code}`;
+    const text = `Here's our player's RallyCap stats pass. Sign in at rallycap.team, link yourself to our player on the team (Coaches & parents) if you haven't, then open My player and enter: ${code}`;
     try {
       if (navigator.share) await navigator.share({ text });
       else {
@@ -221,8 +234,8 @@ export function ShareCodes({ pass }: { pass: FamilyPassRow }) {
         Share your stats pass
       </h2>
       <p className="mb-2 text-sm text-slate-600">
-        Each code lets one other adult in your family see the same players&apos; stats this season.
-        They need their own RallyCap sign-in.
+        For your player&apos;s other parents: each code lets one of them see the stats this season.
+        It only works for someone linked as your player&apos;s parent on their team.
       </p>
       <ul className="flex flex-col gap-2">
         {pass.codes.map((c) => (
@@ -233,7 +246,32 @@ export function ShareCodes({ pass }: { pass: FamilyPassRow }) {
               {c.code}
             </span>
             {c.used ? (
-              <span className="text-sm text-slate-600">Used</span>
+              <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                <span className="text-sm text-slate-600">Used by {c.usedBy ?? "someone"}</span>
+                {removing === c.code ? (
+                  <span className="flex gap-1">
+                    <button
+                      onClick={() => void takeBack(c.code)}
+                      className="h-10 rounded-lg bg-red-700 px-3 text-sm font-bold text-white"
+                    >
+                      Remove them
+                    </button>
+                    <button
+                      onClick={() => setRemoving(null)}
+                      className="h-10 rounded-lg border-2 border-slate-300 px-3 text-sm font-semibold"
+                    >
+                      Keep
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setRemoving(c.code)}
+                    className="h-10 rounded-lg border-2 border-slate-300 px-3 text-sm font-semibold"
+                  >
+                    Remove
+                  </button>
+                )}
+              </span>
             ) : (
               <button
                 onClick={() => void share(c.code)}
@@ -245,6 +283,16 @@ export function ShareCodes({ pass }: { pass: FamilyPassRow }) {
           </li>
         ))}
       </ul>
+      {removing && (
+        <p className="mt-2 text-sm text-slate-600">
+          They lose the pass, and you get a new code to give someone else.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="mt-2 text-base font-semibold text-red-700">
+          {error}
+        </p>
+      )}
     </section>
   );
 }
