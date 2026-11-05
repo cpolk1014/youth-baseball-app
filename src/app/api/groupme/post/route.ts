@@ -1,3 +1,4 @@
+import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import { NextResponse, type NextRequest } from "next/server";
 import { groupMeBot } from "@/lib/groupme/bot";
 import { ChannelError } from "@/lib/groupme/channel";
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
     return errorResponse(403, "Only coaches, managers and the treasurer can post to GroupMe.");
   }
   if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up to post.");
+  if (!(await teamHasPaid(supabase, teamId))) return errorResponse(402, PAID_FEATURE_MESSAGE);
   if (!bot) return errorResponse(404, "Connect the team's GroupMe first.");
 
   try {

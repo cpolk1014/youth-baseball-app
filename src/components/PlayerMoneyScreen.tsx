@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate } from "./paywall";
 import { useState } from "react";
 import { permissionsFor } from "@/lib/data/permissions";
 import { myUserId, useAppData } from "@/lib/data/store";
@@ -207,13 +208,15 @@ export function PlayerMoneyScreen({ playerId }: { playerId: string }) {
         onClose={() => setEditing(null)}
       >
         {editing && (
-          <MoneyEntryForm
-            key={editing.entry.id}
-            entry={editing.entry}
-            isNew={editing.isNew}
-            presetPlayerId={playerId}
-            onDone={() => setEditing(null)}
-          />
+          <PaidGate feature="Team money">
+            <MoneyEntryForm
+              key={editing.entry.id}
+              entry={editing.entry}
+              isNew={editing.isNew}
+              presetPlayerId={playerId}
+              onDone={() => setEditing(null)}
+            />
+          </PaidGate>
         )}
       </Sheet>
     </AppShell>

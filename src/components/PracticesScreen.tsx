@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate } from "./paywall";
 import Link from "next/link";
 import { useState } from "react";
 import { localDateString, placeLabel, recentPlaces } from "@/lib/data/game";
@@ -153,12 +154,18 @@ export function PracticesScreen() {
       </Sheet>
 
       <Sheet open={importing} title="Import a schedule" onClose={() => setImporting(false)}>
-        {importing && <ImportSchedule data={data} onClose={() => setImporting(false)} />}
+        {importing && (
+          <PaidGate feature="Schedule import">
+            <ImportSchedule data={data} onClose={() => setImporting(false)} />
+          </PaidGate>
+        )}
       </Sheet>
 
       <Sheet open={planning} title="Plan practices with AI" onClose={() => setPlanning(false)}>
         {planning && (
-          <AiPracticePlan data={data} upcoming={upcoming} onClose={() => setPlanning(false)} />
+          <PaidGate feature="AI practice plans">
+            <AiPracticePlan data={data} upcoming={upcoming} onClose={() => setPlanning(false)} />
+          </PaidGate>
         )}
       </Sheet>
 

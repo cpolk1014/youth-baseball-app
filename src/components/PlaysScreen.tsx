@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate } from "./paywall";
 import { useState } from "react";
 import Link from "next/link";
 import { isCoach, permissionsFor } from "@/lib/data/permissions";
@@ -136,14 +137,16 @@ export function PlaysScreen() {
 
       <Sheet open={assigning !== null} title="Assign plays" onClose={() => setAssigning(null)}>
         {assigning && (
-          <AssignForm
-            assignment={assigning}
-            onCancel={() => setAssigning(null)}
-            onSave={(a) => {
-              saveAssignment(a);
-              setAssigning(null);
-            }}
-          />
+          <PaidGate feature="Homework">
+            <AssignForm
+              assignment={assigning}
+              onCancel={() => setAssigning(null)}
+              onSave={(a) => {
+                saveAssignment(a);
+                setAssigning(null);
+              }}
+            />
+          </PaidGate>
         )}
       </Sheet>
     </AppShell>

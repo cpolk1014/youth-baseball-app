@@ -1,3 +1,4 @@
+import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { EXTRACTION_JSON_SCHEMA, type ScheduleExtraction } from "@/lib/schedule-import/schema";
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
     return errorResponse(403, "Only coaches and managers can import a schedule.");
   if (team.optioned_at)
     return errorResponse(409, "This team is optioned. Call it up to import a schedule.");
+  if (!(await teamHasPaid(supabase, teamId))) return errorResponse(402, PAID_FEATURE_MESSAGE);
 
   const bytes = Buffer.from(await file.arrayBuffer());
   const name = file.name.toLowerCase();

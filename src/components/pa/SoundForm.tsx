@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate, usePlan } from "../paywall";
 import { useState } from "react";
 import { defaultClip, type ClipRange } from "@/lib/pa/clip";
 import { CATEGORY_LABEL, type SoundCategory, type TeamSound } from "@/lib/pa/types";
@@ -28,7 +29,9 @@ export function SoundForm({
   onAdd: (s: Omit<TeamSound, "id" | "path">, file: Blob) => Promise<void>;
   onDone: () => void;
 }) {
-  const [how, setHow] = useState<"ai" | "upload">(signedIn ? "ai" : "upload");
+  // Making sounds with AI is a paid feature; uploading stays free.
+  const { paid } = usePlan();
+  const [how, setHow] = useState<"ai" | "upload">(signedIn && paid ? "ai" : "upload");
   const [category, setCategory] = useState<SoundCategory>(initialCategory);
   const [label, setLabel] = useState("");
   const [describe, setDescribe] = useState("");
@@ -70,7 +73,9 @@ export function SoundForm({
         ))}
       </div>
 
+      {how === "ai" && !paid && <PaidGate feature="Making sounds with AI">{null}</PaidGate>}
       {how === "ai" &&
+        paid &&
         (signedIn ? (
           <>
             <label className="flex flex-col gap-1">

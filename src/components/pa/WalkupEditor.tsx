@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate, usePlan } from "../paywall";
 import { useEffect, useState } from "react";
 import { clampClip, defaultClip, type ClipRange } from "@/lib/pa/clip";
 import {
@@ -79,7 +80,9 @@ export function WalkupEditor({
   const [theme, setTheme] = useState<LyricTheme>("hype");
   const [lyricOptions, setLyricOptions] = useState<LyricOption[]>([]);
 
-  const [announce, setAnnounce] = useState(existing?.announce ?? signedIn);
+  // AI songs and the AI announcer are paid features; uploaded songs stay free.
+  const { paid } = usePlan();
+  const [announce, setAnnounce] = useState(existing?.announce ?? (signedIn && paid));
   const [mode, setMode] = useState<AnnounceMode>(existing?.announceMode ?? "over");
   const [nameSpoken, setNameSpoken] = useState(existing?.nameSpoken ?? "");
   const [numberSpoken, setNumberSpoken] = useState(existing?.numberSpoken ?? "");
@@ -231,7 +234,7 @@ export function WalkupEditor({
       const rendered = await clip();
       const songBuffer = rendered?.buffer ?? savedClip;
       if (!songBuffer) throw new Error("Pick a song first.");
-      const c = announce && signedIn && !scriptError ? await ensureCall() : null;
+      const c = announce && signedIn && paid && !scriptError ? await ensureCall() : null;
       playWalkup("preview", songBuffer, c?.buffer ?? null, { mode, volume });
     });
 
@@ -240,7 +243,7 @@ export function WalkupEditor({
       if (scriptError) throw new Error(scriptError);
       const rendered = await clip();
       if (!rendered && !existing) throw new Error("Pick a song first.");
-      const c = announce && signedIn ? await ensureCall() : null;
+      const c = announce && signedIn && paid ? await ensureCall() : null;
       const newCall = c && (c.blob !== null || !existing?.announcePath);
       const w: Walkup = {
         playerId: player.id,
@@ -320,7 +323,9 @@ export function WalkupEditor({
               ))}
             </div>
 
+            {picking === "ai" && !paid && <PaidGate feature="AI walk-up songs">{null}</PaidGate>}
             {picking === "ai" &&
+              paid &&
               (signedIn ? (
                 <>
                   <fieldset>
@@ -501,7 +506,11 @@ export function WalkupEditor({
       {/* ── Announcer ── */}
       <section className="flex flex-col gap-3">
         <h3 className={heading}>Announcer</h3>
-        {signedIn ? (
+        {signedIn && !paid ? (
+          <p className="text-base text-slate-700">
+            🔒 The AI announcer is a paid feature. Uploaded songs still play.
+          </p>
+        ) : signedIn ? (
           <>
             <label className="flex items-center gap-3 text-base">
               <input

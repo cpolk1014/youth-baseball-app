@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate } from "../paywall";
 import { useEffect, useMemo, useState } from "react";
 import type { Tournament, TournamentGame, TournamentTeam } from "@/lib/data/tournament-backend";
 import type { AppData } from "@/lib/data/types";
@@ -715,59 +716,61 @@ function RulesSheet({
         </div>
       )}
 
-      <section className="flex flex-col gap-2 border-t-2 border-slate-100 pt-3">
-        <h3 className={heading}>New rules from a screenshot</h3>
-        <p className="text-base text-slate-700">
-          Screenshot the tournament&apos;s tie-breaker rules (often on its Rules tab). You&apos;ll
-          name them, like “2D Tiebreak”, and can use them again at that organization&apos;s other
-          tournaments.
-        </p>
-        {files.length > 0 && (
-          <ul className="grid grid-cols-3 gap-2">
-            {files.map((f, i) => (
-              <li key={`${f.name}-${i}`} className="relative">
-                <Thumb file={f} />
-                <button
-                  onClick={() => setFiles(files.filter((_, j) => j !== i))}
-                  aria-label={`Remove screenshot ${i + 1}`}
-                  className="absolute top-1 right-1 flex size-9 items-center justify-center rounded-full bg-slate-900/75 text-lg font-bold text-white"
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        {files.length < MAX_SCREENSHOTS && (
-          <ScreenshotButton
-            onFiles={(f) => setFiles([...files, ...f].slice(0, MAX_SCREENSHOTS))}
-            label={files.length ? "Add more screenshots" : "Add screenshots of the rules"}
-            primary={sorted.length === 0 && files.length === 0}
-          />
-        )}
-        {files.length > 0 && (
+      <PaidGate feature="Reading tie-break rules from a screenshot">
+        <section className="flex flex-col gap-2 border-t-2 border-slate-100 pt-3">
+          <h3 className={heading}>New rules from a screenshot</h3>
+          <p className="text-base text-slate-700">
+            Screenshot the tournament&apos;s tie-breaker rules (often on its Rules tab). You&apos;ll
+            name them, like “2D Tiebreak”, and can use them again at that organization&apos;s other
+            tournaments.
+          </p>
+          {files.length > 0 && (
+            <ul className="grid grid-cols-3 gap-2">
+              {files.map((f, i) => (
+                <li key={`${f.name}-${i}`} className="relative">
+                  <Thumb file={f} />
+                  <button
+                    onClick={() => setFiles(files.filter((_, j) => j !== i))}
+                    aria-label={`Remove screenshot ${i + 1}`}
+                    className="absolute top-1 right-1 flex size-9 items-center justify-center rounded-full bg-slate-900/75 text-lg font-bold text-white"
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {files.length < MAX_SCREENSHOTS && (
+            <ScreenshotButton
+              onFiles={(f) => setFiles([...files, ...f].slice(0, MAX_SCREENSHOTS))}
+              label={files.length ? "Add more screenshots" : "Add screenshots of the rules"}
+              primary={sorted.length === 0 && files.length === 0}
+            />
+          )}
+          {files.length > 0 && (
+            <button
+              onClick={() => void read()}
+              className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white"
+            >
+              Read the rules
+            </button>
+          )}
           <button
-            onClick={() => void read()}
-            className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white"
+            onClick={() =>
+              setEditing({
+                name: `${t.organization ?? "Tournament"} Tiebreak`.slice(0, 60),
+                organization: t.organization,
+                rules: [{ type: "head_to_head", cap: null, text: "" }],
+                restart: true,
+                notes: null,
+              })
+            }
+            className="self-start text-base underline"
           >
-            Read the rules
+            Or type them in
           </button>
-        )}
-        <button
-          onClick={() =>
-            setEditing({
-              name: `${t.organization ?? "Tournament"} Tiebreak`.slice(0, 60),
-              organization: t.organization,
-              rules: [{ type: "head_to_head", cap: null, text: "" }],
-              restart: true,
-              notes: null,
-            })
-          }
-          className="self-start text-base underline"
-        >
-          Or type them in
-        </button>
-      </section>
+        </section>
+      </PaidGate>
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">
           {error}

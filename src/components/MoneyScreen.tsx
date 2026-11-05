@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate } from "./paywall";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -271,12 +272,14 @@ export function MoneyScreen() {
         onClose={() => setEditing(null)}
       >
         {editing && (
-          <MoneyEntryForm
-            key={editing.entry.id}
-            entry={editing.entry}
-            isNew={editing.isNew}
-            onDone={() => setEditing(null)}
-          />
+          <PaidGate feature="Team money">
+            <MoneyEntryForm
+              key={editing.entry.id}
+              entry={editing.entry}
+              isNew={editing.isNew}
+              onDone={() => setEditing(null)}
+            />
+          </PaidGate>
         )}
       </Sheet>
     </AppShell>

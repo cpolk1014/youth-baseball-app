@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate } from "./paywall";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -222,14 +223,16 @@ export function AssignmentScreen({ assignmentId }: { assignmentId: string }) {
 
       <Sheet open={panel === "edit"} title="Edit homework" onClose={() => setPanel(null)}>
         {panel === "edit" && (
-          <AssignForm
-            assignment={assignment}
-            onCancel={() => setPanel(null)}
-            onSave={(a) => {
-              saveAssignment(a);
-              setPanel(null);
-            }}
-          />
+          <PaidGate feature="Homework">
+            <AssignForm
+              assignment={assignment}
+              onCancel={() => setPanel(null)}
+              onSave={(a) => {
+                saveAssignment(a);
+                setPanel(null);
+              }}
+            />
+          </PaidGate>
         )}
       </Sheet>
       <Sheet open={panel === "delete"} title="Delete this homework?" onClose={() => setPanel(null)}>

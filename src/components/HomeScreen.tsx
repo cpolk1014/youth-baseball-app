@@ -1,5 +1,6 @@
 "use client";
 
+import { PlanBanner } from "./paywall";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { coachTodos, comingUp, lineupStatus, seasonRecord, type Todo } from "@/lib/dashboard";
@@ -58,6 +59,7 @@ export function HomeScreen() {
       tab="home"
       onTitleTap={mode === "supabase" ? () => setSwitching(true) : undefined}
     >
+      <PlanBanner />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div className="md:col-span-2">
           {next?.kind === "game" ? (

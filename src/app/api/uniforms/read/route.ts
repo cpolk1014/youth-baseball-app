@@ -1,3 +1,4 @@
+import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
@@ -92,6 +93,8 @@ export async function POST(request: NextRequest) {
     const allowed = (roles ?? []).some((r) => ["owner", "coach", "manager"].includes(r.role));
     if (!allowed || !team) return errorResponse(403, "Only coaches and managers set up uniforms.");
     if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up first.");
+    if (typeof teamId !== "string" || !(await teamHasPaid(supabase, teamId)))
+      return errorResponse(402, PAID_FEATURE_MESSAGE);
     ownerName = team.name;
   }
 

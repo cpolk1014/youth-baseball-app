@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate } from "./paywall";
 import { useState } from "react";
 import { permissionsFor } from "@/lib/data/permissions";
 import { saveSeasonRules, useAppData, useStoreState } from "@/lib/data/store";
@@ -185,15 +186,17 @@ export function FairPlayScreen() {
 
       <Sheet open={typing} title="Type a rule" onClose={() => setTyping(false)}>
         {typing && (
-          <TypedRuleForm
-            config={config}
-            team={team}
-            onCancel={() => setTyping(false)}
-            onAdd={(rules) => {
-              setCustom([...custom, ...rules]);
-              setTyping(false);
-            }}
-          />
+          <PaidGate feature="Typing rules with AI">
+            <TypedRuleForm
+              config={config}
+              team={team}
+              onCancel={() => setTyping(false)}
+              onAdd={(rules) => {
+                setCustom([...custom, ...rules]);
+                setTyping(false);
+              }}
+            />
+          </PaidGate>
         )}
       </Sheet>
 

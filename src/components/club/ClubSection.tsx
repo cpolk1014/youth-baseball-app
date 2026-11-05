@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { TEAM_PRICE_CENTS, dollars, seasonEnds, seasonFor } from "@/lib/billing/season";
 import type { TeamClub } from "@/lib/data/club-backend";
 import { clearPaidFlag } from "./paidFlag";
+import { refreshData } from "@/lib/data/store";
+import { planLine, usePlan } from "../paywall";
 import { useCheckoutReturn } from "../useCheckoutReturn";
 
 const field =
@@ -27,8 +29,12 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
   // Back from Stripe without paying: the Pay button works again.
   useCheckoutReturn(() => setPaying(false));
 
+  const { plan } = usePlan();
+
   useEffect(() => {
     let current = true;
+    // A new pass or club code changes what's unlocked: refresh the team's plan too.
+    if (look > 0) void refreshData();
     import("@/lib/data/club-backend")
       .then((m) => Promise.all([m.teamClub(teamId), m.teamPasses(teamId).catch(() => [])]))
       .then(
@@ -75,6 +81,7 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
       await m.redeemClubCode(teamId, code);
       setClub(await m.teamClub(teamId));
       setCode("");
+      void refreshData();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -113,8 +120,26 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
   };
 
   return (
-    <section className="mb-6 rounded-xl border-2 border-slate-200 bg-white p-4">
-      <h2 className="mb-1 text-sm font-bold tracking-wide text-slate-600 uppercase">Club</h2>
+    <section
+      id="plan"
+      className="mb-6 scroll-mt-20 rounded-xl border-2 border-slate-200 bg-white p-4"
+    >
+      <h2 className="mb-1 text-sm font-bold tracking-wide text-slate-600 uppercase">
+        Plan &amp; club
+      </h2>
+      {plan && (
+        <p
+          className={`mb-3 rounded-lg p-2 text-base font-semibold ${
+            plan.kind === "none"
+              ? "bg-red-50 text-red-900"
+              : plan.kind === "grace"
+                ? "bg-amber-50 text-amber-950"
+                : "bg-green-50 text-green-900"
+          }`}
+        >
+          {planLine(plan)}
+        </p>
+      )}
       {active ? (
         <p className="text-base">
           Part of <b>{club.club}</b> for {club.season}. The club can view this team&apos;s lineups,

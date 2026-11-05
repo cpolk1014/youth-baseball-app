@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate } from "../paywall";
 import { useState } from "react";
 import { isCoach } from "@/lib/data/permissions";
 import { deleteUniform, newId, saveUniform, useAppData } from "@/lib/data/store";
@@ -174,7 +175,11 @@ function Uniforms({ data }: { data: AppData }) {
       </Sheet>
 
       <Sheet open={reading} title="Build combos from a flyer" onClose={() => setReading(false)}>
-        {reading && <FlyerImport teamId={data.team.id} onDone={() => setReading(false)} />}
+        {reading && (
+          <PaidGate feature="The uniform flyer reader">
+            <FlyerImport teamId={data.team.id} onDone={() => setReading(false)} />
+          </PaidGate>
+        )}
       </Sheet>
     </AppShell>
   );

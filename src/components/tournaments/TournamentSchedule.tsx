@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate } from "../paywall";
 import Link from "next/link";
 import { useState } from "react";
 import type {
@@ -147,16 +148,18 @@ export function TournamentSchedule({
         onClose={() => setScoreShots(false)}
       >
         {scoreShots && games && (
-          <ScoresImport
-            data={data}
-            tournament={tournament}
-            games={games}
-            canEdit={canEdit}
-            onSaved={() => {
-              setScoreShots(false);
-              void load();
-            }}
-          />
+          <PaidGate feature="Reading scores from screenshots">
+            <ScoresImport
+              data={data}
+              tournament={tournament}
+              games={games}
+              canEdit={canEdit}
+              onSaved={() => {
+                setScoreShots(false);
+                void load();
+              }}
+            />
+          </PaidGate>
         )}
       </Sheet>
       <Sheet
@@ -165,17 +168,19 @@ export function TournamentSchedule({
         onClose={() => setImporting(false)}
       >
         {importing && games && (
-          <ScheduleImport
-            data={data}
-            tournament={tournament}
-            teams={teams}
-            saved={games}
-            ourName={ourName}
-            onSaved={() => {
-              setImporting(false);
-              void load();
-            }}
-          />
+          <PaidGate feature="Reading the schedule from screenshots">
+            <ScheduleImport
+              data={data}
+              tournament={tournament}
+              teams={teams}
+              saved={games}
+              ourName={ourName}
+              onSaved={() => {
+                setImporting(false);
+                void load();
+              }}
+            />
+          </PaidGate>
         )}
       </Sheet>
       <Sheet

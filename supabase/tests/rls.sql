@@ -1672,6 +1672,69 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002
 select pg_temp.expect((select count(*) from public.player_game_stat where opponent = 'Rays' and game_date = '2026-10-03' and batting->>'h' = '3') = 1, 'the family keeps the box score after the coach deletes the team');
 select pg_temp.expect((select count(*) from public.my_athletes() where name = 'Kept Kid') = 1, 'the kid''s record stays with the family');
 reset role;
+-- ── the paywall: trial, launch, passes with 5 days' grace; unpaid teams go read-only ──
+reset role;
+insert into public.team (id, name, age_group, created_by) values ('abababab-0000-4000-8000-000000000001', 'Trial Team', '9U', null);
+insert into public.member (team_id, user_id, role) values ('abababab-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'coach');
+insert into public.season (id, team_id, name) values ('abababab-0000-4000-8000-000000000002', 'abababab-0000-4000-8000-000000000001', 'Spring');
+insert into public.game (season_id, game_date, opponent) values ('abababab-0000-4000-8000-000000000002', '2027-04-01', 'Rays');
+insert into public.team_stats (season_id, file_name, data) values ('abababab-0000-4000-8000-000000000002', 's.csv', '{"columns": [], "players": [], "totals": null}');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- the coach
+select pg_temp.expect((select paid and kind = 'trial' and until = current_date + 14 from public.team_plan('abababab-0000-4000-8000-000000000001')), 'a new team gets a 14-day trial');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- not on the team
+select pg_temp.expect(not exists (select 1 from public.team_plan('abababab-0000-4000-8000-000000000001')), 'only the team sees its plan');
+-- The trial ends.
+reset role;
+update public.team set free_until = current_date - 1 where id = 'abababab-0000-4000-8000-000000000001';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- coach
+select pg_temp.expect((select not paid and kind = 'none' from public.team_plan('abababab-0000-4000-8000-000000000001')), 'after the trial, paid features lock');
+do $$ begin
+  insert into public.finance_entry (season_id, type, title, amount_cents, entry_date)
+    values ('abababab-0000-4000-8000-000000000002', 'walkoff', 'Ump fees', 5000, current_date);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when sqlstate 'P0402' then raise notice 'ok: unpaid teams can''t add to team money';
+end $$;
+do $$ begin
+  insert into public.play_assignment (team_id, title, play_ids) values ('abababab-0000-4000-8000-000000000001', 'Cutoffs', '{bunt-defense}');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when sqlstate 'P0402' then raise notice 'ok: unpaid teams can''t assign homework';
+end $$;
+do $$ begin
+  update public.team_stats set file_name = 'again.csv' where season_id = 'abababab-0000-4000-8000-000000000002';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when sqlstate 'P0402' then raise notice 'ok: unpaid teams can''t import stats';
+end $$;
+do $$ begin
+  update public.game set lineup_style = 'competitive' where season_id = 'abababab-0000-4000-8000-000000000002';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when sqlstate 'P0402' then raise notice 'ok: unpaid teams can''t switch to competitive lineups';
+end $$;
+do $$ begin
+  insert into public.team_groupme (team_id, bot_id) values ('abababab-0000-4000-8000-000000000001', 'abcdef0123456789abcdef01');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when sqlstate 'P0402' then raise notice 'ok: unpaid teams can''t connect GroupMe';
+end $$;
+select pg_temp.expect((select count(*) from public.game where season_id = 'abababab-0000-4000-8000-000000000002') = 1 and (select count(*) from public.team_stats where season_id = 'abababab-0000-4000-8000-000000000002') = 1, 'what the team made stays, read-only');
+-- A team pass that ended 3 days ago: still working (5 days' grace).
+reset role;
+insert into public.team_pass (team_id, season_label, expires_on) values ('abababab-0000-4000-8000-000000000001', '2025-26', current_date - 3);
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- coach
+select pg_temp.expect((select paid and kind = 'grace' and until = current_date + 2 from public.team_plan('abababab-0000-4000-8000-000000000001')), 'a pass keeps working for 5 days after it ends');
+insert into public.finance_entry (season_id, type, title, amount_cents, entry_date)
+  values ('abababab-0000-4000-8000-000000000002', 'walkoff', 'Grace fees', 5000, current_date);
+select pg_temp.expect((select count(*) from public.finance_entry where title = 'Grace fees') = 1, 'during the grace days the team can still add');
+-- Fully unpaid again, the coach can still delete the (optioned) team, money and all.
+reset role;
+delete from public.team_pass where team_id = 'abababab-0000-4000-8000-000000000001';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- coach
+update public.team set optioned_at = now() where id = 'abababab-0000-4000-8000-000000000001';
+delete from public.team where id = 'abababab-0000-4000-8000-000000000001';
+select pg_temp.expect((select count(*) from public.team where id = 'abababab-0000-4000-8000-000000000001') = 0, 'an unpaid team can still be deleted');
+reset role;
 -- ── game places ──
 update public.game set location = 'Traction Sports Complex', field = 'Chabills Field', location_lat = 30.2, location_lng = -92.0
   where id = 'eeeeeeee-0000-4000-8000-000000000020';

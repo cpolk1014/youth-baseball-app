@@ -1,5 +1,6 @@
 "use client";
 
+import type { TeamPlan } from "@/lib/data/types";
 import type { Lineup, Player } from "@/lib/rules/types";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import {
@@ -210,6 +211,25 @@ export async function loadFromSupabase(
   const groupme = check<{ bot_id: string; group_name: string | null } | null>(
     await sb.from("team_groupme").select("bot_id,group_name").eq("team_id", team.id).maybeSingle(),
   );
+  const { data: planRows } = await sb.rpc("team_plan", { p_team: team.id });
+  const planRow = (
+    (planRows ?? []) as {
+      paid: boolean;
+      kind: TeamPlan["kind"];
+      until: string | null;
+      ends: string | null;
+      next_season: boolean;
+    }[]
+  )[0];
+  const plan: TeamPlan | undefined = planRow
+    ? {
+        paid: planRow.paid,
+        kind: planRow.kind,
+        until: planRow.until,
+        ends: planRow.ends,
+        nextSeason: planRow.next_season,
+      }
+    : undefined;
   const { count: tournamentCount } = await sb
     .from("tournament")
     .select("id", { count: "exact", head: true })
@@ -264,6 +284,7 @@ export async function loadFromSupabase(
         groupme,
         uniforms,
         tournamentCount: tournamentCount ?? 0,
+        plan,
         userId: user?.id ?? "",
         myTeams,
       },

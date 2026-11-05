@@ -1,3 +1,4 @@
+import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { PLAYS } from "@/lib/plays/library";
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
   );
   if (!canPlan || !team) return errorResponse(403, "Only coaches and managers can plan practices.");
   if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up first.");
+  if (!(await teamHasPaid(supabase, teamId))) return errorResponse(402, PAID_FEATURE_MESSAGE);
   const list = (practices ?? []).map((p) => ({
     id: p.id as string,
     date: p.practice_date as string,

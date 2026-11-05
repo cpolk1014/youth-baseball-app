@@ -1,5 +1,6 @@
 "use client";
 
+import { PlanBanner, usePlan } from "./paywall";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -33,6 +34,7 @@ export function GamesScreen() {
   const [importing, setImporting] = useState(false);
   const { mode } = useStoreState();
   const [switching, setSwitching] = useState(false);
+  const { paid } = usePlan();
 
   if (!data) {
     return (
@@ -45,7 +47,9 @@ export function GamesScreen() {
   const { upcoming, final } = splitGames(data.games);
   const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
   // The import needs the server (and a signal); otherwise go straight to the form.
-  const canImport = mode === "supabase" && (typeof navigator === "undefined" || navigator.onLine);
+  // Importing a schedule is a paid (AI) feature; adding games by hand is free.
+  const canImport =
+    paid && mode === "supabase" && (typeof navigator === "undefined" || navigator.onLine);
   const startAdd = () => (canImport ? setImporting(true) : addManually());
   const addManually = () =>
     setAdding({
@@ -81,6 +85,7 @@ export function GamesScreen() {
     >
       {/* Keyboards: N adds a game. */}
       <Shortcut keyName="n" run={startAdd} enabled={canEdit} />
+      <PlanBanner />
       <MoneyNudge />
       {upcoming[0] && <NextGame game={upcoming[0]} data={data} />}
       <Section title="Upcoming" games={upcoming} data={data} empty="No upcoming games." />

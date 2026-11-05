@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate } from "../paywall";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -111,14 +112,16 @@ export function TournamentsScreen() {
       )}
       <Sheet open={adding} title="Add a tournament" onClose={() => setAdding(false)}>
         {adding && (
-          <AddTournament
-            data={data}
-            onSaved={(id) => {
-              setAdding(false);
-              setTournamentCount((list?.length ?? 0) + 1);
-              router.push(`/tournaments/${id}`);
-            }}
-          />
+          <PaidGate feature="Adding a tournament from screenshots">
+            <AddTournament
+              data={data}
+              onSaved={(id) => {
+                setAdding(false);
+                setTournamentCount((list?.length ?? 0) + 1);
+                router.push(`/tournaments/${id}`);
+              }}
+            />
+          </PaidGate>
         )}
       </Sheet>
     </>,

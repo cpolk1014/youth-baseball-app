@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate, usePlan } from "./paywall";
 import { useState } from "react";
 import { postToGroupMe } from "@/lib/data/store";
 
@@ -18,6 +19,7 @@ export function GroupMePost({
   const [text, setText] = useState(initialText);
   const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);
+  const { paid } = usePlan();
 
   const send = async () => {
     setState("sending");
@@ -32,6 +34,8 @@ export function GroupMePost({
     }
   };
 
+  // Posting to GroupMe is a paid feature.
+  if (!paid) return <PaidGate feature="Posting to GroupMe">{null}</PaidGate>;
   return (
     <div className="flex flex-col gap-3">
       <textarea

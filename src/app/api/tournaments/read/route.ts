@@ -1,3 +1,4 @@
+import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { MAX_SCREENSHOTS } from "@/lib/tournaments/event";
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest) {
       : (roles ?? []).some((r) => ["owner", "coach", "manager"].includes(r.role));
   if (!allowed || !team) return errorResponse(403, "Only coaches and managers can do that.");
   if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up first.");
+  if (!(await teamHasPaid(supabase, teamId))) return errorResponse(402, PAID_FEATURE_MESSAGE);
 
   const today = new Date().toISOString().slice(0, 10);
   const context = `Today is ${today}. The team adding this is ${team.name} (${team.age_group ?? "age not set"}). List every division and its teams.`;

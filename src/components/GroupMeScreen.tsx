@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate } from "./paywall";
 import { useState } from "react";
 import { permissionsFor } from "@/lib/data/permissions";
 import {
@@ -43,12 +44,14 @@ export function GroupMeScreen() {
 
   if (!data.groupme || changing) {
     return shell(
-      <ConnectForm
-        initialBotId={data.groupme?.botId ?? ""}
-        initialGroup={data.groupme?.groupName ?? ""}
-        onDone={() => setChanging(false)}
-        onCancel={data.groupme ? () => setChanging(false) : undefined}
-      />,
+      <PaidGate feature="GroupMe">
+        <ConnectForm
+          initialBotId={data.groupme?.botId ?? ""}
+          initialGroup={data.groupme?.groupName ?? ""}
+          onDone={() => setChanging(false)}
+          onCancel={data.groupme ? () => setChanging(false) : undefined}
+        />
+      </PaidGate>,
     );
   }
 

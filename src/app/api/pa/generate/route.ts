@@ -1,3 +1,4 @@
+import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import { NextResponse, type NextRequest } from "next/server";
 import { paAccess } from "@/lib/pa/access";
 import { AudioMakerError, makeAnnouncement, makeSong, makeSoundEffect } from "@/lib/pa/elevenlabs";
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
     kind === "sound" ? null : str(body?.playerId, 40),
   );
   if (!access.ok) return errorResponse(access.status, access.error);
+  if (!(await teamHasPaid(supabase, teamId))) return errorResponse(402, PAID_FEATURE_MESSAGE);
   const { player } = access;
 
   const { data: usage, error: usageError } = await supabase

@@ -1,3 +1,4 @@
+import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { paAccess } from "@/lib/pa/access";
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
 
   const access = await paAccess(supabase, user.id, teamId, playerId);
   if (!access.ok) return errorResponse(access.status, access.error);
+  if (!(await teamHasPaid(supabase, teamId))) return errorResponse(402, PAID_FEATURE_MESSAGE);
   const call = {
     rosterName: access.player!.name,
     jerseyNumber: access.player!.jersey_number,

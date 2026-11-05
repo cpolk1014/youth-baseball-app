@@ -16,6 +16,7 @@ import type {
   Practice,
   QuizResult,
   TeamSummary,
+  TeamPlan,
 } from "@/lib/data/types";
 import type {
   GameRow,
@@ -56,6 +57,8 @@ export interface TeamRows {
   uniforms?: UniformComboRow[];
   /** Missing in older callers (tests): none. */
   tournamentCount?: number;
+  /** Missing in older callers (tests): no plan (everything open). */
+  plan?: TeamPlan;
   /** The signed-in user. */
   userId: string;
   myTeams: TeamSummary[];
@@ -419,6 +422,7 @@ export function appDataFromRows(
       : null,
     uniforms: (rows.uniforms ?? []).map(uniformFromRow),
     tournamentCount: rows.tournamentCount ?? 0,
+    plan: rows.plan,
     team: {
       id: rows.team.id,
       name: rows.team.name,

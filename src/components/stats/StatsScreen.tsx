@@ -1,5 +1,6 @@
 "use client";
 
+import { PaidGate } from "../paywall";
 import { useMemo, useState } from "react";
 import { isCoach } from "@/lib/data/permissions";
 import { useAppData } from "@/lib/data/store";
@@ -95,15 +96,17 @@ function Stats({ data }: { data: AppData }) {
 
       <Sheet open={importing} title="Import from GameChanger" onClose={() => setImporting(false)}>
         {importing && (
-          <ImportStats
-            data={data}
-            replacing={stats ? formatWhen(stats.importedAt) : null}
-            onCancel={() => setImporting(false)}
-            onImport={async (fileName, next) => {
-              await save(fileName, next);
-              setImporting(false);
-            }}
-          />
+          <PaidGate feature="The GameChanger stats import">
+            <ImportStats
+              data={data}
+              replacing={stats ? formatWhen(stats.importedAt) : null}
+              onCancel={() => setImporting(false)}
+              onImport={async (fileName, next) => {
+                await save(fileName, next);
+                setImporting(false);
+              }}
+            />
+          </PaidGate>
         )}
       </Sheet>
     </AppShell>

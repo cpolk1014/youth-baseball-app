@@ -1,3 +1,4 @@
+import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { interpretationSchema, type Interpretation } from "@/lib/rules/interpret";
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
   if (!team || !(roles ?? []).some((r) => r.role === "owner" || r.role === "coach")) {
     return errorResponse(403, "Only coaches set fair-play rules.");
   }
+  if (!(await teamHasPaid(supabase, teamId))) return errorResponse(402, PAID_FEATURE_MESSAGE);
   const names = (players ?? []).map((p) => p.name);
   const context = [
     `Team type: ${team.coach_pitch ? "coach pitch (P is a fielding spot; no pitching rules)" : "kid pitch"}.`,

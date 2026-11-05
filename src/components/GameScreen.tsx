@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlan } from "./paywall";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -65,6 +66,8 @@ export function GameScreen({ gameId }: { gameId: string }) {
   });
   const [posting, setPosting] = useState(false);
   const [sharing, setSharing] = useState(false);
+  // Competitive lineups are a paid feature.
+  const { paid } = usePlan();
   // Only coaches and managers can see stats (the database enforces it).
   const seesStats = !!data && (isCoach(data.me.role) || data.me.role === "manager");
   const stats = useTeamStats(data?.season.id ?? "", seesStats);
@@ -319,7 +322,9 @@ export function GameScreen({ gameId }: { gameId: string }) {
                     key={s}
                     role="radio"
                     aria-checked={style === s}
-                    disabled={s === "competitive" && !hasStats && style !== "competitive"}
+                    disabled={
+                      s === "competitive" && (!hasStats || !paid) && style !== "competitive"
+                    }
                     onClick={() => setLineupStyle(game.id, s)}
                     className={`min-h-12 rounded-xl px-2 py-1 text-base font-bold disabled:opacity-40 ${
                       style === s
@@ -327,7 +332,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
                         : "border-2 border-slate-300 bg-white text-slate-800 active:bg-slate-100"
                     }`}
                   >
-                    {s === "fair" ? "Fair play" : "Competitive"}
+                    {s === "fair" ? "Fair play" : paid ? "Competitive" : "🔒 Competitive"}
                     <span className="block text-xs font-semibold opacity-80">
                       {s === "fair" ? "Everyone plays evenly" : "From GameChanger stats"}
                     </span>

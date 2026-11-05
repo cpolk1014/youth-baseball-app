@@ -201,4 +201,18 @@ export interface AppData {
   uniforms: UniformCombo[];
   /** How many tournaments the team has (the menu shows Tournaments once there's one). */
   tournamentCount?: number;
+  /** The team's plan (paid features); missing in local mode, where everything's open. */
+  plan?: TeamPlan;
+}
+
+/** Whether a team can use RallyCap's paid features, and why (see `team_plan`). */
+export interface TeamPlan {
+  paid: boolean;
+  /** club / pass: paid through `until`; grace: ended `ends`, works through `until`;
+   * trial / launch: free through `until`; none: paid features are locked. */
+  kind: "club" | "pass" | "grace" | "trial" | "launch" | "none";
+  until: string | null;
+  ends: string | null;
+  /** Next season (from June) is already paid. */
+  nextSeason: boolean;
 }
