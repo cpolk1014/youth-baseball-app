@@ -5,6 +5,7 @@ import { MAX_KIDS, statsPriceCents } from "@/lib/billing/family";
 import { dollars } from "@/lib/billing/season";
 import { useStoreState } from "@/lib/data/store";
 import { getBrowserSupabase } from "@/lib/supabase/client";
+import { useCheckoutReturn } from "../useCheckoutReturn";
 
 export interface StatsPass {
   passId: string;
@@ -133,6 +134,8 @@ export function BuyPlayerStats({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Back from Stripe without paying: the button works again.
+  useCheckoutReturn(() => setBusy(false));
 
   const setTo = (n: number) => {
     const next = Math.min(MAX_KIDS, Math.max(1, n));

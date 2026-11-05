@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useCheckoutReturn } from "../useCheckoutReturn";
 import {
   CLUB_PRICE_CENTS,
   MAX_CLUB_TEAMS,
@@ -29,6 +30,8 @@ export function BuyCodes({ clubId, onCancel }: { clubId?: string; onCancel?: () 
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Back from Stripe without paying: the button works again.
+  useCheckoutReturn(() => setBusy(false));
   const valid = teams >= 1 && teams <= MAX_CLUB_TEAMS && (clubId || name.trim().length > 0);
 
   const pay = async () => {

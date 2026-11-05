@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { TEAM_PRICE_CENTS, dollars, seasonEnds, seasonFor } from "@/lib/billing/season";
 import type { TeamClub } from "@/lib/data/club-backend";
 import { clearPaidFlag } from "./paidFlag";
+import { useCheckoutReturn } from "../useCheckoutReturn";
 
 const field =
   "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 font-mono text-lg tracking-widest uppercase focus:border-[var(--team)] focus:outline-none";
@@ -23,6 +24,8 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Back from Stripe without paying: the Pay button works again.
+  useCheckoutReturn(() => setPaying(false));
 
   useEffect(() => {
     let current = true;
