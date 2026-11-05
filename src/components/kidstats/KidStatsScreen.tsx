@@ -21,6 +21,14 @@ import { StrikeChart, TrendChart } from "../charts/Charts";
 import { useToday } from "../useToday";
 import { battingTrend, pitchingTrend, playerCardModel } from "@/lib/boxscore/trends";
 import { useKidGames } from "./kidGames";
+import {
+  defaultYears,
+  inYears,
+  toggleYear,
+  yearsLabel,
+  yearsOf,
+  type YearPick,
+} from "@/lib/boxscore/years";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 
@@ -48,6 +56,8 @@ function KidStats({ data }: { data: AppData }) {
   const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState<KidGame | null>(null);
   const [sharing, setSharing] = useState(false);
+  // The years picked, per kid (opens on this year when there's more than one).
+  const [pickBy, setPickBy] = useState<Record<string, YearPick>>({});
   const today = useToday();
 
   const shell = (children: React.ReactNode) => (
@@ -70,7 +80,11 @@ function KidStats({ data }: { data: AppData }) {
 
   const mine = games.filter((g) => g.playerId === kid.id);
   const year = Number((today || "2026").slice(0, 4));
-  const t = seasonTotals(mine);
+  const years = yearsOf(mine);
+  const pick = pickBy[kid.id] ?? defaultYears(years, year);
+  const shown = inYears(mine, pick);
+  const span = years.length <= 1 ? "season" : yearsLabel(pick);
+  const t = seasonTotals(shown);
   const b = t.batting;
   const stat = (label: string, value: string | number, big = false) => (
     <div className="flex flex-col items-center rounded-lg bg-slate-50 px-2 py-2">
@@ -125,9 +139,38 @@ function KidStats({ data }: { data: AppData }) {
         </p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 md:items-start">
+          {years.length > 1 && (
+            <div className="md:col-span-2">
+              <p className="mb-1 text-sm font-semibold text-slate-600">
+                Years (tap more than one to add them up)
+              </p>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Years">
+                <button
+                  onClick={() => setPickBy({ ...pickBy, [kid.id]: "all" })}
+                  aria-pressed={pick === "all"}
+                  className={`h-11 rounded-full px-4 text-base font-bold ${pick === "all" ? "bg-[var(--team)] text-white" : "border-2 border-slate-300 bg-white"}`}
+                >
+                  All years
+                </button>
+                {years.map((y) => {
+                  const on = pick !== "all" && pick.includes(y);
+                  return (
+                    <button
+                      key={y}
+                      onClick={() => setPickBy({ ...pickBy, [kid.id]: toggleYear(pick, y) })}
+                      aria-pressed={on}
+                      className={`h-11 rounded-full px-4 text-base font-bold tabular-nums ${on ? "bg-[var(--team)] text-white" : "border-2 border-slate-300 bg-white"}`}
+                    >
+                      {y}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <section className="rounded-xl border-2 border-slate-200 bg-white p-3">
             <h2 className={heading}>
-              {kid.name}&apos;s season · {t.games} game{t.games === 1 ? "" : "s"}
+              {kid.name}&apos;s {span} · {t.games} game{t.games === 1 ? "" : "s"}
               {t.wins + t.losses > 0 ? ` · ${t.wins}-${t.losses}` : ""}
             </h2>
             <div className="mb-2 grid grid-cols-4 gap-2">
@@ -189,7 +232,7 @@ function KidStats({ data }: { data: AppData }) {
           <section>
             <h2 className={heading}>Games</h2>
             <ul className="flex flex-col gap-2">
-              {mine.map((g) => (
+              {shown.map((g) => (
                 <li key={g.id}>
                   <button
                     onClick={() => setOpen(g)}
@@ -201,6 +244,7 @@ function KidStats({ data }: { data: AppData }) {
                         {new Date(`${g.gameDate}T12:00`).toLocaleDateString(undefined, {
                           month: "short",
                           day: "numeric",
+                          ...(years.length > 1 ? { year: "numeric" as const } : {}),
                         })}
                         {g.ourRuns !== null && g.theirRuns !== null
                           ? ` · ${g.ourRuns > g.theirRuns ? "W" : g.ourRuns < g.theirRuns ? "L" : "T"} ${g.ourRuns}–${g.theirRuns}`
@@ -215,11 +259,11 @@ function KidStats({ data }: { data: AppData }) {
           </section>
 
           {/* Season trends: how the numbers moved game by game. */}
-          {mine.length >= 2 && (
+          {shown.length >= 2 && (
             <div className="flex flex-col gap-4 md:col-span-2 md:grid md:grid-cols-2 md:items-start">
-              <TrendChart points={battingTrend(mine)} year={year} />
-              {pitchingTrend(mine).length >= 2 && (
-                <StrikeChart points={pitchingTrend(mine)} year={year} />
+              <TrendChart points={battingTrend(shown)} year={year} />
+              {pitchingTrend(shown).length >= 2 && (
+                <StrikeChart points={pitchingTrend(shown)} year={year} />
               )}
             </div>
           )}
@@ -234,7 +278,12 @@ function KidStats({ data }: { data: AppData }) {
               name: kid.name,
               jersey: kid.jerseyNumber ?? null,
               teamName: data.team.name,
-              season: data.season.name,
+              season:
+                years.length <= 1
+                  ? data.season.name
+                  : pick === "all"
+                    ? "All years"
+                    : yearsLabel(pick),
               totals: t,
             })}
           />
