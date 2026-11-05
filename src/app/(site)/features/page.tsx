@@ -101,7 +101,7 @@ export default function FeaturesPage() {
       <PageHero
         eyebrow="Features"
         title="Everything your season runs on. AI where it saves you time."
-        lead="From the first practice to the last bracket game. Built for the dugout: big buttons, sunlight-bright, one hand."
+        lead="From the first practice to the last bracket game. Built for the dugout: big buttons, readable in full sun, and works one-handed while the other hand holds a bucket of balls."
       >
         <Cta />
       </PageHero>
@@ -111,7 +111,7 @@ export default function FeaturesPage() {
           <div>
             <Ai>AI tools</Ai>
             <h2 className="mt-3 text-3xl font-black tracking-tight md:text-4xl">
-              Seven ways AI takes work off your plate.
+              Seven jobs you can stop doing.
             </h2>
             <p className="mt-3 text-white/75">Team and Club plans, and every trial.</p>
             <Link
@@ -204,11 +204,11 @@ export default function FeaturesPage() {
       <Section tone="mist">
         <div className="text-center">
           <h2 className="text-3xl font-black tracking-tight text-[#1B2A4A] md:text-4xl">
-            Your whole season on one screen.
+            Your whole season on one screen. Finally.
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
-            On a laptop or tablet: the next game, the record, what needs doing and who&apos;s
-            sitting too much.
+            On a laptop or tablet: the next game, the record, what needs doing and who&apos;s been
+            sitting too much (before their parents notice).
           </p>
         </div>
         <Laptop

@@ -23,37 +23,37 @@ import { LowRisk, PricingGrid } from "@/components/site/Pricing";
 export const metadata: Metadata = {
   title: { absolute: "RallyCap: AI-Powered Youth Baseball | Lineups, Schedules & Tournaments" },
   description:
-    "Snap your schedule and AI adds every game. Get practice plans for your age group and fair lineups in two minutes. Built by a travel ball coach. Free 14-day trial.",
+    "Snap your schedule and AI adds every game. Get practice plans for your age group and fair lineups in two minutes. Built by a travel ball coach who writes software for a living. Free 14-day trial.",
   alternates: { canonical: "/" },
 };
 
 const PROBLEMS = [
-  ["Typing", "a 40-game schedule into a spreadsheet, one game at a time."],
-  ["Planning", "practice the night before. Again."],
-  ["Redoing", "the lineup at midnight so everyone gets fair innings."],
-  ["Answering", "“what time do we play?” forty times."],
-  ["Working out", "tournament seeding on Saturday night with a pencil."],
+  ["Typing", "a 40-game schedule into a spreadsheet. At 11\u00a0p.m. With one eye open."],
+  ["Planning", "practice in the parking lot. Five minutes before practice."],
+  ["Redoing", "the lineup because somebody's dad has been counting innings."],
+  ["Answering", "“what time do we play?” in the group chat. Forty times. Same game."],
+  ["Doing", "pool-play math on a napkin at the hotel breakfast."],
 ];
 
 const MAGIC = [
   {
     title: "Snap the schedule. AI adds every game.",
-    body: "A photo, PDF or spreadsheet of your season or tournament schedule. AI reads the dates, times, opponents and fields, and you check them before they're added.",
+    body: "Screenshot it, photo it, PDF it, spreadsheet it. AI reads every date, time, opponent and field. You check it, tap Add, and get back to pretending you're not watching the 8U game on the next field.",
     screen: <AiScheduleScreen />,
   },
   {
-    title: "Practice plans written for your age group.",
-    body: "Tell AI what your team needs (“more two-strike approach, better cutoffs”). It plans every practice of your season: drills timed to fit, plays to work on, coaching for 7U or 14U.",
+    title: "Practice plans that aren't just “take BP.”",
+    body: "Tell AI what your team needs, like “stop throwing to the wrong base.” It plans every practice of your season: drills timed to the minute, plays to work on, and coaching made for 7U or 14U.",
     screen: <AiPracticeScreen />,
   },
   {
-    title: "Tournaments, read in seconds.",
-    body: "Screenshot the event page, the pool schedule, the bracket, even the tie-breaker rules. AI reads it all. Snap the results page and it adds the scores.",
+    title: "Tournament weekend, minus the napkin math.",
+    body: "Screenshot the event page, the pool schedule, the bracket, even the tie-breaker rules nobody reads. AI reads them. Snap the results page and it adds the scores.",
     screen: <TournamentScreen />,
   },
   {
-    title: "Big-league walk-ups, made by AI.",
-    body: "AI writes the lyrics, makes the song, and records a stadium announcer calling the kid's name and number. Every kid gets their moment.",
+    title: "Big-league walk-up songs. (He's nine.)",
+    body: "AI writes the lyrics, makes the song and gets a stadium announcer to call your kid's name and number. Every kid gets their moment. Every parent gets the video.",
     screen: <WalkupScreen />,
   },
 ];
@@ -77,12 +77,13 @@ export default function HomePage() {
               ✨ AI-powered youth baseball · 7U–14U
             </p>
             <h1 className="text-5xl leading-[1.02] font-black tracking-tight text-balance md:text-7xl lg:text-6xl xl:text-7xl">
-              Your AI assistant coach.
+              Finally, an assistant coach with no kid on the team.
             </h1>
             <p className="mt-6 max-w-xl text-xl leading-relaxed text-white/85 text-pretty">
-              Snap a picture of your schedule and AI adds every game. Tell it what your team needs
-              and it plans every practice. Then get a fair lineup in two minutes.{" "}
-              <b className="text-white">You coach. RallyCap handles the rest.</b>
+              RallyCap&apos;s AI types in your schedule, plans your practices and reads the
+              tournament bracket. The lineup engine hands out fair innings, receipts included.{" "}
+              <b className="text-white">You just coach.</b> (And find your kid&apos;s other batting
+              glove.)
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Cta />
@@ -115,15 +116,15 @@ export default function HomePage() {
           </span>
           <p className="max-w-3xl text-lg text-slate-700">
             <b className="text-[#1B2A4A]">
-              Built by a travel ball dad who coaches, and put AI to work on the parts coaches hate.
+              Built by a travel ball coach who writes software for a living.
             </b>{" "}
-            Seven years in the travel ball grind, three as a head coach, four as the team&apos;s
-            GameChanger guy.{" "}
+            Seven years of 7&nbsp;a.m. games, four as the GameChanger guy, three as a 7U head coach.
+            Eventually he did what developers do: built an app instead of complaining.{" "}
             <Link
               href="/story"
               className="font-semibold text-[#DC143C] underline-offset-4 hover:underline"
             >
-              Craig, founder &amp; 7U head coach →
+              Meet Craig →
             </Link>
           </p>
         </div>
@@ -134,9 +135,12 @@ export default function HomePage() {
         <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
           <div>
             <Eyebrow>The problem</Eyebrow>
-            <H2>Coaching takes two hours a week. Running the team takes ten.</H2>
+            <H2>The baseball is the easy part.</H2>
+            <p className="mt-4 text-xl text-slate-600">
+              Coaching takes two hours a week. Running the team takes ten.
+            </p>
             <p className="mt-6 text-2xl font-bold text-[#DC143C]">
-              What if most of that just… got done for you?
+              What if a robot did all that? A nice one. It loves baseball.
             </p>
           </div>
           <ul className="flex flex-col gap-3">
@@ -161,8 +165,8 @@ export default function HomePage() {
           <H2>Point your phone at it. AI handles it.</H2>
           <Lead>
             <span className="mx-auto block">
-              The typing, planning and figuring out behind a travel team, done by AI and checked by
-              you.
+              The typing, the planning and the figuring out. Done by AI, checked by you, finished
+              before game two of the doubleheader.
             </span>
           </Lead>
         </div>
@@ -191,8 +195,8 @@ export default function HomePage() {
                 Your rules, in plain English.
               </h3>
               <p className="mt-2 text-slate-600">
-                “Mason catches at least two innings.” AI turns what you type into lineup rules, and
-                checks them against your roster.
+                Type “Mason catches at least two innings.” AI turns it into a lineup rule and checks
+                it against your roster. No digging through settings.
               </p>
             </div>
             <div className="hidden sm:block">
@@ -203,8 +207,8 @@ export default function HomePage() {
             <Ai />
             <h3 className="mt-3 text-2xl font-black text-[#1B2A4A]">Uniforms from the flyer.</h3>
             <p className="mt-2 text-slate-600">
-              Snap the uniform flyer and AI lists every combo (shirt, pants, hat, belt and socks),
-              ready to pick for each game.
+              Snap the uniform flyer and AI lists every combo, ready to pick for each game. Now
+              nobody shows up in white pants on gray day. (Somebody still will.)
             </p>
             <Link
               href="/ai"
@@ -221,24 +225,24 @@ export default function HomePage() {
         <div className="grid gap-12 lg:grid-cols-[1fr_1.1fr] lg:items-center">
           <div>
             <Eyebrow>Smart where it counts</Eyebrow>
-            <H2>AI clears your plate. The smart engine runs your game.</H2>
+            <H2>AI does the busywork. The lineup engine keeps the peace.</H2>
             <div className="mt-8 grid gap-6 sm:grid-cols-2">
               {[
                 [
-                  "⚾ Fair lineups in two minutes",
-                  "Tap Auto-fill. Every inning follows your fair-play rules, and Why this lineup? explains every spot.",
+                  "⚾ Fair lineups, with receipts",
+                  "Tap Auto-fill. Every inning follows your fair-play rules, and Why this lineup? explains every spot before anyone asks in the parking lot.",
                 ],
                 [
                   "📣 Game day on autopilot",
-                  "The game day post goes to your GroupMe automatically: field, time, arrive by and uniform.",
+                  "The game day post hits your GroupMe on its own: field, time, arrive by and uniform. Fewer “what time?” texts. Not zero. Never zero.",
                 ],
                 [
                   "🏁 What time do we play tomorrow?",
-                  "Every way your seed can still land, with the game time and what has to happen.",
+                  "Every way your seed can still land, with the game time and what has to happen. Settled before the hotel pool closes.",
                 ],
                 [
-                  "💵 Team money everyone can see",
-                  "Fees split across the roster, payments, expenses and receipts. Every family knows what they owe.",
+                  "💵 Team money, out in the open",
+                  "Fees split across the roster, payments, expenses and receipts. Every family knows what they owe, and where the umpire money went.",
                 ],
               ].map(([t, b]) => (
                 <div key={t}>
@@ -263,7 +267,7 @@ export default function HomePage() {
       <Section tone="navy">
         <div className="text-center">
           <Eyebrow light>How it works</Eyebrow>
-          <H2 light>From zero to game ready in one evening.</H2>
+          <H2 light>Set it up tonight. Look organized by Saturday.</H2>
         </div>
         <ol className="mt-12 grid gap-6 md:grid-cols-3">
           {[
@@ -271,10 +275,13 @@ export default function HomePage() {
               "Add your roster",
               "Names, numbers and who can pitch and catch. Invite coaches and parents with a link.",
             ],
-            ["Snap your schedule", "AI adds every game and practice. Check them, tap Add."],
+            [
+              "Snap your schedule",
+              "AI adds every game and practice. Check them, tap Add. That's it. That's the step.",
+            ],
             [
               "Tell AI your goals",
-              "Practice plans for the season, done. Then tap Auto-fill for a fair lineup before every game.",
+              "A season of practice plans, done. Then tap Auto-fill before every game and look like a genius.",
             ],
           ].map(([t, b], i) => (
             <li key={t} className="rounded-3xl bg-white/5 p-6 ring-1 ring-white/10">
@@ -295,12 +302,12 @@ export default function HomePage() {
       <Section tone="mist">
         <div className="mx-auto max-w-3xl">
           <Eyebrow>From the dugout</Eyebrow>
-          <H2>“I put AI on everything I hated about running a team.”</H2>
+          <H2>“I write software for a living. So I made the computer do the annoying parts.”</H2>
           <blockquote className="mt-8 flex flex-col gap-4 border-l-4 border-[#DC143C] pl-6 text-lg leading-relaxed text-slate-700">
             <p>
               My stepson and my nephew started travel ball at 7. They&apos;re 14 now. I&apos;ve been
               the GameChanger guy, the dad in the bleachers, and for three years the head coach of a
-              7U team.
+              7U team. By day, I build software.
             </p>
             <p>
               The baseball was never the hard part. It was typing in schedules, planning practices
@@ -308,12 +315,15 @@ export default function HomePage() {
               tournament seeding with a pencil.
             </p>
             <p>
-              So I built RallyCap and put AI on the busywork. Now I snap the schedule instead of
-              typing it. I tell it what my team needs and get a practice plan.{" "}
+              One night, somewhere between the third lineup rewrite and the fortieth “what time do
+              we play?” text, the developer in me snapped. So I built RallyCap and put AI on the
+              busywork. Now I snap the schedule instead of typing it.{" "}
               <b className="text-[#1B2A4A]">And I spend my time coaching kids.</b>
             </p>
           </blockquote>
-          <p className="mt-6 pl-7 font-bold text-[#1B2A4A]">Craig, founder &amp; 7U head coach</p>
+          <p className="mt-6 pl-7 font-bold text-[#1B2A4A]">
+            Craig, founder, software developer &amp; 7U head coach
+          </p>
           <Link
             href="/story"
             className="mt-6 inline-block pl-7 font-bold text-[#DC143C] underline-offset-4 hover:underline"
@@ -327,7 +337,7 @@ export default function HomePage() {
       <Section>
         <div className="text-center">
           <Eyebrow>Pricing</Eyebrow>
-          <H2>Start free. Turn on the AI when you&apos;re ready.</H2>
+          <H2>Less than one tournament entry fee. For the whole season.</H2>
         </div>
         <PricingGrid />
         <LowRisk />
@@ -352,10 +362,11 @@ export default function HomePage() {
       <section className="relative overflow-hidden bg-[#1B2A4A] px-4 py-20 text-center text-white sm:px-6">
         <div aria-hidden className="absolute inset-x-0 top-0 h-2 bg-[#DC143C]" />
         <h2 className="mx-auto max-w-3xl text-4xl leading-tight font-black tracking-tight text-balance md:text-6xl">
-          Let AI run the busywork. You coach the kids.
+          Go coach. We&apos;ve got the typing.
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-xl text-white/80">
-          Snap your schedule tonight. Have a fair lineup before first pitch.
+          Snap your schedule tonight. Have a fair lineup before first pitch. Maybe even beat the
+          other team to the field.
         </p>
         <div className="mt-8">
           <Cta />

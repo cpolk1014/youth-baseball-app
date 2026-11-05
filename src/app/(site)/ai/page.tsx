@@ -22,7 +22,7 @@ export default function AiPage() {
       <PageHero
         eyebrow="✨ RallyCap AI"
         title="AI-powered youth baseball."
-        lead="The work behind a travel team, from schedules to practice plans to tournament weekends, done by AI and checked by you."
+        lead="AI that does the stuff you used to do at 11 p.m. Schedules, practice plans, tournament brackets, walk-up songs. It does the work, you check it, everybody thinks you're very organized."
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Cta />
@@ -43,13 +43,15 @@ export default function AiPage() {
               (dates, times, opponents, places) and shows you the list to check before anything is
               added.
             </p>
-            <p className="font-bold text-[#1B2A4A]">No more typing in 40 games one at a time.</p>
+            <p className="font-bold text-[#1B2A4A]">
+              No more typing in 40 games one at a time. Your thumbs will thank you.
+            </p>
           </FeatureRow>
 
           <FeatureRow
             flip
             label={<Ai>Practice plans</Ai>}
-            title="A season of practices, planned for your age group."
+            title="A whole season of practices. Planned before you finish your coffee."
             visual={<AiPracticeScreen />}
           >
             <p>
@@ -67,7 +69,7 @@ export default function AiPage() {
 
           <FeatureRow
             label={<Ai>Tournament reader</Ai>}
-            title="Tournament weekends, read for you."
+            title="Tournament weekends, without the napkin math."
             visual={<TournamentScreen />}
           >
             <p>Screenshot it and AI reads it:</p>
@@ -102,15 +104,15 @@ export default function AiPage() {
             visual={<TypedRuleScreen />}
           >
             <p>
-              Type a lineup rule the way you&apos;d say it to an assistant coach. AI turns it into a
-              rule RallyCap can follow, asks if anything&apos;s unclear, and checks it against your
-              roster before you save it.
+              Type a lineup rule the way you&apos;d say it to your assistant coach. Unlike your
+              assistant coach, AI actually listens. It turns it into a rule RallyCap can follow,
+              asks if anything&apos;s unclear, and checks it against your roster before you save it.
             </p>
           </FeatureRow>
 
           <FeatureRow
             label={<Ai>Walk-ups & announcer</Ai>}
-            title="Every kid gets a big-league moment."
+            title="Every kid gets a big-league moment. Even the one picking dandelions in right."
             visual={<WalkupScreen />}
           >
             <ul className="flex flex-col gap-2">
@@ -160,7 +162,7 @@ export default function AiPage() {
       <Section tone="mist">
         <div className="mx-auto max-w-3xl">
           <h2 className="text-3xl font-black tracking-tight text-[#1B2A4A] md:text-4xl">
-            AI you can trust around kids.
+            Fun for the kids. Serious about the kids.
           </h2>
           <ul className="mt-8 flex flex-col gap-4 text-lg text-slate-700">
             <Check>

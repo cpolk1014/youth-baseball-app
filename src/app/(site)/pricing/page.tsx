@@ -61,8 +61,8 @@ export default function PricingPage() {
     <>
       <PageHero
         eyebrow="Pricing"
-        title="Simple pricing. AI included."
-        lead="Start free. Try every AI tool for 14 days. Pay once a season, never automatically."
+        title="Simple pricing. No fine print. No surprise renewals."
+        lead="Start free. Try every AI tool for 14 days. Pay once a season, for less than one tournament entry fee. We never charge you automatically, because nobody likes that guy."
       />
 
       <Section className="!pt-4 md:!pt-8">
@@ -91,7 +91,7 @@ export default function PricingPage() {
       <Section tone="mist">
         <div className="mx-auto max-w-3xl">
           <h2 className="text-3xl font-black tracking-tight text-[#1B2A4A] md:text-4xl">
-            Questions coaches ask
+            Questions coaches ask (between innings)
           </h2>
           <div className="mt-8 flex flex-col gap-3">
             {FAQ.map(([q, a]) => (
@@ -115,7 +115,7 @@ export default function PricingPage() {
         </div>
       </Section>
 
-      <EndCta title="Try every AI tool free for 14 days." />
+      <EndCta title="Try every AI tool free for 14 days. Your scorebook will be jealous." />
     </>
   );
 }

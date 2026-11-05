@@ -13,10 +13,18 @@ const FREE: [string, string, string][] = [
   [
     "📍",
     "When and where",
-    "Every game and practice, with arrive by, the field and one-tap directions.",
+    "Every game and practice, with arrive by, the field and one-tap directions. Yes, Field 7. The far one.",
   ],
-  ["👕", "What to wear", "The uniform for each game."],
-  ["💵", "What you owe", "Your family's balance and due dates."],
+  [
+    "👕",
+    "What to wear",
+    "The uniform for each game, so the white pants get washed before, not during.",
+  ],
+  [
+    "💵",
+    "What you owe",
+    "Your family's balance and due dates. No more awkward payment reminders in the group chat.",
+  ],
   ["🏁", "Tournament weekends", "Live standings and What time do we play tomorrow?"],
   [
     "🎵",
@@ -31,8 +39,8 @@ export default function ParentsPage() {
     <>
       <PageHero
         eyebrow="For parents"
-        title="Everything you need for game day. And your player's stats, powered by AI."
-        lead="RallyCap is free for parents on your team. Your coach sends the invite link."
+        title="Know where to be, what to wear and what you owe. Without asking the group chat."
+        lead="RallyCap is free for parents on your team. Your coach sends the link. You get your Saturday back. And your kid's stats, powered by AI, if you want them."
       />
 
       <Section>
@@ -57,7 +65,7 @@ export default function ParentsPage() {
           <div>
             <Ai>Player stats · $10 a year</Ai>
             <h2 className="mt-3 text-3xl leading-tight font-black tracking-tight text-[#1B2A4A] md:text-5xl">
-              Upload the box score. AI does the rest.
+              Upload the box score. AI does the bragging math.
             </h2>
             <ul className="mt-6 flex flex-col gap-3 text-lg text-slate-700">
               <Check>

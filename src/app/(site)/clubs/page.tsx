@@ -19,12 +19,12 @@ const WHY: [string, string, string][] = [
   [
     "👀",
     "Every team at a glance",
-    "Each team's record, next game and latest lineup. Teams that have gone quiet for two weeks are flagged.",
+    "Each team's record, next game and latest lineup. Teams that have gone quiet for two weeks get flagged, so you know before the parents call you.",
   ],
   [
     "🎨",
     "One club look",
-    "Colors from your logo or flyer, and club uniforms every team can wear (AI reads the uniform flyer).",
+    "Colors from your logo or flyer, and club uniforms every team can wear (AI reads the uniform flyer). No more twelve shades of red.",
   ],
   [
     "📚",
@@ -34,7 +34,7 @@ const WHY: [string, string, string][] = [
   [
     "📣",
     "Reach everyone at once",
-    "Post to your coaches' group, or to any or all of your teams' GroupMe groups, in one message.",
+    "Post to your coaches' group, or to any or all of your teams' GroupMe groups, in one message. Rainout? Done in ten seconds.",
   ],
   [
     "🔒",
@@ -49,7 +49,7 @@ export default function ClubsPage() {
       <PageHero
         eyebrow="For clubs"
         title="Give every coach in your club an AI assistant."
-        lead="One code per team. Every coach gets RallyCap's full Team plan, AI included, and you get the whole club at a glance."
+        lead="Your volunteer coaches have day jobs. Give them an assistant that doesn't. One code per team, the full Team plan with AI for every coach, and the whole club at a glance for you."
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Cta href={CLUB_HREF}>Start a club</Cta>

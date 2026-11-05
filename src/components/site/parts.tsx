@@ -244,7 +244,7 @@ export function FeatureRow({
 
 /** The closing band on inner pages. */
 export function EndCta({
-  title = "Let AI run the busywork. You coach the kids.",
+  title = "Go coach. We've got the typing.",
   children,
 }: {
   title?: ReactNode;
