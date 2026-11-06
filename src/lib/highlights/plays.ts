@@ -81,3 +81,29 @@ export function callProblem(text: string): string | null {
   if (/https?:|www\.|@/.test(t)) return "Leave links and emails out of the call.";
   return null;
 }
+
+/** The longest stretch of the clip that can be slowed down (it plays twice as long). */
+export const MAX_REPLAY_SECONDS = 5;
+export const MIN_REPLAY_SECONDS = 0.5;
+const DEFAULT_REPLAY_SECONDS = 3;
+
+/**
+ * The part of the clip the slow-mo replays, kept inside the clip: what the parent picked,
+ * or the last 3 seconds. Times are seconds in the original video.
+ */
+export function replayWindow(
+  start: number,
+  end: number,
+  pick?: { from: number; to: number } | null,
+): { from: number; to: number } {
+  const clip = Math.max(0, end - start);
+  const shortest = Math.min(MIN_REPLAY_SECONDS, clip);
+  if (!pick) {
+    const len = Math.min(DEFAULT_REPLAY_SECONDS, clip);
+    return { from: end - len, to: end };
+  }
+  const from = Math.min(Math.max(pick.from, start), end - shortest);
+  const longest = Math.min(MAX_REPLAY_SECONDS, end - from);
+  const len = Math.min(Math.max(pick.to - pick.from, shortest), longest);
+  return { from, to: from + len };
+}

@@ -3,7 +3,7 @@
 // Pine Tar Productions: a parent turns a clip of their kid into a highlight with a name
 // banner, an AI announcer call and a slow-motion replay. It's made on the phone and saved
 // to the phone; RallyCap never stores the video.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AppData } from "@/lib/data/types";
 import type { Player } from "@/lib/rules/types";
 import {
@@ -12,8 +12,11 @@ import {
   MAX_CALL,
   MAX_CLIP_SECONDS,
   MAX_DETAIL,
+  MAX_REPLAY_SECONDS,
+  MIN_REPLAY_SECONDS,
   PLAYS,
   playOf,
+  replayWindow,
   type PlayId,
 } from "@/lib/highlights/plays";
 import { MicField } from "../Dictate";
@@ -58,6 +61,10 @@ export function PineTar({ data, kid }: { data: AppData; kid: Player }) {
   const [options, setOptions] = useState<string[]>([]);
   const [announcer, setAnnouncer] = useState(true);
   const [replay, setReplay] = useState(true);
+  // The slow-mo stretch: null until the parent moves a slider (then the last 3 seconds).
+  const [slowFrom, setSlowFrom] = useState<number | null>(null);
+  const [slowLen, setSlowLen] = useState(3);
+  const preview = useRef<HTMLVideoElement>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +77,29 @@ export function PineTar({ data, kid }: { data: AppData; kid: Player }) {
   const opponent = games.find((g) => g.id === gameId)?.opponent ?? null;
   const len = Math.min(length, Math.max(1, duration - start), MAX_CLIP_SECONDS);
   const end = start + len;
+  const slow = replayWindow(
+    start,
+    end,
+    slowFrom === null ? null : { from: start + slowFrom, to: start + slowFrom + slowLen },
+  );
+
+  /** Play the slow-mo stretch at half speed in the preview above. */
+  const previewSlow = () => {
+    const v = preview.current;
+    if (!v) return;
+    v.currentTime = slow.from;
+    v.playbackRate = 0.5;
+    const stop = () => {
+      if (v.currentTime >= slow.to) {
+        v.pause();
+        v.playbackRate = 1;
+        v.removeEventListener("timeupdate", stop);
+      }
+    };
+    v.addEventListener("timeupdate", stop);
+    v.scrollIntoView({ block: "center", behavior: "smooth" });
+    void v.play();
+  };
 
   const pickPlay = (id: PlayId) => {
     setPlay(id);
@@ -122,6 +152,7 @@ export function PineTar({ data, kid }: { data: AppData; kid: Player }) {
         opponent,
         voice,
         replay,
+        replayPick: slow,
         onProgress: setProgress,
       });
       setReel(blob);
@@ -235,6 +266,7 @@ export function PineTar({ data, kid }: { data: AppData; kid: Player }) {
         {url && (
           <div className="mt-3 flex flex-col gap-3">
             <video
+              ref={preview}
               key={url}
               src={`${url}#t=${start.toFixed(2)},${end.toFixed(2)}`}
               controls
@@ -409,6 +441,51 @@ export function PineTar({ data, kid }: { data: AppData; kid: Player }) {
           />
           Slow-motion replay at the end
         </label>
+        {replay && duration > 0 && (
+          <div className="mt-3 flex flex-col gap-3 rounded-xl bg-slate-50 p-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-base font-semibold">
+                Slow-mo starts {secs(slow.from - start)} into the clip
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={Math.max(0, len - MIN_REPLAY_SECONDS)}
+                step={0.1}
+                value={slow.from - start}
+                onChange={(e) => {
+                  setSlowFrom(Number(e.target.value));
+                  setSlowLen(slow.to - slow.from);
+                }}
+                className="h-11 w-full accent-[var(--team)]"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-base font-semibold">
+                Slows down {secs(slow.to - slow.from)} (plays for {secs((slow.to - slow.from) * 2)})
+              </span>
+              <input
+                type="range"
+                min={MIN_REPLAY_SECONDS}
+                max={Math.max(MIN_REPLAY_SECONDS, Math.min(MAX_REPLAY_SECONDS, end - slow.from))}
+                step={0.1}
+                value={slow.to - slow.from}
+                onChange={(e) => {
+                  setSlowFrom(slow.from - start);
+                  setSlowLen(Number(e.target.value));
+                }}
+                className="h-11 w-full accent-[var(--team)]"
+              />
+            </label>
+            <button type="button" onClick={previewSlow} className={secondary}>
+              ▶️ Preview the slow-mo
+            </button>
+            <p className="text-sm text-slate-600">
+              Pick the big moment: the swing, the catch, the slide. Up to {MAX_REPLAY_SECONDS}{" "}
+              seconds, played at half speed.
+            </p>
+          </div>
+        )}
       </section>
 
       {error && (

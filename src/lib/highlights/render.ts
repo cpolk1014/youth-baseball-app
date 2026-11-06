@@ -17,7 +17,7 @@ import {
   QUALITY_HIGH,
 } from "mediabunny";
 import { DEFAULT_ACCENT, DEFAULT_PRIMARY, inkFor, isHex } from "@/lib/branding/color";
-import type { Play } from "./plays";
+import { replayWindow, type Play } from "./plays";
 
 export interface ReelSpec {
   file: File;
@@ -33,6 +33,8 @@ export interface ReelSpec {
   /** The announcer's MP3, or null for game sound only. */
   voice: ArrayBuffer | null;
   replay: boolean;
+  /** The stretch to slow down (seconds in the video); the last 3 seconds when missing. */
+  replayPick?: { from: number; to: number } | null;
   onProgress?: (share: number) => void;
 }
 
@@ -41,15 +43,15 @@ export class ReelError extends Error {}
 const FPS = 30;
 const INTRO = 1.8;
 const OUTRO = 1.6;
-const REPLAY_SOURCE = 3; // seconds of the clip replayed, at half speed
 const RATE = 48000;
 
 const FONT = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 const ease = (x: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
 
 /** How long the finished reel runs. */
-export function reelSeconds(clip: number, replay: boolean) {
-  return INTRO + clip + (replay ? Math.min(REPLAY_SOURCE, clip) * 2 : 0) + OUTRO;
+export function reelSeconds(spec: Pick<ReelSpec, "start" | "end" | "replay" | "replayPick">) {
+  const r = replayWindow(spec.start, spec.end, spec.replayPick);
+  return INTRO + (spec.end - spec.start) + (spec.replay ? (r.to - r.from) * 2 : 0) + OUTRO;
 }
 
 function fit(
@@ -273,7 +275,7 @@ async function mixAudio(
   spec: ReelSpec,
   audioTrack: Awaited<ReturnType<Input["getPrimaryAudioTrack"]>>,
   clip: number,
-  replayLen: number,
+  replay: { from: number; to: number } | null,
   total: number,
 ): Promise<AudioBuffer> {
   const ctx = new OfflineAudioContext(2, Math.ceil(total * RATE), RATE);
@@ -298,9 +300,7 @@ async function mixAudio(
       }
     };
     await place(spec.start, spec.end, INTRO, 1, gameGain);
-    if (replayLen > 0) {
-      await place(spec.end - replayLen / 2, spec.end, INTRO + clip, 0.5, 0.35);
-    }
+    if (replay) await place(replay.from, replay.to, INTRO + clip, 0.5, 0.35);
   }
   sting(ctx, 0.05, [392, 523.25, 659.25, 783.99]);
   sting(ctx, total - OUTRO + 0.1, [523.25, 783.99]);
@@ -341,7 +341,8 @@ export async function renderReel(spec: ReelSpec): Promise<Blob> {
     }
 
     const clip = spec.end - spec.start;
-    const replayLen = spec.replay ? Math.min(REPLAY_SOURCE, clip) * 2 : 0;
+    const replay = spec.replay ? replayWindow(spec.start, spec.end, spec.replayPick) : null;
+    const replayLen = replay ? (replay.to - replay.from) * 2 : 0;
     const total = INTRO + clip + replayLen + OUTRO;
     const look = lookFor(spec);
 
@@ -362,7 +363,7 @@ export async function renderReel(spec: ReelSpec): Promise<Blob> {
     await output.start();
 
     // Sound first (quick), then the pictures frame by frame.
-    const mixed = await mixAudio(spec, await input.getPrimaryAudioTrack(), clip, replayLen, total);
+    const mixed = await mixAudio(spec, await input.getPrimaryAudioTrack(), clip, replay, total);
     await audio.add(mixed);
     audio.close();
 
@@ -394,8 +395,8 @@ export async function renderReel(spec: ReelSpec): Promise<Blob> {
       i++;
     }
 
-    if (replayLen > 0) {
-      const from = spec.end - replayLen / 2;
+    if (replay) {
+      const from = replay.from;
       const replayTimes = Array.from(
         { length: Math.round(replayLen * FPS) },
         (_, k) => from + (k * step) / 2,
