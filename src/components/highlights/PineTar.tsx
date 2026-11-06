@@ -46,6 +46,8 @@ export function PineTar({ data, kid }: { data: AppData; kid: Player }) {
   const url = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
   useEffect(() => () => void (url && URL.revokeObjectURL(url)), [url]);
   const [duration, setDuration] = useState(0);
+  // Reading the clip's length from the file ("reading"), or why it can't be used.
+  const [clipNote, setClipNote] = useState<string | null>(null);
   const [start, setStart] = useState(0);
   const [length, setLength] = useState(8);
   const [play, setPlay] = useState<PlayId>("hit");
@@ -208,7 +210,25 @@ export function PineTar({ data, kid }: { data: AppData; kid: Player }) {
               setStart(0);
               setDuration(0);
               setReel(null);
+              setError(null);
               e.target.value = "";
+              if (!f) return;
+              setClipNote("reading");
+              void import("@/lib/highlights/render")
+                .then(({ readClip }) => readClip(f))
+                .then((d) => {
+                  setDuration((now) => now || d);
+                  setLength((l) => Math.min(l || 8, d, 8));
+                  setClipNote(null);
+                })
+                .catch((err: unknown) => {
+                  console.error("clip read failed", err);
+                  setClipNote(
+                    err instanceof Error && err.message
+                      ? err.message
+                      : "Couldn't read that clip. Try a different one.",
+                  );
+                });
             }}
           />
         </label>
@@ -222,11 +242,9 @@ export function PineTar({ data, kid }: { data: AppData; kid: Player }) {
               muted
               preload="metadata"
               onLoadedMetadata={(e) => {
+                // A backup for browsers that do load it; the file read above is the main way.
                 const d = e.currentTarget.duration;
-                if (Number.isFinite(d)) {
-                  setDuration(d);
-                  setLength(Math.min(8, d));
-                }
+                if (Number.isFinite(d) && d > 0) setDuration((now) => now || d);
               }}
               className="max-h-72 w-full rounded-xl bg-black"
             />
@@ -419,6 +437,15 @@ export function PineTar({ data, kid }: { data: AppData; kid: Player }) {
       >
         🎬 Roll the highlight
       </button>
+      {!busy && (!file || duration === 0) && (
+        <p aria-live="polite" className="-mt-2 text-center text-base font-semibold text-slate-700">
+          {!file
+            ? "Pick a clip first (step 1)."
+            : clipNote === "reading" || clipNote === null
+              ? "Reading your clip…"
+              : clipNote}
+        </p>
+      )}
       <p className="text-sm text-slate-600">
         Keep this screen open while it&apos;s made (about as long as the video). Your clip never
         leaves your phone; only the announcer&apos;s words go to the AI.

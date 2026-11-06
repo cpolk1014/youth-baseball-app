@@ -420,3 +420,29 @@ export async function renderReel(spec: ReelSpec): Promise<Blob> {
     input.dispose();
   }
 }
+
+/**
+ * How long a clip runs, read from the file itself (iPhone Safari often won't load a video
+ * element's details until it plays). Throws a ReelError when the phone can't use it.
+ */
+export async function readClip(file: File): Promise<number> {
+  const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
+  try {
+    const track = await input.getPrimaryVideoTrack().catch(() => null);
+    if (!track) throw new ReelError("That file doesn't look like a video. Pick a different clip.");
+    if (!(await track.canDecode())) {
+      throw new ReelError(
+        "This phone can't read that video. Try a clip recorded on this phone's camera.",
+      );
+    }
+    const seconds = await input.computeDuration();
+    if (!(seconds > 0)) throw new ReelError("That clip looks empty. Pick a different one.");
+    return seconds;
+  } catch (e) {
+    if (e instanceof ReelError) throw e;
+    console.error("reading clip failed", e);
+    throw new ReelError("Couldn't read that clip. Try a different one, or a shorter one.");
+  } finally {
+    input.dispose();
+  }
+}
