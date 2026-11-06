@@ -20,6 +20,7 @@ import { KidTeams } from "./KidTeams";
 import { longDate, useStatsPasses } from "./familyPass";
 import { StatsTeaser } from "./StatsTeaser";
 import { KidWalkup } from "./KidWalkup";
+import { PineTar } from "../highlights/PineTar";
 import { StrikeChart, TrendChart } from "../charts/Charts";
 import { useToday } from "../useToday";
 import { battingTrend, pitchingTrend } from "@/lib/boxscore/trends";
@@ -59,6 +60,7 @@ function KidStats({ data }: { data: AppData }) {
     kids.map((k) => k.id),
   );
   const [importing, setImporting] = useState(false);
+  const [filming, setFilming] = useState(false);
   const [open, setOpen] = useState<KidGame | null>(null);
   const fam = useStatsPasses();
   const router = useRouter();
@@ -138,6 +140,22 @@ function KidStats({ data }: { data: AppData }) {
         className="mb-4 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[var(--team)] text-lg font-bold text-white"
       >
         + Import a box score
+      </button>
+
+      <button
+        onClick={() => (unlocked ? setFilming(true) : toBuy())}
+        className="mb-4 flex w-full items-center gap-3 rounded-xl border-2 border-slate-900 bg-slate-900 p-3 text-left text-white active:bg-slate-800"
+      >
+        <span aria-hidden="true" className="text-3xl">
+          🎬
+        </span>
+        <span className="flex flex-col">
+          <span className="text-lg font-black">Pine Tar Productions</span>
+          <span className="text-sm text-white/80">
+            Turn a clip into a highlight: name on screen, stadium announcer, slow-mo replay.
+            {unlocked ? "" : " 🔒 Comes with Player stats."}
+          </span>
+        </span>
       </button>
 
       <KidWalkup key={kid.id} data={data} kid={kid} />
@@ -301,6 +319,10 @@ function KidStats({ data }: { data: AppData }) {
           )}
         </div>
       )}
+
+      <Sheet open={filming} title="Pine Tar Productions" onClose={() => setFilming(false)}>
+        {filming && <PineTar data={data} kid={kid} />}
+      </Sheet>
 
       <Sheet open={importing} title="Import a box score" onClose={() => setImporting(false)}>
         {importing && (
