@@ -18,7 +18,7 @@ export function AwardsScreen() {
   const data = useAppData();
   if (!data) {
     return (
-      <AppShell title="Club awards" tab="roster">
+      <AppShell title="Club awards" tab="awards">
         <Loading />
       </AppShell>
     );
@@ -36,7 +36,7 @@ function Awards({ data }: { data: AppData }) {
   const refresh = async () => setClubAwards(await (await backend()).teamClubAwards(data.team.id));
 
   return (
-    <AppShell title="Club awards" subtitle={data.team.name} tab="roster">
+    <AppShell title="Club awards" subtitle={data.team.name} tab="awards">
       {awards.length === 0 ? (
         <p className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-4 text-lg">
           No club awards right now. When your club opens its season awards, they show up here and in

@@ -14,6 +14,7 @@ export type Tab =
   | "stats"
   | "roster"
   | "money"
+  | "awards"
   | "club"
   | "account";
 
@@ -27,6 +28,8 @@ export type MenuTab = {
   notParents?: boolean;
   /** Only once the team has a tournament. */
   needsTournament?: boolean;
+  /** Only while the team's club has awards live (coaches and managers). */
+  needsAwards?: boolean;
 };
 
 /** The menu's sections, grouped by what people are doing. */
@@ -48,6 +51,14 @@ export const TEAM: MenuTab[] = [
   { id: "season", href: "/season", label: "Playing time", icon: "season", notParents: true },
   { id: "stats", href: "/stats", label: "Stats", icon: "stats", staffOnly: true },
   { id: "money", href: "/money", label: "Money", icon: "money" },
+  {
+    id: "awards",
+    href: "/awards",
+    label: "Club awards",
+    icon: "medal",
+    staffOnly: true,
+    needsAwards: true,
+  },
 ];
 /** Home (the dashboard) is for tablets and bigger screens; phones open on Games. */
 export const HOME: MenuTab = { id: "home", href: "/home", label: "Home", icon: "home" };
@@ -60,7 +71,8 @@ export function visibleTabs(tabs: MenuTab[], data: AppData | null): MenuTab[] {
     (t) =>
       (!t.staffOnly || staff) &&
       (!t.notParents || data?.me.role !== "parent") &&
-      (!t.needsTournament || (data?.tournamentCount ?? 0) > 0),
+      (!t.needsTournament || (data?.tournamentCount ?? 0) > 0) &&
+      (!t.needsAwards || (data?.clubAwards?.length ?? 0) > 0),
   );
 }
 

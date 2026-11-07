@@ -16,6 +16,7 @@ import {
   type BoardRow,
   type BoardSummary,
   type ClubAward,
+  type ShowTeam,
 } from "@/lib/club/awards";
 import { Loading } from "../AppShell";
 import { Sheet } from "../Sheet";
@@ -759,7 +760,7 @@ function PostForm({
 const esc = (s: string) =>
   s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
-/** Winners by award, for the presenter: on screen, copied, or printed. */
+/** Winners for the presenter, age group by age group and team by team: on screen, copied or printed. */
 function ShowList({
   clubName,
   season,
@@ -772,11 +773,24 @@ function ShowList({
   const list = showList(summary);
   const [copied, setCopied] = useState(false);
   const who = (w: BoardRow) =>
-    `${w.jerseyNumber !== null ? `#${w.jerseyNumber} ` : ""}${w.playerName} (${w.ageGroup} ${w.teamName})`;
+    `${w.jerseyNumber !== null ? `#${w.jerseyNumber} ` : ""}${w.playerName}`;
+  const coachOf = (t: ShowTeam) => (t.team.headCoach ? ` (${t.team.headCoach})` : "");
   const asText = list
     .map(
-      ({ award, winners }) =>
-        `${award.emoji ?? "🏅"} ${award.name}\n${winners.map((w) => `  ${who(w)}${w.note ? `: ${w.note}` : ""}`).join("\n") || "  (no picks yet)"}`,
+      (g) =>
+        `${g.ageGroup.toUpperCase()}\n` +
+        g.teams
+          .map(
+            (t) =>
+              `${t.team.ageGroup} ${t.team.teamName}${coachOf(t)}\n` +
+              t.awards
+                .map(
+                  ({ award, winner }) =>
+                    `  ${award.emoji ?? "🏅"} ${award.name}: ${winner ? `${who(winner)}${winner.note ? ` (${winner.note})` : ""}` : "not picked yet"}`,
+                )
+                .join("\n"),
+          )
+          .join("\n\n"),
     )
     .join("\n\n");
   const print = () => {
@@ -784,17 +798,24 @@ function ShowList({
     if (!win) return;
     win.document.write(
       `<!doctype html><meta charset="utf-8"><title>${esc(clubName)} awards ${esc(season)}</title>
-<style>body{font:16px system-ui,sans-serif;margin:32px;color:#111}h1{margin:0 0 4px}h2{margin:28px 0 8px;border-bottom:2px solid #111;padding-bottom:4px}li{margin:6px 0}.n{color:#555}</style>
+<style>body{font:16px system-ui,sans-serif;margin:32px;color:#111}h1{margin:0 0 4px}h2{margin:32px 0 4px;font-size:26px;border-bottom:3px solid #111;padding-bottom:4px}h3{margin:18px 0 6px;font-size:19px}.team{break-inside:avoid}ul{margin:0;padding-left:20px}li{margin:5px 0}.n{color:#555}.miss{color:#999}</style>
 <h1>${esc(clubName)} awards</h1><p class="n">${esc(season)} season</p>` +
         list
           .map(
-            ({ award, winners }) =>
-              `<h2>${esc(award.emoji ?? "🏅")} ${esc(award.name)}</h2><ul>${winners
+            (g) =>
+              `<h2>${esc(g.ageGroup)}</h2>` +
+              g.teams
                 .map(
-                  (w) =>
-                    `<li><b>${esc(who(w))}</b>${w.note ? ` <span class="n">— ${esc(w.note)}</span>` : ""}</li>`,
+                  (t) =>
+                    `<div class="team"><h3>${esc(t.team.ageGroup)} ${esc(t.team.teamName)}<span class="n">${esc(coachOf(t))}</span></h3><ul>${t.awards
+                      .map(({ award, winner }) =>
+                        winner
+                          ? `<li>${esc(award.emoji ?? "🏅")} ${esc(award.name)}: <b>${esc(who(winner))}</b>${winner.note ? ` <span class="n">— ${esc(winner.note)}</span>` : ""}</li>`
+                          : `<li class="miss">${esc(award.emoji ?? "🏅")} ${esc(award.name)}: not picked yet</li>`,
+                      )
+                      .join("")}</ul></div>`,
                 )
-                .join("")}</ul>`,
+                .join(""),
           )
           .join(""),
     );
@@ -803,24 +824,37 @@ function ShowList({
     win.print();
   };
   return (
-    <div className="flex flex-col gap-4">
-      {list.map(({ award, winners }) => (
-        <section key={award.id}>
-          <h3 className="text-lg font-black">
-            {award.emoji ?? "🏅"} {award.name}
-          </h3>
-          {winners.length === 0 ? (
-            <p className="text-base text-slate-500">No picks yet.</p>
-          ) : (
-            <ul className="mt-1 flex flex-col gap-1">
-              {winners.map((w) => (
-                <li key={w.teamId} className="text-base">
-                  <b>{who(w)}</b>
-                  {w.note && <span className="text-slate-600">: {w.note}</span>}
-                </li>
-              ))}
-            </ul>
-          )}
+    <div className="flex flex-col gap-5">
+      {list.map((g) => (
+        <section key={g.ageGroup}>
+          <h3 className="border-b-2 border-slate-900 pb-1 text-xl font-black">{g.ageGroup}</h3>
+          <div className="mt-2 flex flex-col gap-3">
+            {g.teams.map((t) => (
+              <div key={t.team.teamId}>
+                <p className="text-lg font-bold">
+                  {t.team.ageGroup} {t.team.teamName}
+                  {t.team.headCoach && (
+                    <span className="font-normal text-slate-600"> · {t.team.headCoach}</span>
+                  )}
+                </p>
+                <ul className="mt-1 flex flex-col gap-1">
+                  {t.awards.map(({ award, winner }) => (
+                    <li key={award.id} className="text-base">
+                      {award.emoji ?? "🏅"} {award.name}:{" "}
+                      {winner ? (
+                        <>
+                          <b>{who(winner)}</b>
+                          {winner.note && <span className="text-slate-600"> ({winner.note})</span>}
+                        </>
+                      ) : (
+                        <span className="text-slate-400">not picked yet</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </section>
       ))}
       <div className="flex gap-2">

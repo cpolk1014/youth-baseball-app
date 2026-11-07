@@ -202,13 +202,35 @@ export function reminderMessage(
 }
 
 /** Winners for the awards show: each award, then age group order. */
-export function showList(summary: BoardSummary): { award: ClubAward; winners: BoardRow[] }[] {
-  return summary.live.map((award) => ({
-    award,
-    winners: summary.byTeam
-      .map((t) => t.cells[award.id])
-      .filter((c): c is BoardRow => !!c?.playerId),
-  }));
+export interface ShowTeam {
+  team: TeamProgress;
+  /** Every live award, in award order, with the team's winner (null: not picked). */
+  awards: { award: ClubAward; winner: BoardRow | null }[];
+}
+
+/**
+ * Winners for the awards show: age group by age group (7U, 8U … 14U), each team with
+ * its awards and winners underneath.
+ */
+export function showList(summary: BoardSummary): { ageGroup: string; teams: ShowTeam[] }[] {
+  const groups: { ageGroup: string; teams: ShowTeam[] }[] = [];
+  for (const team of summary.byTeam) {
+    let g = groups.find((x) => x.ageGroup === team.ageGroup);
+    if (!g) {
+      g = { ageGroup: team.ageGroup, teams: [] };
+      groups.push(g);
+    }
+    g.teams.push({
+      team,
+      awards: summary.live
+        .filter((award) => team.cells[award.id])
+        .map((award) => {
+          const cell = team.cells[award.id]!;
+          return { award, winner: cell.playerId ? cell : null };
+        }),
+    });
+  }
+  return groups;
 }
 
 /** The latest due date among live awards (they're made live together). */

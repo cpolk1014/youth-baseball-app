@@ -72,10 +72,38 @@ describe("summarizeBoard", () => {
       ["Canes", ["Best Teammate"]],
     ]);
   });
-  it("makes the awards show list", () => {
-    expect(showList(s).map((x) => [x.award.name, x.winners.map((w) => w.playerName)])).toEqual([
-      ["Team MVP", ["Kid p2", "Kid p1"]],
-      ["Best Teammate", ["Kid p3"]],
+  it("makes the awards show list: age group by age group, team by team", () => {
+    const list = showList(s);
+    expect(list.map((g) => g.ageGroup)).toEqual(["9U", "10U"]);
+    expect(
+      list.map((g) =>
+        g.teams.map((t) => [
+          t.team.teamName,
+          t.awards.map((a) => `${a.award.name}: ${a.winner?.playerName ?? "-"}`),
+        ]),
+      ),
+    ).toEqual([
+      [["Bombers", ["Team MVP: Kid p2", "Best Teammate: Kid p3"]]],
+      [["Canes", ["Team MVP: Kid p1", "Best Teammate: -"]]],
+    ]);
+  });
+  it("puts 7U before 10U and 14U", () => {
+    const teams = [
+      ["a", "14U"],
+      ["b", "7U"],
+      ["c", "10U"],
+      ["d", "8U"],
+    ];
+    const r = teams.map(([id, age]) => ({
+      ...row("mvp", id!, "p"),
+      teamName: id!,
+      ageGroup: age!,
+    }));
+    expect(showList(summarizeBoard(awards, r)).map((g) => g.ageGroup)).toEqual([
+      "7U",
+      "8U",
+      "10U",
+      "14U",
     ]);
   });
 });

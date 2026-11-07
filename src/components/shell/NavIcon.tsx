@@ -23,6 +23,7 @@ const PATHS = {
   player: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 21a7 7 0 0 1 14 0",
   trophy:
     "M8 4h8v5a4 4 0 0 1-8 0V4ZM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 21h6M10 17h4v4h-4z",
+  medal: "M8 2l4 6 4-6M12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM12 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
 } as const;
 
 export type IconName = keyof typeof PATHS;

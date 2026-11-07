@@ -1,5 +1,6 @@
 "use client";
 
+import { dueText } from "@/lib/club/awards";
 import { PlanBanner } from "./paywall";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
@@ -75,6 +76,7 @@ export function HomeScreen() {
         </div>
         <RecordCard data={data} today={today} />
         {staff && <TodoCard todos={coachTodos(data, today)} />}
+        {staff && (data.clubAwards?.length ?? 0) > 0 && <AwardsCard data={data} />}
         <ComingUpCard data={data} today={today} />
         {!parent && <PlayingTimeCard data={data} />}
         <MoneyCard data={data} today={today} />
@@ -312,6 +314,58 @@ function TodoCard({ todos }: { todos: Todo[] }) {
           ))}
         </ul>
       )}
+    </Card>
+  );
+}
+
+/** The club's awards and this team's picks (coaches and managers), even once all are in. */
+function AwardsCard({ data }: { data: AppData }) {
+  const awards = data.clubAwards ?? [];
+  const open = awards.filter((a) => a.open);
+  const due = open.reduce<string | null>((d, a) => (!d || a.dueOn < d ? a.dueOn : d), null);
+  const toPick = open.filter((a) => !a.playerId).length;
+  return (
+    <Card
+      title="Club awards"
+      href="/awards"
+      linkText={toPick > 0 && isCoach(data.me.role) ? "Pick" : "Open"}
+    >
+      <ul className="-mx-2 flex flex-col">
+        {awards.map((a) => {
+          const winner = data.players.find((p) => p.id === a.playerId);
+          return (
+            <li key={a.awardId}>
+              <Link
+                href="/awards"
+                className="flex items-center gap-3 rounded-lg px-2 py-2 text-[15px] hover:bg-slate-50"
+              >
+                <span aria-hidden="true" className="text-xl">
+                  {a.emoji || "🏅"}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-semibold text-slate-800">
+                  {a.name}
+                </span>
+                {winner ? (
+                  <span className="shrink-0 rounded-md bg-green-50 px-2 py-0.5 font-semibold text-green-900">
+                    {winner.jerseyNumber != null ? `#${winner.jerseyNumber} ` : ""}
+                    {winner.name}
+                  </span>
+                ) : a.open ? (
+                  <span className="shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-sm font-bold text-amber-900">
+                    To pick
+                  </span>
+                ) : (
+                  <span className="shrink-0 text-sm text-slate-500">Closed</span>
+                )}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-2 text-sm text-slate-600">
+        {due ? `${toPick > 0 ? "Pick" : "You can change picks"} through ${dueText(due)}. ` : ""}
+        🤫 Only {awards[0]!.clubName} sees these.
+      </p>
     </Card>
   );
 }
