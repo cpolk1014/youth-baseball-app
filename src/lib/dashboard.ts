@@ -1,4 +1,6 @@
 // The Home dashboard's numbers, worked out from the team's data (pure: no I/O, no React).
+import { awardsToPick, pickText } from "@/lib/club/awards";
+import { isCoach } from "@/lib/data/permissions";
 import { gameContext, gameResult, splitGames, whenText, type GameResult } from "@/lib/data/game";
 import type { AppData, Game, Practice } from "@/lib/data/types";
 import { homeworkStatus } from "@/lib/plays/homework";
@@ -157,6 +159,17 @@ export function coachTodos(data: AppData, today: string, limit = 6): Todo[] {
         level: "info",
       });
     }
+  }
+  // Club awards the coach still has to pick (coaches only; managers can't pick).
+  const toPick = isCoach(data.me.role) ? awardsToPick(data.clubAwards) : [];
+  if (toPick.length > 0) {
+    const due = toPick.reduce((d, a) => (a.dueOn < d ? a.dueOn : d), toPick[0]!.dueOn);
+    todos.push({
+      key: "club-awards",
+      text: pickText(toPick),
+      href: "/awards",
+      level: daysBetween(today, due) <= 2 ? "urgent" : "soon",
+    });
   }
   const order = { urgent: 0, soon: 1, info: 2 };
   return todos.sort((a, b) => order[a.level] - order[b.level]).slice(0, limit);

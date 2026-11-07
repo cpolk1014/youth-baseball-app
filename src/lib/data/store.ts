@@ -1,5 +1,6 @@
 "use client";
 
+import type { TeamAward } from "@/lib/club/awards";
 import { useSyncExternalStore } from "react";
 import type { Lineup, Player } from "@/lib/rules/types";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -420,6 +421,11 @@ export function setTournamentCount(count: number): void {
   if (data && (data.tournamentCount ?? 0) !== count) {
     update((d) => ({ ...d, tournamentCount: count }));
   }
+}
+
+/** Keep the club awards (and the To do) in step after a coach picks. */
+export function setClubAwards(clubAwards: TeamAward[]): void {
+  if (data) update((d) => ({ ...d, clubAwards }));
 }
 
 export function setCoachPitch(coachPitch: boolean): void {

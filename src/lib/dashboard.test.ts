@@ -109,3 +109,40 @@ describe("lineupStatus and coachTodos", () => {
     expect(todos[0]!.level).toBe("urgent");
   });
 });
+
+describe("club awards in To do", () => {
+  const award = (name: string, dueOn: string, playerId: string | null = null) => ({
+    awardId: name,
+    clubName: "Canes",
+    name,
+    description: null,
+    emoji: null,
+    dueOn,
+    open: true,
+    playerId,
+    note: null,
+    pickedAt: null,
+  });
+  const clubAwards = [award("Team MVP", "2026-11-05"), award("Best Teammate", "2026-11-05", "p1")];
+  it("tells coaches which awards to pick, urgent near the due date", () => {
+    const data = withData({
+      games: [],
+      assignments: [],
+      me: { userId: "u", role: "coach" },
+      clubAwards,
+    });
+    const todo = coachTodos(data, "2026-11-03").find((t) => t.key === "club-awards");
+    expect(todo).toMatchObject({ href: "/awards", level: "urgent" });
+    expect(todo!.text).toBe("Pick your club award: Team MVP (due Thu, Nov 5)");
+    expect(coachTodos(data, "2026-10-20").find((t) => t.key === "club-awards")!.level).toBe("soon");
+  });
+  it("leaves it out for managers, who can't pick", () => {
+    const data = withData({
+      games: [],
+      assignments: [],
+      me: { userId: "u", role: "manager" },
+      clubAwards,
+    });
+    expect(coachTodos(data, "2026-11-03").some((t) => t.key === "club-awards")).toBe(false);
+  });
+});

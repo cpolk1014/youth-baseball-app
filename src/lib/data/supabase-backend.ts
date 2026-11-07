@@ -1,5 +1,6 @@
 "use client";
 
+import { teamAwardsFromRows } from "./club-backend";
 import type { TeamPlan } from "@/lib/data/types";
 import type { Lineup, Player } from "@/lib/rules/types";
 import { getBrowserSupabase } from "@/lib/supabase/client";
@@ -230,6 +231,9 @@ export async function loadFromSupabase(
         nextSeason: planRow.next_season,
       }
     : undefined;
+  // The club's live awards for this team (the function returns none unless coach/manager).
+  const { data: awardRows } = await sb.rpc("team_club_awards", { p_team: team.id });
+  const clubAwards = teamAwardsFromRows(awardRows);
   const { count: tournamentCount } = await sb
     .from("tournament")
     .select("id", { count: "exact", head: true })
@@ -285,6 +289,7 @@ export async function loadFromSupabase(
         uniforms,
         tournamentCount: tournamentCount ?? 0,
         plan,
+        clubAwards,
         userId: user?.id ?? "",
         myTeams,
       },

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TEAM_PRICE_CENTS, dollars, seasonEnds, seasonFor } from "@/lib/billing/season";
 import type { TeamClub } from "@/lib/data/club-backend";
@@ -144,7 +145,10 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
         <p className="text-base">
           Part of <b>{club.club}</b> for {club.season}. The club can view this team&apos;s lineups,
           playing time, rules and GameChanger stats. It can&apos;t change anything, and it never
-          sees team money, parents or families&apos; own stats.
+          sees team money, parents or families&apos; own stats.{" "}
+          <Link href="/awards" className="font-semibold text-[var(--team)] underline">
+            Club awards
+          </Link>
         </p>
       ) : (
         <>

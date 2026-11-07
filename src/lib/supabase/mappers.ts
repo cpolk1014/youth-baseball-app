@@ -1,3 +1,4 @@
+import type { TeamAward } from "@/lib/club/awards";
 import type { RuleConfigInput } from "@/lib/rules/config";
 import { cleanPieces, type UniformCombo } from "@/lib/uniforms";
 import type { Lineup, Player } from "@/lib/rules/types";
@@ -59,6 +60,7 @@ export interface TeamRows {
   tournamentCount?: number;
   /** Missing in older callers (tests): no plan (everything open). */
   plan?: TeamPlan;
+  clubAwards?: TeamAward[];
   /** The signed-in user. */
   userId: string;
   myTeams: TeamSummary[];
@@ -423,6 +425,7 @@ export function appDataFromRows(
     uniforms: (rows.uniforms ?? []).map(uniformFromRow),
     tournamentCount: rows.tournamentCount ?? 0,
     plan: rows.plan,
+    clubAwards: rows.clubAwards ?? [],
     team: {
       id: rows.team.id,
       name: rows.team.name,

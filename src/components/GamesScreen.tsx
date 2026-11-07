@@ -1,6 +1,7 @@
 "use client";
 
 import { PlanBanner, usePlan } from "./paywall";
+import { AwardsBanner } from "./awards/AwardsBanner";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -86,6 +87,7 @@ export function GamesScreen() {
       {/* Keyboards: N adds a game. */}
       <Shortcut keyName="n" run={startAdd} enabled={canEdit} />
       <PlanBanner />
+      <AwardsBanner data={data} />
       <MoneyNudge />
       {upcoming[0] && <NextGame game={upcoming[0]} data={data} />}
       <Section title="Upcoming" games={upcoming} data={data} empty="No upcoming games." />

@@ -1735,6 +1735,61 @@ update public.team set optioned_at = now() where id = 'abababab-0000-4000-8000-0
 delete from public.team where id = 'abababab-0000-4000-8000-000000000001';
 select pg_temp.expect((select count(*) from public.team where id = 'abababab-0000-4000-8000-000000000001') = 0, 'an unpaid team can still be deleted');
 reset role;
+-- ── club awards: the club makes them, team coaches pick, nobody else sees ──
+reset role;
+update public.club_code set expires_on = current_date + 30 where team_id = '00000000-0000-4000-8000-000000000001';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false); -- director
+insert into public.club_award (id, organization_id, season_label, name, emoji, sort)
+  values ('cccccccc-0000-4000-8000-0000000000a1', (select org from club_t), '2026-27', 'Team MVP', '🏆', 0),
+         ('cccccccc-0000-4000-8000-0000000000a2', (select org from club_t), '2026-27', 'Best Teammate', '🤝', 1);
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- coach
+select pg_temp.expect((select count(*) from public.club_award) = 0, 'coaches can''t read the club''s award list directly');
+select pg_temp.expect((select count(*) from public.team_club_awards('00000000-0000-4000-8000-000000000001')) = 0, 'awards stay hidden until the club makes them live');
+do $$ begin
+  perform public.pick_club_award('cccccccc-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000001001', null);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: no picking before an award is live';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false); -- director
+update public.club_award set live_at = now(), due_on = current_date + 7 where organization_id = (select org from club_t);
+select pg_temp.expect((select count(*) from public.club_award_board((select org from club_t), '2026-27')) = 2 and (select bool_and(player_id is null) from public.club_award_board((select org from club_t), '2026-27')), 'the board lists every award for each team, still to pick');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- coach
+select pg_temp.expect((select count(*) from public.team_club_awards('00000000-0000-4000-8000-000000000001') where open) = 2, 'live awards show up for the team''s coaches');
+select public.pick_club_award('cccccccc-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000001001', 'Hit .450');
+select public.pick_club_award('cccccccc-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000001002', '  ');
+select pg_temp.expect((select player_id = '00000000-0000-4000-8000-000000001002' and note is null from public.team_club_awards('00000000-0000-4000-8000-000000000001') where award_id = 'cccccccc-0000-4000-8000-0000000000a1'), 'a coach picks a winner and can change it');
+select pg_temp.expect((select count(*) from public.club_award_pick) = 0, 'coaches can''t read pick rows directly');
+do $$ begin
+  perform public.pick_club_award('cccccccc-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-000000000001', 'cccccccc-0000-4000-8000-0000000000a1', null);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: winners come from the team''s roster';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+select pg_temp.expect((select count(*) from public.team_club_awards('00000000-0000-4000-8000-000000000001')) = 0, 'parents don''t see club awards');
+do $$ begin
+  perform public.pick_club_award('cccccccc-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000001001', null);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents can''t pick award winners';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- outsider
+do $$ begin
+  perform * from public.club_award_board((select org from club_t), '2026-27');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: only club admins see the awards board';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false); -- director
+select pg_temp.expect((select player_name from public.club_award_board((select org from club_t), '2026-27') where award_id = 'cccccccc-0000-4000-8000-0000000000a1') = 'Leo T.', 'the club sees the winner');
+-- Past the due date, picks close until the club moves it.
+update public.club_award set due_on = current_date - 2 where organization_id = (select org from club_t);
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- coach
+select pg_temp.expect((select count(*) from public.team_club_awards('00000000-0000-4000-8000-000000000001') where not open) = 2, 'awards past their due date show as closed');
+do $$ begin
+  perform public.pick_club_award('cccccccc-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000001001', null);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: picks close after the due date';
+end $$;
+reset role;
 -- ── game places ──
 update public.game set location = 'Traction Sports Complex', field = 'Chabills Field', location_lat = 30.2, location_lng = -92.0
   where id = 'eeeeeeee-0000-4000-8000-000000000020';

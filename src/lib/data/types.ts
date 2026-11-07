@@ -1,3 +1,4 @@
+import type { TeamAward } from "@/lib/club/awards";
 import type { RuleConfigInput } from "@/lib/rules/config";
 import type { GameUniform, UniformCombo } from "@/lib/uniforms";
 import type { Lineup, Player } from "@/lib/rules/types";
@@ -203,6 +204,8 @@ export interface AppData {
   tournamentCount?: number;
   /** The team's plan (paid features); missing in local mode, where everything's open. */
   plan?: TeamPlan;
+  /** The club's live awards and this team's picks (coaches and managers; empty otherwise). */
+  clubAwards?: TeamAward[];
 }
 
 /** Whether a team can use RallyCap's paid features, and why (see `team_plan`). */

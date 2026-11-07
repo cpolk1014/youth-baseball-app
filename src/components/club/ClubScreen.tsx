@@ -10,6 +10,7 @@ import { useStoreState } from "@/lib/data/store";
 import { AppShell, Loading } from "../AppShell";
 import { Sheet } from "../Sheet";
 import { TeamBadge } from "../TeamBadge";
+import { ClubAwardsTab } from "./ClubAwardsTab";
 import { ClubGroupMeTab } from "./ClubGroupMeTab";
 import { ClubLibraryTab } from "./ClubLibraryTab";
 import { ClubLookTab } from "./ClubLookTab";
@@ -69,9 +70,10 @@ export function ClubScreen() {
   );
 }
 
-type Tab = "teams" | "look" | "library" | "groupme";
+type Tab = "teams" | "awards" | "look" | "library" | "groupme";
 const TABS: [Tab, string][] = [
   ["teams", "Teams"],
+  ["awards", "Awards"],
   ["look", "Look"],
   ["library", "Library"],
   ["groupme", "GroupMe"],
@@ -83,7 +85,7 @@ function ClubTabs({ clubId, clubName }: { clubId: string; clubName: string }) {
     <>
       <div
         role="tablist"
-        className="mb-4 grid grid-cols-4 gap-1 rounded-xl border-2 border-[var(--team)] p-1"
+        className="mb-4 grid grid-cols-5 gap-1 rounded-xl border-2 border-[var(--team)] p-1"
       >
         {TABS.map(([id, label]) => (
           <button
@@ -91,7 +93,7 @@ function ClubTabs({ clubId, clubName }: { clubId: string; clubName: string }) {
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`min-h-11 rounded-lg px-1 text-sm font-bold sm:text-base ${
+            className={`min-h-11 rounded-lg px-0.5 text-[13px] font-bold sm:text-base ${
               tab === id ? "bg-[var(--team)] text-white" : "text-[var(--team)]"
             }`}
           >
@@ -100,6 +102,7 @@ function ClubTabs({ clubId, clubName }: { clubId: string; clubName: string }) {
         ))}
       </div>
       {tab === "teams" && <ClubDashboard clubId={clubId} clubName={clubName} />}
+      {tab === "awards" && <ClubAwardsTab clubId={clubId} clubName={clubName} />}
       {tab === "look" && <ClubLookTab clubId={clubId} />}
       {tab === "library" && <ClubLibraryTab clubId={clubId} />}
       {tab === "groupme" && <ClubGroupMeTab clubId={clubId} />}

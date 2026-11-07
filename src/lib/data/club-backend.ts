@@ -1,3 +1,4 @@
+import type { BoardRow, ClubAward, TeamAward } from "@/lib/club/awards";
 import { appDataFromRows, uniformFromRow } from "@/lib/supabase/mappers";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import type {
@@ -522,4 +523,180 @@ export async function teamPasses(teamId: string): Promise<{ season: string; expi
       .order("season_label", { ascending: false }),
   );
   return rows.map((r) => ({ season: r.season_label, expiresOn: r.expires_on }));
+}
+
+// ── Club awards ──
+
+type AwardRow = {
+  id: string;
+  season_label: string;
+  name: string;
+  description: string | null;
+  emoji: string | null;
+  sort: number;
+  live_at: string | null;
+  due_on: string | null;
+};
+const awardFromRow = (r: AwardRow): ClubAward => ({
+  id: r.id,
+  season: r.season_label,
+  name: r.name,
+  description: r.description,
+  emoji: r.emoji,
+  sort: r.sort,
+  liveAt: r.live_at,
+  dueOn: r.due_on,
+});
+
+/** The club's awards for a season (club admins). */
+export async function clubAwards(clubId: string, season: string): Promise<ClubAward[]> {
+  const rows = check<AwardRow[]>(
+    await getBrowserSupabase()
+      .from("club_award")
+      .select("id, season_label, name, description, emoji, sort, live_at, due_on")
+      .eq("organization_id", clubId)
+      .eq("season_label", season)
+      .order("sort")
+      .order("created_at"),
+  );
+  return rows.map(awardFromRow);
+}
+
+export async function saveClubAward(
+  clubId: string,
+  award: Pick<ClubAward, "season" | "name" | "description" | "emoji" | "sort"> & { id?: string },
+): Promise<void> {
+  const row = {
+    organization_id: clubId,
+    season_label: award.season,
+    name: award.name.trim(),
+    description: award.description?.trim() || null,
+    emoji: award.emoji?.trim() || null,
+    sort: award.sort,
+  };
+  const sb = getBrowserSupabase();
+  const result = award.id
+    ? await sb.from("club_award").update(row).eq("id", award.id)
+    : await sb.from("club_award").insert(row);
+  if (result.error) {
+    throw new Error(
+      result.error.code === "23505"
+        ? "There's already an award with that name."
+        : result.error.message,
+    );
+  }
+}
+
+export async function deleteClubAward(id: string): Promise<void> {
+  check(await getBrowserSupabase().from("club_award").delete().eq("id", id));
+}
+
+/** Make the season's draft awards live (and set every live award's due date). */
+export async function makeAwardsLive(clubId: string, season: string, dueOn: string): Promise<void> {
+  const sb = getBrowserSupabase();
+  check(
+    await sb
+      .from("club_award")
+      .update({ live_at: new Date().toISOString(), due_on: dueOn })
+      .eq("organization_id", clubId)
+      .eq("season_label", season)
+      .is("live_at", null),
+  );
+  await setAwardsDue(clubId, season, dueOn);
+}
+
+/** Move the due date for the season's live awards (reopens picks if it's later). */
+export async function setAwardsDue(clubId: string, season: string, dueOn: string): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("club_award")
+      .update({ due_on: dueOn })
+      .eq("organization_id", clubId)
+      .eq("season_label", season)
+      .not("live_at", "is", null),
+  );
+}
+
+export async function clubAwardBoard(clubId: string, season: string): Promise<BoardRow[]> {
+  const rows = check<
+    {
+      award_id: string;
+      team_id: string;
+      team_name: string;
+      age_group: string;
+      head_coach: string | null;
+      player_id: string | null;
+      player_name: string | null;
+      jersey_number: number | null;
+      note: string | null;
+      picked_at: string | null;
+    }[]
+  >(await getBrowserSupabase().rpc("club_award_board", { p_org: clubId, p_season: season }));
+  return rows.map((r) => ({
+    awardId: r.award_id,
+    teamId: r.team_id,
+    teamName: r.team_name,
+    ageGroup: r.age_group,
+    headCoach: r.head_coach,
+    playerId: r.player_id,
+    playerName: r.player_name,
+    jerseyNumber: r.jersey_number,
+    note: r.note,
+    pickedAt: r.picked_at,
+  }));
+}
+
+/** A team's live club awards, from team_club_awards rows. */
+export function teamAwardsFromRows(rows: unknown): TeamAward[] {
+  return (
+    (rows ?? []) as {
+      award_id: string;
+      club_name: string;
+      name: string;
+      description: string | null;
+      emoji: string | null;
+      due_on: string;
+      open: boolean;
+      player_id: string | null;
+      note: string | null;
+      picked_at: string | null;
+    }[]
+  ).map((r) => ({
+    awardId: r.award_id,
+    clubName: r.club_name,
+    name: r.name,
+    description: r.description,
+    emoji: r.emoji,
+    dueOn: r.due_on,
+    open: r.open,
+    playerId: r.player_id,
+    note: r.note,
+    pickedAt: r.picked_at,
+  }));
+}
+
+export async function teamClubAwards(teamId: string): Promise<TeamAward[]> {
+  const { data, error } = await getBrowserSupabase().rpc("team_club_awards", { p_team: teamId });
+  if (error) throw new Error(error.message);
+  return teamAwardsFromRows(data);
+}
+
+export async function pickClubAward(
+  awardId: string,
+  teamId: string,
+  playerId: string,
+  note: string,
+): Promise<void> {
+  check(
+    await getBrowserSupabase().rpc("pick_club_award", {
+      p_award: awardId,
+      p_team: teamId,
+      p_player: playerId,
+      p_note: note,
+    }),
+  );
+}
+
+export async function unpickClubAward(awardId: string, teamId: string): Promise<void> {
+  check(await getBrowserSupabase().rpc("unpick_club_award", { p_award: awardId, p_team: teamId }));
 }
