@@ -107,3 +107,52 @@ export function replayWindow(
   const len = Math.min(Math.max(pick.to - pick.from, shortest), longest);
   return { from, to: from + len };
 }
+
+/** How long a new cut runs when the parent only marks where it starts. */
+export const DEFAULT_CLIP_SECONDS = 8;
+
+/**
+ * Moves one end of the cut to where the video is paused ("Start here" / "End here"),
+ * keeping it at least a second long and no longer than MAX_CLIP_SECONDS; the other end
+ * moves along when it has to. Times are seconds in the video.
+ */
+export function markClip(
+  duration: number,
+  cut: { start: number; end: number },
+  at: number,
+  which: "start" | "end",
+): { start: number; end: number } {
+  const t = Math.min(Math.max(at, 0), duration);
+  const shortest = Math.min(1, duration);
+  if (which === "start") {
+    const start = Math.min(t, duration - shortest);
+    let end = cut.end;
+    if (end - start < shortest) end = Math.min(duration, start + DEFAULT_CLIP_SECONDS);
+    end = Math.min(end, start + MAX_CLIP_SECONDS);
+    return { start, end: Math.max(end, start + shortest) };
+  }
+  const end = Math.max(t, shortest);
+  let start = cut.start;
+  if (end - start < shortest) start = Math.max(0, end - DEFAULT_CLIP_SECONDS);
+  start = Math.max(start, end - MAX_CLIP_SECONDS);
+  return { start: Math.min(start, end - shortest), end };
+}
+
+/** Slow-mo lengths a parent can pick (seconds of the clip, played at half speed). */
+export const SLOW_LENGTHS = [
+  { label: "Quick", seconds: 1.5 },
+  { label: "Medium", seconds: 2.5 },
+  { label: "Long", seconds: 4 },
+] as const;
+
+/** The slow-mo stretch around the big moment, slid over to stay inside the cut. */
+export function momentWindow(
+  start: number,
+  end: number,
+  moment: number,
+  seconds: number,
+): { from: number; to: number } {
+  const len = Math.min(Math.max(seconds, MIN_REPLAY_SECONDS), MAX_REPLAY_SECONDS, end - start);
+  const from = Math.min(Math.max(moment - len / 2, start), end - len);
+  return { from, to: from + len };
+}
