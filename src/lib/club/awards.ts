@@ -62,7 +62,7 @@ export const AWARD_PRESETS: { name: string; emoji: string; description: string }
     description: "Never stops running out ground balls or backing up plays.",
   },
   { name: "Top Glove", emoji: "🧤", description: "The season's best defender." },
-  { name: "Top Bat", emoji: "🏏", description: "The season's best hitter." },
+  { name: "Top Bat", emoji: "⚾", description: "The season's best hitter." },
   { name: "Top Arm", emoji: "🔥", description: "The season's best pitcher." },
   {
     name: "Coach's Award",

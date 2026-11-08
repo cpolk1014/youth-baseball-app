@@ -22,7 +22,7 @@ export interface Play {
 }
 
 export const PLAYS: Play[] = [
-  { id: "hit", label: "Base hit", banner: "BASE HIT", icon: "🏏" },
+  { id: "hit", label: "Base hit", banner: "BASE HIT", icon: "⚾" },
   { id: "double", label: "Double", banner: "DOUBLE", icon: "✌️" },
   { id: "triple", label: "Triple", banner: "TRIPLE", icon: "🔥" },
   { id: "home_run", label: "Home run", banner: "HOME RUN", icon: "💣" },
