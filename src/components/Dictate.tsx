@@ -19,6 +19,7 @@ type Recognition = {
   onresult: ((e: ResultEvent) => void) | null;
   onerror: ((e: { error: string }) => void) | null;
   onend: (() => void) | null;
+  onaudiostart: (() => void) | null;
 };
 type RecognitionCtor = new () => Recognition;
 
@@ -71,16 +72,22 @@ export function DictateButton({
   value,
   onChange,
   maxLength,
+  onWords,
   className = "",
 }: {
   value: string;
   onChange: (next: string) => void;
   maxLength?: number;
+  /** After words land in the box (MicField scrolls the box to them). */
+  onWords?: () => void;
   className?: string;
 }) {
   const can = useCanDictate();
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // What it's hearing, shown by the mic while listening (so it's visible even when the
+  // words land below the fold of a long box).
+  const [live, setLive] = useState("");
   const rec = useRef<Recognition | null>(null);
 
   useEffect(() => () => rec.current?.abort(), []);
@@ -96,25 +103,38 @@ export function DictateButton({
     r.continuous = true;
     r.interimResults = true;
     const base = value;
-    let heard = "";
+    let words = "";
+    let gotAudio = false;
+    let failed = false;
+    r.onaudiostart = () => {
+      gotAudio = true;
+    };
     r.onresult = (e) => {
-      let pending = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const res = e.results[i];
-        if (!res) continue;
-        const words = res[0]?.transcript ?? "";
-        if (res.isFinal) heard += ` ${words}`;
-        else pending += ` ${words}`;
-      }
-      onChange(joinDictation(base, heard + pending, maxLength));
+      // Rebuild from every result each time: browsers differ in which results they
+      // resend (Safari repeats finished ones), so this never drops or doubles words.
+      const parts: string[] = [];
+      for (let i = 0; i < e.results.length; i++) parts.push(e.results[i]?.[0]?.transcript ?? "");
+      words = parts.join(" ").replace(/\s+/g, " ").trim();
+      setLive(words);
+      onChange(joinDictation(base, words, maxLength));
+      onWords?.();
     };
     r.onerror = (e) => {
       if (e.error === "no-speech" || e.error === "aborted") return;
+      failed = true;
       setError(ERRORS[e.error] ?? "Dictation didn't work. Try the mic on your keyboard.");
     };
     r.onend = () => {
       setListening(false);
+      setLive("");
       rec.current = null;
+      if (words || failed) return;
+      // Ended without a word and without saying why: tell them what we know.
+      setError(
+        gotAudio
+          ? "The mic heard you, but this browser didn't send back any words. Dictation works in Chrome, Edge and Safari; some browsers (like Arc or Brave) can't. You can also use your keyboard's dictation."
+          : "The microphone didn't turn on. Check that this browser is allowed to use the mic, then try again.",
+      );
     };
     rec.current = r;
     try {
@@ -144,7 +164,15 @@ export function DictateButton({
       <span role="status" className="sr-only">
         {listening ? "Listening. Tap the mic again when you're done." : ""}
       </span>
-      {error && (
+      {listening && (
+        <span
+          aria-hidden="true"
+          className="absolute top-full right-0 mt-1 w-56 rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow-lg"
+        >
+          {live ? `“…${live.slice(-80)}”` : "Listening… say something, then tap the mic."}
+        </span>
+      )}
+      {!listening && error && (
         <span
           role="alert"
           className="absolute top-full right-0 mt-1 w-56 rounded-lg bg-slate-900 px-3 py-2 text-sm text-white shadow-lg"
@@ -173,12 +201,30 @@ export function MicField({
   multiline?: boolean;
   children: ReactNode;
 }) {
+  const box = useRef<HTMLDivElement>(null);
+  // Show the new words: they're added at the end, which a long box may have scrolled
+  // past. Scroll once the box has the new text (after React updates it).
+  const scrollPending = useRef(false);
+  const toEnd = () => {
+    scrollPending.current = true;
+  };
+  useEffect(() => {
+    if (!scrollPending.current) return;
+    scrollPending.current = false;
+    const field = box.current?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+      "textarea, input",
+    );
+    if (!field) return;
+    field.scrollTop = field.scrollHeight;
+    field.scrollLeft = field.scrollWidth;
+  }, [value]);
   return (
-    <div className="relative">
+    <div ref={box} className="relative">
       {children}
       <DictateButton
         value={value}
         onChange={onChange}
+        onWords={toEnd}
         maxLength={maxLength}
         className={multiline ? "top-2 right-2" : "top-1/2 right-1 -translate-y-1/2"}
       />
