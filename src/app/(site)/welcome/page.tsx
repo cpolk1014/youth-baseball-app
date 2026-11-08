@@ -84,9 +84,8 @@ export default function HomePage() {
             </h1>
             <p className="mt-6 max-w-xl text-xl leading-relaxed text-white/85 text-pretty">
               RallyCap&apos;s AI types in your schedule, plans your practices and reads the
-              tournament bracket. The lineup engine hands out fair innings, receipts included.{" "}
-              <b className="text-white">You just coach.</b> (And find your kid&apos;s other batting
-              glove.)
+              tournament bracket. <b className="text-white">You just coach.</b> (And find your
+              kid&apos;s other batting glove.)
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Cta />
