@@ -44,13 +44,17 @@ export function AiPracticePlan({
   const open = upcoming.filter((p) => !p.canceled);
   const empty = open.filter((p) => p.plan.length === 0);
   const [onlyEmpty, setOnlyEmpty] = useState(empty.length > 0 && empty.length < open.length);
-  const [goals, setGoals] = useState(() => {
+  // The goals the coach used last time (remembered on this device). The box starts empty
+  // with them as grey hint text, so typing or dictating starts fresh; one tap brings
+  // them back to edit.
+  const [lastGoals] = useState(() => {
     try {
       return window.localStorage.getItem(goalsKey(data.team.id)) ?? "";
     } catch {
       return "";
     }
   });
+  const [goals, setGoals] = useState("");
   const [step, setStep] = useState<Step>({ kind: "ask" });
   const [error, setError] = useState<string | null>(null);
   const chosen = (onlyEmpty ? empty : open).slice(0, MAX_PLANNED);
@@ -156,7 +160,7 @@ export function AiPracticePlan({
             }}
             rows={7}
             maxLength={4000}
-            placeholder={EXAMPLE}
+            placeholder={lastGoals || EXAMPLE}
             className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 pr-14 text-base leading-snug focus:border-[var(--team)] focus:outline-none"
           />
         </MicField>
@@ -164,10 +168,10 @@ export function AiPracticePlan({
       {!goals ? (
         <button
           type="button"
-          onClick={() => setGoals(EXAMPLE)}
+          onClick={() => setGoals(lastGoals || EXAMPLE)}
           className="-mt-2 self-start text-sm font-semibold text-[var(--team)] underline"
         >
-          Start from the example
+          {lastGoals ? "Use your last goals" : "Start from the example"}
         </button>
       ) : (
         <button
