@@ -161,13 +161,24 @@ export function AiPracticePlan({
           />
         </MicField>
       </label>
-      {!goals && (
+      {!goals ? (
         <button
           type="button"
           onClick={() => setGoals(EXAMPLE)}
           className="-mt-2 self-start text-sm font-semibold text-[var(--team)] underline"
         >
           Start from the example
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setGoals("");
+            setError(null);
+          }}
+          className="-mt-2 self-start text-sm font-semibold text-[var(--team)] underline"
+        >
+          Clear to start over
         </button>
       )}
       {empty.length > 0 && empty.length < open.length && (

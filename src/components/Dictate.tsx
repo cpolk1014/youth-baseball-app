@@ -4,7 +4,7 @@
 // Uses the browser's own speech recognition (Chrome, Edge, Safari); where there
 // isn't any (Firefox), no button shows and the phone keyboard's mic still works.
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { joinDictation } from "@/lib/dictation/join";
+import { insertDictation } from "@/lib/dictation/join";
 
 type Alternative = { transcript: string };
 type Result = ArrayLike<Alternative> & { isFinal: boolean };
@@ -73,13 +73,16 @@ export function DictateButton({
   onChange,
   maxLength,
   onWords,
+  getField,
   className = "",
 }: {
   value: string;
   onChange: (next: string) => void;
   maxLength?: number;
-  /** After words land in the box (MicField scrolls the box to them). */
+  /** After words land at the end of the box (MicField scrolls the box to them). */
   onWords?: () => void;
+  /** The text box, so words go where the cursor is (or replace what's selected). */
+  getField?: () => HTMLInputElement | HTMLTextAreaElement | null;
   className?: string;
 }) {
   const can = useCanDictate();
@@ -89,6 +92,9 @@ export function DictateButton({
   // words land below the fold of a long box).
   const [live, setLive] = useState("");
   const rec = useRef<Recognition | null>(null);
+  // Where the cursor (or selection) was in the box when the mic was pressed; null when
+  // the box wasn't being typed in (then the words go at the end).
+  const cursor = useRef<{ start: number; end: number } | null>(null);
 
   useEffect(() => () => rec.current?.abort(), []);
 
@@ -103,6 +109,9 @@ export function DictateButton({
     r.continuous = true;
     r.interimResults = true;
     const base = value;
+    const at = cursor.current ?? { start: base.length, end: base.length };
+    const atEnd = at.start >= base.length;
+    let caret = at.end;
     let words = "";
     let gotAudio = false;
     let failed = false;
@@ -116,8 +125,10 @@ export function DictateButton({
       for (let i = 0; i < e.results.length; i++) parts.push(e.results[i]?.[0]?.transcript ?? "");
       words = parts.join(" ").replace(/\s+/g, " ").trim();
       setLive(words);
-      onChange(joinDictation(base, words, maxLength));
-      onWords?.();
+      const next = insertDictation(base, at.start, at.end, words, maxLength);
+      caret = next.caret;
+      onChange(next.text);
+      if (atEnd) onWords?.();
     };
     r.onerror = (e) => {
       if (e.error === "no-speech" || e.error === "aborted") return;
@@ -128,6 +139,15 @@ export function DictateButton({
       setListening(false);
       setLive("");
       rec.current = null;
+      if (words && cursor.current) {
+        // They were typing in the box: put them back there, right after the new words.
+        const field = getField?.();
+        if (field) {
+          field.focus();
+          field.setSelectionRange(caret, caret);
+        }
+      }
+      cursor.current = null;
       if (words || failed) return;
       // Ended without a word and without saying why: tell them what we know.
       setError(
@@ -149,6 +169,16 @@ export function DictateButton({
     <span className={`absolute z-10 ${className}`}>
       <button
         type="button"
+        onPointerDown={() => {
+          // Before the box loses focus to the button: note the cursor, if they were in it.
+          const field = getField?.();
+          cursor.current =
+            !listening && field && document.activeElement === field
+              ? { start: field.selectionStart ?? 0, end: field.selectionEnd ?? 0 }
+              : listening
+                ? cursor.current
+                : null;
+        }}
         onClick={() => (listening ? rec.current?.stop() : start())}
         aria-label={listening ? "Stop dictating" : "Dictate: talk instead of typing"}
         aria-pressed={listening}
@@ -225,6 +255,10 @@ export function MicField({
         value={value}
         onChange={onChange}
         onWords={toEnd}
+        getField={() =>
+          box.current?.querySelector<HTMLInputElement | HTMLTextAreaElement>("textarea, input") ??
+          null
+        }
         maxLength={maxLength}
         className={multiline ? "top-2 right-2" : "top-1/2 right-1 -translate-y-1/2"}
       />
