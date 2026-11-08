@@ -1,5 +1,6 @@
 "use client";
 
+import { forgetLook } from "@/lib/branding/remembered";
 import type { TeamAward } from "@/lib/club/awards";
 import { useSyncExternalStore } from "react";
 import type { Lineup, Player } from "@/lib/rules/types";
@@ -54,6 +55,8 @@ export interface StoreState {
   savedAt: string | null;
   /** Offline changes waiting to be saved. */
   pending: number;
+  /** The team being opened from the team switcher, until its data is loaded. */
+  switchingTo: { name: string; ageGroup: string; colors?: string[] } | null;
 }
 
 const STORAGE_KEY = "lineup-app:v1";
@@ -71,6 +74,7 @@ const SERVER_STATE: StoreState = {
   offline: false,
   savedAt: null,
   pending: 0,
+  switchingTo: null,
 };
 
 const listeners = new Set<() => void>();
@@ -156,11 +160,21 @@ async function loadRemote(): Promise<void> {
       data = applyOutbox(result.data, outbox);
       writeJson(TEAM_KEY, result.teamId);
       const savedAt = keepSnapshot(result.data, result.email);
-      setState({ status: { kind: "ready" }, email: result.email, offline: false, savedAt });
+      setState({
+        status: { kind: "ready" },
+        email: result.email,
+        offline: false,
+        savedAt,
+        switchingTo: null,
+      });
       if (outbox.length) void enqueue(flushOutbox);
     } else {
       data = null;
-      setState({ status: { kind: "setup", team: result.team }, email: result.email });
+      setState({
+        status: { kind: "setup", team: result.team },
+        email: result.email,
+        switchingTo: null,
+      });
     }
   } catch (e) {
     // No signal (or the server can't be reached): open the device's copy instead.
@@ -173,10 +187,14 @@ async function loadRemote(): Promise<void> {
         offline: true,
         savedAt: snap.savedAt,
         pending: outbox.length,
+        switchingTo: null,
       });
       return;
     }
-    setState({ status: { kind: "error", message: e instanceof Error ? e.message : String(e) } });
+    setState({
+      status: { kind: "error", message: e instanceof Error ? e.message : String(e) },
+      switchingTo: null,
+    });
   }
 }
 
@@ -607,10 +625,20 @@ export function syncNow(): Promise<boolean> {
       if (result.kind === "ready") {
         data = applyOutbox(result.data, outbox);
         const savedAt = keepSnapshot(result.data, result.email);
-        setState({ status: { kind: "ready" }, email: result.email, offline: false, savedAt });
+        setState({
+          status: { kind: "ready" },
+          email: result.email,
+          offline: false,
+          savedAt,
+          switchingTo: null,
+        });
       } else {
         data = null;
-        setState({ status: { kind: "setup", team: result.team }, email: result.email });
+        setState({
+          status: { kind: "setup", team: result.team },
+          email: result.email,
+          switchingTo: null,
+        });
       }
       lastSync = Date.now();
       window.dispatchEvent(new Event(SYNC_EVENT));
@@ -936,6 +964,10 @@ export function setOptioned(optioned: boolean): void {
 /** Open another of the user's teams. */
 export function switchTeam(teamId: string): void {
   if (teamId === data?.team.id) return;
+  const t = data?.myTeams.find((x) => x.id === teamId);
+  setState({
+    switchingTo: t ? { name: t.name, ageGroup: t.ageGroup, colors: t.colors } : null,
+  });
   preferTeam(teamId);
   reloadData();
 }
@@ -952,6 +984,7 @@ export async function signOut(): Promise<void> {
   }
   // This device's copy of the team (data and saved pages) leaves with the user.
   outbox = [];
+  forgetLook();
   try {
     window.localStorage.removeItem(SNAPSHOT_KEY);
     window.localStorage.removeItem(OUTBOX_KEY);

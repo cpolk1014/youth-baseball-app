@@ -12,7 +12,9 @@ import {
   type ReactNode,
 } from "react";
 import { BRAND_CRIMSON, BRAND_NAVY } from "@/lib/branding/brand-mark";
+import { rememberLook } from "@/lib/branding/remembered";
 import { themeVars } from "@/lib/branding/theme";
+import { LoadingCurtain } from "./LoadingCurtain";
 import { myUserId, signOut, syncNow, useAppData, useStoreState } from "@/lib/data/store";
 import { initials, useMe, useMyTeamClubs } from "./account/useMe";
 import { useMyClubs } from "./club/useMyClubs";
@@ -63,11 +65,24 @@ export function AppShell({
   const data = useAppData();
   const palette = useCommandPalette();
   const rail = useRail();
+  const teamColors = data?.team.colors;
+  const hasTeam = !!data;
+  useEffect(() => {
+    if (!brand && hasTeam) rememberLook(teamColors);
+  }, [brand, hasTeam, teamColors]);
   return (
     // The team's colors, for everything inside (bars, buttons, badges).
     <div
       className="min-h-dvh lg:flex lg:bg-slate-50 print:block print:min-h-0 print:bg-white"
-      style={themeVars(brand ? [BRAND_NAVY, BRAND_CRIMSON] : data?.team.colors) as CSSProperties}
+      // While a team loads, no colors here: the page keeps the last team's colors that were
+      // put on <html> before the first paint (rememberLook), not RallyCap's defaults.
+      style={
+        (brand
+          ? themeVars([BRAND_NAVY, BRAND_CRIMSON])
+          : data
+            ? themeVars(data.team.colors)
+            : undefined) as CSSProperties | undefined
+      }
     >
       {/* Landscape tablets, laptops and desktops: a light side rail that can fold to icons. */}
       <nav
@@ -198,6 +213,7 @@ export function AppShell({
       <CommandPalette state={palette} />
       <ToastHost />
       <OfflineSupport />
+      <LoadingCurtain brand={brand} />
     </div>
   );
 }

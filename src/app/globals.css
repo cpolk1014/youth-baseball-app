@@ -52,6 +52,68 @@ body {
   }
 }
 
+/* Loading a team: the page blurs in, and a bat takes full swings at a ball. */
+@keyframes curtain-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.curtain-in {
+  animation: curtain-in 0.25s ease-out;
+}
+@keyframes bat-loading {
+  0% {
+    transform: rotate(-70deg);
+  }
+  45% {
+    transform: rotate(-70deg);
+  }
+  60% {
+    transform: rotate(35deg);
+  }
+  100% {
+    transform: rotate(-70deg);
+  }
+}
+.bat-loading {
+  transform-origin: 22% 78%;
+  animation: bat-loading 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes ball-hit {
+  0%,
+  57% {
+    transform: translate(-28px, 34px) scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: translate(-28px, 34px) scale(1);
+    opacity: 1;
+  }
+  95% {
+    transform: translate(40px, -30px) scale(0.7);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.ball-hit {
+  animation: ball-hit 1.3s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .curtain-in,
+  .bat-loading,
+  .ball-hit {
+    animation: none;
+  }
+  .ball-hit {
+    display: none;
+  }
+}
+
 /* Printing: only the lineup card, at true size, on white. */
 @media print {
   html,

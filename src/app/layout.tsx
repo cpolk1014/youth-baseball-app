@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import { LOOK_SCRIPT } from "@/lib/branding/remembered";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,7 +23,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
+    // suppressHydrationWarning: the head script sets the remembered team colors on <html>.
+    <html lang="en" className={`${geistSans.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        {/* The last team's colors, before the first paint (see rememberLook). */}
+        <script dangerouslySetInnerHTML={{ __html: LOOK_SCRIPT }} />
+      </head>
       <body className="min-h-full">{children}</body>
     </html>
   );
