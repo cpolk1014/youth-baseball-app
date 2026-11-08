@@ -8,9 +8,10 @@ import { TRIAL_HREF } from "./parts";
 export const SITE_NAV = [
   { href: "/features", label: "Features" },
   { href: "/ai", label: "AI" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/clubs", label: "Clubs" },
+  { href: "/coaches", label: "Coaches" },
   { href: "/parents", label: "Parents" },
+  { href: "/clubs", label: "Clubs" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/story", label: "Our story" },
 ];
 

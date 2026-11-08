@@ -237,6 +237,50 @@ export function WalkupScreen() {
   );
 }
 
+/** Pine Tar Productions: a highlight frame (name banner, slow-mo replay) ready to save. */
+export function PineTarScreen() {
+  return (
+    <PhoneScreen title="Pine Tar Productions" subtitle="Mason R. · Highlight">
+      <div className="relative aspect-[9/12] overflow-hidden rounded-xl bg-[#2f6b2f]">
+        {/* The field: grass, the infield dirt and the base lines. */}
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[#3d8040]" />
+        <div className="absolute bottom-[-30%] left-1/2 size-[85%] -translate-x-1/2 rotate-45 rounded-md bg-[#b98a5a]" />
+        <div className="absolute bottom-[-12%] left-1/2 size-[48%] -translate-x-1/2 rotate-45 rounded-sm bg-[#3d8040]" />
+        <div className="absolute bottom-[14%] left-1/2 size-3 -translate-x-1/2 rotate-45 bg-white" />
+        <span className="absolute top-[22%] left-[62%] size-2.5 rounded-full bg-white shadow" />
+        <span
+          className="absolute top-2 left-2 rounded px-1.5 py-0.5 text-[10px] font-black text-white"
+          style={{ background: ACCENT }}
+        >
+          REPLAY
+        </span>
+        <span className="absolute top-2 right-2 rounded bg-black/55 px-1.5 py-0.5 text-[8px] font-extrabold text-white">
+          PINE TAR PRODUCTIONS
+        </span>
+        <div className="absolute right-2 bottom-3 left-2">
+          <div
+            className="inline-block rounded-sm border-l-4 px-2 py-0.5 text-[15px] font-black text-white"
+            style={{ background: TEAM, borderColor: ACCENT }}
+          >
+            #7 MASON R.
+          </div>
+          <div
+            className="mt-0.5 inline-block rounded-sm px-2 py-0.5 text-[10px] font-extrabold text-white"
+            style={{ background: ACCENT }}
+          >
+            HOME RUN · vs Bandits
+          </div>
+        </div>
+      </div>
+      <Card>
+        <p className="text-[11px] font-bold text-slate-500">🎤 The call</p>
+        <p className="italic">“Mason turns on it… deep to left… that ball is GONE!”</p>
+      </Card>
+      <Btn>⬇️ Save to my phone</Btn>
+    </PhoneScreen>
+  );
+}
+
 /** A rule typed in plain English, turned into a lineup rule. */
 export function TypedRuleScreen() {
   return (

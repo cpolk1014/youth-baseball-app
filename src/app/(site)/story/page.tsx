@@ -5,7 +5,7 @@ import { SUPPORT_EMAIL } from "@/components/site/SiteFooter";
 export const metadata: Metadata = {
   title: { absolute: "Our Story | RallyCap, the AI Assistant Coach Built by a Coach" },
   description:
-    "RallyCap was built by Craig, a software developer, 7U head coach and travel ball stepdad and uncle, who put AI to work on the busywork of running a youth baseball team.",
+    "RallyCap was built by Craig, a software developer, 7U head coach and youth baseball stepdad and uncle, who put AI to work on the busywork of running a youth baseball team.",
   alternates: { canonical: "/story" },
 };
 
@@ -37,7 +37,7 @@ export default function StoryPage() {
           <p className="text-2xl font-bold text-[#1B2A4A]">Hi, I&apos;m Craig.</p>
           <p>
             By day I&apos;m a <b className={b}>software developer</b>. Nights and weekends, I&apos;m
-            a travel ball guy. My stepson and my nephew started at 7. They&apos;re 14 now.
+            a youth baseball guy. My stepson and my nephew started at 7. They&apos;re 14 now.
             That&apos;s seven years of 7&nbsp;a.m. games, gas station breakfasts and brackets that
             end after dark.
           </p>

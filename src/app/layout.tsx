@@ -11,7 +11,7 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: { default: "RallyCap", template: "%s · RallyCap" },
   description:
-    "Run your travel baseball team: fair lineups, lineup cards, and season playing time.",
+    "Run your youth baseball team: fair lineups, lineup cards, and season playing time.",
   appleWebApp: { capable: true, title: "RallyCap", statusBarStyle: "default" },
 };
 

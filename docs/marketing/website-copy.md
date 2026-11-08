@@ -8,7 +8,7 @@
 ---
 
 > **Voice, draft 3 (2026-11-05): loose, bleacher humor.** The live pages in `src/app/(site)/` are now the source of truth for the exact copy. Rules:
-> - Talk like a travel-ball insider: 7 a.m. games, the group chat, "what time do we play?", napkin math at the hotel breakfast, the dad who counts innings. Wry and affectionate, never mean, and never a joke at a real kid's expense.
+> - Say "youth baseball", never "travel ball" (user's call, 2026-11-08). Talk like a youth baseball insider: 7 a.m. games, the group chat, "what time do we play?", napkin math at the hotel breakfast, the dad who counts innings. Wry and affectionate, never mean, and never a joke at a real kid's expense.
 > - Short lines. Fragments are fine. One joke per block, then the real information.
 > - Craig is a software developer as well as a 7U coach: "built an app instead of complaining."
 > - Original jokes only; don't borrow other creators' slogans.

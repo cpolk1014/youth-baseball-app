@@ -7,6 +7,7 @@ export const SITE_PATHS = [
   "/welcome",
   "/features",
   "/ai",
+  "/coaches",
   "/pricing",
   "/clubs",
   "/parents",

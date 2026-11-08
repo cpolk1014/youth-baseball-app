@@ -5,6 +5,7 @@ const PAGES: [string, number][] = [
   ["/", 1],
   ["/ai", 0.9],
   ["/features", 0.9],
+  ["/coaches", 0.9],
   ["/pricing", 0.9],
   ["/clubs", 0.8],
   ["/parents", 0.8],

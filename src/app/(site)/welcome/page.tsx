@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     absolute: "RallyCap: Youth Baseball's AI Assistant Coach | Lineups, Schedules & Tournaments",
   },
   description:
-    "Snap your schedule and AI adds every game. Get practice plans for your age group and fair lineups in two minutes. Built by a travel ball coach who writes software for a living. Free 14-day trial.",
+    "Snap your schedule and AI adds every game. Get practice plans for your age group and fair lineups in two minutes. Built by a youth baseball coach who writes software for a living. Free 14-day trial.",
   alternates: { canonical: "/" },
 };
 
@@ -119,7 +119,7 @@ export default function HomePage() {
           </span>
           <p className="max-w-3xl text-lg text-slate-700">
             <b className="text-[#1B2A4A]">
-              Built by a travel ball coach who writes software for a living.
+              Built by a youth baseball coach who writes software for a living.
             </b>{" "}
             Seven years of 7&nbsp;a.m. games, four as the GameChanger guy, three as a 7U head coach.
             Eventually he did what developers do: built an app instead of complaining.{" "}
@@ -308,9 +308,9 @@ export default function HomePage() {
           <H2>“I write software for a living. So I made the computer do the annoying parts.”</H2>
           <blockquote className="mt-8 flex flex-col gap-4 border-l-4 border-[#DC143C] pl-6 text-lg leading-relaxed text-slate-700">
             <p>
-              My stepson and my nephew started travel ball at 7. They&apos;re 14 now. I&apos;ve been
-              the GameChanger guy, the dad in the bleachers, and for three years the head coach of a
-              7U team. By day, I build software.
+              My stepson and my nephew started youth baseball at 7. They&apos;re 14 now. I&apos;ve
+              been the GameChanger guy, the dad in the bleachers, and for three years the head coach
+              of a 7U team. By day, I build software.
             </p>
             <p>
               The baseball was never the hard part. It was typing in schedules, planning practices

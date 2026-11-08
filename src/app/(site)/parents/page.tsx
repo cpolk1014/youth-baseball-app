@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { PlayerStatsScreen } from "@/components/site/mocks";
+import { PineTarScreen, PlayerStatsScreen } from "@/components/site/mocks";
 import { Ai, Check, Cta, PageHero, Section, TRIAL_HREF } from "@/components/site/parts";
 
 export const metadata: Metadata = {
-  title: { absolute: "RallyCap for Parents: Game Day Info & AI-Powered Player Stats" },
+  title: { absolute: "RallyCap for Parents: Highlight Reels, Player Stats & Game Day Info" },
   description:
-    "Know when and where to be, what to wear and what you owe, free with your team. Upload a box score and AI tracks your player's stats season after season, for $10 a year.",
+    "Turn your clips into highlight reels with a stadium announcer, track your player's stats season after season with AI, and know where to be and what to wear. Free with your team; Player stats is $10 a year.",
   alternates: { canonical: "/parents" },
 };
 
@@ -40,8 +40,62 @@ export default function ParentsPage() {
       <PageHero
         eyebrow="For parents"
         title="Know where to be, what to wear and what you owe. Without asking the group chat."
-        lead="RallyCap is free for parents on your team. Your coach sends the link. You get your Saturday back. And your kid's stats, powered by AI, if you want them."
+        lead="RallyCap is free for parents on your team. Your coach sends the link. You get your Saturday back. And if you want: your kid's stats and highlight reels, powered by AI."
       />
+
+      {/* Pine Tar Productions: the headline act for parents. */}
+      <section
+        id="pine-tar"
+        className="relative overflow-hidden bg-[#0F1A30] px-4 py-16 text-white sm:px-6 md:py-24"
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-32 -left-32 size-[30rem] rounded-full bg-[#7C3AED]/30 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-40 -bottom-40 size-[34rem] rounded-full bg-[#DC143C]/30 blur-3xl"
+        />
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-[1.1fr_1fr]">
+          <div>
+            <Ai>Pine Tar Productions</Ai>
+            <h2 className="mt-4 text-4xl leading-[1.05] font-black tracking-tight text-balance md:text-6xl">
+              Your kid&apos;s highlight reel. Network quality. Bleacher budget.
+            </h2>
+            <p className="mt-6 text-xl leading-relaxed text-white/85">
+              You filmed it from the fence. Now make it look like the big leagues. Pick the clip,
+              tag the play, and get a highlight with your kid&apos;s name on screen, a stadium
+              announcer calling it, and a slow-mo replay.
+            </p>
+            <ul className="mt-8 flex flex-col gap-3 text-lg text-white/85">
+              <Check light>
+                <b className="text-white">AI writes the call</b> (“Mason turns on it… GONE!”) and a
+                stadium voice reads it.
+              </Check>
+              <Check light>
+                <b className="text-white">Name and number on screen</b> in your team&apos;s colors.
+              </Check>
+              <Check light>
+                <b className="text-white">Slow-mo replay</b> of the exact moment you pick.
+              </Check>
+              <Check light>
+                <b className="text-white">Made on your phone, saved to your phone.</b> We never
+                store your video.
+              </Check>
+            </ul>
+            <p className="mt-6 text-lg font-bold">Included with Player stats, $10 a year.</p>
+            <div className="mt-6">
+              <Cta href={`${TRIAL_HREF}?next=/profile`} variant="light">
+                Get Player stats
+              </Cta>
+            </div>
+            <p className="mt-6 text-sm text-white/60">
+              Side effects: grandma watches it 40 times. Budget your data accordingly.
+            </p>
+          </div>
+          <PineTarScreen />
+        </div>
+      </section>
 
       <Section>
         <h2 className="text-3xl font-black tracking-tight text-[#1B2A4A] md:text-4xl">
@@ -86,6 +140,10 @@ export default function ParentsPage() {
               <Check>
                 <b className="text-[#1B2A4A]">Private to your family.</b> Not coaches, not other
                 parents.
+              </Check>
+              <Check>
+                <b className="text-[#1B2A4A]">Pine Tar Productions included:</b> highlight reels
+                with the announcer and slow-mo.
               </Check>
             </ul>
             <p className="mt-6 text-slate-600">

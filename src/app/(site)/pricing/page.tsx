@@ -77,8 +77,8 @@ export default function PricingPage() {
             </h2>
             <p className="mt-2 max-w-2xl text-slate-600">
               AI reads your player&apos;s GameChanger box scores. Season totals and trends, private
-              to your family, and they follow your player to every team. $5 for each additional
-              child.
+              to your family, and they follow your player to every team. Plus Pine Tar Productions:
+              highlight reels with a stadium announcer and slow-mo. $5 for each additional child.
             </p>
           </div>
           <Cta href="/parents" variant="outline" size="md">

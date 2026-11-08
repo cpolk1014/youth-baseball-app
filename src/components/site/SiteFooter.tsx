@@ -16,7 +16,7 @@ export function SiteFooter() {
           <img src="/brand/rallycap-horizontal-white.svg" alt="RallyCap" className="h-14 w-auto" />
           <p className="mt-3 text-lg font-bold">Youth baseball&apos;s AI assistant coach.</p>
           <p className="mt-1 text-white/70">
-            Built by a travel ball coach who writes code. For 7U–14U teams.
+            Built by a youth baseball coach who writes code. For 7U–14U teams.
           </p>
           <Link
             href={TRIAL_HREF}
@@ -39,7 +39,7 @@ export function SiteFooter() {
         </div>
         <div className={col}>
           <p className={head}>Who it&apos;s for</p>
-          <Link className={link} href="/features">
+          <Link className={link} href="/coaches">
             Coaches
           </Link>
           <Link className={link} href="/clubs">
