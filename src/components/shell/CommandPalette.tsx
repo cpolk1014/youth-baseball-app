@@ -64,11 +64,11 @@ export function searchResults(data: AppData | null, signedIn: boolean, query: st
   const q = query.trim().toLowerCase();
   const hit = (...texts: (string | null | undefined)[]) =>
     !q || texts.some((t) => t?.toLowerCase().includes(q));
-  const pages: Result[] = [
-    ...(data ? [HOME] : []),
-    ...visibleTabs([...GAME_DAY, ...TEAM], data),
-  ].map((t) => ({ key: t.href, group: "Pages", label: t.label, href: t.href, icon: t.icon }));
-  for (const x of settingsLinks(data, signedIn)) {
+  // No team (e.g. someone who only runs a club): no team pages to jump to.
+  const pages: Result[] = (data ? [HOME, ...visibleTabs([...GAME_DAY, ...TEAM], data)] : []).map(
+    (t) => ({ key: t.href, group: "Pages", label: t.label, href: t.href, icon: t.icon }),
+  );
+  for (const x of data ? settingsLinks(data, signedIn) : []) {
     pages.push({ key: x.href, group: "Pages", label: x.label, href: x.href, icon: x.icon });
   }
   if (signedIn) {

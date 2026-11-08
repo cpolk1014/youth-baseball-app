@@ -391,10 +391,14 @@ function MenuLinks({
   collapsed?: boolean;
 }) {
   const data = useAppData();
-  const { mode } = useStoreState();
+  const { mode, status } = useStoreState();
   const signedIn = mode === "supabase";
   const pathname = usePathname();
   const rail = variant === "rail";
+  // Signed in with no team (e.g. someone who only runs a club): the team sections would
+  // lead nowhere, so the menu offers their club and starting a team instead.
+  const noTeam = signedIn && !data && status.kind !== "loading";
+  const clubs = useMyClubs();
   const settings = settingsLinks(data, signedIn);
   const isOn = (x: { href: string; also: string[] }) =>
     pathname === x.href || x.also.includes(pathname);
@@ -438,6 +442,24 @@ function MenuLinks({
       ))}
     </>
   );
+  if (noTeam) {
+    return (
+      <>
+        {heading("Get started")}
+        {(clubs ?? []).length > 0 &&
+          link(
+            {
+              href: "/club",
+              label: clubs!.length === 1 ? clubs![0]!.name : "My clubs",
+              icon: "club",
+            },
+            pathname.startsWith("/club"),
+          )}
+        {link({ href: "/my-teams", label: "Start a team", icon: "plus" }, pathname === "/my-teams")}
+        <AccountMenu tab={tab} onPick={onPick} variant={variant} collapsed={collapsed} />
+      </>
+    );
+  }
   return (
     <>
       {/* Home: tablets and up (phones open on Games). */}
