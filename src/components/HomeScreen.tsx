@@ -33,7 +33,7 @@ import { TeamBadge } from "./TeamBadge";
 import { TeamSwitcher } from "./TeamSwitcher";
 import { useToday } from "./useToday";
 
-/** Home: the team at a glance (tablets and bigger; phones open on Games). */
+/** Home: the team at a glance (phones open on Games and reach this from the menu). */
 export function HomeScreen() {
   const data = useAppData();
   const today = useToday();
@@ -61,7 +61,7 @@ export function HomeScreen() {
       onTitleTap={mode === "supabase" ? () => setSwitching(true) : undefined}
     >
       <PlanBanner />
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div className="md:col-span-2">
           {next?.kind === "game" ? (
             <NextGame game={next.game} data={data} today={today} />
@@ -109,10 +109,13 @@ function Card({
     <section
       className={`flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}
     >
-      <div className="mb-3 flex items-baseline justify-between gap-2">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-sm font-bold tracking-wide text-slate-500 uppercase">{title}</h2>
         {href && (
-          <Link href={href} className="text-sm font-semibold text-[var(--team)] hover:underline">
+          <Link
+            href={href}
+            className="-my-2 flex min-h-11 items-center text-sm font-semibold text-[var(--team)] hover:underline"
+          >
             {linkText ?? "Open"} ›
           </Link>
         )}
@@ -151,10 +154,15 @@ function NextGame({ game, data, today }: { game: Game; data: AppData; today: str
         />
         <div className="min-w-0">
           <p className="text-sm font-bold tracking-wide text-white/70 uppercase">
-            Next game · {whenText(game.date, today)}
-            {game.startTime ? ` · ${formatClock(game.startTime)}` : ""}
+            <span className="block md:inline">
+              Next game<span className="hidden md:inline"> · </span>
+            </span>
+            <span className="block md:inline">
+              {whenText(game.date, today)}
+              {game.startTime ? ` · ${formatClock(game.startTime)}` : ""}
+            </span>
           </p>
-          <p className="line-clamp-2 text-3xl leading-tight font-black tracking-tight">
+          <p className="line-clamp-2 text-2xl leading-tight font-black tracking-tight md:text-3xl">
             vs {game.opponent}
           </p>
           {placeLabel(game) && (
@@ -299,7 +307,7 @@ function TodoCard({ todos }: { todos: Todo[] }) {
             <li key={t.key}>
               <Link
                 href={t.href}
-                className="flex items-start gap-3 rounded-lg px-2 py-2 text-[15px] text-slate-800 hover:bg-slate-50"
+                className="flex min-h-11 items-start gap-3 rounded-lg px-2 py-2.5 text-[15px] text-slate-800 hover:bg-slate-50"
               >
                 <span
                   aria-hidden="true"
@@ -337,7 +345,7 @@ function AwardsCard({ data }: { data: AppData }) {
             <li key={a.awardId}>
               <Link
                 href="/awards"
-                className="flex items-center gap-3 rounded-lg px-2 py-2 text-[15px] hover:bg-slate-50"
+                className="flex min-h-11 items-center gap-3 rounded-lg px-2 py-2 text-[15px] hover:bg-slate-50"
               >
                 <span aria-hidden="true" className="text-xl">
                   {a.emoji || "🏅"}
@@ -632,7 +640,7 @@ function HomeworkCard({ data, today }: { data: AppData; today: string }) {
               <li key={a.id}>
                 <Link
                   href={`/plays/homework/${a.id}`}
-                  className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-slate-50"
+                  className="flex min-h-11 items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-slate-50"
                 >
                   <span className="min-w-0 truncate text-[15px] font-semibold">{a.title}</span>
                   <span

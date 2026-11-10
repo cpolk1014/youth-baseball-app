@@ -462,12 +462,7 @@ function MenuLinks({
   }
   return (
     <>
-      {/* Home: tablets and up (phones open on Games). */}
-      {data && (
-        <div className={rail ? "flex flex-col" : "hidden flex-col md:flex"}>
-          {link(HOME, tab === "home")}
-        </div>
-      )}
+      {data && <div className="flex flex-col">{link(HOME, tab === "home")}</div>}
       {section("Play Ball", GAME_DAY)}
       {section("Team", TEAM)}
       {settings.length > 0 && !parent && (
