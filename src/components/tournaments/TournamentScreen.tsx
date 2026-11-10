@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { Tournament, TournamentGame, TournamentTeam } from "@/lib/data/tournament-backend";
@@ -18,20 +19,63 @@ import { gamesAtVenues, scheduleText, venueFor, venuesSavedNote } from "@/lib/to
 import { AppShell, Loading } from "../AppShell";
 import { DeleteGamePanel } from "../DeleteGamePanel";
 import { Sheet } from "../Sheet";
-import {
-  LinkFields,
-  ScreenshotButton,
-  checkLinks,
-  readTournament,
-  type LinkInputs,
-} from "./AddTournament";
-import { TournamentSchedule } from "./TournamentSchedule";
+import { LinkFields, checkLinks, readTournament, type LinkInputs } from "./AddTournament";
+import { TournamentSchedule, type ImportMode } from "./TournamentSchedule";
 import { TournamentStandings } from "./TournamentStandings";
 import { TournamentVenues } from "./TournamentVenues";
 import { tournamentWhen } from "./TournamentsScreen";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 const backend = () => import("@/lib/data/tournament-backend");
+
+type Step = {
+  title: string;
+  done: boolean;
+  status: string;
+  label: string;
+  /** What the button says; `label` is for screen readers. */
+  short: string;
+  onClick?: () => void;
+  onFiles?: (files: File[]) => void;
+};
+
+/** A Set up step's button: screenshots straight from the picker, or a sheet. */
+function StepButton({
+  step,
+  primary,
+  disabled,
+}: {
+  step: Step;
+  primary: boolean;
+  disabled: boolean;
+}) {
+  const look = `flex h-11 shrink-0 items-center justify-center rounded-xl px-4 text-base font-bold ${primary ? "bg-[var(--team)] text-white active:bg-[var(--team-press)]" : "border-2 border-slate-300 bg-white active:bg-slate-100"} ${disabled ? "pointer-events-none opacity-40" : ""}`;
+  if (step.onFiles) {
+    const onFiles = step.onFiles;
+    return (
+      <label className={`${look} cursor-pointer`} aria-label={step.label}>
+        {step.short}
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          disabled={disabled}
+          className="sr-only"
+          onChange={(e) => {
+            const picked = Array.from(e.target.files ?? []);
+            e.target.value = "";
+            if (picked.length) onFiles(picked);
+          }}
+        />
+      </label>
+    );
+  }
+  return (
+    <button onClick={step.onClick} disabled={disabled} className={look} aria-label={step.label}>
+      {step.short}
+    </button>
+  );
+}
 
 /** One tournament: its details, links for the team, and the teams in our division. */
 export function TournamentScreen({ id }: { id: string }) {
@@ -51,6 +95,7 @@ export function TournamentScreen({ id }: { id: string }) {
   // Set once a delete starts, so the sheet holds still while the games disappear.
   const [deleting, setDeleting] = useState(false);
   const [editLinks, setEditLinks] = useState<LinkInputs | null>(null);
+  const [importing, setImporting] = useState<ImportMode | null>(null);
 
   const load = useCallback(async () => {
     const b = await backend();
@@ -123,9 +168,9 @@ export function TournamentScreen({ id }: { id: string }) {
   const ours = teams.find((x) => x.isUs);
   const links: [string, string][] = [];
   for (const [label, href] of [
-    ["Tournament info", t.infoUrl],
-    ["Tournament schedule", t.scheduleUrl],
-    ["Tournament bracket", t.bracketUrl],
+    ["Tournament site", t.infoUrl],
+    ["Schedule page", t.scheduleUrl],
+    ["Bracket page", t.bracketUrl],
   ] as const) {
     if (href) links.push([label, href]);
   }
@@ -152,71 +197,155 @@ export function TournamentScreen({ id }: { id: string }) {
     setTournamentCount(Math.max(0, (data.tournamentCount ?? 1) - 1));
     router.push("/tournaments");
   };
+  const poolCount = (games ?? []).filter((g) => g.stage === "pool").length;
+  const bracketCount = (games ?? []).filter((g) => g.stage === "bracket").length;
+  const gamesCount = (n: number) => `${n} game${n === 1 ? "" : "s"} saved`;
+  // The first step not done yet is the one to do next.
+  const steps: Step[] = [
+    {
+      title: "Teams",
+      done: teams.length > 0,
+      status: teams.length
+        ? `${teams.length} team${teams.length === 1 ? "" : "s"}${ours ? "" : " · tap “That’s us” on yours"}`
+        : "From the tournament's team list",
+      label: teams.length ? "Add more teams" : "Add teams",
+      short: teams.length ? "Add more" : "Add",
+      onFiles: (f) => void fromScreenshots(f.slice(0, MAX_SCREENSHOTS)),
+    },
+    {
+      title: "Pool schedule",
+      done: poolCount > 0,
+      status: poolCount ? gamesCount(poolCount) : "When it comes out",
+      label: poolCount ? "Update the pool schedule" : "Add the pool schedule",
+      short: poolCount ? "Update" : "Add",
+      onClick: () => setImporting("schedule"),
+    },
+    {
+      title: "Bracket",
+      done: bracketCount > 0,
+      status: bracketCount ? gamesCount(bracketCount) : "When it comes out",
+      label: bracketCount ? "Update the bracket" : "Add the bracket",
+      short: bracketCount ? "Update" : "Add",
+      onClick: () => setImporting("bracket"),
+    },
+  ];
+  const next = steps.findIndex((x) => !x.done);
+  const status = (
+    <>
+      {busy && (
+        <p role="status" className="mt-2 text-base font-semibold text-slate-700">
+          {busy}
+        </p>
+      )}
+      {note && (
+        <p role="status" className="mt-2 text-base font-semibold text-green-800">
+          {note}
+        </p>
+      )}
+      {error && editLinks === null && (
+        <p role="alert" className="mt-2 text-base font-semibold text-red-700">
+          {error}
+        </p>
+      )}
+    </>
+  );
   return shell(
     <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:items-start">
-      <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
-        <h2 className={heading}>The tournament</h2>
-        <p className="text-lg font-bold">{t.name}</p>
-        <p className="text-base text-slate-700">
+      {/* What it is, where to read more, and the bracket. */}
+      <section className="rounded-xl border-2 border-slate-200 bg-white p-4 md:col-span-2">
+        <p className="text-base font-semibold text-slate-800">
           {[t.organization, tournamentWhen(t), t.city].filter(Boolean).join(" · ")}
         </p>
         {t.division && <p className="text-base text-slate-700">Division: {t.division}</p>}
         {t.venues.length > 0 && t.places.length === 0 && (
-          <p className="mt-1 text-sm text-slate-600">Fields: {t.venues.join(", ")}</p>
+          <p className="text-sm text-slate-600">Fields: {t.venues.join(", ")}</p>
         )}
-        <p className="mt-2 text-sm text-slate-600">Scores, standings and what-ifs come next.</p>
+        <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center">
+          {bracketCount > 0 && (
+            <Link
+              href={`/tournaments/${t.id}/bracket`}
+              className="flex h-12 shrink-0 items-center justify-center rounded-xl bg-[var(--team)] px-6 text-base font-bold text-white active:bg-[var(--team-press)]"
+            >
+              View bracket
+            </Link>
+          )}
+          {(links.length > 0 || canEdit) && (
+            <ul className="flex flex-wrap gap-2">
+              {links.map(([label, href]) => (
+                <li key={label}>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-h-11 items-center gap-1 rounded-full border-2 border-slate-200 px-3 text-sm font-semibold text-[var(--team)] active:bg-slate-50"
+                  >
+                    {label}
+                    <span aria-hidden className="text-slate-400">
+                      ↗
+                    </span>
+                  </a>
+                </li>
+              ))}
+              {canEdit && (
+                <li>
+                  <button
+                    onClick={() =>
+                      setEditLinks({
+                        info: t.infoUrl ?? "",
+                        schedule: t.scheduleUrl ?? "",
+                        bracket: t.bracketUrl ?? "",
+                      })
+                    }
+                    className="flex min-h-11 items-center rounded-full border-2 border-dashed border-slate-300 px-3 text-sm font-semibold text-slate-700 active:bg-slate-50"
+                  >
+                    {links.length ? "Edit links" : "+ Add the tournament's links"}
+                  </button>
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
       </section>
 
-      <TournamentVenues
-        data={data}
-        tournament={t}
-        canEdit={canEdit}
-        ourGames={(games ?? []).filter((g) => g.gameId).length}
-        onSave={savePlaces}
-      />
-
-      <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
-        <h2 className={heading}>Links</h2>
-        {links.length === 0 ? (
-          <p className="text-base text-slate-700">
-            {canEdit
-              ? "Add the tournament's info, schedule and bracket pages so parents can open them here."
-              : "No links yet."}
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {links.map(([label, href]) => (
-              <li key={label}>
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex min-h-12 items-center justify-between gap-2 rounded-xl border-2 border-slate-200 px-3 py-2 text-base font-semibold text-[var(--team)] active:bg-slate-50"
+      {/* Coaches: the steps to get the tournament in, each with its own button. */}
+      {canEdit && (
+        <section className="rounded-xl border-2 border-slate-200 bg-white p-4 md:col-span-2">
+          <details open={next !== -1} className="group">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+              <h2 className="text-sm font-bold tracking-wide text-slate-600 uppercase">Set up</h2>
+              {next === -1 && (
+                <span className="text-sm font-semibold text-green-800">
+                  All in ✓ <span className="text-slate-500 group-open:hidden">· Update</span>
+                </span>
+              )}
+            </summary>
+            <ol className="mt-1 grid gap-2 md:grid-cols-3">
+              {steps.map((x, i) => (
+                <li
+                  key={x.title}
+                  className="flex items-center gap-3 rounded-xl border-2 border-slate-100 p-3"
                 >
-                  {label}
-                  <span aria-hidden className="text-slate-400">
-                    ↗
+                  <span
+                    aria-hidden
+                    className={`flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-bold ${x.done ? "bg-green-700 text-white" : "border-2 border-slate-300 text-slate-500"}`}
+                  >
+                    {x.done ? "✓" : i + 1}
                   </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-        {canEdit && (
-          <button
-            onClick={() =>
-              setEditLinks({
-                info: t.infoUrl ?? "",
-                schedule: t.scheduleUrl ?? "",
-                bracket: t.bracketUrl ?? "",
-              })
-            }
-            className="mt-3 h-12 w-full rounded-xl border-2 border-slate-400 bg-white text-base font-bold active:bg-slate-100"
-          >
-            {links.length ? "Edit links" : "Add links"}
-          </button>
-        )}
-      </section>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-base font-bold">
+                      {x.title}
+                      <span className="sr-only">{x.done ? " (done)" : ""}</span>
+                    </span>
+                    <span className="block text-sm text-slate-600">{x.status}</span>
+                  </span>
+                  <StepButton step={x} primary={i === next} disabled={busy !== null} />
+                </li>
+              ))}
+            </ol>
+          </details>
+          {status}
+        </section>
+      )}
 
       <TournamentStandings
         data={data}
@@ -234,6 +363,16 @@ export function TournamentScreen({ id }: { id: string }) {
         canEdit={canEdit}
         games={shownGames}
         onChanged={load}
+        importing={importing}
+        onImportClose={() => setImporting(null)}
+      />
+
+      <TournamentVenues
+        data={data}
+        tournament={t}
+        canEdit={canEdit}
+        ourGames={(games ?? []).filter((g) => g.gameId).length}
+        onSave={savePlaces}
       />
 
       <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
@@ -243,14 +382,17 @@ export function TournamentScreen({ id }: { id: string }) {
             <b>{ours.name}</b> <span className="text-slate-600">(us)</span>
           </p>
         ) : (
-          canEdit && (
+          canEdit &&
+          others.length > 0 && (
             <p className="mb-2 text-sm text-slate-600">
-              Your team isn&apos;t marked yet. Tap “That’s us” on it when it shows up.
+              Your team isn&apos;t marked yet. Tap “That’s us” on it.
             </p>
           )
         )}
         {others.length === 0 ? (
-          <p className="text-base text-slate-700">No other teams yet.</p>
+          <p className="text-base text-slate-700">
+            {canEdit ? "No teams yet. Add them in Set up above." : "No other teams yet."}
+          </p>
         ) : (
           <ul className="flex flex-col divide-y divide-slate-100">
             {others.map((x) => (
@@ -270,7 +412,7 @@ export function TournamentScreen({ id }: { id: string }) {
                             await (await backend()).setOurTeam(t.id, x.id);
                           })
                         }
-                        className="h-10 shrink-0 rounded-lg border-2 border-slate-300 px-2 text-sm font-semibold"
+                        className="h-11 shrink-0 rounded-lg border-2 border-slate-300 px-3 text-sm font-semibold"
                       >
                         That&apos;s us
                       </button>
@@ -282,7 +424,7 @@ export function TournamentScreen({ id }: { id: string }) {
                         })
                       }
                       aria-label={`Remove ${x.name}`}
-                      className="flex size-10 shrink-0 items-center justify-center rounded-lg text-xl text-slate-400 hover:bg-slate-100"
+                      className="flex size-11 shrink-0 items-center justify-center rounded-lg text-xl text-slate-400 hover:bg-slate-100"
                     >
                       ×
                     </button>
@@ -292,47 +434,26 @@ export function TournamentScreen({ id }: { id: string }) {
             ))}
           </ul>
         )}
-
-        {canEdit && (
-          <div className="mt-3 flex flex-col gap-2">
-            <ScreenshotButton
-              onFiles={(f) => void fromScreenshots(f.slice(0, MAX_SCREENSHOTS))}
-              label="Add teams from screenshots"
-            />
-          </div>
-        )}
-        {busy && (
-          <p role="status" className="mt-2 text-base font-semibold text-slate-700">
-            {busy}
-          </p>
-        )}
-        {note && (
-          <p role="status" className="mt-2 text-base font-semibold text-green-800">
-            {note}
-          </p>
-        )}
-        {error && (
-          <p role="alert" className="mt-2 text-base font-semibold text-red-700">
-            {error}
-          </p>
-        )}
+        {!canEdit && status}
       </section>
 
-      {canEdit && unplayed.games.length > 0 && (
-        <button
-          onClick={() => setConfirmDrop(true)}
-          className="h-12 rounded-xl border-2 border-red-200 bg-white text-base font-semibold text-red-700 md:col-span-2"
-        >
-          We&apos;re not playing in this one
-        </button>
-      )}
       {canEdit && (
-        <button
-          onClick={() => setConfirmDelete(true)}
-          className="h-12 rounded-xl border-2 border-red-200 bg-white text-base font-semibold text-red-700 md:col-span-2"
-        >
-          Delete tournament
-        </button>
+        <div className="flex flex-col gap-2 border-t-2 border-slate-200 pt-4 md:col-span-2 md:flex-row md:justify-end">
+          {unplayed.games.length > 0 && (
+            <button
+              onClick={() => setConfirmDrop(true)}
+              className="h-12 rounded-xl border-2 border-red-200 bg-white px-6 text-base font-semibold text-red-700"
+            >
+              We&apos;re not playing in this one
+            </button>
+          )}
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="h-12 rounded-xl border-2 border-red-200 bg-white px-6 text-base font-semibold text-red-700"
+          >
+            Delete tournament
+          </button>
+        </div>
       )}
       <Sheet open={editLinks !== null} title="Tournament links" onClose={() => setEditLinks(null)}>
         {editLinks && (

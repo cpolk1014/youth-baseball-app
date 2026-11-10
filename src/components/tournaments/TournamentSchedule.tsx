@@ -56,8 +56,18 @@ export const gameLabel = (g: Pick<ScheduleGame, "gameNo" | "stage" | "pool" | "r
     .filter(Boolean)
     .join(" · ");
 
-/** The tournament's games by day, ours highlighted; coaches add or update from screenshots,
- * and anyone on the team reports scores of the games we're not in. */
+/** Which screenshots a coach is adding: the pool schedule (it may show the bracket too) or
+ * only the bracket. */
+export type ImportMode = "schedule" | "bracket";
+
+export const importTitle = (mode: ImportMode, games: TournamentGame[] | null) => {
+  const has = games?.some((g) => (mode === "bracket" ? g.stage === "bracket" : g.stage === "pool"));
+  return `${has ? "Update" : "Add"} the ${mode === "bracket" ? "bracket" : "pool schedule"}`;
+};
+
+/** The tournament's games by day, ours highlighted, and anyone on the team reports scores of
+ * the games we're not in. Coaches add or update the games from screenshots (`importing`, opened
+ * from the page's Set up card). */
 export function TournamentSchedule({
   data,
   tournament,
@@ -65,6 +75,8 @@ export function TournamentSchedule({
   canEdit,
   games,
   onChanged,
+  importing,
+  onImportClose,
 }: {
   data: AppData;
   tournament: Tournament;
@@ -72,9 +84,10 @@ export function TournamentSchedule({
   canEdit: boolean;
   games: TournamentGame[] | null;
   onChanged: () => Promise<void>;
+  importing: ImportMode | null;
+  onImportClose: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
-  const [importing, setImporting] = useState(false);
   const [scoring, setScoring] = useState<TournamentGame | null>(null);
   const [scoreShots, setScoreShots] = useState(false);
   const ourName = teams.find((t) => t.isUs)?.name ?? null;
@@ -87,20 +100,12 @@ export function TournamentSchedule({
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white p-4 md:col-span-2">
       <h2 className={heading}>Schedule</h2>
-      {games?.some((g) => g.stage === "bracket") && (
-        <Link
-          href={`/tournaments/${tournament.id}/bracket`}
-          className="mb-3 flex h-12 items-center justify-center rounded-xl bg-[var(--team)] text-base font-bold text-white active:bg-[var(--team-press)] md:w-64"
-        >
-          View bracket
-        </Link>
-      )}
       {games === null ? (
         <p className="text-base text-slate-600">Loading…</p>
       ) : games.length === 0 ? (
         <p className="text-base text-slate-700">
           {canEdit
-            ? "When the pool schedule and bracket come out, add screenshots of them. Your games go on the team's Games too."
+            ? "When the pool schedule and bracket come out, add them in Set up above. Your games go on the team's Games too."
             : "The schedule isn't out yet."}
         </p>
       ) : (
@@ -133,24 +138,14 @@ export function TournamentSchedule({
           {error}
         </p>
       )}
-      <div className="mt-3 flex flex-col gap-2 md:flex-row">
-        {!!games?.length && (
-          <button
-            onClick={() => setScoreShots(true)}
-            className="h-12 rounded-xl border-2 border-[var(--team)] bg-white px-6 text-base font-bold text-[var(--team)]"
-          >
-            Update scores from screenshots
-          </button>
-        )}
-        {canEdit && (
-          <button
-            onClick={() => setImporting(true)}
-            className="h-12 rounded-xl bg-[var(--team)] px-6 text-base font-bold text-white active:bg-[var(--team-press)]"
-          >
-            {games?.length ? "Update the schedule" : "Add the schedule"}
-          </button>
-        )}
-      </div>
+      {!!games?.length && (
+        <button
+          onClick={() => setScoreShots(true)}
+          className="mt-3 h-12 w-full rounded-xl border-2 border-[var(--team)] bg-white px-6 text-base font-bold text-[var(--team)] md:w-auto"
+        >
+          Update scores from screenshots
+        </button>
+      )}
       <Sheet
         open={scoreShots}
         title="Update scores from screenshots"
@@ -172,20 +167,28 @@ export function TournamentSchedule({
         )}
       </Sheet>
       <Sheet
-        open={importing}
-        title={games?.length ? "Update the schedule" : "Add the schedule"}
-        onClose={() => setImporting(false)}
+        open={canEdit && importing !== null}
+        title={importing ? importTitle(importing, games) : ""}
+        onClose={onImportClose}
       >
-        {importing && games && (
-          <PaidGate feature="Reading the schedule from screenshots">
+        {canEdit && importing && games && (
+          <PaidGate
+            feature={
+              importing === "bracket"
+                ? "Reading the bracket from screenshots"
+                : "Reading the schedule from screenshots"
+            }
+          >
             <ScheduleImport
+              key={importing}
+              mode={importing}
               data={data}
               tournament={tournament}
               teams={teams}
               saved={games}
               ourName={ourName}
               onSaved={() => {
-                setImporting(false);
+                onImportClose();
                 void load();
               }}
             />
@@ -799,6 +802,7 @@ type ImportPick =
 
 /** Screenshots → what's new and what changed → the coach picks → save (team games too). */
 function ScheduleImport({
+  mode,
   data,
   tournament,
   teams,
@@ -806,6 +810,7 @@ function ScheduleImport({
   ourName,
   onSaved,
 }: {
+  mode: ImportMode;
   data: AppData;
   tournament: Tournament;
   teams: TournamentTeam[];
@@ -826,11 +831,16 @@ function ScheduleImport({
     setError(null);
     try {
       const { schedule } = await sendScreenshots<{ schedule?: Schedule }>(
-        { teamId: data.team.id, tournamentId: tournament.id },
+        { teamId: data.team.id, tournamentId: tournament.id, kind: mode },
         files,
       );
       if (!schedule) throw new Error("Couldn't read the screenshots. Try again.");
-      setRead({ schedule, match: matchSchedule(saved, schedule.games) });
+      // From "Add the bracket", every game is a bracket game.
+      const read =
+        mode === "bracket"
+          ? { ...schedule, games: schedule.games.map((g) => ({ ...g, stage: "bracket" as const })) }
+          : schedule;
+      setRead({ schedule: read, match: matchSchedule(saved, read.games) });
       setSkip(new Set());
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -853,9 +863,10 @@ function ScheduleImport({
     return (
       <div className="flex flex-col gap-4">
         <p className="text-base text-slate-700">
-          Take screenshots of the pool play schedule and the bracket (several if they&apos;re long).
-          RallyCap lists every game; your games also go on the team&apos;s Games. Updated schedule?
-          Add the new screenshots and you&apos;ll see only what changed.
+          {mode === "bracket"
+            ? "Take screenshots of the bracket (several if it's big). RallyCap reads the seeds and game numbers and draws it on View bracket; your bracket games also go on the team's Games once seeds are locked."
+            : "Take screenshots of the pool play schedule (several if it's long). RallyCap lists every game; your games also go on the team's Games."}{" "}
+          Updated? Add the new screenshots and you&apos;ll see only what changed.
         </p>
         {files.length > 0 && (
           <ul className="grid grid-cols-3 gap-2">

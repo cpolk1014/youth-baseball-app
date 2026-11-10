@@ -27,7 +27,8 @@ function errorResponse(status: number, error: string) {
 /**
  * A coach or manager reads screenshots (form: teamId, file, one per screenshot, up to 6):
  * a new tournament's event page and team list (returns { event }), or, with tournamentId,
- * that tournament's pool schedule and bracket (returns { schedule }), or, with kind
+ * that tournament's pool schedule and bracket (returns { schedule }; kind "bracket" says the
+ * screenshots are only the bracket), or, with kind
  * "tiebreak", an organization's tie-break rules (returns { rules }), or, with kind "scores" and
  * tournamentId (anyone on the team), final scores (returns { scores }), or, with kind "venue"
  * and tournamentId, the parks shown, found on the map (returns { venues }). Nothing is saved
@@ -126,7 +127,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ scores: await readScores(images, scheduleContext) });
     }
     if (scheduleContext) {
-      return NextResponse.json({ schedule: await readSchedule(images, scheduleContext) });
+      // From "Add the bracket": every game shown is a bracket game.
+      const hint =
+        kind === "bracket"
+          ? " These screenshots are the bracket: list every game as stage bracket, even when no words say so."
+          : "";
+      return NextResponse.json({ schedule: await readSchedule(images, scheduleContext + hint) });
     }
     const event = await readEvent(images, context);
     return NextResponse.json({ event });
