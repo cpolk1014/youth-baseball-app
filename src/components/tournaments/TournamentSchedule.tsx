@@ -88,6 +88,14 @@ export function TournamentSchedule({
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white p-4 md:col-span-2">
       <h2 className={heading}>Schedule</h2>
+      {games?.some((g) => g.stage === "bracket") && (
+        <Link
+          href={`/tournaments/${tournament.id}/bracket`}
+          className="mb-3 flex h-12 items-center justify-center rounded-xl bg-[var(--team)] text-base font-bold text-white active:bg-[var(--team-press)] md:w-64"
+        >
+          View bracket
+        </Link>
+      )}
       {games === null ? (
         <p className="text-base text-slate-600">Loading…</p>
       ) : games.length === 0 ? (
