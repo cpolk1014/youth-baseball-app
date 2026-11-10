@@ -12,6 +12,9 @@ import {
   type Schedule,
 } from "./schedule";
 import { TIEBREAK_JSON_SCHEMA, cleanRules, type ReadRules } from "./tiebreak";
+import type { GamePlace } from "@/lib/places/maps";
+import { placeDetails, searchPlaces } from "@/lib/places/google";
+import { VENUES_JSON_SCHEMA, cleanVenues, venueSearchText, type ReadVenue } from "./venues";
 
 export class EventReadError extends Error {}
 
@@ -27,6 +30,8 @@ const SCHEDULE_PROMPT = `You read screenshots of a youth baseball tournament's p
 const TIEBREAK_PROMPT = `You read screenshots of a youth baseball tournament organization's rules and pull out how pool play standings and bracket seeding are decided, as an ordered list of tie-breakers for teams with the same record. Use only these criteria: head_to_head (results among the tied teams), runs_allowed (fewest total), run_diff (best total run differential), runs_scored (most total), runs_allowed_avg, run_diff_avg, runs_scored_avg (per game, when the rules say per game or average), coin_flip. When a rule caps runs per game (e.g. "max 8 runs per game" or a run rule margin used for differential), put that number in cap. Keep each rule's own words in text. Leave out rules that aren't tie-breakers. If a tie-breaker doesn't fit any criterion, use the closest one and say so in warnings. Set restart to true unless the rules say tied teams continue down the list after a team is separated.`;
 
 const SCORES_PROMPT = `You read screenshots of a youth baseball tournament's results (a schedule with scores, a bracket with scores, or a results list) and list every game that shows a final score. For each give its game number if shown, the date if shown (YYYY-MM-DD), the two teams exactly as shown (the first-listed team as home), and each team's runs. Skip games without a score. Standings tables show only records, not games: list nothing from them and say so in warnings. Don't guess anything that isn't shown.`;
+
+const VENUES_PROMPT = `You read pictures about a youth baseball tournament (a flyer, an event page, a directions page, a map, a park sign) and list the ballparks or sports complexes where its games are played. For each give its name as shown, its street address if shown, and its city and state if shown. List each park once, not each field inside it. Leave out hotels, restaurants, sponsors, registration or mailing addresses, and team hometowns. Don't guess anything that isn't shown. If no ballpark is shown, return no venues and say why in warnings.`;
 
 /** One read of screenshots with structured output (streamed: schedules can be long). */
 async function readScreenshots(
@@ -91,4 +96,49 @@ export async function readScores(
   return cleanScores(
     await readScreenshots(images, SCORES_PROMPT, SCORES_JSON_SCHEMA, context, 16000),
   );
+}
+
+/** Read the parks shown in pictures of a tournament. */
+export async function readVenues(
+  images: ScreenshotImage[],
+  context: string,
+): Promise<{ venues: ReadVenue[]; warnings: string[] }> {
+  return cleanVenues(
+    await readScreenshots(images, VENUES_PROMPT, VENUES_JSON_SCHEMA, context, 4000),
+  );
+}
+
+/** Find a park read from a picture on the map; without a match it keeps what the picture said. */
+async function findOnMap(v: ReadVenue, tournamentCity: string | null): Promise<GamePlace> {
+  const asRead: GamePlace = {
+    name: v.name,
+    address: v.address ?? v.city,
+    lat: null,
+    lng: null,
+    placeId: null,
+  };
+  try {
+    const session = crypto.randomUUID();
+    const [hit] = await searchPlaces(venueSearchText(v, tournamentCity), session);
+    if (!hit) return asRead;
+    const d = await placeDetails(hit.placeId, session);
+    return {
+      name: hit.name.slice(0, 80),
+      address: d.address ?? (hit.detail || asRead.address),
+      lat: d.lat,
+      lng: d.lng,
+      placeId: d.placeId,
+    };
+  } catch (e) {
+    console.error("couldn't find a park on the map", e);
+    return asRead;
+  }
+}
+
+/** Each park read from a picture, looked up on the map for its address and position. */
+export function findVenuesOnMap(
+  venues: ReadVenue[],
+  tournamentCity: string | null,
+): Promise<GamePlace[]> {
+  return Promise.all(venues.map((v) => findOnMap(v, tournamentCity)));
 }

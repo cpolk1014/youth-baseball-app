@@ -5,8 +5,16 @@ import { useCallback, useEffect, useState } from "react";
 import type { Tournament, TournamentGame, TournamentTeam } from "@/lib/data/tournament-backend";
 import { permissionsFor } from "@/lib/data/permissions";
 import { unplayedTournamentGames } from "@/lib/data/gameDelete";
-import { deleteGames, setTournamentCount, useAppData, useStoreState } from "@/lib/data/store";
+import {
+  deleteGames,
+  importSchedule,
+  setTournamentCount,
+  useAppData,
+  useStoreState,
+} from "@/lib/data/store";
+import type { GamePlace } from "@/lib/places/maps";
 import { MAX_SCREENSHOTS, newTeams, pickDivision, teamKey } from "@/lib/tournaments/event";
+import { gamesAtVenues, scheduleText, venueFor, venuesSavedNote } from "@/lib/tournaments/venues";
 import { AppShell, Loading } from "../AppShell";
 import { DeleteGamePanel } from "../DeleteGamePanel";
 import { Sheet } from "../Sheet";
@@ -19,6 +27,7 @@ import {
 } from "./AddTournament";
 import { TournamentSchedule } from "./TournamentSchedule";
 import { TournamentStandings } from "./TournamentStandings";
+import { TournamentVenues } from "./TournamentVenues";
 import { tournamentWhen } from "./TournamentsScreen";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
@@ -123,6 +132,22 @@ export function TournamentScreen({ id }: { id: string }) {
   const others = teams.filter((x) => !x.isUs);
   const unplayed = unplayedTournamentGames(games ?? [], data.games);
   const gamesWord = `${unplayed.games.length} game${unplayed.games.length === 1 ? "" : "s"}`;
+  // The schedule shows the tournament's park; what the screenshots said stays underneath.
+  const shownGames =
+    games?.map((g) => ({
+      ...g,
+      parkName: venueFor(scheduleText(g), t.places)?.name ?? null,
+    })) ?? null;
+  /** Save the parks, then put our games in the tournament at them. */
+  const savePlaces = async (places: GamePlace[]): Promise<string> => {
+    await (await backend()).setPlaces(t.id, places);
+    const moved = gamesAtVenues(data.games, games ?? [], places);
+    if (moved.games.length) await importSchedule([], moved.games);
+    await load();
+    return places.length
+      ? venuesSavedNote(moved)
+      : "Removed. Your games keep the address they had.";
+  };
   const afterDelete = () => {
     setTournamentCount(Math.max(0, (data.tournamentCount ?? 1) - 1));
     router.push("/tournaments");
@@ -136,11 +161,19 @@ export function TournamentScreen({ id }: { id: string }) {
           {[t.organization, tournamentWhen(t), t.city].filter(Boolean).join(" · ")}
         </p>
         {t.division && <p className="text-base text-slate-700">Division: {t.division}</p>}
-        {t.venues.length > 0 && (
+        {t.venues.length > 0 && t.places.length === 0 && (
           <p className="mt-1 text-sm text-slate-600">Fields: {t.venues.join(", ")}</p>
         )}
         <p className="mt-2 text-sm text-slate-600">Scores, standings and what-ifs come next.</p>
       </section>
+
+      <TournamentVenues
+        data={data}
+        tournament={t}
+        canEdit={canEdit}
+        ourGames={(games ?? []).filter((g) => g.gameId).length}
+        onSave={savePlaces}
+      />
 
       <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
         <h2 className={heading}>Links</h2>
@@ -189,7 +222,7 @@ export function TournamentScreen({ id }: { id: string }) {
         data={data}
         tournament={t}
         teams={teams}
-        games={games}
+        games={shownGames}
         canEdit={canEdit}
         onChanged={load}
       />
@@ -199,7 +232,7 @@ export function TournamentScreen({ id }: { id: string }) {
         tournament={t}
         teams={teams}
         canEdit={canEdit}
-        games={games}
+        games={shownGames}
         onChanged={load}
       />
 

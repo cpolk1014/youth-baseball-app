@@ -4,10 +4,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { MAX_SCREENSHOTS } from "@/lib/tournaments/event";
 import {
   EventReadError,
+  findVenuesOnMap,
   readEvent,
   readSchedule,
   readScores,
   readTiebreak,
+  readVenues,
 } from "@/lib/tournaments/read.server";
 import { getServerSupabase } from "@/lib/supabase/server";
 
@@ -27,7 +29,8 @@ function errorResponse(status: number, error: string) {
  * a new tournament's event page and team list (returns { event }), or, with tournamentId,
  * that tournament's pool schedule and bracket (returns { schedule }), or, with kind
  * "tiebreak", an organization's tie-break rules (returns { rules }), or, with kind "scores" and
- * tournamentId (anyone on the team), final scores (returns { scores }). Nothing is saved
+ * tournamentId (anyone on the team), final scores (returns { scores }), or, with kind "venue"
+ * and tournamentId, the parks shown, found on the map (returns { venues }). Nothing is saved
  * until the coach confirms.
  */
 export async function POST(request: NextRequest) {
@@ -67,16 +70,18 @@ export async function POST(request: NextRequest) {
   const context = `Today is ${today}. The team adding this is ${team.name} (${team.age_group ?? "age not set"}). List every division and its teams.`;
 
   let scheduleContext: string | null = null;
+  let tournamentCity: string | null = null;
   if (tournamentId && kind !== "tiebreak") {
     const [{ data: t }, { data: teams }] = await Promise.all([
       supabase
         .from("tournament")
-        .select("team_id,name,start_date,end_date,division,venues")
+        .select("team_id,name,start_date,end_date,division,venues,city")
         .eq("id", tournamentId)
         .maybeSingle(),
       supabase.from("tournament_team").select("name,is_us").eq("tournament_id", tournamentId),
     ]);
     if (!t || t.team_id !== teamId) return errorResponse(404, "That tournament wasn't found.");
+    tournamentCity = t.city;
     const us = (teams ?? []).find((x) => x.is_us)?.name;
     scheduleContext = [
       `Today is ${today}. The tournament is ${t.name}, ${t.start_date ?? "dates unknown"} to ${t.end_date ?? t.start_date ?? "unknown"}.`,
@@ -107,6 +112,15 @@ export async function POST(request: NextRequest) {
           images,
           `Today is ${today}. These are a tournament organization's rules; list the tie-breakers in order.`,
         ),
+      });
+    }
+    if (kind === "venue" && scheduleContext) {
+      const read = await readVenues(images, scheduleContext);
+      return NextResponse.json({
+        venues: {
+          places: await findVenuesOnMap(read.venues, tournamentCity),
+          warnings: read.warnings,
+        },
       });
     }
     if (kind === "scores" && scheduleContext) {

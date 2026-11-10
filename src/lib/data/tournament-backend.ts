@@ -1,10 +1,12 @@
 // Tournaments (phase 1) in Supabase: a team's tournaments and their teams. RLS: the team
 // sees them; coaches and managers change them. Loaded on the Tournaments pages only.
 import { getBrowserSupabase } from "@/lib/supabase/client";
+import type { GamePlace } from "@/lib/places/maps";
 import type { EventDetails, EventTeam } from "@/lib/tournaments/event";
 import type { SavedGame, ScheduleGame } from "@/lib/tournaments/schedule";
 import type { Seed } from "@/lib/tournaments/standings";
 import { rulesFromJson, type Criterion, type RuleSet } from "@/lib/tournaments/tiebreak";
+import { cleanPlaces } from "@/lib/tournaments/venues";
 
 export interface Tournament {
   id: string;
@@ -17,7 +19,10 @@ export interface Tournament {
   startDate: string | null;
   endDate: string | null;
   city: string | null;
+  /** Names read from the event page. */
   venues: string[];
+  /** Parks added on the map or from a picture; the tournament's games use these. */
+  places: GamePlace[];
   division: string | null;
   teamCount: number;
   tiebreakSetId: string | null;
@@ -48,6 +53,7 @@ interface Row {
   end_date: string | null;
   city: string | null;
   venues: string[] | null;
+  places: unknown;
   division: string | null;
   tournament_team?: { count: number }[];
   tiebreak_set_id: string | null;
@@ -57,7 +63,7 @@ interface Row {
 }
 
 const COLS =
-  "id,team_id,name,organization,info_url,schedule_url,bracket_url,start_date,end_date,city,venues,division,tiebreak_set_id,seeding,seeds,seeds_locked_at,tournament_team(count)";
+  "id,team_id,name,organization,info_url,schedule_url,bracket_url,start_date,end_date,city,venues,places,division,tiebreak_set_id,seeding,seeds,seeds_locked_at,tournament_team(count)";
 
 const fromRow = (r: Row): Tournament => ({
   id: r.id,
@@ -71,6 +77,7 @@ const fromRow = (r: Row): Tournament => ({
   endDate: r.end_date,
   city: r.city,
   venues: r.venues ?? [],
+  places: cleanPlaces(r.places),
   division: r.division,
   teamCount: r.tournament_team?.[0]?.count ?? 0,
   tiebreakSetId: r.tiebreak_set_id,
@@ -185,6 +192,11 @@ export async function setLinks(id: string, links: TournamentLinks): Promise<void
   );
 }
 
+/** Coaches set the parks the tournament is played at. */
+export async function setPlaces(id: string, places: GamePlace[]): Promise<void> {
+  check(await getBrowserSupabase().from("tournament").update({ places }).eq("id", id));
+}
+
 /** Add teams to a tournament's list; returns the new rows. */
 export async function addTeams(
   tournamentId: string,
@@ -259,6 +271,8 @@ interface GameRow {
 }
 
 export interface TournamentGame extends SavedGame {
+  /** For showing: the tournament's park for this game, when one applies. */
+  parkName?: string | null;
   homeTeamId: string | null;
   awayTeamId: string | null;
   scoreHome: number | null;

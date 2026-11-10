@@ -545,6 +545,7 @@ export async function saveScheduleGames({
         seasonId: data.season.id,
         fieldPlayers: defaultFieldPlayers(data.team.coachPitch),
         venues: tournament.venues,
+        places: tournament.places,
       });
       if (tg) {
         teamGames.push(tg);

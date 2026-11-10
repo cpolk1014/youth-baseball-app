@@ -11,9 +11,9 @@ const EMBED_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY ?? "";
 
 /**
  * Where a game (or practice) is: location and field, the address, a map, and "Open in…" for
- * this device.
+ * this device. `bare` leaves off the card and heading, to sit inside another card.
  */
-export function GamePlaceCard({ game }: { game: PlaceFields }) {
+export function GamePlaceCard({ game, bare = false }: { game: PlaceFields; bare?: boolean }) {
   const [links, setLinks] = useState<{ app: string; href: string }[]>([]);
   const [online, setOnline] = useState(true);
   const place: GamePlace = {
@@ -44,9 +44,17 @@ export function GamePlaceCard({ game }: { game: PlaceFields }) {
   const showMap = !!EMBED_KEY && !!mapQuery && online;
 
   return (
-    <section className="mb-4 overflow-hidden rounded-xl border-2 border-slate-200 bg-white">
-      <div className="p-3">
-        <h2 className="text-sm font-bold tracking-wide text-slate-600 uppercase">Where</h2>
+    <section
+      className={
+        bare
+          ? "overflow-hidden"
+          : "mb-4 overflow-hidden rounded-xl border-2 border-slate-200 bg-white"
+      }
+    >
+      <div className={bare ? "pb-3" : "p-3"}>
+        {!bare && (
+          <h2 className="text-sm font-bold tracking-wide text-slate-600 uppercase">Where</h2>
+        )}
         <p className="text-lg font-bold">{game.location || game.field}</p>
         {game.location && game.field && <p className="text-base font-semibold">{game.field}</p>}
         {place.address && <p className="text-base text-slate-700">{place.address}</p>}
@@ -55,14 +63,14 @@ export function GamePlaceCard({ game }: { game: PlaceFields }) {
         <iframe
           title={`Map of ${game.location}`}
           src={`https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(EMBED_KEY)}&q=${encodeURIComponent(mapQuery!)}`}
-          className="block h-48 w-full border-0 md:h-64"
+          className={`block h-48 w-full border-0 ${bare ? "rounded-lg" : "md:h-64"}`}
           loading="lazy"
           referrerPolicy="strict-origin-when-cross-origin"
           allowFullScreen
         />
       )}
       {place.name && links.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 p-3">
+        <div className={`flex flex-wrap items-center gap-3 ${bare ? "pt-3" : "p-3"}`}>
           <span className="text-sm font-semibold text-slate-600">Directions</span>
           {links.map((l) => (
             <a

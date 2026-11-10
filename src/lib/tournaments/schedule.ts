@@ -1,7 +1,9 @@
 // Tournaments, phase 2: the pool schedule and bracket read from screenshots, matched against
 // what's already saved so an updated schedule shows only what changed (pure: no I/O).
 import type { Game } from "@/lib/data/types";
+import type { GamePlace } from "@/lib/places/maps";
 import { teamKey } from "./event";
+import { atPlace, scheduleText, venueFor } from "./venues";
 
 export const SCHEDULE_JSON_SCHEMA = {
   type: "object",
@@ -153,15 +155,21 @@ const day = (d: string | null) =>
         day: "numeric",
       })
     : "no date";
-export const placeOf = (g: Pick<ScheduleGame, "venue" | "field">) =>
+/** What the schedule itself says, for spotting changes between screenshots. */
+const schedulePlace = (g: Pick<ScheduleGame, "venue" | "field">) =>
   [g.venue, g.field].filter(Boolean).join(" · ");
+/** Where a game is, for showing: the tournament's park when one applies. */
+export const placeOf = (g: Pick<ScheduleGame, "venue" | "field"> & { parkName?: string | null }) =>
+  [g.parkName ?? g.venue, g.field].filter(Boolean).join(" · ");
 
 /** What changed between the saved game and the new screenshot, in words. */
 export function describeChanges(a: ScheduleGame, b: ScheduleGame): string[] {
   const out: string[] = [];
   if (a.date !== b.date && b.date) out.push(`moved to ${day(b.date)}`);
   if (a.startTime !== b.startTime && b.startTime) out.push(`now ${time12(b.startTime)}`);
-  if (teamKey(placeOf(a)) !== teamKey(placeOf(b)) && placeOf(b)) out.push(`now at ${placeOf(b)}`);
+  if (teamKey(schedulePlace(a)) !== teamKey(schedulePlace(b)) && schedulePlace(b)) {
+    out.push(`now at ${schedulePlace(b)}`);
+  }
   const sides = (g: ScheduleGame) => [teamKey(g.home), teamKey(g.away)].sort().join("|");
   if (sides(a) !== sides(b)) out.push(`now ${b.home} vs ${b.away}`);
   if ((a.pool ?? "") !== (b.pool ?? "") && b.pool) out.push(`Pool ${b.pool}`);
@@ -237,7 +245,8 @@ export function byDay<T extends Pick<ScheduleGame, "date" | "startTime" | "gameN
 /**
  * The team game for one of our tournament games: a new one, or the linked one updated with
  * the schedule's date, time, opponent and place (its lineup, uniform and the rest are kept).
- * Null when the schedule has no date for it yet.
+ * A park added to the tournament wins over the schedule's name for it. Null when the schedule
+ * has no date for it yet.
  */
 export function teamGameFor(
   g: ScheduleGame,
@@ -248,11 +257,25 @@ export function teamGameFor(
     seasonId: string;
     fieldPlayers: 9 | 10;
     venues: string[];
+    places?: GamePlace[];
   },
 ): Game | null {
   if (!g.date) return null;
-  const location = g.venue ?? (opts.venues.length === 1 ? opts.venues[0]! : null);
+  const park = venueFor(scheduleText(g), opts.places ?? []);
+  const location = park?.name ?? g.venue ?? (opts.venues.length === 1 ? opts.venues[0]! : null);
   const e = opts.existing;
+  if (e && park) {
+    return atPlace(
+      {
+        ...e,
+        date: g.date,
+        startTime: g.startTime ?? e.startTime,
+        opponent,
+        field: g.field ?? e.field ?? null,
+      },
+      park,
+    );
+  }
   if (e) {
     const moved = teamKey(e.location ?? "") !== teamKey(location ?? "");
     return {
@@ -273,7 +296,7 @@ export function teamGameFor(
         : {}),
     };
   }
-  return {
+  const created: Game = {
     id: opts.id,
     seasonId: opts.seasonId,
     date: g.date,
@@ -285,6 +308,7 @@ export function teamGameFor(
     fieldPlayers: opts.fieldPlayers,
     status: "scheduled",
   };
+  return park ? atPlace(created, park) : created;
 }
 
 /** A team game already on the schedule for this tournament game (same day and opponent). */

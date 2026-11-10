@@ -1835,4 +1835,16 @@ select pg_temp.expect((select count(*) from public.game where id = '00000000-000
 select pg_temp.expect((select count(*) from public.tournament_game where id = '00000000-0000-4000-8000-00000000ae01') = 0, 'and from the tournament');
 select pg_temp.expect((select count(*) from public.lineup where game_id = '00000000-0000-4000-8000-00000000ad01') = 0, 'the lineup goes with the game');
 select pg_temp.expect((select game_id is null from public.tournament_game where id = '00000000-0000-4000-8000-00000000ae02'), 'a deleted game unlinks from the tournament');
+-- Tournament parks: coaches and managers set them, everyone on the team sees them.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- manager
+update public.tournament set places = '[{"name":"Traction Sports Complex","address":"1 Main St","lat":30.1,"lng":-92.1,"placeId":"abc"}]' where id = (select id from trn);
+do $$ begin
+  update public.tournament set places = '{"name":"not a list"}' where id = (select id from trn);
+  raise exception 'places must be a list';
+exception when check_violation then null; end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+update public.tournament set places = '[]' where id = (select id from trn);
+select pg_temp.expect((select places->0->>'name' from public.tournament where id = (select id from trn)) = 'Traction Sports Complex', 'parents see a tournament''s parks and can''t change them');
+reset role;
 \echo ALL RLS TESTS PASSED
