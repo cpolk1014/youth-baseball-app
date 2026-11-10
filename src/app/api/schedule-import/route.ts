@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   // Only coaches and managers of an active team can import (RLS limits what we can see).
   const [{ data: roles }, { data: team }, { data: season }] = await Promise.all([
     supabase.from("member").select("role").eq("team_id", teamId).eq("user_id", user.id),
-    supabase.from("team").select("name,age_group,optioned_at").eq("id", teamId).maybeSingle(),
+    supabase.from("team").select("name,age_group").eq("id", teamId).maybeSingle(),
     supabase
       .from("season")
       .select("name")
@@ -64,8 +64,6 @@ export async function POST(request: NextRequest) {
   );
   if (!canImport || !team)
     return errorResponse(403, "Only coaches and managers can import a schedule.");
-  if (team.optioned_at)
-    return errorResponse(409, "This team is optioned. Call it up to import a schedule.");
   if (!(await teamHasPaid(supabase, teamId))) return errorResponse(402, PAID_FEATURE_MESSAGE);
 
   const bytes = Buffer.from(await file.arrayBuffer());

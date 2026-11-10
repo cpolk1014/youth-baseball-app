@@ -377,15 +377,11 @@ reset role;
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 delete from public.team where id = 'cccccccc-0000-4000-8000-000000000001';
-select pg_temp.expect((select count(*) from public.team) = 1, 'an active team cannot be deleted');
-update public.team set optioned_at = now() where id = 'cccccccc-0000-4000-8000-000000000001';
-select pg_temp.expect((select optioned_at is not null from public.team), 'coach options their team');
-delete from public.team where id = 'cccccccc-0000-4000-8000-000000000001';
-select pg_temp.expect((select count(*) from public.team) = 0, 'a coach can delete an optioned team');
+select pg_temp.expect((select count(*) from public.team) = 0, 'a coach can delete an active team at any time');
 reset role;
 
 -- ── delete team (as the app does: delete ... returning id) ──
-insert into public.team (id, name, age_group, created_by, optioned_at) values ('dddddddd-0000-4000-8000-000000000001', 'Delete Me', '9U', null, now());
+insert into public.team (id, name, age_group, created_by) values ('dddddddd-0000-4000-8000-000000000001', 'Delete Me', '9U', null);
 insert into public.member (team_id, user_id, role) values ('dddddddd-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000005', 'coach'),
                                                           ('dddddddd-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000004', 'parent');
 set role authenticated;
@@ -408,19 +404,6 @@ select pg_temp.expect(
   (select count(*) from public.member where team_id = 'dddddddd-0000-4000-8000-000000000001') = 0,
   'deleting a team removes its members');
 
--- ── option / call up ──
-set role authenticated;
-select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
-update public.team set optioned_at = now() where id = '00000000-0000-4000-8000-000000000001';
-reset role;
-select pg_temp.expect((select optioned_at is null from public.team where id = '00000000-0000-4000-8000-000000000001'), 'a parent cannot option the team');
-set role authenticated;
-select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
-update public.team set optioned_at = now() where id = '00000000-0000-4000-8000-000000000001';
-select pg_temp.expect((select count(*) from public.player) = 12, 'an optioned team is still readable');
-update public.team set optioned_at = null where id = '00000000-0000-4000-8000-000000000001';
-select pg_temp.expect((select optioned_at is null from public.team where id = '00000000-0000-4000-8000-000000000001'), 'coach calls the team back up');
-reset role;
 
 -- ── practices ──
 set role authenticated;
@@ -1665,9 +1648,8 @@ insert into public.player_guardian (player_id, user_id) values ('ffffffff-0000-4
 insert into public.player_game_stat (player_id, game_id, game_date, opponent, batting)
   values ('ffffffff-0000-4000-8000-000000000004', 'ffffffff-0000-4000-8000-000000000003', '2026-10-03', 'Rays', '{"ab": 4, "h": 3}');
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- the coach
-update public.team set optioned_at = now() where id = 'ffffffff-0000-4000-8000-000000000001';
 delete from public.team where id = 'ffffffff-0000-4000-8000-000000000001';
-select pg_temp.expect((select count(*) from public.team where id = 'ffffffff-0000-4000-8000-000000000001') = 0, 'a coach deletes an optioned team');
+select pg_temp.expect((select count(*) from public.team where id = 'ffffffff-0000-4000-8000-000000000001') = 0, 'a coach deletes a team');
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
 select pg_temp.expect((select count(*) from public.player_game_stat where opponent = 'Rays' and game_date = '2026-10-03' and batting->>'h' = '3') = 1, 'the family keeps the box score after the coach deletes the team');
 select pg_temp.expect((select count(*) from public.my_athletes() where name = 'Kept Kid') = 1, 'the kid''s record stays with the family');
@@ -1726,12 +1708,11 @@ select pg_temp.expect((select paid and kind = 'grace' and until = current_date +
 insert into public.finance_entry (season_id, type, title, amount_cents, entry_date)
   values ('abababab-0000-4000-8000-000000000002', 'walkoff', 'Grace fees', 5000, current_date);
 select pg_temp.expect((select count(*) from public.finance_entry where title = 'Grace fees') = 1, 'during the grace days the team can still add');
--- Fully unpaid again, the coach can still delete the (optioned) team, money and all.
+-- Fully unpaid again, the coach can still delete the team, money and all.
 reset role;
 delete from public.team_pass where team_id = 'abababab-0000-4000-8000-000000000001';
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- coach
-update public.team set optioned_at = now() where id = 'abababab-0000-4000-8000-000000000001';
 delete from public.team where id = 'abababab-0000-4000-8000-000000000001';
 select pg_temp.expect((select count(*) from public.team where id = 'abababab-0000-4000-8000-000000000001') = 0, 'an unpaid team can still be deleted');
 reset role;
@@ -1847,4 +1828,26 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002
 update public.tournament set places = '[]' where id = (select id from trn);
 select pg_temp.expect((select places->0->>'name' from public.tournament where id = (select id from trn)) = 'Traction Sports Complex', 'parents see a tournament''s parks and can''t change them');
 reset role;
+-- Expired teams: no season or free time left today (the grace days count as expired).
+insert into public.team (id, name, age_group, free_until, free_kind) values
+  ('e0e0e0e0-0000-4000-8000-000000000001', 'Ran Out', '9U', current_date - 1, 'trial');
+insert into public.member (team_id, user_id, role) values
+  ('e0e0e0e0-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'coach');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select count(*) from public.my_expired_teams() where team_id = 'e0e0e0e0-0000-4000-8000-000000000001') = 1, 'a team whose free time ran out is expired');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.my_expired_teams() where team_id = 'e0e0e0e0-0000-4000-8000-000000000001') = 0, 'only your own teams are listed');
+reset role;
+insert into public.team_pass (team_id, season_label, expires_on) values ('e0e0e0e0-0000-4000-8000-000000000001', '2099-00', current_date);
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select count(*) from public.my_expired_teams() where team_id = 'e0e0e0e0-0000-4000-8000-000000000001') = 0, 'a team paid through today is not expired');
+reset role;
+update public.team_pass set expires_on = current_date - 1 where team_id = 'e0e0e0e0-0000-4000-8000-000000000001';
+set role authenticated;
+select pg_temp.expect((select count(*) from public.my_expired_teams() where team_id = 'e0e0e0e0-0000-4000-8000-000000000001') = 1, 'the day after a season ends the team is expired');
+select pg_temp.expect(public.team_paid('e0e0e0e0-0000-4000-8000-000000000001'), 'and keeps working through the grace days');
+reset role;
+delete from public.team where id = 'e0e0e0e0-0000-4000-8000-000000000001';
 \echo ALL RLS TESTS PASSED

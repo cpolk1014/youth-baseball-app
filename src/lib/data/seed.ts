@@ -28,14 +28,13 @@ export const SEED_DATA: AppData = {
   members: [],
   invites: [],
   myTeams: [
-    { id: TEAM_ID, name: "Riverside Rattlers", ageGroup: "10U", role: "owner", optioned: false },
+    { id: TEAM_ID, name: "Riverside Rattlers", ageGroup: "10U", role: "owner", expired: false },
   ],
   team: {
     id: TEAM_ID,
     name: "Riverside Rattlers",
     ageGroup: "10U",
     coachPitch: false,
-    optionedAt: null,
   },
   season: { id: SEASON_ID, teamId: TEAM_ID, name: "Fall 2026", fairPlayRules: DEFAULT_RULE_CONFIG },
   players: [

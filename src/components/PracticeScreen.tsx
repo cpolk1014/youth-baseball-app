@@ -45,7 +45,7 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
     );
   }
 
-  const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
+  const canEdit = permissionsFor(data.me.role).editTeam;
   const save = (changes: Partial<Practice>) => savePractice({ ...practice, ...changes });
   const setPlan = (plan: PlanItem[]) => save({ plan });
   const planned = planMinutes(practice.plan);

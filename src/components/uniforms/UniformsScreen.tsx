@@ -36,7 +36,6 @@ export function UniformsScreen() {
 function Uniforms({ data }: { data: AppData }) {
   const [editing, setEditing] = useState<UniformCombo | null>(null);
   const [reading, setReading] = useState(false);
-  const canEdit = data.team.optionedAt === null;
   const own = data.uniforms.filter((u) => !u.clubId);
   const fromClub = data.uniforms.filter((u) => u.clubId);
   const isNew = editing !== null && !own.some((u) => u.id === editing.id);
@@ -52,14 +51,12 @@ function Uniforms({ data }: { data: AppData }) {
       backHref="/team-look"
       tab="roster"
       action={
-        canEdit && (
-          <button
-            onClick={add}
-            className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[var(--team)] active:bg-slate-200"
-          >
-            + Add
-          </button>
-        )
+        <button
+          onClick={add}
+          className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[var(--team)] active:bg-slate-200"
+        >
+          + Add
+        </button>
       }
     >
       <p className="mb-4 text-base text-slate-700">
@@ -67,14 +64,12 @@ function Uniforms({ data }: { data: AppData }) {
         wear on the game.
       </p>
 
-      {canEdit && (
-        <button
-          onClick={() => setReading(true)}
-          className="mb-4 flex h-14 w-full items-center justify-center gap-2 rounded-xl border-2 border-[var(--team)] bg-white text-lg font-bold text-[var(--team)] active:bg-slate-100"
-        >
-          <span aria-hidden="true">📷</span> Build combos from a flyer
-        </button>
-      )}
+      <button
+        onClick={() => setReading(true)}
+        className="mb-4 flex h-14 w-full items-center justify-center gap-2 rounded-xl border-2 border-[var(--team)] bg-white text-lg font-bold text-[var(--team)] active:bg-slate-100"
+      >
+        <span aria-hidden="true">📷</span> Build combos from a flyer
+      </button>
 
       {fromClub.length > 0 && (
         <section className="mb-5">
@@ -118,8 +113,7 @@ function Uniforms({ data }: { data: AppData }) {
           {own.map((u) => (
             <li key={u.id}>
               <button
-                onClick={canEdit ? () => setEditing(u) : undefined}
-                disabled={!canEdit}
+                onClick={() => setEditing(u)}
                 className="flex h-full w-full flex-col gap-2 rounded-xl border-2 border-slate-200 bg-white p-3 text-left active:bg-slate-50"
               >
                 <span className="flex w-full items-baseline justify-between gap-2">
@@ -137,7 +131,7 @@ function Uniforms({ data }: { data: AppData }) {
         </ul>
       )}
 
-      {canEdit && own.length > 0 && (
+      {own.length > 0 && (
         <button
           onClick={add}
           className="mt-4 h-14 w-full rounded-xl border-2 border-dashed border-slate-400 text-lg font-bold text-slate-700 active:bg-slate-100"

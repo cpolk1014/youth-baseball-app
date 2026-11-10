@@ -31,7 +31,7 @@ export function GroupMeScreen() {
       </AppShell>
     );
   }
-  const canManage = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
+  const canManage = permissionsFor(data.me.role).editTeam;
   const shell = (children: React.ReactNode) => (
     <AppShell title="GroupMe" subtitle={data.team.name} backHref="/roster" tab="roster">
       {children}

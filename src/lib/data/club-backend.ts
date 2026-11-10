@@ -190,7 +190,7 @@ export async function loadClubTeam(teamId: string): Promise<AppData> {
   const team = check<TeamRow | null>(
     await sb
       .from("team")
-      .select("id,name,age_group,coach_pitch,optioned_at,colors,logo_path")
+      .select("id,name,age_group,coach_pitch,colors,logo_path")
       .eq("id", teamId)
       .maybeSingle(),
   );

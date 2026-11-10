@@ -44,9 +44,8 @@ export function StatsScreen() {
 function Stats({ data }: { data: AppData }) {
   const { stats, loading, error, save } = useTeamStats(data.season.id);
   const [importing, setImporting] = useState(false);
-  const canImport = data.team.optionedAt === null;
 
-  const importButton = canImport && (
+  const importButton = (
     <button
       onClick={() => setImporting(true)}
       className="h-11 shrink-0 rounded-lg bg-white px-4 text-base font-bold text-[var(--team)] active:bg-slate-200"
@@ -83,14 +82,12 @@ function Stats({ data }: { data: AppData }) {
             team&apos;s Stats and choose Export), then import the file here. Each import replaces
             the last one, so do it once a week to keep stats current.
           </p>
-          {canImport && (
-            <button
-              onClick={() => setImporting(true)}
-              className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white"
-            >
-              Import from GameChanger
-            </button>
-          )}
+          <button
+            onClick={() => setImporting(true)}
+            className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white"
+          >
+            Import from GameChanger
+          </button>
         </div>
       )}
 

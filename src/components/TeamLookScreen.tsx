@@ -34,7 +34,7 @@ export function TeamLookScreen() {
       </AppShell>
     );
   }
-  const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
+  const canEdit = permissionsFor(data.me.role).editTeam;
   const colors = { main: main ?? start.main, accent: accent ?? start.accent };
   const logoPath = logo ? logo.path : (data.team.logoPath ?? null);
   const dirty = main !== null || accent !== null || logo?.changed === true;

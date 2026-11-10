@@ -40,7 +40,7 @@ export function MoneyScreen() {
     );
   }
 
-  const perms = permissionsFor(data.me.role, data.team.optionedAt !== null);
+  const perms = permissionsFor(data.me.role);
   const year = Number(today.slice(0, 4));
   const myKids = kidsOf(data, myUserId(data));
   const summary = summaryToShow(data.financeEntries, data.financeSummary, perms.seeAllMoney);

@@ -24,18 +24,9 @@ export function isCoach(role: MemberRole): boolean {
   return role === "owner" || role === "coach";
 }
 
-/** What a role can do; an optioned (archived) team is read-only for everyone. */
-export function permissionsFor(role: MemberRole, optioned = false): Permissions {
+/** What a role can do. */
+export function permissionsFor(role: MemberRole): Permissions {
   const money = isCoach(role) || role === "treasurer";
-  if (optioned) {
-    return {
-      editLineups: false,
-      editTeam: false,
-      manageMembers: false,
-      editMoney: false,
-      seeAllMoney: money,
-    };
-  }
   return {
     editLineups: isCoach(role),
     editTeam: isCoach(role) || role === "manager",
@@ -45,8 +36,8 @@ export function permissionsFor(role: MemberRole, optioned = false): Permissions 
   };
 }
 
-/** Coaches option a team, call it back up, and delete it (only once optioned). */
-export function canCallUp(role: MemberRole): boolean {
+/** Coaches (and the owner) can delete a team at any time. */
+export function canDeleteTeam(role: MemberRole): boolean {
   return isCoach(role);
 }
 

@@ -22,12 +22,9 @@ export async function paAccess(
 ): Promise<PaAccess> {
   const [{ data: roles }, { data: team }] = await Promise.all([
     supabase.from("member").select("role").eq("team_id", teamId).eq("user_id", userId),
-    supabase.from("team").select("name, age_group, optioned_at").eq("id", teamId).maybeSingle(),
+    supabase.from("team").select("name, age_group").eq("id", teamId).maybeSingle(),
   ]);
   if (!team || !roles?.length) return { ok: false, status: 403, error: "You're not on this team." };
-  if (team.optioned_at) {
-    return { ok: false, status: 409, error: "This team is optioned. Call it up first." };
-  }
   const staff = roles.some((r) => ["owner", "coach", "manager"].includes(r.role));
   const teamInfo = { name: team.name as string, age_group: (team.age_group ?? "") as string };
   if (playerId === null) {

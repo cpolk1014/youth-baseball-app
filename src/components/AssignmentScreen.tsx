@@ -51,7 +51,7 @@ export function AssignmentScreen({ assignmentId }: { assignmentId: string }) {
     );
   }
 
-  const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
+  const canEdit = permissionsFor(data.me.role).editTeam;
   const coachView = isCoach(data.me.role) || data.me.role === "manager";
   const plays = playsFor(assignment.playIds);
   const status = homeworkStatus(assignment, data.quizResults, data.members, data.me.userId);

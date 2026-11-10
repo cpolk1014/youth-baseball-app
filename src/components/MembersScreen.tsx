@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   ROLE_LABEL,
-  canCallUp,
+  canDeleteTeam,
   isCoach,
   permissionsFor,
   type MemberRole,
@@ -15,7 +15,6 @@ import {
   removeMember,
   revokeInvite,
   setMemberRole,
-  setOptioned,
   signOut,
   useAppData,
   useStoreState,
@@ -58,7 +57,6 @@ export function MembersScreen() {
   const [created, setCreated] = useState<{ role: MemberRole; url: string } | null>(null);
   const [removing, setRemoving] = useState<Member | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [optioning, setOptioning] = useState(false);
   const [confirmName, setConfirmName] = useState("");
   const [kidsFor, setKidsForMember] = useState<Member | null>(null);
   const venmoUsers = useVenmoUsers(mode === "supabase" ? data?.team.id : undefined);
@@ -90,7 +88,7 @@ export function MembersScreen() {
     );
   }
 
-  const perms = permissionsFor(data.me.role, data.team.optionedAt !== null);
+  const perms = permissionsFor(data.me.role);
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
     setError(null);
@@ -161,7 +159,7 @@ export function MembersScreen() {
             const isMe = m.userId === data.me.userId;
             const kids = kidsOf(data, m.userId);
             // Coaches and managers link anyone; everyone can set their own.
-            const canLink = !data.team.optionedAt && (perms.editTeam || isMe);
+            const canLink = perms.editTeam || isMe;
             return (
               <li
                 key={m.id}
@@ -267,7 +265,7 @@ export function MembersScreen() {
       {meIsOwner ? (
         <p className="text-center text-sm text-slate-600">
           You created this team, so you&apos;re its Owner and can&apos;t be removed. To stop using
-          it, option the team.
+          it, delete the team below.
         </p>
       ) : (
         <button
@@ -283,30 +281,13 @@ export function MembersScreen() {
 
       {perms.editTeam && <ClubSection teamId={data.team.id} canJoin={isCoach(data.me.role)} />}
 
-      {canCallUp(data.me.role) && !data.team.optionedAt && (
-        <section className="mt-4 rounded-xl border-2 border-slate-300 bg-white p-4">
-          <h2 className="text-lg font-bold">Option this team</h2>
-          <p className="mt-1 text-base text-slate-700">
-            Season over? Send the team down: it&apos;s archived and read-only for everyone, and the
-            app opens your other teams first. Call it back up any time.
-          </p>
-          <button
-            onClick={() => setOptioning(true)}
-            className="mt-3 h-12 w-full rounded-xl border-2 border-[var(--team)] text-base font-bold text-[var(--team)] active:bg-slate-100"
-          >
-            Option team
-          </button>
-          <p className="mt-2 text-sm text-slate-600">To delete a team, option it first.</p>
-        </section>
-      )}
-
-      {canCallUp(data.me.role) && data.team.optionedAt && (
+      {canDeleteTeam(data.me.role) && (
         <button
           onClick={() => {
             setConfirmName("");
             setDeleting(true);
           }}
-          className="mt-2 h-12 w-full text-base font-semibold text-red-700 underline"
+          className="mt-4 h-12 w-full rounded-xl border-2 border-red-200 bg-white text-base font-semibold text-red-700"
         >
           Delete this team
         </button>
@@ -326,37 +307,20 @@ export function MembersScreen() {
         )}
       </Sheet>
 
-      <Sheet open={optioning} title="Option this team?" onClose={() => setOptioning(false)}>
-        <div className="flex flex-col gap-4">
-          <p className="text-lg leading-snug">
-            <b>{data.team.name}</b> moves to your Optioned teams. Everyone keeps view-only access to
-            its lineups and playing time; nothing can be changed until a coach calls it back up.
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setOptioning(false)}
-              className="h-14 flex-1 rounded-xl border-2 border-slate-400 text-lg font-bold active:bg-slate-100"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                setOptioning(false);
-                setOptioned(true);
-              }}
-              className="h-14 flex-1 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]"
-            >
-              Option team
-            </button>
-          </div>
-        </div>
-      </Sheet>
-
       <Sheet open={deleting} title="Delete this team?" onClose={() => setDeleting(false)}>
         <div className="flex flex-col gap-4">
           <p className="text-lg leading-snug">
-            This permanently deletes <b>{data.team.name}</b>: its roster, games, lineups, season
-            playing time, members and invite links. It can&apos;t be undone.
+            This permanently deletes <b>{data.team.name}</b> and all of its information for everyone
+            on the team: roster, games, lineups, practices, money records, tournaments, walk-up
+            songs, coaches and parents. It can&apos;t be undone.
+          </p>
+          {data.plan?.kind === "pass" && (
+            <p className="text-lg leading-snug font-bold">
+              You won&apos;t receive a refund for this team&apos;s season.
+            </p>
+          )}
+          <p className="text-base text-slate-700">
+            Families keep their own kids&apos; box score stats on My player.
           </p>
           <label className="flex flex-col gap-1">
             <span className="text-sm font-semibold text-slate-700">

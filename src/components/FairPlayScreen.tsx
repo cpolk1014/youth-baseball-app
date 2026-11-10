@@ -45,7 +45,7 @@ export function FairPlayScreen() {
     );
   }
 
-  const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editLineups;
+  const canEdit = permissionsFor(data.me.role).editLineups;
   const input: RuleConfigInput = data.season.fairPlayRules ?? {};
   const config = { ...resolveRuleConfig(input), coachPitch: data.team.coachPitch };
   const rules = rulesFor(data.team.coachPitch);

@@ -34,9 +34,9 @@ export function PaScreen() {
 
 function Pa({ data }: { data: AppData }) {
   const pa = usePa(data.team.id);
-  const perms = permissionsFor(data.me.role, data.team.optionedAt !== null);
+  const perms = permissionsFor(data.me.role);
   const staff = perms.editTeam;
-  const coach = isCoach(data.me.role) && data.team.optionedAt === null;
+  const coach = isCoach(data.me.role);
   // Anyone on the team can run the PA at a game (approved walk-ups only); parents edit only
   // their own kids' walk-ups, and team sounds are added by coaches and managers.
   const [view, setView] = useState<"pa" | "walkups">("pa");
@@ -522,7 +522,6 @@ function Walkups({
   const kids = data.players.filter((p) => p.active !== false && (staff || mine.has(p.id)));
   const byPlayer = new Map(pa.walkups.map((w) => [w.playerId, w]));
   const waiting = coach ? kids.filter((p) => byPlayer.get(p.id)?.status === "pending") : [];
-  const readOnly = data.team.optionedAt !== null;
 
   const preview = async (p: Player, w: Walkup) => {
     setError(null);
@@ -642,14 +641,12 @@ function Walkups({
                     {playing === `preview:${p.id}` ? "■" : "▶"}
                   </button>
                 )}
-                {!readOnly && (
-                  <button
-                    onClick={() => setOpen(p)}
-                    className="h-12 shrink-0 rounded-lg bg-[var(--team)] px-4 text-base font-bold text-white active:bg-[var(--team-press)]"
-                  >
-                    {w ? "Edit" : "Set up"}
-                  </button>
-                )}
+                <button
+                  onClick={() => setOpen(p)}
+                  className="h-12 shrink-0 rounded-lg bg-[var(--team)] px-4 text-base font-bold text-white active:bg-[var(--team-press)]"
+                >
+                  {w ? "Edit" : "Set up"}
+                </button>
               </li>
             );
           })}

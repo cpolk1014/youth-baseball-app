@@ -65,7 +65,7 @@ export const HOME: MenuTab = { id: "home", href: "/home", label: "Home", icon: "
 
 /** The menu's tabs this person sees. */
 export function visibleTabs(tabs: MenuTab[], data: AppData | null): MenuTab[] {
-  // Coaches (and owners) and managers; stays true on an optioned team, unlike editTeam.
+  // Coaches (and owners) and managers.
   const staff = !!data && (isCoach(data.me.role) || data.me.role === "manager");
   return tabs.filter(
     (t) =>
@@ -78,7 +78,7 @@ export function visibleTabs(tabs: MenuTab[], data: AppData | null): MenuTab[] {
 
 /** Team settings links this person sees. */
 export function settingsLinks(data: AppData | null, signedIn: boolean) {
-  const perms = data ? permissionsFor(data.me.role, data.team.optionedAt !== null) : null;
+  const perms = data ? permissionsFor(data.me.role) : null;
   return [
     {
       href: "/members",

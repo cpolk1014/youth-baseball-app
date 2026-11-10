@@ -78,7 +78,6 @@ export function TournamentSchedule({
   const [scoring, setScoring] = useState<TournamentGame | null>(null);
   const [scoreShots, setScoreShots] = useState(false);
   const ourName = teams.find((t) => t.isUs)?.name ?? null;
-  const canScore = data.team.optionedAt === null;
 
   const load = () =>
     onChanged().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
@@ -106,7 +105,7 @@ export function TournamentSchedule({
         </p>
       ) : (
         <div className="flex flex-col gap-4">
-          {canScore && scored < games.length && (
+          {scored < games.length && (
             <p className="text-sm text-slate-600">
               Tap a game to enter its final score. Anyone on the team can help keep scores up to
               date.
@@ -121,7 +120,7 @@ export function TournamentSchedule({
                     key={g.id}
                     g={g}
                     ours={!!ourSide(g, ourName)}
-                    onOpen={canScore || canEdit ? () => setScoring(g) : undefined}
+                    onOpen={() => setScoring(g)}
                   />
                 ))}
               </ul>
@@ -135,7 +134,7 @@ export function TournamentSchedule({
         </p>
       )}
       <div className="mt-3 flex flex-col gap-2 md:flex-row">
-        {canScore && !!games?.length && (
+        {!!games?.length && (
           <button
             onClick={() => setScoreShots(true)}
             className="h-12 rounded-xl border-2 border-[var(--team)] bg-white px-6 text-base font-bold text-[var(--team)]"
@@ -206,7 +205,6 @@ export function TournamentSchedule({
             ours={!!ourSide(scoring, ourName)}
             tournamentName={tournament.name}
             canEdit={canEdit}
-            canScore={canScore}
             onDone={() => {
               setScoring(null);
               void load();
@@ -270,7 +268,6 @@ function ScoreSheet({
   ours,
   tournamentName,
   canEdit,
-  canScore,
   onDone,
 }: {
   data: AppData;
@@ -278,7 +275,6 @@ function ScoreSheet({
   ours: boolean;
   tournamentName: string;
   canEdit: boolean;
-  canScore: boolean;
   onDone: () => void;
 }) {
   const [home, setHome] = useState(g.scoreHome ?? 0);
@@ -311,7 +307,7 @@ function ScoreSheet({
         minute: "2-digit",
       })
     : null;
-  const editable = canScore && !ours && (!g.locked || canEdit);
+  const editable = !ours && (!g.locked || canEdit);
   // Kept from when the sheet opened, so it holds still while the game is being removed.
   const [teamGame] = useState(() =>
     g.gameId ? data.games.find((x) => x.id === g.gameId) : undefined,

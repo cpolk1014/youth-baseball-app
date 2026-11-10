@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   // The database only shows the bot to the team's coaches, managers and treasurer.
   const [{ data: roles }, { data: team }, { data: bot }] = await Promise.all([
     supabase.from("member").select("role").eq("team_id", teamId).eq("user_id", user.id),
-    supabase.from("team").select("optioned_at").eq("id", teamId).maybeSingle(),
+    supabase.from("team").select("id").eq("id", teamId).maybeSingle(),
     supabase.from("team_groupme").select("bot_id").eq("team_id", teamId).maybeSingle(),
   ]);
   const canPost = (roles ?? []).some((r) =>
@@ -39,7 +39,6 @@ export async function POST(request: NextRequest) {
   if (!canPost || !team) {
     return errorResponse(403, "Only coaches, managers and the treasurer can post to GroupMe.");
   }
-  if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up to post.");
   if (!(await teamHasPaid(supabase, teamId))) return errorResponse(402, PAID_FEATURE_MESSAGE);
   if (!bot) return errorResponse(404, "Connect the team's GroupMe first.");
 

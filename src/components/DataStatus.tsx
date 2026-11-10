@@ -2,16 +2,7 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { canCallUp } from "@/lib/data/permissions";
-import {
-  createTeam,
-  dismissSaveError,
-  reloadData,
-  setOptioned,
-  signOut,
-  useAppData,
-  useStoreState,
-} from "@/lib/data/store";
+import { createTeam, dismissSaveError, reloadData, signOut, useStoreState } from "@/lib/data/store";
 import { useMyClubs } from "./club/useMyClubs";
 import { KidsPrompt } from "./KidPicker";
 
@@ -26,8 +17,6 @@ function defaultSeasonName(today: Date): string {
 /** Wraps screen content: first-time setup, load errors, and failed-save notices. */
 export function DataStatus({ children }: { children: ReactNode }) {
   const { status, saveError, offline, savedAt, pending } = useStoreState();
-  const data = useAppData();
-
   if (status.kind === "setup") {
     return (
       <>
@@ -78,22 +67,6 @@ export function DataStatus({ children }: { children: ReactNode }) {
       )}
       {(offline || pending > 0) && (
         <OfflineBanner offline={offline} savedAt={savedAt} pending={pending} />
-      )}
-      {data?.team.optionedAt && (
-        <div className="mb-3 flex items-center gap-3 rounded-xl border-2 border-amber-500 bg-amber-50 p-3 text-amber-950">
-          <p className="flex-1 text-base leading-snug">
-            <b>Optioned.</b> This team is archived and read-only.
-            {canCallUp(data.me.role) ? "" : " A coach can call it back up."}
-          </p>
-          {canCallUp(data.me.role) && (
-            <button
-              onClick={() => setOptioned(false)}
-              className="h-11 shrink-0 rounded-lg bg-[var(--team)] px-4 text-base font-bold text-white active:bg-[var(--team-press)]"
-            >
-              Call Up
-            </button>
-          )}
-        </div>
       )}
       <KidsPrompt />
       {children}

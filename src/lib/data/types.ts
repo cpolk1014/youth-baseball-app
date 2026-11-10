@@ -15,8 +15,6 @@ export interface Team {
   ageGroup: string;
   /** Coach's pitch: P is a fielding spot and new games default to 10 fielders. */
   coachPitch: boolean;
-  /** When the team was optioned (archived); null while active. */
-  optionedAt: string | null;
   /** Team colors as hex: [main, accent]. Empty until a coach picks them. */
   colors?: string[];
   /** Where the team's logo is stored (or a data URL in local mode). */
@@ -165,7 +163,8 @@ export interface TeamSummary {
   name: string;
   ageGroup: string;
   role: MemberRole;
-  optioned: boolean;
+  /** Its season or free time has run out: shown greyed at the bottom of team lists. */
+  expired: boolean;
   colors?: string[];
   logoPath?: string | null;
 }

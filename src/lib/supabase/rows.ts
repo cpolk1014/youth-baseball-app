@@ -7,7 +7,6 @@ export interface TeamRow {
   name: string;
   age_group: string;
   coach_pitch: boolean;
-  optioned_at: string | null;
   colors?: string[];
   logo_path?: string | null;
   organization_id?: string | null;

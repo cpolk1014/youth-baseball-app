@@ -54,7 +54,7 @@ export function RosterScreen() {
         (p) => fieldPositionsFor(9).includes(p) || fieldPositionsFor(10).includes(p),
       )
     : fieldPositionsFor(9);
-  const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
+  const canEdit = permissionsFor(data.me.role).editTeam;
   // Parents open their own kid's My player page from the roster.
   const myKids = new Set(kidsOf(data, myUserId(data)).map((p) => p.id));
   const openPlayer = (p: Player) =>
@@ -136,9 +136,7 @@ export function RosterScreen() {
             <span className="block text-lg font-semibold">Coaches &amp; parents</span>
             <span className="block text-sm text-slate-600">
               {others} on the team
-              {permissionsFor(data.me.role, data.team.optionedAt !== null).manageMembers
-                ? " · invite people"
-                : ""}
+              {permissionsFor(data.me.role).manageMembers ? " · invite people" : ""}
             </span>
           </span>
           <span aria-hidden="true" className="text-2xl text-slate-500">
@@ -173,7 +171,7 @@ export function RosterScreen() {
         <span>
           <span className="block text-lg font-semibold">Team money</span>
           <span className="block text-sm text-slate-600">
-            {permissionsFor(data.me.role, data.team.optionedAt !== null).seeAllMoney
+            {permissionsFor(data.me.role).seeAllMoney
               ? "Balances, payments and expenses"
               : "Your balance and team totals"}
           </span>

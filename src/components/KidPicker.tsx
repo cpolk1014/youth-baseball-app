@@ -123,7 +123,7 @@ function wasSkipped(teamId: string): boolean {
 export function KidsPrompt() {
   const data = useAppData();
   const [skipped, setSkipped] = useState<string | null>(null);
-  if (!data || data.me.role !== "parent" || data.team.optionedAt) return null;
+  if (!data || data.me.role !== "parent") return null;
   if (activePlayers(data.players).length === 0) return null;
   if (kidsOf(data, myUserId(data)).length > 0) return null;
   if (skipped === data.team.id || wasSkipped(data.team.id)) return null;

@@ -64,11 +64,7 @@ export async function POST(request: NextRequest) {
   const [{ data: roles }, { data: team }, { count: players }, { data: practices }] =
     await Promise.all([
       supabase.from("member").select("role").eq("team_id", teamId).eq("user_id", user.id),
-      supabase
-        .from("team")
-        .select("name,age_group,coach_pitch,optioned_at")
-        .eq("id", teamId)
-        .maybeSingle(),
+      supabase.from("team").select("name,age_group,coach_pitch").eq("id", teamId).maybeSingle(),
       supabase
         .from("player")
         .select("id", { count: "exact", head: true })
@@ -85,7 +81,6 @@ export async function POST(request: NextRequest) {
     (r) => r.role === "owner" || r.role === "coach" || r.role === "manager",
   );
   if (!canPlan || !team) return errorResponse(403, "Only coaches and managers can plan practices.");
-  if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up first.");
   if (!(await teamHasPaid(supabase, teamId))) return errorResponse(402, PAID_FEATURE_MESSAGE);
   const list = (practices ?? []).map((p) => ({
     id: p.id as string,

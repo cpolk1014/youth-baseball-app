@@ -253,11 +253,10 @@ function upgradeLocalData(d: AppData): AppData {
           role: d.me?.role ?? "coach",
         },
       ]
-    ).map((t) => ({ ...t, optioned: t.optioned ?? false })),
+    ).map((t) => ({ ...t, expired: t.expired ?? false })),
     team: {
       ...d.team,
       coachPitch: d.team.coachPitch ?? false,
-      optionedAt: d.team.optionedAt ?? null,
     },
     games: d.games.map((g) => ({ ...g, fieldPlayers: g.fieldPlayers ?? 9 })),
   };
@@ -962,19 +961,6 @@ export function saveSeasonRules(rules: RuleConfigInput): void {
   update(
     (d) => ({ ...d, season: { ...d.season, fairPlayRules: rules } }),
     async () => (await remote()).saveSeasonRulesRow(seasonId, rules),
-  );
-}
-
-/** Coach: option the current team (archive it, read-only) or call it back up. */
-export function setOptioned(optioned: boolean): void {
-  const optionedAt = optioned ? new Date().toISOString() : null;
-  update(
-    (d) => ({
-      ...d,
-      team: { ...d.team, optionedAt },
-      myTeams: d.myTeams.map((t) => (t.id === d.team.id ? { ...t, optioned } : t)),
-    }),
-    async () => (await remote()).saveTeamOptioned(data!.team.id, optionedAt),
   );
 }
 

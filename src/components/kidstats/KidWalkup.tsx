@@ -23,7 +23,6 @@ export function KidWalkup({ data, kid }: { data: AppData; kid: Player }) {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const w = pa.walkups.find((x) => x.playerId === kid.id) ?? null;
-  const readOnly = data.team.optionedAt !== null;
   const id = `preview:${kid.id}`;
   useEffect(() => stopAll, []);
 
@@ -73,7 +72,7 @@ export function KidWalkup({ data, kid }: { data: AppData; kid: Player }) {
             {playing === id ? "■" : "▶"}
           </button>
         )}
-        {!readOnly && !pa.loading && (
+        {!pa.loading && (
           <button
             onClick={() => setEditing(true)}
             className="h-12 shrink-0 rounded-lg bg-[var(--team)] px-4 text-base font-bold text-white active:bg-[var(--team-press)]"
@@ -101,7 +100,7 @@ export function KidWalkup({ data, kid }: { data: AppData; kid: Player }) {
             teamId={data.team.id}
             player={kid}
             existing={w}
-            isCoach={isCoach(data.me.role) && data.team.optionedAt === null}
+            isCoach={isCoach(data.me.role)}
             signedIn={pa.signedIn}
             onSave={pa.saveWalkup}
             onRemove={pa.removeWalkup}

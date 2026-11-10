@@ -27,7 +27,7 @@ export function PlaysScreen() {
     );
   }
 
-  const canAssign = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
+  const canAssign = permissionsFor(data.me.role).editTeam;
   const coachView = isCoach(data.me.role) || data.me.role === "manager";
   const startAssign = () =>
     setAssigning({

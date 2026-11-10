@@ -68,11 +68,11 @@ export async function loadFromSupabase(
   const user = (await sb.auth.getUser()).data.user;
   const email = user?.email ?? null;
 
-  const [allTeams, myMemberships] = await Promise.all([
+  const [allTeams, myMemberships, expiredRows] = await Promise.all([
     sb
       .from("team")
       .select(
-        "id,name,age_group,coach_pitch,optioned_at,colors,logo_path,timezone,arrive_minutes,game_post_mode,game_post_hours,game_post_days,game_post_time,organization_id,organization:organization_id(id,name,colors,logo_path,palette)",
+        "id,name,age_group,coach_pitch,colors,logo_path,timezone,arrive_minutes,game_post_mode,game_post_hours,game_post_days,game_post_time,organization_id,organization:organization_id(id,name,colors,logo_path,palette)",
       )
       .order("created_at")
       // The untyped client thinks the joined club is a list; it's one row (or null).
@@ -84,14 +84,16 @@ export async function loadFromSupabase(
       .select("team_id,role")
       .eq("user_id", user?.id ?? "")
       .then((r) => check<Pick<MemberRow, "team_id" | "role">[]>(r)),
+    sb.rpc("my_expired_teams").then((r) => check<{ team_id: string }[]>(r)),
   ]);
-  const myTeams = summarizeMyTeams(allTeams, myMemberships);
+  const expired = new Set(expiredRows.map((r) => r.team_id));
+  const myTeams = summarizeMyTeams(allTeams, myMemberships, expired);
   // Only teams the user is a member of (not ones they merely created and then left).
   const teams = allTeams.filter((t) => myTeams.some((m) => m.id === t.id));
-  // The team the user last opened; otherwise their first active (not optioned) team.
+  // The team the user last opened; otherwise their first team that hasn't expired.
   const team =
     teams.find((t) => t.id === preferredTeamId) ??
-    teams.find((t) => t.optioned_at === null) ??
+    teams.find((t) => !expired.has(t.id)) ??
     teams[0];
   if (!team) return { kind: "setup", team: null, email };
 
@@ -319,12 +321,6 @@ export async function saveTeamSettings(teamId: string, coachPitch: boolean): Pro
   );
 }
 
-export async function saveTeamOptioned(teamId: string, optionedAt: string | null): Promise<void> {
-  check(
-    await getBrowserSupabase().from("team").update({ optioned_at: optionedAt }).eq("id", teamId),
-  );
-}
-
 export async function saveGameStatus(gameId: string, status: GameStatus): Promise<void> {
   check(await getBrowserSupabase().from("game").update({ status }).eq("id", gameId));
 }
@@ -457,12 +453,17 @@ export async function acceptInvite(token: string, displayName: string): Promise<
 }
 
 /** Coach: permanently delete a team and everything in it (seasons, games, lineups, roster). */
+/** Permanently delete a team and its stored files (on the server, which holds the file key). */
 export async function deleteTeamRow(teamId: string): Promise<void> {
-  const sb = getBrowserSupabase();
-  const deleted = check<{ id: string }[]>(
-    await sb.from("team").delete().eq("id", teamId).select("id"),
-  );
-  if (deleted.length === 0) throw new Error("Only a coach can delete this team.");
+  const res = await fetch("/api/team/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ teamId }),
+  });
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(json.error ?? "Couldn't delete the team. Try again.");
+  }
 }
 
 export async function savePracticeRows(practices: Practice[]): Promise<void> {

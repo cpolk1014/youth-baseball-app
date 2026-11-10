@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
   const [{ data: roles }, { data: team }] = await Promise.all([
     supabase.from("member").select("role").eq("team_id", teamId).eq("user_id", user.id),
-    supabase.from("team").select("name,age_group,optioned_at").eq("id", teamId).maybeSingle(),
+    supabase.from("team").select("name,age_group").eq("id", teamId).maybeSingle(),
   ]);
   // Anyone on the team can read scores; the rest is for coaches and managers.
   const allowed =
@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
       ? (roles ?? []).length > 0 && !!tournamentId
       : (roles ?? []).some((r) => ["owner", "coach", "manager"].includes(r.role));
   if (!allowed || !team) return errorResponse(403, "Only coaches and managers can do that.");
-  if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up first.");
   if (!(await teamHasPaid(supabase, teamId))) return errorResponse(402, PAID_FEATURE_MESSAGE);
 
   const today = new Date().toISOString().slice(0, 10);

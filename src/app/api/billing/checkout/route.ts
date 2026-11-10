@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     const teamId = typeof body?.teamId === "string" ? body.teamId : "";
     const [{ data: roles }, { data: team }, { data: pass }] = await Promise.all([
       supabase.from("member").select("role").eq("team_id", teamId).eq("user_id", user.id),
-      supabase.from("team").select("name,optioned_at").eq("id", teamId).maybeSingle(),
+      supabase.from("team").select("name").eq("id", teamId).maybeSingle(),
       supabase
         .from("team_pass")
         .select("season_label")
@@ -88,7 +88,6 @@ export async function POST(request: NextRequest) {
     ]);
     const coach = (roles ?? []).some((r) => r.role === "owner" || r.role === "coach");
     if (!coach || !team) return errorResponse(403, "Only the team's coaches pay for its season.");
-    if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up first.");
     if (pass) return errorResponse(409, `This team is already paid for ${season}.`);
     meta.kind = "team";
     meta.teamId = teamId;

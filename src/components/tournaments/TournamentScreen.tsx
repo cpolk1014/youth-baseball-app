@@ -83,7 +83,7 @@ export function TournamentScreen({ id }: { id: string }) {
   if (mode !== "supabase") return shell(<p className="text-lg">Tournaments need sign-in.</p>);
   if (missing) return shell(<p className="text-lg">This tournament doesn&apos;t exist.</p>);
   if (!t) return shell(error ? <p className="text-base text-red-700">{error}</p> : <Loading />);
-  const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
+  const canEdit = permissionsFor(data.me.role).editTeam;
 
   const run = async (label: string, fn: () => Promise<string | void>) => {
     setBusy(label);

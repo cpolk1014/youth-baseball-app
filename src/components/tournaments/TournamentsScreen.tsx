@@ -55,7 +55,7 @@ export function TournamentsScreen() {
   );
   if (!data) return shell(<Loading />);
   if (mode !== "supabase") return shell(<p className="text-lg">Tournaments need sign-in.</p>);
-  const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
+  const canEdit = permissionsFor(data.me.role).editTeam;
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = (list ?? []).filter((t) => !t.endDate || t.endDate >= today);
   const past = (list ?? []).filter((t) => t.endDate && t.endDate < today).reverse();

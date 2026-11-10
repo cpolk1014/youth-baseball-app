@@ -44,17 +44,17 @@ export function TeamSwitcher({
       ) : (
         <div className="flex flex-col gap-2">
           <TeamList
-            teams={teams.filter((t) => !t.optioned)}
+            teams={teams.filter((t) => !t.expired)}
             currentTeamId={currentTeamId}
             onPick={close}
           />
-          {teams.some((t) => t.optioned) && (
+          {teams.some((t) => t.expired) && (
             <>
               <h3 className="mt-3 text-sm font-bold tracking-wide text-slate-600 uppercase">
-                Optioned
+                Expired
               </h3>
               <TeamList
-                teams={teams.filter((t) => t.optioned)}
+                teams={teams.filter((t) => t.expired)}
                 currentTeamId={currentTeamId}
                 onPick={close}
               />
@@ -100,14 +100,14 @@ export function TeamList({
                 current
                   ? "border-[var(--team)] bg-slate-50"
                   : "border-slate-200 bg-white active:bg-slate-50"
-              } ${t.optioned ? "opacity-70" : ""}`}
+              } ${t.expired ? "opacity-60 grayscale" : ""}`}
             >
               <TeamBadge name={t.name} colors={t.colors} logoPath={t.logoPath} size={40} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-lg font-semibold">{t.name}</span>
                 <span className="block text-sm text-slate-600">
                   {t.ageGroup} · {ROLE_LABEL[t.role]}
-                  {t.optioned ? " · Optioned" : ""}
+                  {t.expired ? " · Expired" : ""}
                 </span>
               </span>
               {current && <span className="text-xl font-bold text-[var(--team)]">✓</span>}

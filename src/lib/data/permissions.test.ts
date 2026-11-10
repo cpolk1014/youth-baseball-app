@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bestRole, canCallUp, permissionsFor } from "./permissions";
+import { bestRole, canDeleteTeam, permissionsFor } from "./permissions";
 
 describe("permissions", () => {
   it("lets coaches do everything", () => {
@@ -48,23 +48,16 @@ describe("permissions", () => {
     expect(bestRole([])).toBe("parent");
   });
 
-  it("makes optioned teams read-only for everyone, but coaches can call up or delete", () => {
-    expect(permissionsFor("coach", true)).toEqual({
-      editLineups: false,
-      editTeam: false,
-      manageMembers: false,
-      editMoney: false,
-      seeAllMoney: true,
-    });
-    expect(canCallUp("coach")).toBe(true);
-    expect(canCallUp("manager")).toBe(false);
-    expect(canCallUp("parent")).toBe(false);
+  it("lets only coaches and the owner delete a team", () => {
+    expect(canDeleteTeam("owner")).toBe(true);
+    expect(canDeleteTeam("coach")).toBe(true);
+    expect(canDeleteTeam("manager")).toBe(false);
+    expect(canDeleteTeam("treasurer")).toBe(false);
+    expect(canDeleteTeam("parent")).toBe(false);
   });
 
   it("lets the owner do everything a coach can, and outranks every role", () => {
     expect(permissionsFor("owner")).toEqual(permissionsFor("coach"));
-    expect(permissionsFor("owner", true)).toEqual(permissionsFor("coach", true));
-    expect(canCallUp("owner")).toBe(true);
     expect(bestRole(["coach", "owner", "parent"])).toBe("owner");
   });
 });

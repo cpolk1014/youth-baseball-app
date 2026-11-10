@@ -88,11 +88,10 @@ export async function POST(request: NextRequest) {
   } else {
     const [{ data: roles }, { data: team }] = await Promise.all([
       supabase.from("member").select("role").eq("team_id", teamId).eq("user_id", user.id),
-      supabase.from("team").select("name,optioned_at").eq("id", teamId).maybeSingle(),
+      supabase.from("team").select("name").eq("id", teamId).maybeSingle(),
     ]);
     const allowed = (roles ?? []).some((r) => ["owner", "coach", "manager"].includes(r.role));
     if (!allowed || !team) return errorResponse(403, "Only coaches and managers set up uniforms.");
-    if (team.optioned_at) return errorResponse(409, "This team is optioned. Call it up first.");
     if (typeof teamId !== "string" || !(await teamHasPaid(supabase, teamId)))
       return errorResponse(402, PAID_FEATURE_MESSAGE);
     ownerName = team.name;

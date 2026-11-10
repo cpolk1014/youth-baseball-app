@@ -73,6 +73,7 @@ export interface TeamRows {
 export function summarizeMyTeams(
   teams: TeamRow[],
   myMemberships: { team_id: string; role: MemberRow["role"] }[],
+  expired: Set<string> = new Set(),
 ): TeamSummary[] {
   return teams
     .filter((t) => myMemberships.some((m) => m.team_id === t.id))
@@ -81,11 +82,11 @@ export function summarizeMyTeams(
       name: t.name,
       ageGroup: t.age_group,
       role: bestRole(myMemberships.filter((m) => m.team_id === t.id).map((m) => m.role)),
-      optioned: t.optioned_at !== null,
+      expired: expired.has(t.id),
       colors: (t.colors ?? []).filter(isHex),
       logoPath: t.logo_path ?? null,
     }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => Number(a.expired) - Number(b.expired) || a.name.localeCompare(b.name));
 }
 
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : null);
@@ -431,7 +432,6 @@ export function appDataFromRows(
       name: rows.team.name,
       ageGroup: rows.team.age_group,
       coachPitch: rows.team.coach_pitch,
-      optionedAt: rows.team.optioned_at,
       colors: (rows.team.colors ?? []).filter(isHex),
       logoPath: rows.team.logo_path ?? null,
       gameDay: gameDayFromRow(rows.team),

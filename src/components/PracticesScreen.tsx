@@ -32,7 +32,7 @@ export function PracticesScreen() {
     );
   }
 
-  const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
+  const canEdit = permissionsFor(data.me.role).editTeam;
   const today = localDateString(new Date());
   const sorted = [...data.practices].sort(
     (a, b) => a.date.localeCompare(b.date) || (a.startTime ?? "").localeCompare(b.startTime ?? ""),

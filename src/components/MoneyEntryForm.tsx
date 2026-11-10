@@ -164,7 +164,7 @@ export function MoneyEntryForm({
 
   // Bat Arounds can be posted to the team's GroupMe (offered after saving a new one, and
   // from the button on an existing one).
-  const canAnnounce = type === "bat_around" && !!data.groupme && !data.team.optionedAt;
+  const canAnnounce = type === "bat_around" && !!data.groupme;
 
   const save = async () => {
     if (problem || cents === null) return;

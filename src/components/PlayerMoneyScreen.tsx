@@ -33,7 +33,7 @@ export function PlayerMoneyScreen({ playerId }: { playerId: string }) {
     );
   }
   const player = data.players.find((p) => p.id === playerId);
-  const perms = permissionsFor(data.me.role, data.team.optionedAt !== null);
+  const perms = permissionsFor(data.me.role);
   const year = Number(today.slice(0, 4));
   const ledger = playerLedger(playerId, data.financeEntries, data.financeShares, today);
   const myShares = data.financeShares.filter((s) => s.playerId === playerId);

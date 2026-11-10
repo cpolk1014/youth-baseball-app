@@ -46,7 +46,7 @@ export function GamesScreen() {
   }
 
   const { upcoming, final } = splitGames(data.games);
-  const canEdit = permissionsFor(data.me.role, data.team.optionedAt !== null).editTeam;
+  const canEdit = permissionsFor(data.me.role).editTeam;
   // The import needs the server (and a signal); otherwise go straight to the form.
   // Importing a schedule is a paid (AI) feature; adding games by hand is free.
   const canImport =
