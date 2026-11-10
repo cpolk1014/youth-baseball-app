@@ -133,7 +133,7 @@ and the same build refuses demo sign-in everywhere else.
 ## Phase 3: The demo's content (one to two days)
 
 This is what makes it convincing. The team is the Bayou Bombers 10U, the made-up team from the
-website. Its data sits in a temporary file today, so moving it into the repo comes first.
+website. The temporary file behind its website screenshots is gone, so its data gets rebuilt as a seed in the repo.
 
 Every date is relative to today, so there's always a game this weekend and a recent win.
 
