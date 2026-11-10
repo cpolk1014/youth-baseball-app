@@ -286,3 +286,11 @@ describe("tie-break rules", () => {
     expect(cleanRules(null)).toMatchObject({ rules: [], restart: true, seeding: null });
   });
 });
+
+describe("bracket numbers that repeat pool numbers", () => {
+  it("takes the winner of the bracket's own game", () => {
+    const pool = g("Aces", "Bats", [9, 0], { gameNo: "1", stage: "pool" });
+    const bracket = g("Cubs", "Dogs", [2, 7], { gameNo: "1", stage: "bracket" });
+    expect(resolveSide("Winner Game 1", [], [pool, bracket])).toBe("Dogs");
+  });
+});

@@ -42,7 +42,7 @@ export const SCHEDULE_JSON_SCHEMA = {
           home: {
             type: "string",
             description:
-              "Team name as shown, or the bracket placeholder (e.g. 1st Pool A, Winner G7).",
+              "Team name as shown, or the bracket placeholder (e.g. Seed 4, 1st Pool A, Winner Game 7).",
           },
           away: { type: "string" },
         },
@@ -111,14 +111,46 @@ export function cleanSchedule(raw: unknown): Schedule {
   const warnings = Array.isArray(r.warnings)
     ? r.warnings.flatMap((w) => str(w, 300) ?? []).slice(0, 10)
     : [];
-  return { games: unique.slice(0, 200), warnings };
+  return { games: bracketSides(unique).slice(0, 200), warnings };
 }
 
-/** How a game is recognized across schedule updates: its number, else when, where and who. */
+/**
+ * Tidy the sides of a drawn bracket, where a line is often labeled with just a number. A number
+ * is a seed the first time it enters the bracket; the same number on a later game is the
+ * winner of that game number (each seed enters once).
+ */
+function bracketSides(games: ScheduleGame[]): ScheduleGame[] {
+  const bracket = games.filter((g) => g.stage === "bracket");
+  const order = (g: ScheduleGame) => Number(g.gameNo) || Infinity;
+  const numbers = new Set(bracket.flatMap((g) => (g.gameNo ? [g.gameNo] : [])));
+  const seeded = new Set<string>();
+  const fixed = new Map<ScheduleGame, ScheduleGame>();
+  for (const g of [...bracket].sort((a, b) => order(a) - order(b))) {
+    const side = (name: string) => {
+      const bare = /^\d{1,2}$/.test(name);
+      const p = parsePlaceholder(name);
+      if (p?.kind !== "seed") return name;
+      const n = String(p.n);
+      if (bare && seeded.has(n) && numbers.has(n) && Number(n) < order(g)) {
+        return `Winner Game ${n}`;
+      }
+      seeded.add(n);
+      return bare ? `Seed ${n}` : name;
+    };
+    const home = side(g.home);
+    fixed.set(g, { ...g, home, away: side(g.away) });
+  }
+  return games.map((g) => fixed.get(g) ?? g);
+}
+
+/**
+ * How a game is recognized across schedule updates: its number within pool play or the bracket
+ * (a bracket often starts over at 1), else when, where and who.
+ */
 export function gameKey(
-  g: Pick<ScheduleGame, "gameNo" | "date" | "startTime" | "field" | "home" | "away">,
+  g: Pick<ScheduleGame, "gameNo" | "stage" | "date" | "startTime" | "field" | "home" | "away">,
 ): string {
-  if (g.gameNo) return `#${teamKey(g.gameNo)}`;
+  if (g.gameNo) return `${g.stage} #${teamKey(g.gameNo)}`;
   const sides = [teamKey(g.home), teamKey(g.away)].sort().join("|");
   return `${g.date ?? ""} ${g.startTime ?? ""} ${teamKey(g.field ?? "")} ${sides}`;
 }

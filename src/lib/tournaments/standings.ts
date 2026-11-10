@@ -293,7 +293,9 @@ export function resolveSide(name: string, seeds: Seed[], games: SGame[], depth =
       seeds.find((s) => s.seed === p.n && teamKey(s.pool ?? "") === teamKey(p.pool))?.name ?? null
     );
   }
-  const g = games.find((x) => x.gameNo && teamKey(x.gameNo) === teamKey(p.gameNo));
+  // A bracket's numbers can start over at 1, so its own game comes before a pool game's.
+  const numbered = games.filter((x) => x.gameNo && teamKey(x.gameNo) === teamKey(p.gameNo));
+  const g = numbered.find((x) => x.stage === "bracket") ?? numbered[0];
   if (!g || g.scoreHome === null || g.scoreAway === null || g.scoreHome === g.scoreAway)
     return null;
   const homeWon = g.scoreHome > g.scoreAway;

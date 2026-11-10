@@ -389,3 +389,84 @@ describe("game days", () => {
     expect(todayIn("Not/AZone", new Date("2026-11-15T01:00:00Z"))).toBe("2026-11-15");
   });
 });
+
+describe("a drawn bracket whose game numbers start over at 1", () => {
+  const raw = (no: string, time: string, home: string, away: string) => ({
+    game_no: no,
+    stage: "bracket",
+    pool: null,
+    round: null,
+    date: "2026-11-15",
+    start_time: time,
+    venue: null,
+    field: "Central #2",
+    home,
+    away,
+  });
+  // The lines only carry numbers: seeds going in, game numbers coming out.
+  const numbersOnly = [
+    raw("1", "09:00", "4", "5"),
+    raw("2", "10:45", "2", "7"),
+    raw("3", "14:15", "3", "6"),
+    raw("4", "12:30", "1", "1"),
+    raw("5", "16:00", "2", "3"),
+    raw("6", "17:45", "4", "5"),
+  ];
+  const sides = (games: ScheduleGame[]) => games.map((g) => [g.gameNo, g.home, g.away]);
+  const expected = [
+    ["1", "Seed 4", "Seed 5"],
+    ["2", "Seed 2", "Seed 7"],
+    ["3", "Seed 3", "Seed 6"],
+    ["4", "Seed 1", "Winner Game 1"],
+    ["5", "Winner Game 2", "Winner Game 3"],
+    ["6", "Winner Game 4", "Winner Game 5"],
+  ];
+
+  it("reads numbers going in as seeds and repeats as winners", () => {
+    expect(sides(cleanSchedule({ games: numbersOnly, warnings: [] }).games)).toEqual(expected);
+  });
+
+  it("leaves sides that were already written out", () => {
+    const written = expected.map(([no, home, away]) => raw(no!, "09:00", home!, away!));
+    expect(sides(cleanSchedule({ games: written, warnings: [] }).games)).toEqual(expected);
+  });
+
+  it("works out winners even when the first round was written out", () => {
+    const mixed = [
+      raw("1", "09:00", "Seed 4", "Seed 5"),
+      raw("4", "12:30", "Seed 2", "Seed 3"),
+      raw("5", "16:00", "Seed 1", "Seed 6"),
+      raw("6", "17:45", "4", "5"),
+    ];
+    expect(sides(cleanSchedule({ games: mixed, warnings: [] }).games).at(-1)).toEqual([
+      "6",
+      "Winner Game 4",
+      "Winner Game 5",
+    ]);
+  });
+
+  it("keeps pool and bracket games with the same number apart in one upload", () => {
+    const pool = { ...raw("1", "08:00", "Cubs", "Reds"), stage: "pool", pool: "A" };
+    const r = cleanSchedule({ games: [pool, raw("1", "09:00", "4", "5")], warnings: [] });
+    expect(r.games.map((g) => g.stage)).toEqual(["pool", "bracket"]);
+  });
+
+  it("adds them as new, leaving pool games with the same numbers alone", () => {
+    const poolGames = ["1", "2", "3", "4", "5", "6"].map((no) =>
+      saved({ id: `p${no}`, gameNo: no, stage: "pool", pool: "A" }),
+    );
+    const found = cleanSchedule({ games: numbersOnly, warnings: [] }).games;
+    const m = matchSchedule(poolGames, found);
+    expect(m.added).toHaveLength(6);
+    expect(m.changed).toEqual([]);
+    expect(m.unchanged).toEqual([]);
+    expect(m.notShown).toHaveLength(6);
+  });
+
+  it("recognizes the same bracket game on the next update", () => {
+    const b = saved({ gameNo: "1", stage: "bracket", home: "Seed 4", away: "Seed 5" });
+    const m = matchSchedule([b], [{ ...b, startTime: "09:30" }]);
+    expect(m.added).toEqual([]);
+    expect(m.changed[0]?.changes).toEqual(["now 9:30 AM"]);
+  });
+});
