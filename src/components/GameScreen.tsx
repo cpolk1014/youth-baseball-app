@@ -34,6 +34,7 @@ import { statLines } from "@/lib/stats/profile";
 import { AppShell, Loading } from "./AppShell";
 import { Attendance } from "./Attendance";
 import { BattingOrder } from "./BattingOrder";
+import { GameDeleteSection } from "./GameDeleteSection";
 import { GameForm } from "./GameForm";
 import { ParentGame } from "./ParentGame";
 import { toast } from "./shell/Toast";
@@ -537,6 +538,13 @@ export function GameScreen({ gameId }: { gameId: string }) {
               setUndo(null);
               setEditing(false);
             }}
+          />
+        )}
+        {editing && (
+          <GameDeleteSection
+            game={game}
+            lineup={data.lineups[game.id]}
+            onClose={() => setEditing(false)}
           />
         )}
       </Sheet>

@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { Tournament, TournamentGame, TournamentTeam } from "@/lib/data/tournament-backend";
 import { permissionsFor } from "@/lib/data/permissions";
-import { setTournamentCount, useAppData, useStoreState } from "@/lib/data/store";
+import { unplayedTournamentGames } from "@/lib/data/gameDelete";
+import { deleteGames, setTournamentCount, useAppData, useStoreState } from "@/lib/data/store";
 import { MAX_SCREENSHOTS, newTeams, pickDivision, teamKey } from "@/lib/tournaments/event";
 import { AppShell, Loading } from "../AppShell";
+import { DeleteGamePanel } from "../DeleteGamePanel";
 import { Sheet } from "../Sheet";
 import {
   LinkFields,
@@ -35,6 +37,10 @@ export function TournamentScreen({ id }: { id: string }) {
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDrop, setConfirmDrop] = useState(false);
+  const [alsoGames, setAlsoGames] = useState(true);
+  // Set once a delete starts, so the sheet holds still while the games disappear.
+  const [deleting, setDeleting] = useState(false);
   const [editLinks, setEditLinks] = useState<LinkInputs | null>(null);
 
   const load = useCallback(async () => {
@@ -115,6 +121,12 @@ export function TournamentScreen({ id }: { id: string }) {
     if (href) links.push([label, href]);
   }
   const others = teams.filter((x) => !x.isUs);
+  const unplayed = unplayedTournamentGames(games ?? [], data.games);
+  const gamesWord = `${unplayed.games.length} game${unplayed.games.length === 1 ? "" : "s"}`;
+  const afterDelete = () => {
+    setTournamentCount(Math.max(0, (data.tournamentCount ?? 1) - 1));
+    router.push("/tournaments");
+  };
   return shell(
     <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:items-start">
       <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
@@ -273,6 +285,14 @@ export function TournamentScreen({ id }: { id: string }) {
         )}
       </section>
 
+      {canEdit && unplayed.games.length > 0 && (
+        <button
+          onClick={() => setConfirmDrop(true)}
+          className="h-12 rounded-xl border-2 border-red-200 bg-white text-base font-semibold text-red-700 md:col-span-2"
+        >
+          We&apos;re not playing in this one
+        </button>
+      )}
       {canEdit && (
         <button
           onClick={() => setConfirmDelete(true)}
@@ -311,34 +331,99 @@ export function TournamentScreen({ id }: { id: string }) {
         )}
       </Sheet>
       <Sheet
+        open={confirmDrop}
+        title="Not playing in this one?"
+        onClose={() => setConfirmDrop(false)}
+      >
+        {confirmDrop && (
+          <DeleteGamePanel
+            games={unplayed.games}
+            tournamentName={t.name}
+            action="Remove"
+            onDelete={async () => {
+              await (await backend()).removeGames(unplayed.rowIds);
+              await deleteGames(unplayed.games.map((g) => g.id));
+            }}
+            onDone={() => {
+              setConfirmDrop(false);
+              void load().catch((e: unknown) =>
+                setError(e instanceof Error ? e.message : String(e)),
+              );
+            }}
+            onCancel={() => setConfirmDrop(false)}
+          >
+            <p className="font-bold">
+              Remove our {gamesWord} from {t.name} and from Games?
+            </p>
+            <p>Any lineups made for them go too. Games already marked final stay.</p>
+            <p className="text-sm text-slate-600">
+              Change your mind? Add the schedule screenshot again and they come back as New.
+            </p>
+          </DeleteGamePanel>
+        )}
+      </Sheet>
+      <Sheet
         open={confirmDelete}
         title="Delete this tournament?"
         onClose={() => setConfirmDelete(false)}
       >
-        <p className="mb-4 text-lg">
-          {t.name} and its team list are removed for everyone on the team. Your games aren&apos;t
-          touched.
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => setConfirmDelete(false)}
-            className="h-14 rounded-xl border-2 border-slate-400 text-lg font-bold"
+        {unplayed.games.length > 0 && !deleting && (
+          <label className="mb-3 flex items-center gap-3 text-base font-semibold">
+            <input
+              type="checkbox"
+              checked={alsoGames}
+              onChange={(e) => setAlsoGames(e.target.checked)}
+              className="size-6 accent-[var(--team)]"
+            />
+            Also remove {gamesWord} we haven&apos;t played from Games
+          </label>
+        )}
+        {deleting || (unplayed.games.length > 0 && alsoGames) ? (
+          <DeleteGamePanel
+            key="with-games"
+            games={unplayed.games}
+            tournamentName={t.name}
+            action="Delete"
+            onDelete={async () => {
+              setDeleting(true);
+              await (await backend()).deleteTournament(t.id);
+              await deleteGames(unplayed.games.map((g) => g.id));
+            }}
+            onDone={afterDelete}
+            onCancel={() => setConfirmDelete(false)}
           >
-            Keep it
-          </button>
-          <button
-            onClick={() =>
-              void (async () => {
-                await (await backend()).deleteTournament(t.id);
-                setTournamentCount(Math.max(0, (data.tournamentCount ?? 1) - 1));
-                router.push("/tournaments");
-              })()
-            }
-            className="h-14 rounded-xl bg-red-700 text-lg font-bold text-white"
-          >
-            Delete
-          </button>
-        </div>
+            <p>
+              {t.name} and its team list are removed for everyone on the team, along with these{" "}
+              {gamesWord} and any lineups made for them. Games already marked final stay.
+            </p>
+          </DeleteGamePanel>
+        ) : (
+          <>
+            <p className="mb-4 text-lg">
+              {t.name} and its team list are removed for everyone on the team. Your games
+              aren&apos;t touched.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="h-14 rounded-xl border-2 border-slate-400 text-lg font-bold"
+              >
+                Keep it
+              </button>
+              <button
+                onClick={() =>
+                  void (async () => {
+                    await (await backend()).deleteTournament(t.id);
+                    afterDelete();
+                  })()
+                }
+                className="h-14 rounded-xl bg-red-700 text-lg font-bold text-white"
+              >
+                Delete
+              </button>
+            </div>
+          </>
+        )}
       </Sheet>
     </div>,
   );

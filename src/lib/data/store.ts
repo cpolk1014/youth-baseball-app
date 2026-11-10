@@ -453,6 +453,23 @@ export function setCoachPitch(coachPitch: boolean): void {
   );
 }
 
+/**
+ * Coach or manager: delete games for good, waiting until they're gone. Lineups go with them.
+ * The callers check the rules first (`gameDelete.ts`). Throws if it can't be done.
+ */
+export async function deleteGames(gameIds: string[]): Promise<void> {
+  if (state.mode === "supabase") {
+    if (!online()) throw new Error("Deleting a game needs a connection.");
+    await enqueue(async () => (await remote()).deleteGameRows(gameIds));
+  }
+  const gone = new Set(gameIds);
+  update((d) => ({
+    ...d,
+    games: d.games.filter((g) => !gone.has(g.id)),
+    lineups: Object.fromEntries(Object.entries(d.lineups).filter(([id]) => !gone.has(id))),
+  }));
+}
+
 /** Mark a game final with its score (either score may be left out), or update the score. */
 export function setGameResult(
   gameId: string,

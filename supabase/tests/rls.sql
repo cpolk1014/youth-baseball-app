@@ -1802,4 +1802,37 @@ do $$ begin
   raise exception 'should have failed' using errcode = 'T0001';
 exception when check_violation then raise notice 'ok: map positions are checked';
 end $$;
+-- ── deleting games: coaches and managers only; linked records behave ──
+reset role;
+insert into public.game (id, season_id, game_date, opponent) values
+  ('00000000-0000-4000-8000-00000000ad01', '00000000-0000-4000-8000-000000000101', '2026-11-14', 'Delete Me'),
+  ('00000000-0000-4000-8000-00000000ad02', '00000000-0000-4000-8000-000000000101', '2026-11-15', 'Delete Me Too');
+insert into public.lineup (game_id) values ('00000000-0000-4000-8000-00000000ad01');
+insert into public.tournament_game (id, tournament_id, home, away, game_id) values
+  ('00000000-0000-4000-8000-00000000ae01', (select id from trn), 'Rattlers', 'Delete Me', '00000000-0000-4000-8000-00000000ad01'),
+  ('00000000-0000-4000-8000-00000000ae02', (select id from trn), 'Rattlers', 'Delete Me Too', '00000000-0000-4000-8000-00000000ad02');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+delete from public.game where id = '00000000-0000-4000-8000-00000000ad01';
+delete from public.tournament_game where id = '00000000-0000-4000-8000-00000000ae01';
+reset role;
+select pg_temp.expect((select count(*) from public.game where id = '00000000-0000-4000-8000-00000000ad01') = 1, 'parents can''t delete a game');
+select pg_temp.expect((select count(*) from public.tournament_game where id = '00000000-0000-4000-8000-00000000ae01') = 1, 'parents can''t remove a tournament game');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- not on the team
+delete from public.game where id = '00000000-0000-4000-8000-00000000ad01';
+reset role;
+select pg_temp.expect((select count(*) from public.game where id = '00000000-0000-4000-8000-00000000ad01') = 1, 'people not on the team can''t delete a game');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- manager
+-- From the tournament page: its row, then the team game.
+delete from public.tournament_game where id = '00000000-0000-4000-8000-00000000ae01';
+delete from public.game where id = '00000000-0000-4000-8000-00000000ad01';
+-- A game deleted on its own leaves the tournament's row, unlinked.
+delete from public.game where id = '00000000-0000-4000-8000-00000000ad02';
+reset role;
+select pg_temp.expect((select count(*) from public.game where id = '00000000-0000-4000-8000-00000000ad01') = 0, 'a manager removes a tournament game from Games');
+select pg_temp.expect((select count(*) from public.tournament_game where id = '00000000-0000-4000-8000-00000000ae01') = 0, 'and from the tournament');
+select pg_temp.expect((select count(*) from public.lineup where game_id = '00000000-0000-4000-8000-00000000ad01') = 0, 'the lineup goes with the game');
+select pg_temp.expect((select game_id is null from public.tournament_game where id = '00000000-0000-4000-8000-00000000ae02'), 'a deleted game unlinks from the tournament');
 \echo ALL RLS TESTS PASSED

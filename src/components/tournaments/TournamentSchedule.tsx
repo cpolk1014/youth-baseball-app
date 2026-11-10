@@ -10,7 +10,8 @@ import type {
   TournamentTeam,
 } from "@/lib/data/tournament-backend";
 import { defaultFieldPlayers } from "@/lib/data/game";
-import { importSchedule, newId } from "@/lib/data/store";
+import { canDeleteGame, hasLineup } from "@/lib/data/gameDelete";
+import { deleteGames, importSchedule, newId } from "@/lib/data/store";
 import type { AppData, Game } from "@/lib/data/types";
 import { MAX_SCREENSHOTS, teamKey } from "@/lib/tournaments/event";
 import {
@@ -31,6 +32,7 @@ import {
   type ScheduleGame,
   type ScheduleMatch,
 } from "@/lib/tournaments/schedule";
+import { DeleteGamePanel } from "../DeleteGamePanel";
 import { Sheet } from "../Sheet";
 import { ScreenshotButton, Thumb, sendScreenshots } from "./AddTournament";
 
@@ -194,6 +196,7 @@ export function TournamentSchedule({
             data={data}
             g={scoring}
             ours={!!ourSide(scoring, ourName)}
+            tournamentName={tournament.name}
             canEdit={canEdit}
             canScore={canScore}
             onDone={() => {
@@ -257,6 +260,7 @@ function ScoreSheet({
   data,
   g,
   ours,
+  tournamentName,
   canEdit,
   canScore,
   onDone,
@@ -264,6 +268,7 @@ function ScoreSheet({
   data: AppData;
   g: TournamentGame;
   ours: boolean;
+  tournamentName: string;
   canEdit: boolean;
   canScore: boolean;
   onDone: () => void;
@@ -299,6 +304,10 @@ function ScoreSheet({
       })
     : null;
   const editable = canScore && !ours && (!g.locked || canEdit);
+  // Kept from when the sheet opened, so it holds still while the game is being removed.
+  const [teamGame] = useState(() =>
+    g.gameId ? data.games.find((x) => x.id === g.gameId) : undefined,
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -376,29 +385,63 @@ function ScoreSheet({
         </div>
       )}
       {canEdit &&
-        (confirmRemove ? (
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => setConfirmRemove(false)}
-              className="h-12 rounded-xl border-2 border-slate-400 font-bold"
-            >
-              Keep it
-            </button>
-            <button
-              onClick={() => void run(async () => (await backend()).removeGame(g.id))}
-              disabled={busy}
-              className="h-12 rounded-xl bg-red-700 font-bold text-white disabled:opacity-40"
-            >
-              Remove
-            </button>
+        (teamGame && !canDeleteGame(teamGame) ? (
+          <p className="text-base leading-snug text-slate-700">
+            This game is final, so it can&apos;t be removed. To remove it, reopen our game first.
+          </p>
+        ) : confirmRemove && teamGame ? (
+          <DeleteGamePanel
+            games={[teamGame]}
+            tournamentName={tournamentName}
+            action="Remove"
+            onDelete={async () => {
+              // The tournament's row first: if the next step fails, the game can still be
+              // deleted from its own page.
+              await (await backend()).removeGame(g.id);
+              await deleteGames([teamGame.id]);
+            }}
+            onDone={onDone}
+            onCancel={() => setConfirmRemove(false)}
+          >
+            <p className="font-bold">
+              Remove this game from the tournament and from Games? This can&apos;t be undone.
+            </p>
+            {hasLineup(data.lineups[teamGame.id]) && (
+              <p>Its lineup and batting order go with it, even if the game comes back later.</p>
+            )}
+            <p className="text-sm text-slate-600">
+              Change your mind? Add the schedule screenshot again and it comes back as New.
+            </p>
+          </DeleteGamePanel>
+        ) : confirmRemove ? (
+          <div className="flex flex-col gap-2">
+            {g.scoreHome !== null && (
+              <p className="rounded-xl bg-amber-50 p-3 text-base leading-snug text-amber-950">
+                This game has a score, so removing it changes the standings.
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setConfirmRemove(false)}
+                className="h-12 rounded-xl border-2 border-slate-400 font-bold"
+              >
+                Keep it
+              </button>
+              <button
+                onClick={() => void run(async () => (await backend()).removeGame(g.id))}
+                disabled={busy}
+                className="h-12 rounded-xl bg-red-700 font-bold text-white disabled:opacity-40"
+              >
+                Remove
+              </button>
+            </div>
           </div>
         ) : (
           <button
             onClick={() => setConfirmRemove(true)}
             className="h-12 rounded-xl border-2 border-red-200 bg-white text-base font-semibold text-red-700"
           >
-            Remove this game from the schedule
-            {ours ? " (the team game stays)" : ""}
+            {teamGame ? "Remove this game (also from Games)" : "Remove this game from the schedule"}
           </button>
         ))}
       {error && (

@@ -309,6 +309,10 @@ export async function saveGameRow(game: Game, trimmedLineup: Lineup | null): Pro
   if (trimmedLineup) check(await sb.rpc("save_lineup", lineupToRpcArgs(game.id, trimmedLineup)));
 }
 
+export async function deleteGameRows(gameIds: string[]): Promise<void> {
+  check(await getBrowserSupabase().from("game").delete().in("id", gameIds));
+}
+
 export async function saveTeamSettings(teamId: string, coachPitch: boolean): Promise<void> {
   check(
     await getBrowserSupabase().from("team").update({ coach_pitch: coachPitch }).eq("id", teamId),

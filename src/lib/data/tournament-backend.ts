@@ -355,7 +355,11 @@ export async function setScoreLocked(id: string, locked: boolean): Promise<void>
 }
 
 export async function removeGame(id: string): Promise<void> {
-  check(await getBrowserSupabase().from("tournament_game").delete().eq("id", id));
+  await removeGames([id]);
+}
+
+export async function removeGames(ids: string[]): Promise<void> {
+  check(await getBrowserSupabase().from("tournament_game").delete().in("id", ids));
 }
 
 /** The tournament a team game belongs to, for the game page. */
