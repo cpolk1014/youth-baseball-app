@@ -171,8 +171,12 @@ export function BracketView({
                       <div
                         key={r.side}
                         className={`flex items-center gap-1 px-2 text-sm ${
-                          win === r.side ? "font-bold" : win ? "text-slate-500" : "font-semibold"
-                        } ${isUs(r.name) ? "text-[var(--team)]" : ""}`}
+                          win === r.side
+                            ? "font-bold text-green-700"
+                            : win
+                              ? "text-slate-500"
+                              : "font-semibold"
+                        } ${isUs(r.name) && win !== r.side ? "text-[var(--team)]" : ""}`}
                         style={{ height: ROW_H }}
                       >
                         {r.seed && (

@@ -223,11 +223,15 @@ function GameRow({ g, ours, onOpen }: { g: TournamentGame; ours: boolean; onOpen
   const won = winner(g);
   const side = (name: string, score: number | null, isWinner: boolean) => (
     <span className="flex items-baseline justify-between gap-2">
-      <span className={`min-w-0 text-base ${isWinner ? "font-bold" : "font-semibold"}`}>
+      <span
+        className={`min-w-0 text-base ${isWinner ? "font-bold text-green-700" : "font-semibold"}`}
+      >
         {name}
       </span>
       {score !== null && (
-        <span className={`shrink-0 text-lg tabular-nums ${isWinner ? "font-bold" : ""}`}>
+        <span
+          className={`shrink-0 text-lg tabular-nums ${isWinner ? "font-bold text-green-700" : ""}`}
+        >
           {score}
         </span>
       )}
