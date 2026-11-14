@@ -55,16 +55,20 @@ Authentication → URL Configuration:
 
 ## 5. Put the sign-in code in the email
 
-Authentication → Emails → **Magic Link** template. Add the code so people can type it
-when the link opens in a different browser (common on iPhone):
+Sign-in is code only: no link in the email (email scanners and other browsers used up links
+before people tapped them). Authentication → Emails → **Magic Link** template, subject
+`Your RallyCap code: {{ .Token }}` (the code shows in the phone's notification), body:
 
 ```html
-<h2>Sign in to RallyCap</h2>
-<p><a href="{{ .ConfirmationURL }}">Tap here to sign in</a></p>
-<p>Or enter this code: <strong>{{ .Token }}</strong></p>
+<h2>Here's your RallyCap code</h2>
+<p style="font-size:32px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
+<p>Type it on the sign-in screen and you're in. No password, no signs to steal.</p>
+<p>Didn't ask for this? Ignore it. Nobody gets in without the code.</p>
+<p>RallyCap · Youth baseball's AI assistant coach</p>
 ```
 
-Do the same in the **Confirm signup** template (first-time sign-ins use it).
+Use the same subject and body in the **Confirm signup** template (first-time sign-ins use it).
+Keep Resend's click tracking off.
 
 ## 6. Sign in and claim your team
 
@@ -99,8 +103,8 @@ Start the app (`npm run dev`), sign in with your email, and then either:
 - **Email:** Resend, domain `rallycap.team` verified (DNS records in Vercel). Supabase custom
   SMTP: host `smtp.resend.com`, port `465`, username `resend`, password = a Resend API key
   with sending access, sender `RallyCap <signin@rallycap.team>`.
-- **Email templates** (Magic Link and Confirm signup) include both the link and the code
-  (`{{ .Token }}`), so sign-in works inside the home-screen app too.
+- **Email templates** (Magic Link and Confirm signup): code only (`{{ .Token }}`, also in the
+  subject), no link; the text follows the sign-in screen's (see step 5).
 
 If sign-in emails fail and nothing shows in Resend's logs, re-enter the SMTP password in
 Supabase (it can be cleared when other SMTP fields are saved).

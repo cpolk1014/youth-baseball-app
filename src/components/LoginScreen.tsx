@@ -60,8 +60,7 @@ export function LoginScreen() {
       return;
     }
     setCode("");
-    if (step.kind === "sent")
-      setNotice("New code sent. Use the newest email; older codes stop working.");
+    if (step.kind === "sent") setNotice("New code sent. Use the newest one; the old one's out.");
     setStep({ kind: "sent", email: address });
   };
 
@@ -91,8 +90,11 @@ export function LoginScreen() {
           className="-ml-3 h-20 w-auto"
         />
       </h1>
-      <p className="mt-1 mb-6 text-lg text-slate-700">
-        Run your travel team. Fair lineups, every game.
+      <p className="mt-1 text-xl font-bold text-slate-900">
+        Youth baseball&apos;s AI assistant coach.
+      </p>
+      <p className="mt-1 mb-6 text-base text-slate-700">
+        Lineups, tournaments and team money, off your clipboard and onto your phone.
       </p>
       {next() === "/club" ? (
         <p className="-mt-4 mb-6 rounded-xl bg-green-50 p-3 text-base font-semibold text-green-900">
@@ -101,7 +103,7 @@ export function LoginScreen() {
         </p>
       ) : (
         <p className="-mt-4 mb-6 text-base text-slate-700">
-          Running a club with several teams?{" "}
+          Running a whole club?{" "}
           <a href="/login?next=%2Fclub" className="font-semibold text-[var(--team)] underline">
             Start a club
           </a>
@@ -123,8 +125,8 @@ export function LoginScreen() {
         >
           {params.get("error") === "link" && (
             <p className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">
-              That sign-in link expired or was opened in a different browser. Send a new one, or use
-              the code from the email.
+              That sign-in link didn&apos;t work. Sign-in uses a code now: send one below and type
+              it in.
             </p>
           )}
           <label className="flex flex-col gap-1">
@@ -140,10 +142,11 @@ export function LoginScreen() {
             />
           </label>
           <button type="submit" disabled={busy || !email.includes("@")} className={primary}>
-            {busy ? "Sending…" : "Email me a sign-in link"}
+            {busy ? "Sending…" : "Send my code"}
           </button>
           <p className="text-sm text-slate-600">
-            No password needed. New here? This creates your account.
+            No password to forget. We&apos;ll email you a 6-digit code. First time here? This sets
+            up your account.
           </p>
         </form>
       ) : (
@@ -154,17 +157,20 @@ export function LoginScreen() {
           }}
           className="flex flex-col gap-4"
         >
-          <p className="rounded-xl bg-green-50 p-4 text-lg leading-snug text-green-950">
-            Check <b>{step.email}</b>. Type the code from the newest email here, or tap its link.
-            Use one or the other: tapping the link uses up the code.
-          </p>
+          <div className="rounded-xl bg-green-50 p-4 text-green-950">
+            <h2 className="text-xl font-bold">Check your email</h2>
+            <p className="mt-1 text-lg leading-snug">
+              We sent a 6-digit code to <b className="break-all">{step.email}</b>. Not there? Check
+              spam. Sometimes it&apos;s hiding in the dugout.
+            </p>
+          </div>
           {notice && (
             <p role="status" className="text-base font-semibold text-green-900">
               {notice}
             </p>
           )}
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-slate-700">Code from the email</span>
+            <span className="text-sm font-semibold text-slate-700">Your code</span>
             <input
               inputMode="numeric"
               autoComplete="one-time-code"
@@ -174,7 +180,7 @@ export function LoginScreen() {
             />
           </label>
           <button type="submit" disabled={busy || code.length < 6} className={primary}>
-            {busy ? "Checking…" : "Sign in"}
+            {busy ? "Checking…" : "Play ball"}
           </button>
           <button
             type="button"
@@ -194,7 +200,7 @@ export function LoginScreen() {
             }}
             className="h-12 text-base font-semibold text-slate-700 underline"
           >
-            Use a different email
+            Wrong email? Start over
           </button>
         </form>
       )}

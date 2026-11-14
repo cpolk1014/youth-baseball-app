@@ -9,7 +9,7 @@ describe("sign-in error messages", () => {
         status: 403,
         message: "Token has expired or is invalid",
       }),
-    ).toMatch(/expired or was already used/);
+    ).toMatch(/swing and a miss/);
     expect(signInErrorMessage({ message: "Token has expired or is invalid" })).toMatch(
       /Send a new code/,
     );

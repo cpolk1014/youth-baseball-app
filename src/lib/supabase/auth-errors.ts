@@ -6,7 +6,7 @@ export function signInErrorMessage(error: {
 }): string {
   const msg = error.message.toLowerCase();
   if (error.code === "otp_expired" || msg.includes("expired") || msg.includes("invalid")) {
-    return "That code has expired or was already used. Each new email replaces the last code, and tapping the link in the email uses the code up. Tap “Send a new code” and type the newest one.";
+    return "That code's a swing and a miss. It may be mistyped, used already, or replaced by a newer one. Check the newest email and try again, or tap “Send a new code”.";
   }
   if (
     error.code === "over_email_send_rate_limit" ||
