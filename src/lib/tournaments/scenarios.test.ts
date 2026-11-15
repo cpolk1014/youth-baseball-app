@@ -82,10 +82,46 @@ describe("what time do we play tomorrow", () => {
       [g("g1", "Bats", "Cubs", [10, 0]), g("g2", "Aces", "Cubs", null)],
       [rule("run_diff", 6), rule("coin_flip")],
     );
-    // Both count +6 at most: winning by 6 or more ties, then a coin flip.
+    // Both count +6 at most: winning by 6 or more leaves us tied.
     expect(words(i, scenarios(i, "A")).slice(0, 2)).toEqual([
       ["1-2", ["We beat Cubs by 6 or more runs"]],
       ["2", ["We beat Cubs by 1 to 5 runs"]],
+    ]);
+  });
+
+  it("works out the margins when two games left decide a run differential tie", () => {
+    const i = input(
+      [
+        g("g1", "Aces", "Cubs", [5, 1]),
+        g("g2", "Bats", "Dogs", [4, 2]),
+        g("g3", "Aces", "Bats", null),
+        g("g4", "Cubs", "Dogs", null),
+      ],
+      [rule("run_diff")],
+    );
+    const o = words(i, scenarios(i, "A"));
+    expect(o[0]).toEqual(["1", ["We beat Bats"]]);
+    expect(o.find((x) => x[0] === "3")?.[1]).toEqual([
+      "We lose to Bats and Dogs beat Cubs, with our losing margin and Dogs' winning margin adding up to 7 or more",
+      "We lose to Bats and Cubs beat Dogs, with our losing margin and Cubs' winning margin adding up to 9 or more",
+    ]);
+    // Nothing says "runs decide it" without saying how.
+    expect(JSON.stringify(o)).not.toMatch(/depends|decide/);
+  });
+
+  it("compares runs allowed across the two games left", () => {
+    const i = input(
+      [
+        g("g1", "Aces", "Cubs", [5, 1]),
+        g("g2", "Bats", "Dogs", [4, 2]),
+        g("g3", "Aces", "Bats", null),
+        g("g4", "Cubs", "Dogs", null),
+      ],
+      [rule("head_to_head"), rule("runs_allowed"), rule("coin_flip")],
+    );
+    const o = words(i, scenarios(i, "A"));
+    expect(o.find((x) => x[0] === "3")?.[1]).toEqual([
+      "We lose to Bats and Dogs beat Cubs, with Bats' runs at least 4 more than Cubs' runs",
     ]);
   });
 
@@ -137,9 +173,9 @@ describe("grouped for parents", () => {
       g("b2", "1", "4", null, { stage: "bracket", date: "2026-11-15", startTime: "11:00" }),
     ];
     const slots = bySlot(scenarios(i, "A").outcomes, games, null);
-    expect(slots.map((s) => [s.game?.id ?? null, s.seeds, s.opponent, s.coin])).toEqual([
-      ["b1", [2, 3], null, true],
-      ["b2", [1], "4", false],
+    expect(slots.map((s) => [s.game?.id ?? null, s.seeds, s.opponent, s.unsure])).toEqual([
+      ["b1", [2, 3], null, "tied"],
+      ["b2", [1], "4", null],
     ]);
   });
 });

@@ -52,19 +52,23 @@ const field =
 const backend = () => import("@/lib/data/tournament-backend");
 const OPEN_TEXT: Record<NonNullable<StandingRow["open"]>, string> = {
   runs: "Tied: depends on runs",
-  coin: "Tied: coin flip",
+  coin: "Still tied",
   tied: "Still tied",
 };
 const names = (list: string[]) =>
   list.length <= 1 ? (list[0] ?? "") : `${list.slice(0, -1).join(", ")} and ${list.at(-1)}`;
+
+/** Why a seed range isn't settled yet, after "as the #4 or #5 seed". */
+const unsureText = (u: "runs" | "tied" | null) =>
+  u === "runs" ? " (depends on the scores)" : u === "tied" ? " (if the tie isn't broken)" : "";
 
 /** Why a team sits where it does, in plain words. */
 function howText(r: StandingRow, rows: StandingRow[]): string {
   const others = names(
     rows.filter((x) => x.seed === r.seed && x.teamId !== r.teamId).map((x) => x.name),
   );
-  if (r.open === "coin") return `Tied with ${others}; a coin flip decides`;
-  if (r.open === "tied") return `Tied with ${others}; the tie-breakers don't separate them`;
+  if (r.open === "coin" || r.open === "tied")
+    return `Tied with ${others}; the tournament's tie-breakers settle it`;
   if (r.open === "runs") return `Tied with ${others}; runs will decide`;
   return r.decidedBy ? `Tie broken by ${r.decidedBy.toLowerCase()}` : "";
 }
@@ -501,8 +505,8 @@ function LockSeeds({
         </p>
       )}
       <p className="text-base text-slate-700">
-        Check the order against the tournament&apos;s seeds. Teams still tied (a coin flip, say) can
-        be moved. Locking fills in the bracket and adds our bracket games to Games.
+        Check the order against the tournament&apos;s seeds. Teams still tied can be moved. Locking
+        fills in the bracket and adds our bracket games to Games.
       </p>
       <ol className="flex flex-col gap-1">
         {seeds.map((s, i) => {
@@ -1190,13 +1194,13 @@ function PlayTimes({
                     <p className="text-sm text-slate-600">
                       as the {seedList(s.seeds)}
                       {s.opponent ? `, vs ${sideWords(s.opponent)}` : ""}
-                      {s.coin ? " (a coin flip may decide)" : ""}
+                      {unsureText(s.unsure)}
                     </p>
                   </>
                 ) : (
                   <p className="text-lg font-bold">
                     {seedList(s.seeds)}
-                    {s.coin ? " (a coin flip may decide)" : ""}
+                    {unsureText(s.unsure)}
                   </p>
                 )}
                 <ul className="mt-2 flex flex-col gap-1">
