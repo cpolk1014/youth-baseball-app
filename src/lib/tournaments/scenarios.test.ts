@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bySlot, describeTerm, firstGameForSeed, scenarios } from "./scenarios";
+import { SCORES, bySlot, describeTerm, firstGameForSeed, scenarios, splitGame } from "./scenarios";
 import type { SGame, STeam, StandingsInput } from "./standings";
 import type { Criterion } from "./tiebreak";
 
@@ -148,6 +148,28 @@ describe("what time do we play tomorrow", () => {
     expect(firstGameForSeed(games, 1, null)?.opponent).toBe("Winner Game 3");
     expect(firstGameForSeed(games, 2, "B")?.game.id).toBe("b4");
     expect(firstGameForSeed(games, 9, null)).toBeNull();
+  });
+});
+
+describe("splitting a game's scores", () => {
+  it("merges margins whose loser's runs only differ past the scores we try", () => {
+    // Win by 5 or more: A. By 1 with the loser on 9 or fewer: B. Anything else: C.
+    const key = (i: number) => {
+      const { w, l } = SCORES[i]!;
+      return w - l >= 5 ? "A" : w - l === 1 && l <= 9 ? "B" : "C";
+    };
+    const groups = splitGame(
+      SCORES.map((_, i) => i),
+      key,
+      "g",
+      "home",
+    )!.map((x) => [x.key, x.conds.map((c) => `${c.kind} ${c.min}-${c.max ?? "up"}`)]);
+    expect(groups).toEqual([
+      ["B", ["margin 1-1", "loserRuns 0-9"]],
+      ["C", ["margin 1-1", "loserRuns 10-up"]],
+      ["C", ["margin 2-4"]],
+      ["A", ["margin 5-up"]],
+    ]);
   });
 });
 

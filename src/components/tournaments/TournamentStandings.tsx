@@ -1170,12 +1170,24 @@ function PlayTimes({
       {best !== worst && (
         <ul className="flex flex-col gap-3">
           {slots.map((s) => {
+            // A game two seeds can reach (#3 vs #6) says which seed each way leads to.
+            const seedTag = (term: (typeof s.terms)[number]) => {
+              const o = s.seedOf.get(term);
+              if (!o || s.seeds.length < 2) return "";
+              return o.seedTo > o.seed
+                ? ` (#${o.seed} or #${o.seedTo} seed)`
+                : ` (#${o.seed} seed)`;
+            };
             const texts = [
               ...new Set(
                 s.terms
                   .filter((term) => termSize(term) <= MAX_CONDITIONS)
-                  .sort((a, b) => termSize(a) - termSize(b))
-                  .map((term) => describeTerm(term, games, input, us.id)),
+                  .sort(
+                    (a, b) =>
+                      termSize(a) - termSize(b) ||
+                      (s.seedOf.get(a)?.seed ?? 0) - (s.seedOf.get(b)?.seed ?? 0),
+                  )
+                  .map((term) => describeTerm(term, games, input, us.id) + seedTag(term)),
               ),
             ];
             const long = s.terms.some((term) => termSize(term) > MAX_CONDITIONS);

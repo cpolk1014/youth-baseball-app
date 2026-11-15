@@ -148,7 +148,7 @@ export function scenarios(input: StandingsInput, ourId: string): Scenarios {
 
 type Score = { w: number; l: number };
 /** Every final score tried for a game: the winner's runs and the loser's. */
-const SCORES: Score[] = [];
+export const SCORES: Score[] = [];
 for (let w = 1; w <= MAX_RUNS; w++) for (let l = 0; l < w; l++) SCORES.push({ w, l });
 
 type Kind = RunCond["kind"];
@@ -207,7 +207,7 @@ function byKind(
  * loser's runs or winner's runs), or by two when the rules use both ("we lose with Bats
  * scoring 4 or fewer, by 1 to 2 runs"). Null when no such split exists.
  */
-function splitGame(
+export function splitGame(
   members: number[],
   keyOf: (i: number) => string,
   gameId: string,
@@ -241,10 +241,26 @@ function splitGame(
         maps.set(ov, m);
       }
       if (!fits) continue;
-      const sig = (i: number) =>
-        JSON.stringify([...maps.get(valueOf(outerKind, SCORES[i]!))!].sort((a, b) => a[0] - b[0]));
-      const outer = byKind(members, sig, outerKind, gameId, winner);
-      if (!outer) continue;
+      // Merge neighbouring outer values that agree wherever both have scores. (We only try
+      // scores up to MAX_RUNS, so a 5-run win reaches higher loser's runs than a 6-run win;
+      // that's no reason to split them.)
+      const values = [...maps.keys()].sort((a, b) => a - b);
+      const top = values.at(-1)!;
+      const outer: { from: number; to: number; seen: Map<number, string>; members: number[] }[] =
+        [];
+      for (const v of values) {
+        const m = maps.get(v)!;
+        const last = outer.at(-1);
+        const agrees = last && [...m].every(([iv, k]) => (last.seen.get(iv) ?? k) === k);
+        if (last && agrees) {
+          last.to = v;
+          for (const [iv, k] of m) last.seen.set(iv, k);
+        } else outer.push({ from: v, to: v, seen: new Map(m), members: [] });
+      }
+      for (const i of members) {
+        const v = valueOf(outerKind, SCORES[i]!);
+        outer.find((o) => v >= o.from && v <= o.to)!.members.push(i);
+      }
       const out: Group[] = [];
       let ok = true;
       for (const o of outer) {
@@ -253,10 +269,20 @@ function splitGame(
           ok = false;
           break;
         }
+        const outerCond: RunCond = {
+          gameId,
+          winner,
+          kind: outerKind,
+          min: o.from,
+          max: o.to === top ? null : o.to,
+        };
         for (const n of inner) {
           out.push({
             key: n.key,
-            conds: [...(outer.length > 1 ? [o.cond] : []), ...(inner.length > 1 ? [n.cond] : [])],
+            conds: [
+              ...(outer.length > 1 ? [outerCond] : []),
+              ...(inner.length > 1 ? [n.cond] : []),
+            ],
             members: n.members,
           });
         }
@@ -761,6 +787,8 @@ export interface Slot<T> {
   opponent: string | null;
   /** Any of these gets us here. */
   terms: Term[];
+  /** The seed (or seeds, when not settled) each term leads to. */
+  seedOf: Map<Term, { seed: number; seedTo: number }>;
   /** Why we might land here or in another slot: scores we couldn't work out, or a tie the
    * tie-breakers don't break (the tournament settles it). Null when it's certain. */
   unsure: "runs" | "tied" | null;
@@ -777,17 +805,21 @@ export function bySlot<T extends SGame & { date: string | null; startTime: strin
     for (let n = o.seed; n <= o.seedTo; n++) {
       const f = firstGameForSeed(games, n, pool);
       const key = f ? f.game.id : `seed-${n}`;
-      const slot = slots.get(key) ?? {
+      const slot: Slot<T> & { opponents: Set<string> } = slots.get(key) ?? {
         game: f?.game ?? null,
         seeds: [],
         opponent: null,
         opponents: new Set<string>(),
         terms: [],
+        seedOf: new Map(),
         unsure: null,
       };
       if (!slot.seeds.includes(n)) slot.seeds.push(n);
       if (f) slot.opponents.add(f.opponent);
-      slot.terms.push(...o.terms);
+      for (const t of o.terms) {
+        if (!slot.seedOf.has(t)) slot.terms.push(t);
+        slot.seedOf.set(t, { seed: o.seed, seedTo: o.seedTo });
+      }
       if (o.seedTo > o.seed) {
         slot.unsure = o.open === "runs" || slot.unsure === "runs" ? "runs" : "tied";
       }
