@@ -18,7 +18,7 @@ export const MAX_SCENARIO_GAMES = 10;
 /** Highest score tried for a game when runs decide a tie. */
 const MAX_RUNS = 15;
 /** Most standings worked out for run margins before we just say "depends on runs". */
-const RUN_BUDGET = 300_000;
+const RUN_BUDGET = 400_000;
 
 export interface WinCond {
   gameId: string;
@@ -95,6 +95,7 @@ export function scenarios(input: StandingsInput, ourId: string): Scenarios {
   if (left.length > MAX_SCENARIO_GAMES)
     return { remaining: left.length, tooMany: true, outcomes: [] };
   const budget = { left: RUN_BUDGET };
+  const memo: Memo = new Map();
   const byOutcome = new Map<string, { result: Result; terms: Term[] }>();
   const add = (result: Result, term: Term) => {
     const key = `${result.seed}-${result.seedTo}-${result.open ?? ""}`;
@@ -116,9 +117,16 @@ export function scenarios(input: StandingsInput, ourId: string): Scenarios {
       continue;
     }
     const tied = new Set(rows.filter((r) => r.seed === row.seed).map((r) => r.teamId));
-    const split = byRuns(input, ourId, picks, left, tied, budget);
+    const split = byRuns(input, ourId, picks, left, tied, budget, memo, row.seed);
     if (!split) {
-      add(row, { wins, runs: [], dependsOnRuns: true });
+      // Too many games tangled together: name the games whose scores decide it.
+      const games = relevantGames(input, left, tied, ourId).map((g) => g.id);
+      add(row, {
+        wins,
+        runs: [],
+        dependsOnRuns: true,
+        ...(games.length ? { runsGames: games } : {}),
+      });
       continue;
     }
     for (const s of split) {
@@ -143,63 +151,153 @@ type Score = { w: number; l: number };
 const SCORES: Score[] = [];
 for (let w = 1; w <= MAX_RUNS; w++) for (let l = 0; l < w; l++) SCORES.push({ w, l });
 
+type Kind = RunCond["kind"];
+const KINDS: Kind[] = ["margin", "loserRuns", "winnerRuns"];
+const valueOf = (kind: Kind, p: Score) =>
+  kind === "margin" ? p.w - p.l : kind === "loserRuns" ? p.l : p.w;
+type Group = { key: string; conds: RunCond[]; members: number[] };
+
 /**
- * Group a game's scores by the winning margin, the loser's runs or the winner's runs (the
- * first that fits): runs of equal values that lead to the same key become one condition
- * ("by 1 to 3", "by 4 or more"). Null when none of them decides it.
+ * Group some of a game's scores (indexes into SCORES) by one kind of number (the winning
+ * margin, the loser's runs or the winner's runs): runs of equal values that lead to the same
+ * key become one condition ("by 1 to 3", "by 4 or more"). Null when that number doesn't
+ * decide it.
  */
-function ranges(
+function byKind(
+  members: number[],
   keyOf: (i: number) => string,
+  kind: Kind,
   gameId: string,
   winner: WinPick,
 ): { key: string; cond: RunCond; members: number[] }[] | null {
-  for (const kind of ["margin", "loserRuns", "winnerRuns"] as const) {
-    const value = (p: Score) => (kind === "margin" ? p.w - p.l : kind === "loserRuns" ? p.l : p.w);
-    const byValue = new Map<number, { key: string; members: number[] }>();
-    let fits = true;
-    for (let i = 0; i < SCORES.length; i++) {
-      const v = value(SCORES[i]!);
-      const k = keyOf(i);
-      const seen = byValue.get(v);
-      if (seen && seen.key !== k) {
-        fits = false;
-        break;
-      }
-      if (seen) seen.members.push(i);
-      else byValue.set(v, { key: k, members: [i] });
+  const byValue = new Map<number, { key: string; members: number[] }>();
+  for (const i of members) {
+    const v = valueOf(kind, SCORES[i]!);
+    const k = keyOf(i);
+    const seen = byValue.get(v);
+    if (seen && seen.key !== k) return null;
+    if (seen) seen.members.push(i);
+    else byValue.set(v, { key: k, members: [i] });
+  }
+  const values = [...byValue.keys()].sort((a, b) => a - b);
+  const top = values.at(-1)!;
+  const out: { key: string; cond: RunCond; members: number[] }[] = [];
+  let start = values[0]!;
+  let group: number[] = [];
+  for (let n = 0; n < values.length; n++) {
+    const v = values[n]!;
+    group.push(...byValue.get(v)!.members);
+    const next = values[n + 1];
+    if (next === undefined || byValue.get(next)!.key !== byValue.get(v)!.key) {
+      out.push({
+        key: byValue.get(v)!.key,
+        // The top of what we tried counts as "or more" (a bigger score goes the same way).
+        cond: { gameId, winner, kind, min: start, max: v === top ? null : v },
+        members: group,
+      });
+      group = [];
+      if (next !== undefined) start = next;
     }
-    if (!fits) continue;
-    const values = [...byValue.keys()].sort((a, b) => a - b);
-    const top = values.at(-1)!;
-    const out: { key: string; cond: RunCond; members: number[] }[] = [];
-    let start = values[0]!;
-    let members: number[] = [];
-    for (let i = 0; i < values.length; i++) {
-      const v = values[i]!;
-      members.push(...byValue.get(v)!.members);
-      const next = values[i + 1];
-      if (next === undefined || byValue.get(next)!.key !== byValue.get(v)!.key) {
-        out.push({
-          key: byValue.get(v)!.key,
-          // The top of what we tried counts as "or more" (a bigger score goes the same way).
-          cond: { gameId, winner, kind, min: start, max: v === top ? null : v },
-          members,
-        });
-        members = [];
-        if (next !== undefined) start = next;
+  }
+  return out;
+}
+
+/**
+ * Split a game's scores into conditions that each lead to one key: by one number (margin,
+ * loser's runs or winner's runs), or by two when the rules use both ("we lose with Bats
+ * scoring 4 or fewer, by 1 to 2 runs"). Null when no such split exists.
+ */
+function splitGame(
+  members: number[],
+  keyOf: (i: number) => string,
+  gameId: string,
+  winner: WinPick,
+): Group[] | null {
+  for (const kind of KINDS) {
+    const out = byKind(members, keyOf, kind, gameId, winner);
+    if (out)
+      return out.map((o) => ({
+        key: o.key,
+        conds: out.length > 1 ? [o.cond] : [],
+        members: o.members,
+      }));
+  }
+  for (const outerKind of KINDS) {
+    for (const innerKind of KINDS) {
+      if (innerKind === outerKind) continue;
+      // Within each value of the outer number, the inner number has to decide it.
+      const maps = new Map<number, Map<number, string>>();
+      let fits = true;
+      for (const i of members) {
+        const ov = valueOf(outerKind, SCORES[i]!);
+        const iv = valueOf(innerKind, SCORES[i]!);
+        const m = maps.get(ov) ?? new Map<number, string>();
+        const seen = m.get(iv);
+        if (seen !== undefined && seen !== keyOf(i)) {
+          fits = false;
+          break;
+        }
+        m.set(iv, keyOf(i));
+        maps.set(ov, m);
       }
+      if (!fits) continue;
+      const sig = (i: number) =>
+        JSON.stringify([...maps.get(valueOf(outerKind, SCORES[i]!))!].sort((a, b) => a[0] - b[0]));
+      const outer = byKind(members, sig, outerKind, gameId, winner);
+      if (!outer) continue;
+      const out: Group[] = [];
+      let ok = true;
+      for (const o of outer) {
+        const inner = byKind(o.members, keyOf, innerKind, gameId, winner);
+        if (!inner) {
+          ok = false;
+          break;
+        }
+        for (const n of inner) {
+          out.push({
+            key: n.key,
+            conds: [...(outer.length > 1 ? [o.cond] : []), ...(inner.length > 1 ? [n.cond] : [])],
+            members: n.members,
+          });
+        }
+      }
+      if (ok) return out;
     }
-    return out;
   }
   return null;
 }
 
+type Split = { result: Result; conds: RunCond[]; dependsOn: string[] };
+
+/** The games left that involve the tied teams, ours first. */
+function relevantGames(
+  input: StandingsInput,
+  left: SGame[],
+  tied: Set<string>,
+  ourId: string,
+): SGame[] {
+  const teamsIn = (g: SGame) => [
+    sideTeam(g.home, g.homeTeamId, input.teams),
+    sideTeam(g.away, g.awayTeamId, input.teams),
+  ];
+  return left
+    .filter((g) => teamsIn(g).some((t) => t && tied.has(t.id)))
+    .sort(
+      (a, b) =>
+        Number(teamsIn(b).some((t) => t?.id === ourId)) -
+        Number(teamsIn(a).some((t) => t?.id === ourId)),
+    );
+}
+/** Ties already worked out, by the tied teams and who wins the games that involve them. The
+ * order inside a tie depends only on those teams' games, so it's the same whatever happens
+ * elsewhere; seeds are kept relative to the top of the tie. */
+type Memo = Map<string, Split[] | null>;
+
 /**
  * A tie that runs settle: try every score of the games left that involve the tied teams (up
  * to two; ours first) and say what each leads to, by the winning margin, the loser's runs or
- * the winner's runs. With two games, the second game's score is named only where it matters;
- * where neither can be put simply, the outcome "depends on" that game's score. Null when more
- * than two games are in play (or it would take too long).
+ * the winner's runs (or two of them). With two games, the second game's score is named only
+ * where it matters. Null when more than two games are in play (or it would take too long).
  */
 function byRuns(
   input: StandingsInput,
@@ -208,115 +306,109 @@ function byRuns(
   left: SGame[],
   tied: Set<string>,
   budget: { left: number },
-): { result: Result; conds: RunCond[]; dependsOn: string[] }[] | null {
-  const teamsIn = (g: SGame) => [
-    sideTeam(g.home, g.homeTeamId, input.teams),
-    sideTeam(g.away, g.awayTeamId, input.teams),
-  ];
-  const relevant = left
-    .filter((g) => teamsIn(g).some((t) => t && tied.has(t.id)))
-    .sort(
-      (a, b) =>
-        Number(teamsIn(b).some((t) => t?.id === ourId)) -
-        Number(teamsIn(a).some((t) => t?.id === ourId)),
-    );
-  if (relevant.length === 0 || relevant.length > 2) return null;
-  const cost = SCORES.length ** relevant.length;
-  if (budget.left < cost) return null;
-  budget.left -= cost;
+  memo: Memo,
+  top: number,
+): Split[] | null {
+  const relevant = relevantGames(input, left, tied, ourId);
+  const memoKey = `${[...tied].sort().join(",")}|${relevant.map((g) => `${g.id}:${picks.get(g.id)}`).join(",")}`;
+  const shift = (list: Split[] | null, by: number) =>
+    list?.map((x) => ({
+      ...x,
+      result: { ...x.result, seed: x.result.seed + by, seedTo: x.result.seedTo + by },
+    })) ?? null;
+  if (memo.has(memoKey)) return shift(memo.get(memoKey)!, top);
+  const found = work();
+  memo.set(memoKey, shift(found, -top));
+  return found;
 
-  const rest = new Map(picks);
-  for (const g of relevant) rest.delete(g.id);
-  const results = new Map<string, Result>();
-  const keyOf = (r: Result) => `${r.seed}-${r.seedTo}-${r.open ?? ""}`;
-  const evaluate = (scores: Map<string, Score>): string | null => {
-    const games = input.games.map((x) => {
-      const p = scores.get(x.id);
-      if (!p) return x;
-      const home = picks.get(x.id) === "home";
-      return { ...x, scoreHome: home ? p.w : p.l, scoreAway: home ? p.l : p.w };
-    });
-    const r = ourRow(input, ourId, rest, games)?.row;
-    if (!r) return null;
-    const res = { seed: r.seed, seedTo: r.seedTo, open: r.open };
-    results.set(keyOf(res), res);
-    return keyOf(res);
-  };
-  const win = (g: SGame) => picks.get(g.id)!;
+  function work(): Split[] | null {
+    if (relevant.length === 0 || relevant.length > 2) return null;
+    const cost = SCORES.length ** relevant.length;
+    if (budget.left < cost) return null;
+    budget.left -= cost;
 
-  if (relevant.length === 1) {
-    const g = relevant[0]!;
-    const keys: string[] = [];
-    for (const p of SCORES) {
-      const k = evaluate(new Map([[g.id, p]]));
-      if (k === null) return null;
-      keys.push(k);
+    const rest = new Map(picks);
+    for (const g of relevant) rest.delete(g.id);
+    const results = new Map<string, Result>();
+    const keyOf = (r: Result) => `${r.seed}-${r.seedTo}-${r.open ?? ""}`;
+    const evaluate = (scores: Map<string, Score>): string | null => {
+      const games = input.games.map((x) => {
+        const p = scores.get(x.id);
+        if (!p) return x;
+        const home = picks.get(x.id) === "home";
+        return { ...x, scoreHome: home ? p.w : p.l, scoreAway: home ? p.l : p.w };
+      });
+      const r = ourRow(input, ourId, rest, games)?.row;
+      if (!r) return null;
+      const res = { seed: r.seed, seedTo: r.seedTo, open: r.open };
+      results.set(keyOf(res), res);
+      return keyOf(res);
+    };
+    const win = (g: SGame) => picks.get(g.id)!;
+    const all = SCORES.map((_, i) => i);
+
+    if (relevant.length === 1) {
+      const g = relevant[0]!;
+      const keys: string[] = [];
+      for (const p of SCORES) {
+        const k = evaluate(new Map([[g.id, p]]));
+        if (k === null) return null;
+        keys.push(k);
+      }
+      const out = splitGame(all, (i) => keys[i]!, g.id, win(g));
+      if (!out) return null;
+      return out.map((o) => ({ result: results.get(o.key)!, conds: o.conds, dependsOn: [] }));
     }
-    const out = ranges((i) => keys[i]!, g.id, win(g));
-    if (!out) return null;
-    // The score makes no difference after all.
-    if (out.length === 1) return [{ result: results.get(out[0]!.key)!, conds: [], dependsOn: [] }];
-    return out.map((o) => ({ result: results.get(o.key)!, conds: [o.cond], dependsOn: [] }));
-  }
 
-  // Two games: every score of both.
-  const [ga, gb] = relevant as [SGame, SGame];
-  const grid: string[][] = [];
-  for (const pa of SCORES) {
-    const row: string[] = [];
-    for (const pb of SCORES) {
-      const k = evaluate(
-        new Map([
-          [ga.id, pa],
-          [gb.id, pb],
-        ]),
+    // Two games: every score of both.
+    const [ga, gb] = relevant as [SGame, SGame];
+    const grid: string[][] = [];
+    for (const pa of SCORES) {
+      const row: string[] = [];
+      for (const pb of SCORES) {
+        const k = evaluate(
+          new Map([
+            [ga.id, pa],
+            [gb.id, pb],
+          ]),
+        );
+        if (k === null) return null;
+        row.push(k);
+      }
+      grid.push(row);
+    }
+    const at = (first: SGame, i: number, j: number) => (first === ga ? grid[i]![j]! : grid[j]![i]!);
+
+    const tryOrder = (first: SGame, second: SGame): Split[] | null => {
+      // Scores of the first game that lead to the same thing whatever the second's score.
+      const outer = splitGame(
+        all,
+        (i) => all.map((j) => at(first, i, j)).join("|"),
+        first.id,
+        win(first),
       );
-      if (k === null) return null;
-      row.push(k);
-    }
-    grid.push(row);
-  }
-  const at = (first: SGame, i: number, j: number) => (first === ga ? grid[i]![j]! : grid[j]![i]!);
-
-  const tryOrder = (first: SGame, second: SGame) => {
-    // Scores of the first game that lead to the same thing whatever the second's score.
-    const outer = ranges(
-      (i) => SCORES.map((_, j) => at(first, i, j)).join("|"),
-      first.id,
-      win(first),
-    );
-    if (!outer) return null;
-    const out: { result: Result; conds: RunCond[]; dependsOn: string[] }[] = [];
-    for (const o of outer) {
-      const firstConds = outer.length > 1 ? [o.cond] : [];
-      const i = o.members[0]!;
-      const keys = new Set(SCORES.map((_, j) => at(first, i, j)));
-      if (keys.size === 1) {
-        out.push({ result: results.get([...keys][0]!)!, conds: firstConds, dependsOn: [] });
-        continue;
-      }
-      const inner = ranges((j) => at(first, i, j), second.id, win(second));
-      if (inner) {
+      if (!outer) return null;
+      const out: Split[] = [];
+      for (const o of outer) {
+        const i = o.members[0]!;
+        const inner = splitGame(all, (j) => at(first, i, j), second.id, win(second));
+        if (!inner) return null;
         for (const n of inner) {
-          out.push({ result: results.get(n.key)!, conds: [...firstConds, n.cond], dependsOn: [] });
-        }
-      } else {
-        for (const k of keys) {
-          out.push({ result: results.get(k)!, conds: firstConds, dependsOn: [second.id] });
+          out.push({ result: results.get(n.key)!, conds: [...o.conds, ...n.conds], dependsOn: [] });
         }
       }
-    }
-    return out;
-  };
-  return (
-    tryOrder(ga, gb) ??
-    tryOrder(gb, ga) ??
-    [...new Set(grid.flat())].map((k) => ({
-      result: results.get(k)!,
-      conds: [],
-      dependsOn: [ga.id, gb.id],
-    }))
-  );
+      return out;
+    };
+    return (
+      tryOrder(ga, gb) ??
+      tryOrder(gb, ga) ??
+      [...new Set(grid.flat())].map((k) => ({
+        result: results.get(k)!,
+        conds: [],
+        dependsOn: [ga.id, gb.id],
+      }))
+    );
+  }
 }
 
 /** Lowest and highest value of a kind that we try (the top means "or more"). */
@@ -520,39 +612,41 @@ export function describeTerm(
       us: win.us || lose.us,
     });
   }
-  for (const r of term.runs) {
-    const g = games.find((x) => x.id === r.gameId);
-    if (!g) continue;
-    const win = name(g, r.winner);
-    const lose = name(g, r.winner === "home" ? "away" : "home");
-    const range = (unit: string) =>
-      r.max === null
+  // One phrase per game: "we lose to Bats by 1 to 2 runs, with Bats scoring 4 or fewer runs".
+  for (const gameId of [...new Set(term.runs.map((r) => r.gameId))]) {
+    const g = games.find((x) => x.id === gameId);
+    const conds = term.runs.filter((r) => r.gameId === gameId);
+    if (!g || !conds.length) continue;
+    const winner = conds[0]!.winner;
+    const win = name(g, winner);
+    const lose = name(g, winner === "home" ? "away" : "home");
+    const range = (r: RunCond) => {
+      const unit = r.min === 1 && r.max === 1 ? "run" : "runs";
+      return r.max === null
         ? `${r.min} or more ${unit}`
         : r.max === r.min
-          ? `exactly ${r.min} ${unit}`
+          ? r.min === 0
+            ? "no runs"
+            : `exactly ${r.min} ${unit}`
           : r.min === 0
             ? `${r.max} or fewer ${unit}`
             : `${r.min} to ${r.max} ${unit}`;
-    const unit = r.min === 1 && r.max === 1 ? "run" : "runs";
-    const subject = win.us
+    };
+    let text = win.us
       ? `we beat ${lose.name}`
       : lose.us
         ? `we lose to ${win.name}`
         : `${win.name} beat ${lose.name}`;
-    const us = win.us || lose.us;
-    if (r.kind === "margin") {
-      parts.push({ text: `${subject} by ${range(unit)}`, us });
-    } else if (r.kind === "loserRuns") {
-      parts.push({
-        text: `${subject}, with ${lose.us ? "us" : lose.name} scoring ${range(unit)}`,
-        us,
+    const margin = conds.find((r) => r.kind === "margin");
+    if (margin) text += ` by ${range(margin)}`;
+    const scoring = conds
+      .filter((r) => r.kind !== "margin")
+      .map((r) => {
+        const who = r.kind === "loserRuns" ? lose : win;
+        return `${who.us ? "us" : who.name} scoring ${range(r)}`;
       });
-    } else {
-      parts.push({
-        text: `${subject}, with ${win.us ? "us" : win.name} scoring ${range(unit)}`,
-        us,
-      });
-    }
+    if (scoring.length) text += `, with ${scoring.join(" and ")}`;
+    parts.push({ text, us: win.us || lose.us });
   }
   if (term.combo) {
     const c = term.combo;
@@ -568,22 +662,29 @@ export function describeTerm(
             ? `we lose to ${w.name}`
             : `${w.name} beat ${l.name}`;
       };
-      const amount = (g: SGame, side: RunSide) => {
+      /** Whose number it is, and against whom ("Eels' runs vs Cubs"). */
+      const amountOf = (g: SGame, side: RunSide) => {
         const w = name(g, side.winner);
         const l = name(g, side.winner === "home" ? "away" : "home");
-        const own = (who: { name: string; us: boolean }) =>
-          who.us ? "our" : who.name.endsWith("s") ? `${who.name}'` : `${who.name}'s`;
-        return side.kind === "margin"
-          ? w.us
-            ? "our winning margin"
-            : l.us
-              ? "our losing margin"
-              : `${own(w)} winning margin`
-          : side.kind === "loserRuns"
-            ? `${own(l)} runs`
-            : `${own(w)} runs`;
+        const [who, opp] = side.kind === "loserRuns" ? [l, w] : [w, l];
+        const own = who.us ? "our" : who.name.endsWith("s") ? `${who.name}'` : `${who.name}'s`;
+        const what =
+          side.kind === "margin"
+            ? w.us
+              ? "our winning margin"
+              : l.us
+                ? "our losing margin"
+                : `${own} winning margin`
+            : `${own} runs`;
+        return { who: who.name, what, vs: opp.us ? "us" : opp.name };
       };
-      let [qa, qb] = [amount(ga, c.a), amount(gb, c.b)];
+      const [xa, xb] = [amountOf(ga, c.a), amountOf(gb, c.b)];
+      // The same team in both: say which game each number is from.
+      const same = xa.who === xb.who;
+      let [qa, qb] = [xa, xb].map((x) => (same ? `${x.what} vs ${x.vs}` : x.what)) as [
+        string,
+        string,
+      ];
       let { min, max } = c;
       // Keep the numbers positive: "b minus a is 2 or more" over "a minus b is -2 or less".
       if (c.op === "diff" && (max ?? min ?? 0) < 0) {
