@@ -1,7 +1,7 @@
 "use client";
 
 import { PaidGate } from "../paywall";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Tournament, TournamentGame, TournamentTeam } from "@/lib/data/tournament-backend";
 import type { AppData } from "@/lib/data/types";
 import { MAX_SCREENSHOTS } from "@/lib/tournaments/event";
@@ -127,6 +127,29 @@ export function TournamentStandings({
     () => (games && t.seeds ? bracketFills(games, t.seeds) : []),
     [games, t.seeds],
   );
+  // Once seeds are locked, each score that settles a bracket spot fills it in right away (and
+  // our next bracket game goes on Games) whenever a coach or manager has the page open: no
+  // button to remember. Each set of fills is tried once, so a failure can't loop.
+  const filled = useRef("");
+  useEffect(() => {
+    if (!canEdit || !games || !t.seeds || fills.length === 0) return;
+    const key = fills.map((f) => `${f.id}:${f.home}:${f.away}`).join("|");
+    if (filled.current === key) return;
+    filled.current = key;
+    saveScheduleGames({
+      data,
+      tournament: t,
+      teams,
+      saved: games,
+      ourName: teams.find((x) => x.isUs)?.name ?? null,
+      items: fills.flatMap((f) => {
+        const g = games.find((x) => x.id === f.id);
+        return g ? [{ id: g.id, g: { ...g, home: f.home, away: f.away }, linked: g.gameId }] : [];
+      }),
+    })
+      .then(() => onChanged())
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+  }, [canEdit, games, t, fills, data, teams, onChanged]);
 
   if (!games || !input) return null;
   const pool = games.filter((g) => g.stage === "pool");
@@ -208,20 +231,6 @@ export function TournamentStandings({
           </ol>
           {canEdit && (
             <div className="mt-3 flex flex-col gap-2 md:flex-row">
-              {fills.length > 0 && (
-                <button
-                  onClick={() =>
-                    void run("Filling in the bracket…", async () => {
-                      await fillBracket(t.seeds!);
-                      await onChanged();
-                    })
-                  }
-                  disabled={busy !== null}
-                  className="h-12 rounded-xl bg-[var(--team)] px-4 text-base font-bold text-white disabled:opacity-40"
-                >
-                  Fill in the bracket ({fills.length} game{fills.length === 1 ? "" : "s"})
-                </button>
-              )}
               {data.groupme && (
                 <button
                   onClick={() => setSheet("post")}
@@ -506,7 +515,8 @@ function LockSeeds({
       )}
       <p className="text-base text-slate-700">
         Check the order against the tournament&apos;s seeds. Teams still tied can be moved. Locking
-        fills in the bracket and adds our bracket games to Games.
+        fills in the bracket and adds our bracket games to Games, and from then on each final score
+        moves the winner along by itself.
       </p>
       <ol className="flex flex-col gap-1">
         {seeds.map((s, i) => {
