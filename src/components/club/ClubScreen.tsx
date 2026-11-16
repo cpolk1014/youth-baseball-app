@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ClubCode, ClubTeam } from "@/lib/data/club-backend";
-import { CLUB_PRICE_CENTS, dollars } from "@/lib/billing/season";
+import { CLUB_PRICE_CENTS, dollars, quote, seasonsOnSale } from "@/lib/billing/season";
+
+/** Today's price per team (prorated once the season has started). */
+const clubNow = () => quote(CLUB_PRICE_CENTS, seasonsOnSale(new Date())[0]!).cents;
 import { codeMessage } from "@/lib/club";
 import { formatClock } from "@/lib/data/game";
 import { useStoreState } from "@/lib/data/store";
@@ -180,9 +183,9 @@ function StartClubForm() {
         <p className="mt-1 text-slate-700">
           Running several teams? Starting a club is free. Set up your club&apos;s logo, colors,
           uniforms and practice plans now. When you&apos;re ready to bring teams in, buy a code for
-          each team ({dollars(CLUB_PRICE_CENTS)} per team for the season); head coaches enter it,
-          and you can see every team&apos;s lineups, playing time and stats (view only) and post to
-          all your teams&apos; GroupMe groups.
+          each team ({dollars(clubNow())} per team for the season); head coaches enter
+          it, and you can see every team&apos;s lineups, playing time and stats (view only) and post
+          to all your teams&apos; GroupMe groups.
         </p>
       </div>
       <form
@@ -371,7 +374,7 @@ function ClubDashboard({ clubId, clubName }: { clubId: string; clubName: string 
           onClick={() => setBuying(true)}
           className="mb-3 h-12 w-full rounded-xl bg-[var(--team)] text-base font-bold text-white"
         >
-          Buy codes ({dollars(CLUB_PRICE_CENTS)} per team)
+          Buy codes ({dollars(clubNow())} per team)
         </button>
         <ul className="flex flex-col gap-2">
           {thisSeason.map((c) => (

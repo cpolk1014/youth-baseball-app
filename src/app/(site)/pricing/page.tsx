@@ -32,7 +32,11 @@ const FAQ: [string, React.ReactNode][] = [
   ],
   [
     "What's a season?",
-    "August 1 to July 31. Buy next season early from June 1. Paid features keep working for 5 days after July 31 while you renew.",
+    "August 1 to July 31, for teams, clubs and Player stats alike. Paid features keep working for 5 days after July 31 while you renew.",
+  ],
+  [
+    "Joining mid-season?",
+    "You only pay for the innings left. Sign up after August 1 and the price is prorated by the days left in the season, so a team joining in mid-November pays about $91, not $129. It never drops below a quarter of the price, because even the bottom of the ninth has a cover charge. From June 1 you buy next season instead, and the rest of this one is on the house.",
   ],
   [
     "Do parents have to pay?",
@@ -73,7 +77,7 @@ export default function PricingPage() {
               Add-on for parents
             </p>
             <h2 className="mt-2 text-2xl font-black text-[#1B2A4A]">
-              Player stats: $10 a year <Ai />
+              Player stats: $10 a season <Ai />
             </h2>
             <p className="mt-2 max-w-2xl text-slate-600">
               AI reads your player&apos;s GameChanger box scores. Season totals and trends, private

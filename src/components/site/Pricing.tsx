@@ -78,7 +78,9 @@ export function PricingGrid({ full = false }: { full?: boolean }) {
         <div className="mt-8">
           <Cta>Start your free 14-day trial</Cta>
         </div>
-        <p className="mt-3 text-sm text-white/70">One team, through July 31. Pay once a season.</p>
+        <p className="mt-3 text-sm text-white/70">
+          One team, through July 31. Pay once a season, prorated if you join late.
+        </p>
       </div>
 
       <div className="rounded-3xl border-2 border-slate-200 bg-white p-6 md:p-8">

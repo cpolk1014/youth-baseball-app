@@ -5,7 +5,7 @@ import { Ai, Check, Cta, PageHero, Section, TRIAL_HREF } from "@/components/site
 export const metadata: Metadata = {
   title: { absolute: "RallyCap for Parents: Highlight Reels, Player Stats & Game Day Info" },
   description:
-    "Turn your clips into highlight reels with a stadium announcer, track your player's stats season after season with AI, and know where to be and what to wear. Free with your team; Player stats is $10 a year.",
+    "Turn your clips into highlight reels with a stadium announcer, track your player's stats season after season with AI, and know where to be and what to wear. Free with your team; Player stats is $10 a season.",
   alternates: { canonical: "/parents" },
 };
 
@@ -83,7 +83,7 @@ export default function ParentsPage() {
                 store your video.
               </Check>
             </ul>
-            <p className="mt-6 text-lg font-bold">Included with Player stats, $10 a year.</p>
+            <p className="mt-6 text-lg font-bold">Included with Player stats, $10 a season.</p>
             <div className="mt-6">
               <Cta href={`${TRIAL_HREF}?next=/profile`} variant="light">
                 Get Player stats
@@ -117,7 +117,7 @@ export default function ParentsPage() {
       <Section tone="mist">
         <div className="grid items-center gap-12 md:grid-cols-2">
           <div>
-            <Ai>Player stats · $10 a year</Ai>
+            <Ai>Player stats · $10 a season</Ai>
             <h2 className="mt-3 text-3xl leading-tight font-black tracking-tight text-[#1B2A4A] md:text-5xl">
               Upload the box score. AI does the bragging math.
             </h2>

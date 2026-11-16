@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { TEAM_PRICE_CENTS, dollars, seasonEnds, seasonFor } from "@/lib/billing/season";
+import { TEAM_PRICE_CENTS, dollars, quote, seasonsOnSale } from "@/lib/billing/season";
+import { PriceTag, ProrateNote } from "../billing/Prorated";
 import type { TeamClub } from "@/lib/data/club-backend";
 import { clearPaidFlag } from "./paidFlag";
 import { refreshData } from "@/lib/data/store";
@@ -109,7 +110,7 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "team", teamId, season: seasonFor(new Date()) }),
+        body: JSON.stringify({ kind: "team", teamId, season: seasonsOnSale(new Date())[0] }),
       });
       const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
       if (!res.ok || !json.url) throw new Error(json.error ?? "Couldn't start the payment.");
@@ -120,6 +121,7 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
     }
   };
 
+  const teamQuote = quote(TEAM_PRICE_CENTS, seasonsOnSale(new Date())[0]!);
   return (
     <section
       id="plan"
@@ -214,16 +216,22 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
             </p>
           ) : canJoin ? (
             <>
-              <p className="mb-2 text-base text-slate-700">
-                Not part of a club? Pay for this team&apos;s {seasonFor(new Date())} season:{" "}
-                {dollars(TEAM_PRICE_CENTS)}, through {until(seasonEnds(seasonFor(new Date())))}.
+              <p className="text-base text-slate-700">
+                Not part of a club? Pay for this team&apos;s {teamQuote.season} season:{" "}
+                <b className="text-lg">
+                  <PriceTag cents={teamQuote.cents} fullCents={teamQuote.fullCents} />
+                </b>
+                , through {until(teamQuote.ends)}.
               </p>
+              <div className="mt-1 mb-2">
+                <ProrateNote q={teamQuote} />
+              </div>
               <button
                 onClick={() => void payForTeam()}
                 disabled={paying}
                 className="h-12 w-full rounded-xl border-2 border-[var(--team)] bg-white text-base font-bold text-[var(--team)] disabled:opacity-40"
               >
-                {paying ? "Opening checkout…" : `Pay ${dollars(TEAM_PRICE_CENTS)} for the season`}
+                {paying ? "Opening checkout…" : `Pay ${dollars(teamQuote.cents)} for the season`}
               </button>
             </>
           ) : null}

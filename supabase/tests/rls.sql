@@ -1041,7 +1041,7 @@ select pg_temp.expect(public.send_due_game_posts() = 0, 'a game day posted by ha
 update public.team set game_post_mode = 'off' where id = 'eeeeeeee-0000-4000-8000-000000000010';
 delete from public.game_post_log where team_id = 'eeeeeeee-0000-4000-8000-000000000010';
 select pg_temp.expect(public.send_due_game_posts() = 0, 'nothing posts when game day posts are off');
--- ── player stats passes: importing box scores is paid, per kid, for a year ──
+-- ── player stats passes: importing box scores is paid, per kid, for a season ──
 reset role;
 insert into public.game (id, season_id, game_date, opponent) values
   ('00000000-0000-4000-8000-00000000c009', '00000000-0000-4000-8000-000000000101', '2026-06-21', 'No Pass Yet');
@@ -1062,7 +1062,7 @@ select public.grant_family_pass('aaaaaaaa-0000-4000-8000-000000000002', 5, array
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
 select pg_temp.expect(public.family_access((select athlete_id from fam_kid)), 'the pass covers the kid picked');
-select pg_temp.expect((select expires_on = (current_date + interval '1 year')::date and kids = 5 from public.my_family_access()), 'a pass lasts a year from the day it''s bought');
+select pg_temp.expect((select expires_on = make_date(left(public.season_on_sale(), 4)::integer + 1, 7, 31) and kids = 5 from public.my_family_access()), 'a pass runs through July 31 of the season on sale');
 select pg_temp.expect((select count(*) from public.my_purchases() where what like 'Player stats (complimentary)%') = 1, 'my purchases list the pass with its expiry');
 -- Another parent of the same kid needs their own pass.
 reset role;

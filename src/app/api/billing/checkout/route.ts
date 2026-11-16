@@ -3,6 +3,7 @@ import {
   CLUB_PRICE_CENTS,
   MAX_CLUB_TEAMS,
   TEAM_PRICE_CENTS,
+  quote,
   seasonEnds,
   seasonsOnSale,
 } from "@/lib/billing/season";
@@ -15,10 +16,11 @@ function errorResponse(status: number, error: string) {
 }
 
 /**
- * Start paying for a season: a club's team codes ($99 each; a new club for a first-time
- * buyer), one team's season ($129), or a family's box score stats (one player or all of
- * theirs; just them, with a partner, or a blended family). Returns Stripe Checkout's URL; nothing is recorded
- * until Stripe confirms the payment (see /api/stripe/webhook).
+ * Start paying for a season (through July 31): a club's team codes ($99 each; a new club for
+ * a first-time buyer), one team's season ($129), or a parent's player stats ($10, then $5 a
+ * kid). Prorated by the days left once the season has started (`quote`). Returns Stripe
+ * Checkout's URL; nothing is recorded until Stripe confirms the payment (see
+ * /api/stripe/webhook).
  */
 export async function POST(request: NextRequest) {
   const supabase = await getServerSupabase();
@@ -29,7 +31,7 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const kind = body?.kind;
-  // Player stats last a year from the day they're bought; the season is just for the record.
+  // Player stats are for the season on sale, like everything else.
   const season =
     kind === "family"
       ? seasonsOnSale(new Date())[0]!
@@ -72,7 +74,7 @@ export async function POST(request: NextRequest) {
       meta.clubName = clubName;
       name = `${clubName}: ${quantity} team${quantity === 1 ? "" : "s"}`;
     }
-    unit = CLUB_PRICE_CENTS;
+    unit = quote(CLUB_PRICE_CENTS, season).cents;
     back = "/club";
   } else if (kind === "team") {
     const teamId = typeof body?.teamId === "string" ? body.teamId : "";
@@ -91,7 +93,7 @@ export async function POST(request: NextRequest) {
     if (pass) return errorResponse(409, `This team is already paid for ${season}.`);
     meta.kind = "team";
     meta.teamId = teamId;
-    unit = TEAM_PRICE_CENTS;
+    unit = quote(TEAM_PRICE_CENTS, season).cents;
     name = team.name;
     back = "/members";
   } else if (kind === "family") {
@@ -112,7 +114,7 @@ export async function POST(request: NextRequest) {
     meta.kids = String(kids);
     meta.athletes = picked.join(",");
     quantity = 1;
-    unit = statsPriceCents(kids);
+    unit = quote(statsPriceCents(kids), season).cents;
     name = picked.length
       ? `Player stats: ${picked.map((a) => own.get(a)).join(", ")}`
       : `Player stats for ${kids} player${kids === 1 ? "" : "s"}`;
@@ -121,6 +123,18 @@ export async function POST(request: NextRequest) {
     return errorResponse(400, "Something's missing. Reload and try again.");
   }
   meta.quantity = String(quantity);
+  const q = quote(100, season);
+  const through = new Date(`${seasonEnds(season)}T12:00`).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  const terms =
+    q.bonusDays > 0
+      ? `Runs through ${through}, and the rest of this season is free.`
+      : q.daysLeft < q.seasonDays
+        ? `Runs through ${through}. Prorated: ${q.daysLeft} of ${q.seasonDays} days left.`
+        : `Runs through ${through}.`;
 
   const origin = request.nextUrl.origin;
   try {
@@ -135,11 +149,9 @@ export async function POST(request: NextRequest) {
             product_data: {
               name:
                 kind === "family"
-                  ? "RallyCap player stats (one year)"
+                  ? `RallyCap player stats (${season} season)`
                   : `RallyCap ${season} season${kind === "club" ? " (club team)" : ""}`,
-              description: `${name}. Runs through ${new Date(
-                kind === "family" ? Date.now() + 365 * 86400000 : `${seasonEnds(season)}T12:00`,
-              ).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`,
+              description: `${name}. ${terms}`,
             },
           },
         },

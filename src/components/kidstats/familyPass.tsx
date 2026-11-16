@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { MAX_KIDS, statsPriceCents } from "@/lib/billing/family";
+import { quote, seasonsOnSale } from "@/lib/billing/season";
+import { PriceTag, ProrateNote } from "../billing/Prorated";
 import { dollars } from "@/lib/billing/season";
 import { useStoreState } from "@/lib/data/store";
 import { getBrowserSupabase } from "@/lib/supabase/client";
@@ -110,15 +112,10 @@ export function useMyKids(): MyKid[] | null {
   return kids;
 }
 
-function oneYear(): string {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() + 1);
-  return d.toISOString().slice(0, 10);
-}
-
 /**
  * My profile: buy player stats (box score imports and trends) for a number of
- * kids, $10 for the first and $5 each after, for a year from today.
+ * kids, $10 for the first and $5 each after, for the season (through July 31; prorated once
+ * it has started).
  */
 export function BuyPlayerStats({
   kids,
@@ -171,6 +168,7 @@ export function BuyPlayerStats({
   };
 
   const covered = kids.filter((k) => stats.covers(k.athleteId));
+  const q = quote(statsPriceCents(count), seasonsOnSale(new Date())[0]!);
   const spare = count - picked.length;
   const step =
     "flex size-14 shrink-0 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-3xl font-bold active:bg-slate-100 disabled:opacity-30";
@@ -179,8 +177,8 @@ export function BuyPlayerStats({
     <div className="flex flex-col gap-4">
       <p className="text-base text-slate-700">
         Import each game&apos;s GameChanger box score and watch your player&apos;s AVG, OBP, OPS and
-        pitching add up, with charts of how they trend. Stays with your player on every team. Lasts
-        a year from the day you buy.
+        pitching add up, with charts of how they trend. Stays with your player on every team. Runs
+        through July 31, like the team&apos;s season.
       </p>
       {covered.length > 0 && (
         <ul className="flex flex-col gap-1 rounded-xl bg-green-50 p-3 text-base text-green-950">
@@ -264,11 +262,14 @@ export function BuyPlayerStats({
             {dollars(1000)} for the first player
             {count > 1 ? ` + ${count - 1} × ${dollars(500)}` : ""}
           </span>
-          <span className="text-2xl font-black tabular-nums">
-            {dollars(statsPriceCents(count))}
+          <span className="text-2xl font-black">
+            <PriceTag cents={q.cents} fullCents={q.fullCents} />
           </span>
         </p>
-        <p className="text-sm text-slate-600">For one year, through {longDate(oneYear())}.</p>
+        <p className="mb-1 text-sm text-slate-600">
+          For the {q.season} season, through {longDate(q.ends)}.
+        </p>
+        <ProrateNote q={q} />
       </div>
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">
@@ -280,7 +281,7 @@ export function BuyPlayerStats({
         disabled={busy}
         className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)] disabled:opacity-50"
       >
-        {busy ? "Opening checkout…" : `Buy for ${dollars(statsPriceCents(count))}`}
+        {busy ? "Opening checkout…" : `Buy for ${dollars(q.cents)}`}
       </button>
       <p className="text-sm text-slate-600">
         Just for you. Another parent who wants the stats gets their own. Payment is by Stripe;

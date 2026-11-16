@@ -218,7 +218,7 @@ Snap or upload the uniform flyer. AI lists every combo, ready to pick for each g
 
 ### 7. AI box score reader (for parents)
 ## Your player's stats, from one upload.
-Parents upload a GameChanger box score after the game. AI finds **their player's line and only theirs**, matched by jersey number and name. Season totals and trends add up, private to the family. *(Player stats add-on, $10 a year.)*
+Parents upload a GameChanger box score after the game. AI finds **their player's line and only theirs**, matched by jersey number and name. Season totals and trends add up, private to the family. *(Player stats add-on, $10 a season.)*
 
 ### AI you can trust around kids
 - **You check everything.** AI shows what it found, and nothing is saved until you confirm.
@@ -333,7 +333,7 @@ And the tools that run your season:
 - Plays homework for families
 
 **[Start your free 14-day trial]**
-*One team, through July 31. Pay once a season.*
+*One team, through July 31. Pay once a season, prorated if you join late.*
 
 **Club: $99 per team, per season**
 - Everything in Team, AI included, for every team that joins
@@ -344,7 +344,7 @@ And the tools that run your season:
 
 **[Start a club]**
 
-**Add-on for parents: Player stats, $10 a year**
+**Add-on for parents: Player stats, $10 a season**
 ✨ AI reads your player's GameChanger box scores. Season totals and trends, private to your family, and they follow your player to every team. $5 for each additional child.
 [See Player stats](/parents)
 
@@ -362,7 +362,10 @@ It reads things so you don't have to type them (schedules, tournament pages and 
 It's RallyCap's own smart engine. It follows your fair-play rules exactly, gives the same result every time, and explains every spot. It's free forever.
 
 **What's a season?**
-August 1 to July 31. Buy next season early from June 1. Paid features keep working for 5 days after July 31 while you renew.
+August 1 to July 31, for teams, clubs and Player stats alike. Paid features keep working for 5 days after July 31 while you renew.
+
+**Joining mid-season?**
+You only pay for the innings left. Sign up after August 1 and the price is prorated by the days left in the season, so a team joining in mid-November pays about $91, not $129. It never drops below a quarter of the price, because even the bottom of the ninth has a cover charge. From June 1 you buy next season instead, and the rest of this one is on the house.
 
 **Do parents have to pay?**
 No. Parents use RallyCap free with your team. *Player stats* is an optional add-on for their own child.
@@ -424,7 +427,7 @@ Club admins can **view** lineups, playing time, rules and team stats while a tea
 # 6. Parents `/parents`
 
 **Page title:** RallyCap for Parents: Game Day Info & AI-Powered Player Stats
-**Description:** Know when and where to be, what to wear and what you owe, free with your team. Upload a box score and AI tracks your player's stats season after season, for $10 a year.
+**Description:** Know when and where to be, what to wear and what you owe, free with your team. Upload a box score and AI tracks your player's stats season after season, for $10 a season.
 
 # Everything you need for game day. And your player's stats, powered by AI.
 RallyCap is free for parents on your team.
@@ -437,7 +440,7 @@ RallyCap is free for parents on your team.
 - **Your player's walk-up song** at every game (made with AI if your team's plan includes it, or upload your own), approved by the coach.
 - **Homework:** watch the assigned plays and take the quiz together.
 
-### Player stats: $10 a year
+### Player stats: $10 a season
 ## Upload the box score. AI does the rest.
 [Visual: a blurred sample of the stats page with the trend chart]
 - **AI reads the GameChanger box score** and finds your player's line, and only your player's, by jersey number and name.

@@ -143,7 +143,7 @@ export default function AiPage() {
               <b className="text-[#1B2A4A]">their player&apos;s line and only theirs</b>, matched by
               jersey number and name. Season totals and trends add up, private to the family.
             </p>
-            <p className="text-base text-slate-500">Player stats add-on, $10 a year.</p>
+            <p className="text-base text-slate-500">Player stats add-on, $10 a season.</p>
           </FeatureRow>
 
           <div className="mx-auto max-w-2xl rounded-3xl bg-slate-50 p-8 text-center">

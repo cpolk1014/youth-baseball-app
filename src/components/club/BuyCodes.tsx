@@ -6,9 +6,11 @@ import {
   CLUB_PRICE_CENTS,
   MAX_CLUB_TEAMS,
   dollars,
+  quote,
   seasonEnds,
   seasonsOnSale,
 } from "@/lib/billing/season";
+import { PriceTag, ProrateNote } from "../billing/Prorated";
 
 const field =
   "h-12 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
@@ -32,6 +34,7 @@ export function BuyCodes({ clubId, onCancel }: { clubId?: string; onCancel?: () 
   const [error, setError] = useState<string | null>(null);
   // Back from Stripe without paying: the button works again.
   useCheckoutReturn(() => setBusy(false));
+  const q = quote(CLUB_PRICE_CENTS, season);
   const valid = teams >= 1 && teams <= MAX_CLUB_TEAMS && (clubId || name.trim().length > 0);
 
   const pay = async () => {
@@ -109,11 +112,16 @@ export function BuyCodes({ clubId, onCancel }: { clubId?: string; onCancel?: () 
         </label>
       )}
       <div className="rounded-xl bg-slate-100 p-3 text-base">
-        <p className="text-2xl font-black">{dollars(CLUB_PRICE_CENTS * teams)}</p>
-        <p>
-          {teams} team{teams === 1 ? "" : "s"} × {dollars(CLUB_PRICE_CENTS)} for the {season}{" "}
-          season, through {endDate(season)}. One code per team.
+        <p className="text-2xl font-black">
+          <PriceTag cents={q.cents * teams} fullCents={q.fullCents * teams} />
         </p>
+        <p>
+          {teams} team{teams === 1 ? "" : "s"} × {dollars(q.cents)} for the {season} season, through{" "}
+          {endDate(season)}. One code per team.
+        </p>
+        <div className="mt-2">
+          <ProrateNote q={q} per="a team" />
+        </div>
       </div>
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-800">
@@ -134,7 +142,7 @@ export function BuyCodes({ clubId, onCancel }: { clubId?: string; onCancel?: () 
           disabled={!valid || busy}
           className="h-14 flex-[2] rounded-xl bg-[var(--team)] text-lg font-bold text-white disabled:opacity-40"
         >
-          {busy ? "Opening checkout…" : `Pay ${dollars(CLUB_PRICE_CENTS * teams)}`}
+          {busy ? "Opening checkout…" : `Pay ${dollars(q.cents * teams)}`}
         </button>
       </div>
       <p className="text-sm text-slate-600">
