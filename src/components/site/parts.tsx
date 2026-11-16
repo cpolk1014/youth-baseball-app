@@ -180,29 +180,36 @@ export function PageHero({
   title,
   lead,
   children,
+  light = false,
 }: {
   eyebrow?: ReactNode;
   title: ReactNode;
   lead?: ReactNode;
   children?: ReactNode;
+  /** A pale hero with navy words, for a page whose next section is dark. */
+  light?: boolean;
 }) {
   return (
-    <section className="relative overflow-hidden bg-[#1B2A4A] px-4 pt-14 pb-16 text-white sm:px-6 md:pt-20 md:pb-24">
+    <section
+      className={`relative overflow-hidden px-4 pt-14 pb-16 sm:px-6 md:pt-20 md:pb-24 ${light ? "bg-[#FFF5F6] text-[#1B2A4A]" : "bg-[#1B2A4A] text-white"}`}
+    >
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-40 -right-40 size-[34rem] rounded-full bg-[#DC143C]/25 blur-3xl"
+        className={`pointer-events-none absolute -top-40 -right-40 size-[34rem] rounded-full blur-3xl ${light ? "bg-[#DC143C]/15" : "bg-[#DC143C]/25"}`}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -bottom-48 -left-32 size-[28rem] rounded-full bg-[#7C3AED]/20 blur-3xl"
+        className={`pointer-events-none absolute -bottom-48 -left-32 size-[28rem] rounded-full blur-3xl ${light ? "bg-[#7C3AED]/10" : "bg-[#7C3AED]/20"}`}
       />
       <div className="relative mx-auto max-w-6xl">
-        {eyebrow && <Eyebrow light>{eyebrow}</Eyebrow>}
+        {eyebrow && <Eyebrow light={!light}>{eyebrow}</Eyebrow>}
         <h1 className="max-w-4xl text-4xl leading-[1.05] font-black tracking-tight text-balance md:text-6xl">
           {title}
         </h1>
         {lead && (
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-pretty text-white/85 md:text-xl">
+          <p
+            className={`mt-6 max-w-2xl text-lg leading-relaxed text-pretty md:text-xl ${light ? "text-slate-700" : "text-white/85"}`}
+          >
             {lead}
           </p>
         )}

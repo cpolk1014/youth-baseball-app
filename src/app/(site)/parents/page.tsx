@@ -38,6 +38,7 @@ export default function ParentsPage() {
   return (
     <>
       <PageHero
+        light
         eyebrow="For parents"
         title="Know where to be, what to wear and what you owe. Without asking the group chat."
         lead="RallyCap is free for parents on your team. Your coach sends the link. You get your Saturday back. And if you want: your kid's stats and highlight reels, powered by AI."
