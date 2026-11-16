@@ -181,6 +181,7 @@ export function PageHero({
   lead,
   children,
   light = false,
+  art,
 }: {
   eyebrow?: ReactNode;
   title: ReactNode;
@@ -188,6 +189,8 @@ export function PageHero({
   children?: ReactNode;
   /** A pale hero with navy words, for a page whose next section is dark. */
   light?: boolean;
+  /** A picture beside the words on wide screens (below them on phones). */
+  art?: ReactNode;
 }) {
   return (
     <section
@@ -201,19 +204,24 @@ export function PageHero({
         aria-hidden
         className={`pointer-events-none absolute -bottom-48 -left-32 size-[28rem] rounded-full blur-3xl ${light ? "bg-[#7C3AED]/10" : "bg-[#7C3AED]/20"}`}
       />
-      <div className="relative mx-auto max-w-6xl">
-        {eyebrow && <Eyebrow light={!light}>{eyebrow}</Eyebrow>}
-        <h1 className="max-w-4xl text-4xl leading-[1.05] font-black tracking-tight text-balance md:text-6xl">
-          {title}
-        </h1>
-        {lead && (
-          <p
-            className={`mt-6 max-w-2xl text-lg leading-relaxed text-pretty md:text-xl ${light ? "text-slate-700" : "text-white/85"}`}
-          >
-            {lead}
-          </p>
-        )}
-        {children && <div className="mt-8">{children}</div>}
+      <div
+        className={`relative mx-auto max-w-6xl ${art ? "grid items-center gap-12 md:grid-cols-[1.25fr_1fr]" : ""}`}
+      >
+        <div>
+          {eyebrow && <Eyebrow light={!light}>{eyebrow}</Eyebrow>}
+          <h1 className="max-w-4xl text-4xl leading-[1.05] font-black tracking-tight text-balance md:text-6xl">
+            {title}
+          </h1>
+          {lead && (
+            <p
+              className={`mt-6 max-w-2xl text-lg leading-relaxed text-pretty md:text-xl ${light ? "text-slate-700" : "text-white/85"}`}
+            >
+              {lead}
+            </p>
+          )}
+          {children && <div className="mt-8">{children}</div>}
+        </div>
+        {art}
       </div>
     </section>
   );

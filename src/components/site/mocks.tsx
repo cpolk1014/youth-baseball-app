@@ -436,3 +436,68 @@ export function ClubDashboardScreen() {
     </div>
   );
 }
+
+/** What a parent opens on a game day: when, where, what to wear, what they owe. */
+export function ParentGameDayScreen() {
+  const uniform: [string, string][] = [
+    ["Shirt", "#FFFFFF"],
+    ["Pants", "#9CA3AF"],
+    ["Hat", TEAM],
+    ["Socks", ACCENT],
+  ];
+  return (
+    <PhoneScreen title="Home" subtitle="Bayou Bombers · 10U">
+      <div className="rounded-xl p-3 text-white" style={{ background: TEAM }}>
+        <p className="text-[10px] font-bold tracking-wide text-white/70 uppercase">Next game</p>
+        <p className="text-[16px] leading-tight font-black">Sat 9:00 AM vs Bandits</p>
+        <p className="mt-1 text-[11px] text-white/80">Arrive by 8:15 AM</p>
+        <div className="mt-2 flex h-8 items-center justify-center rounded-lg bg-white text-[12px] font-bold text-[#1B2A4A]">
+          📍 Directions
+        </div>
+      </div>
+      <Card>
+        <p className="text-[10px] font-bold tracking-wide text-slate-500 uppercase">Where</p>
+        <p className="font-bold">Bayou Park · Field 7</p>
+        <p className="text-[11px] text-slate-600">The far one, past the concession stand</p>
+      </Card>
+      <Card>
+        <p className="text-[10px] font-bold tracking-wide text-slate-500 uppercase">
+          Uniform · White combo
+        </p>
+        <div className="mt-1.5 grid grid-cols-4 gap-1 text-center">
+          {uniform.map(([piece, color]) => (
+            <div key={piece}>
+              <span
+                className="mx-auto block size-6 rounded-full ring-1 ring-slate-300"
+                style={{ background: color }}
+              />
+              <p className="mt-0.5 text-[9px] font-bold text-slate-500">{piece}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <Card>
+        <p className="text-[10px] font-bold tracking-wide text-slate-500 uppercase">You owe</p>
+        <div className="flex items-baseline justify-between">
+          <p className="text-[18px] font-black">$45</p>
+          <p className="text-[11px] text-slate-600">Tournament fee · due Dec 1</p>
+        </div>
+        <div className="mt-1.5 flex h-2 overflow-hidden rounded-full bg-slate-200">
+          <span className="w-3/4 bg-[#15803D]" />
+        </div>
+        <p className="mt-1 text-[10px] text-slate-500">$135 of $180 paid</p>
+      </Card>
+      <Card className="flex items-center justify-between">
+        <span>
+          <span className="block text-[10px] font-bold tracking-wide text-slate-500 uppercase">
+            Homework
+          </span>
+          <span className="font-bold">Cutoff from right field</span>
+        </span>
+        <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-bold text-green-800">
+          Quiz 5/5 ✓
+        </span>
+      </Card>
+    </PhoneScreen>
+  );
+}

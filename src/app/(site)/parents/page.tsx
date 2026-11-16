@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PineTarScreen, PlayerStatsScreen } from "@/components/site/mocks";
+import { ParentGameDayScreen, PineTarScreen, PlayerStatsScreen } from "@/components/site/mocks";
 import { Ai, Check, Cta, PageHero, Section, TRIAL_HREF } from "@/components/site/parts";
 
 export const metadata: Metadata = {
@@ -42,6 +42,28 @@ export default function ParentsPage() {
         eyebrow="For parents"
         title="Know where to be, what to wear and what you owe. Without asking the group chat."
         lead="RallyCap is free for parents on your team. Your coach sends the link. You get your Saturday back. And if you want: your kid's stats and highlight reels, powered by AI."
+        art={
+          <div className="relative mx-auto w-full max-w-[300px] md:rotate-2">
+            <ParentGameDayScreen />
+            {/* The group chat questions RallyCap answers before anyone asks. */}
+            <div
+              aria-hidden
+              className="absolute top-[44%] -left-4 -rotate-6 rounded-2xl rounded-bl-sm bg-white px-3 py-2 text-sm font-semibold text-slate-500 shadow-xl ring-1 ring-slate-200 sm:-left-36"
+            >
+              <span className="line-through decoration-[#DC143C] decoration-2">
+                Which field are we on??
+              </span>
+            </div>
+            <div
+              aria-hidden
+              className="absolute -right-4 bottom-[6%] rotate-3 rounded-2xl rounded-br-sm bg-white px-3 py-2 text-sm font-semibold text-slate-500 shadow-xl ring-1 ring-slate-200 sm:-right-32"
+            >
+              <span className="line-through decoration-[#DC143C] decoration-2">
+                White pants or gray?
+              </span>
+            </div>
+          </div>
+        }
       />
 
       {/* Pine Tar Productions: the headline act for parents. */}
