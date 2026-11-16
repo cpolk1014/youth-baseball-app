@@ -5,8 +5,10 @@ import { cleanBatting, cleanPitching, type KidGame } from "@/lib/boxscore/stats"
 import { SYNC_EVENT, useStoreState } from "@/lib/data/store";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
-// A kid's imported game lines. Only the kid's own parents can read or change them (the
-// database enforces it). In local mode they live in this browser.
+// A kid's game lines: from the coaches' box scores (and typed pitch counts), plus any box
+// scores a parent imported before that moved to coaches. Only the kid's own parents see
+// them, coach lines with a Player pass (the database enforces it). In local mode they live
+// in this browser.
 
 const localKey = "rallycap:kid-games";
 
@@ -25,6 +27,8 @@ interface Row {
   pitching: unknown;
   errors: number;
   positions: string[];
+  source: "coach" | "parent";
+  pitch_only: boolean;
 }
 
 const fromRow = (r: Row): KidGame => ({
@@ -43,6 +47,8 @@ const fromRow = (r: Row): KidGame => ({
   pitching: cleanPitching(r.pitching),
   errors: r.errors,
   positions: r.positions,
+  source: r.source,
+  pitchOnly: r.pitch_only,
 });
 
 function readLocal(): KidGame[] {
@@ -124,7 +130,7 @@ export function useKidGames(playerIds: string[]) {
       const { data, error: e } = await sb
         .from("player_game_stat")
         .select(
-          "id,player_id,athlete_id,game_id,game_date,opponent,our_runs,their_runs,team_name,box_name,batting,pitching,errors,positions",
+          "id,player_id,athlete_id,game_id,game_date,opponent,our_runs,their_runs,team_name,box_name,batting,pitching,errors,positions,source,pitch_only",
         )
         .or(
           [
@@ -154,46 +160,6 @@ export function useKidGames(playerIds: string[]) {
     window.addEventListener(SYNC_EVENT, onSync);
     return () => window.removeEventListener(SYNC_EVENT, onSync);
   }, []);
-
-  /** Save a game (the same date and opponent replaces the earlier import). */
-  const save = useCallback(
-    async (g: Omit<KidGame, "id">, seasonId: string) => {
-      if (!signedIn) {
-        const rest = readLocal().filter(
-          (x) => !(x.playerId === g.playerId && x.gameId === g.gameId),
-        );
-        const next = [{ ...g, id: crypto.randomUUID() }, ...rest];
-        writeLocal(next);
-        setGames(next.filter((x) => key.split(",").includes(x.playerId)));
-        return;
-      }
-      const { error: e } = await getBrowserSupabase()
-        .from("player_game_stat")
-        .upsert(
-          {
-            player_id: g.playerId,
-            game_id: g.gameId ?? null,
-            season_id: seasonId,
-            game_date: g.gameDate,
-            opponent: g.opponent,
-            our_runs: g.ourRuns,
-            their_runs: g.theirRuns,
-            team_name: g.teamName,
-            box_name: g.boxName,
-            batting: g.batting,
-            pitching: g.pitching,
-            errors: g.errors,
-            positions: g.positions,
-            imported_at: new Date().toISOString(),
-          },
-          // One box score per kid per game (the database takes the game's date and opponent).
-          { onConflict: "player_id,game_id" },
-        );
-      if (e) throw new Error(`Couldn't save the game (${e.message}).`);
-      setVersion((v) => v + 1);
-    },
-    [signedIn, key],
-  );
 
   const remove = useCallback(
     async (id: string) => {
@@ -232,5 +198,5 @@ export function useKidGames(playerIds: string[]) {
     setVersion((v) => v + 1);
   }, []);
 
-  return { games, kidTeams, loading, error, save, remove, link, split };
+  return { games, kidTeams, loading, error, remove, link, split };
 }

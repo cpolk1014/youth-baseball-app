@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { formatGameDate, gameResult } from "@/lib/data/game";
 import { myUserId } from "@/lib/data/store";
 import type { AppData, Game } from "@/lib/data/types";
@@ -10,11 +9,10 @@ import { GamePlaceCard } from "./GamePlaceCard";
 import { TournamentTag } from "./tournaments/TournamentTag";
 import { GamesPane } from "./GamesScreen";
 import { kidsOf } from "./KidPicker";
-import { ImportBoxScore } from "./kidstats/ImportBoxScore";
 import { useKidGames } from "./kidstats/kidGames";
 import { useStatsPasses } from "./kidstats/familyPass";
-import { gameLine, sameGame, type KidGame } from "@/lib/boxscore/stats";
-import { Sheet } from "./Sheet";
+import { gameLine, type KidGame } from "@/lib/boxscore/stats";
+import { useToday } from "./useToday";
 import { GameUniformCard } from "./uniforms/GameUniformCard";
 import { gameUniformShown } from "@/lib/uniforms";
 import type { Player } from "@/lib/rules/types";
@@ -22,8 +20,8 @@ import type { Player } from "@/lib/rules/types";
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 
 /**
- * A game for parents: what to wear, where to go, and their own kid's box score. The lineup,
- * batting order and attendance stay with the coaches.
+ * A game for parents: what to wear, where to go, and their own kid's line from the coaches'
+ * box score. The lineup, batting order and attendance stay with the coaches.
  */
 export function ParentGame({
   data,
@@ -35,30 +33,20 @@ export function ParentGame({
   arrival: string | null;
 }) {
   const kids = kidsOf(data, myUserId(data));
-  const { games: imported, kidTeams, save, remove } = useKidGames(kids.map((k) => k.id));
-  // Player stats are bought on My profile; without them, Upload goes there.
+  const { games: lines, kidTeams } = useKidGames(kids.map((k) => k.id));
+  // The Player pass is bought on My profile.
   const fam = useStatsPasses();
   const unlocked = (kid: Player) =>
     fam.covers(kidTeams.find((r) => r.playerId === kid.id)?.athleteId ?? null);
-  const [importing, setImporting] = useState<Player | null>(null);
   const isFinal = game.status === "final";
   const result = gameResult(game);
   const hasUniform = gameUniformShown(game.uniform, data.uniforms) !== null;
-  // This game's box score for a kid: same day and opponent (GameChanger may name the team a
-  // little differently); or, when the team played only this game that day, that day's one.
-  const onlyGameThatDay = data.games.filter((g) => g.date === game.date).length === 1;
-  const importedFor = (kid: Player): KidGame | null => {
-    const linked = imported.find((g) => g.playerId === kid.id && g.gameId === game.id);
-    if (linked) return linked;
-    // Older imports, saved before box scores were tied to a game.
-    const mine = imported.filter(
-      (g) => g.playerId === kid.id && !g.gameId && g.gameDate === game.date,
-    );
-    return (
-      mine.find((g) => sameGame(g, { gameDate: game.date, opponent: game.opponent })) ??
-      (onlyGameThatDay && mine.length === 1 ? mine[0]! : null)
-    );
-  };
+  const today = useToday();
+  // This game's line for a kid, from the coaches' box score (or a parent's own old import).
+  const lineFor = (kid: Player): KidGame | null =>
+    lines.find((g) => g.playerId === kid.id && g.gameId === game.id && !g.pitchOnly) ??
+    lines.find((g) => g.playerId === kid.id && g.gameId === game.id) ??
+    null;
 
   return (
     <AppShell
@@ -99,100 +87,47 @@ export function ParentGame({
         </section>
       )}
 
-      <section className="mb-4 rounded-xl border-2 border-slate-200 bg-white p-3">
-        <h2 className={heading}>Box score</h2>
-        {kids.length === 0 ? (
-          <p className="text-base text-slate-700">
-            Link your player on{" "}
-            <Link href="/members" className="font-semibold text-[var(--team)] underline">
-              Coaches &amp; parents
-            </Link>{" "}
-            to upload their GameChanger box score.
-          </p>
-        ) : (
+      {kids.length > 0 && (isFinal || game.date <= today) && (
+        <section className="mb-4 rounded-xl border-2 border-slate-200 bg-white p-3">
+          <h2 className={heading}>Box score</h2>
           <ul className="flex flex-col gap-2">
             {kids.map((kid) => {
-              const box = importedFor(kid);
+              const box = lineFor(kid);
               return (
                 <li key={kid.id} className="flex flex-col gap-2">
-                  {box ? (
-                    <div className="rounded-xl border-2 border-green-700 bg-green-50 p-3">
-                      <p className="text-base font-bold text-green-900">
-                        ✓ {kid.name}&apos;s box score is in
-                      </p>
-                      <p className="text-base text-green-950">
-                        vs {box.opponent}: {gameLine(box)}
-                      </p>
-                    </div>
+                  {!unlocked(kid) && !fam.loading ? (
+                    <p className="text-base">
+                      {kid.name}&apos;s line from the coaches&apos; box score, their pitch count and
+                      highlight reels come with the Player pass.{" "}
+                      <Link href="/profile#player-stats" className="font-semibold underline">
+                        Unlock
+                      </Link>
+                    </p>
+                  ) : box ? (
+                    <Link
+                      href={`/my-player?player=${kid.id}`}
+                      className="rounded-xl border-2 border-green-700 bg-green-50 p-3 active:bg-green-100"
+                    >
+                      <span className="block text-base font-bold text-green-900">
+                        {kid.name}: {gameLine(box)}
+                      </span>
+                      {box.pitching && box.pitching.pitches > 0 && (
+                        <span className="block text-base text-green-950">
+                          {box.pitching.pitches} pitches: add it to the pitch count on My player.
+                        </span>
+                      )}
+                    </Link>
                   ) : (
-                    <p className="text-base font-semibold">
-                      {kid.name}:{" "}
-                      <span className="font-normal text-slate-600">not uploaded yet</span>
+                    <p className="text-base text-slate-700">
+                      {kid.name}: the coaches haven&apos;t added this game&apos;s box score yet.
                     </p>
                   )}
-                  <div className="flex gap-2">
-                    {box && (
-                      <Link
-                        href={`/my-player?player=${kid.id}`}
-                        className="flex h-12 flex-1 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-base font-semibold"
-                      >
-                        See stats
-                      </Link>
-                    )}
-                    {unlocked(kid) || fam.loading ? (
-                      <button
-                        onClick={() => setImporting(kid)}
-                        disabled={fam.loading}
-                        className={`h-12 flex-1 rounded-xl text-base font-bold disabled:opacity-50 ${
-                          box
-                            ? "border-2 border-slate-300 bg-white text-slate-800 active:bg-slate-100"
-                            : "bg-[var(--team)] text-white active:bg-[var(--team-press)]"
-                        }`}
-                      >
-                        {box ? "Replace it" : "Upload box score"}
-                      </button>
-                    ) : (
-                      <Link
-                        href="/profile#player-stats"
-                        className="flex h-12 flex-1 items-center justify-center rounded-xl bg-[var(--team)] text-base font-bold text-white"
-                      >
-                        🔒 Unlock box scores
-                      </Link>
-                    )}
-                  </div>
                 </li>
               );
             })}
           </ul>
-        )}
-        <p className="mt-2 text-sm text-slate-600">
-          A GameChanger box score PDF or screenshot. Only your player&apos;s line is kept, and only
-          you can see it.
-        </p>
-      </section>
-
-      <Sheet
-        open={importing !== null}
-        title="Import a box score"
-        onClose={() => setImporting(null)}
-      >
-        {importing && (
-          <ImportBoxScore
-            kid={importing}
-            existing={imported}
-            games={data.games}
-            forGame={game}
-            replacing={importedFor(importing)}
-            onCancel={() => setImporting(null)}
-            onSave={async (g, replaces) => {
-              await save(g, data.season.id);
-              // An earlier import of this game saved without it (or under another game): drop it.
-              if (replaces && replaces.gameId !== g.gameId) await remove(replaces.id);
-              setImporting(null);
-            }}
-          />
-        )}
-      </Sheet>
+        </section>
+      )}
     </AppShell>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { competitivePlan, type StatLine } from "./competitive";
+import { competitivePlan, type RecentLine, type StatLine } from "./competitive";
 import { makePlayer } from "./test-utils";
 
 const line = (o: Partial<StatLine>): StatLine => ({
@@ -85,5 +85,60 @@ describe("competitivePlan fielding and pitching", () => {
       ]),
     );
     expect(cf.fit.get("x")!.LCF).toBeGreaterThan(cf.fit.get("y")!.LCF);
+  });
+});
+
+describe("competitivePlan recent form", () => {
+  const players = ["a", "b", "c"].map((id) => makePlayer(id));
+  const lines = new Map<string, StatLine>([
+    ["a", line({ obp: 0.42, slg: 0.45, ops: 0.87 })],
+    ["b", line({ obp: 0.38, slg: 0.4, ops: 0.78 })],
+    // A .200 season.
+    ["c", line({ obp: 0.28, slg: 0.25, ops: 0.53 })],
+  ]);
+  const recent = (o: Partial<RecentLine>): RecentLine => ({
+    pa: 22,
+    ab: 20,
+    h: 9,
+    avg: 0.45,
+    obp: 0.5,
+    slg: 0.6,
+    ops: 1.1,
+    from: "2026-11-01",
+    to: "2026-11-14",
+    games: 6,
+    source: "box",
+    ...o,
+  });
+
+  it("calls a kid hitting well above their season hot, and moves them up a little", () => {
+    const before = competitivePlan(players, lines);
+    const plan = competitivePlan(players, lines, new Map([["c", recent({})]]));
+    expect(plan.form.get("c")?.trend).toBe("hot");
+    expect(plan.adjusted.get("c")!.obp!).toBeGreaterThan(before.adjusted.get("c")!.obp!);
+    // Six good games don't make a .200 hitter the leadoff man.
+    expect(plan.battingOrder[0]).toBe("a");
+  });
+
+  it("calls a slump cold", () => {
+    const plan = competitivePlan(
+      players,
+      lines,
+      new Map([["a", recent({ obp: 0.2, slg: 0.15, ops: 0.35 })]]),
+    );
+    expect(plan.form.get("a")?.trend).toBe("cold");
+  });
+
+  it("ignores a stretch that's too short or close to the season", () => {
+    const plan = competitivePlan(
+      players,
+      lines,
+      new Map([
+        ["c", recent({ pa: 5 })],
+        ["b", recent({ obp: 0.4, slg: 0.42, ops: 0.82 })],
+      ]),
+    );
+    expect(plan.form.size).toBe(0);
+    expect(plan.adjusted.get("c")).toEqual(competitivePlan(players, lines).adjusted.get("c"));
   });
 });

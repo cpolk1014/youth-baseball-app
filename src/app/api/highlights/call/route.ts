@@ -38,7 +38,7 @@ const SCHEMA = {
 };
 
 /**
- * Pine Tar Productions (My player, parents with Player stats for this kid):
+ * Pine Tar Productions (My player, parents with the Player pass for this kid):
  * action "write" returns 3 announcer calls for the play; action "voice" returns the
  * announcer reading one (MP3). The video itself is made and kept on the phone.
  */
@@ -70,14 +70,14 @@ export async function POST(request: NextRequest) {
     .eq("id", playerId)
     .maybeSingle();
   if (!player) return errorResponse(404, "That player isn't on a team you're on.");
-  // Part of Player stats, the family add-on.
+  // Part of the Player pass, the family add-on.
   const { data: paid } = player.athlete_id
     ? await supabase.rpc("family_access", { p_athlete: player.athlete_id })
     : { data: false };
   if (!paid) {
     return errorResponse(
       402,
-      "Pine Tar Productions comes with Player stats. Unlock it on My profile.",
+      "Pine Tar Productions comes with the Player pass. Unlock it on My profile.",
     );
   }
 

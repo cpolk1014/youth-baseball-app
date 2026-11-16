@@ -16,6 +16,7 @@ import {
 } from "@/lib/stats/gamechanger";
 import { AppShell, Loading } from "../AppShell";
 import { Sheet } from "../Sheet";
+import { BoxScoreTotals } from "./BoxScoreTotals";
 import { ImportStats } from "./ImportStats";
 import { useTeamStats } from "./statsData";
 
@@ -79,8 +80,9 @@ function Stats({ data }: { data: AppData }) {
           <p className="text-lg font-bold">No stats yet</p>
           <p className="text-base text-slate-700">
             Export your team&apos;s season stats from GameChanger as a CSV (on the web, open the
-            team&apos;s Stats and choose Export), then import the file here. Each import replaces
-            the last one, so do it once a week to keep stats current.
+            team&apos;s Stats and choose Export), then import the file here. Import once a week: the
+            newest shows here, and earlier ones are kept so competitive lineups can spot hot and
+            cold streaks.
           </p>
           <button
             onClick={() => setImporting(true)}
@@ -90,6 +92,8 @@ function Stats({ data }: { data: AppData }) {
           </button>
         </div>
       )}
+
+      {!loading && <BoxScoreTotals data={data} />}
 
       <Sheet open={importing} title="Import from GameChanger" onClose={() => setImporting(false)}>
         {importing && (

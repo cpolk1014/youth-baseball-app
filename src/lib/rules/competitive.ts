@@ -21,6 +21,29 @@ export interface StatLine {
   innings: Partial<Record<FieldPosition, number>>;
 }
 
+/** How a kid has hit lately (the last two weeks or so). */
+export interface RecentLine {
+  pa: number;
+  ab: number;
+  h: number;
+  avg: number | null;
+  obp: number | null;
+  slg: number | null;
+  ops: number | null;
+  /** The stretch it covers (YYYY-MM-DD). */
+  from: string;
+  to: string;
+  /** Games in it, when known (box scores). */
+  games: number | null;
+  source: "box" | "imports";
+}
+
+/** A kid hitting well above (hot) or below (cold) their season lately. */
+export interface Form {
+  trend: "hot" | "cold";
+  recent: RecentLine;
+}
+
 export type BattingRole = "obp" | "ops" | "slg" | "rest" | "none";
 
 export interface CompetitivePlan {
@@ -39,6 +62,8 @@ export interface CompetitivePlan {
     string,
     { obp: number | null; slg: number | null; ops: number | null; whip: number | null }
   >;
+  /** Kids who are hot or cold lately (recent hitting mixed into their numbers). */
+  form: Map<string, Form>;
 }
 
 /** How much a position matters to winning, for trading one kid's fit against another's. */
@@ -64,6 +89,15 @@ const CHANCE_PRIOR = 10;
 /** Below these, a kid ranks after everyone with a real sample (too few to trust). */
 export const MIN_PA = 10;
 export const MIN_IP = 5;
+/** Recent hitting needs this many plate appearances to count at all. */
+export const MIN_RECENT_PA = 8;
+/** The most recent form can weigh against the season (so six good games move a kid up a
+ * spot or two, not from 8th to leadoff). */
+const MAX_RECENT_WEIGHT = 0.35;
+/** Plate appearances of season worth mixed in against recent ones. */
+const RECENT_PRIOR = 40;
+/** How far lately has to be from the season (OPS) to call a kid hot or cold. */
+export const STREAK_OPS = 0.2;
 /** A kid with no stats counts as about average overall, but with no history at a spot. */
 const UNKNOWN = 0.5;
 const UNKNOWN_FIT = 0.3;
@@ -90,7 +124,11 @@ function rankScore(
 }
 
 /** Build the plan for today's players from their stat lines (players without one are "unknown"). */
-export function competitivePlan(players: Player[], lines: Map<string, StatLine>): CompetitivePlan {
+export function competitivePlan(
+  players: Player[],
+  lines: Map<string, StatLine>,
+  recent: Map<string, RecentLine> = new Map(),
+): CompetitivePlan {
   const ids = players.map((p) => p.id);
   const mine = new Map(ids.flatMap((id) => (lines.has(id) ? [[id, lines.get(id)!]] : [])));
   const batters = [...mine].filter(([, l]) => l.pa > 0);
@@ -101,10 +139,21 @@ export function competitivePlan(players: Player[], lines: Map<string, StatLine>)
   const avgWhip = mean(pitchers.map(([, l]) => l.whip!)) ?? 0;
 
   const adjusted: CompetitivePlan["adjusted"] = new Map();
+  const form = new Map<string, Form>();
   for (const id of ids) {
     const l = mine.get(id);
-    const bat = (k: "obp" | "slg" | "ops") =>
-      l && l.pa > 0 && l[k] !== null ? shrink(l[k]!, l.pa, avg[k], PA_PRIOR) : null;
+    const r = recent.get(id);
+    const hasRecent = !!r && r.pa >= MIN_RECENT_PA && !!l && l.pa > 0;
+    const w = hasRecent ? Math.min(MAX_RECENT_WEIGHT, r.pa / (r.pa + RECENT_PRIOR)) : 0;
+    const bat = (k: "obp" | "slg" | "ops") => {
+      if (!l || l.pa <= 0 || l[k] === null) return null;
+      const season = shrink(l[k]!, l.pa, avg[k], PA_PRIOR);
+      return hasRecent && r[k] !== null ? (1 - w) * season + w * r[k]! : season;
+    };
+    if (hasRecent && r.ops !== null && l.ops !== null) {
+      if (r.ops - l.ops >= STREAK_OPS) form.set(id, { trend: "hot", recent: r });
+      else if (l.ops - r.ops >= STREAK_OPS) form.set(id, { trend: "cold", recent: r });
+    }
     adjusted.set(id, {
       obp: bat("obp"),
       slg: bat("slg"),
@@ -201,7 +250,7 @@ export function competitivePlan(players: Player[], lines: Map<string, StatLine>)
     }),
   );
 
-  return { lines: mine, battingOrder, battingRole, fit, overall, pitching, adjusted };
+  return { lines: mine, battingOrder, battingRole, fit, overall, pitching, adjusted, form };
 }
 
 /** The rules a competitive lineup keeps: Must rules stay, Warn rules are set aside. */

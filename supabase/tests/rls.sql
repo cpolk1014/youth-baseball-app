@@ -1850,4 +1850,103 @@ select pg_temp.expect((select count(*) from public.my_expired_teams() where team
 select pg_temp.expect(public.team_paid('e0e0e0e0-0000-4000-8000-000000000001'), 'and keeps working through the grace days');
 reset role;
 delete from public.team where id = 'e0e0e0e0-0000-4000-8000-000000000001';
+-- ── coach box scores and parents' pitch counts ──
+reset role;
+insert into public.player_guardian (player_id, user_id) values ('00000000-0000-4000-8000-000000001003', 'aaaaaaaa-0000-4000-8000-000000000002') on conflict do nothing;
+insert into public.game (id, season_id, game_date, opponent, status, score_us, score_them) values
+  ('00000000-0000-4000-8000-00000000c101', '00000000-0000-4000-8000-000000000101', current_date - 2, 'Box Sox', 'final', 6, 3),
+  ('00000000-0000-4000-8000-00000000c102', '00000000-0000-4000-8000-000000000101', current_date - 1, 'Pitch Pirates', 'final', 2, 1);
+create temp table bx_kid as select athlete_id from public.player where id = '00000000-0000-4000-8000-000000001003';
+grant select on bx_kid to authenticated;
+delete from public.family_pass where buyer = 'aaaaaaaa-0000-4000-8000-000000000002';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+do $$ begin
+  perform public.save_game_box_score('00000000-0000-4000-8000-00000000c101', '[{"player_id": "00000000-0000-4000-8000-000000001003", "batting": {"ab": 3, "h": 2}}]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents cannot add a team box score';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect(public.save_game_box_score('00000000-0000-4000-8000-00000000c101', '[
+  {"player_id": "00000000-0000-4000-8000-000000001003", "box_name": "E M", "batting": {"ab": 3, "h": 2}, "pitching": {"outs": 9, "pitches": 48, "strikes": 30}, "errors": 1, "positions": ["P", "SS"]},
+  {"player_id": "00000000-0000-4000-8000-000000001004", "batting": {"ab": 2, "h": 0}}]') = 2, 'a coach saves a game''s box score');
+select pg_temp.expect((select count(*) from public.player_game_stat where game_id = '00000000-0000-4000-8000-00000000c101') = 2, 'coaches see their team''s box score lines');
+select pg_temp.expect((select our_runs = 6 and their_runs = 3 and opponent = 'Box Sox' and athlete_id is not null from public.player_game_stat where player_id = '00000000-0000-4000-8000-000000001003' and game_id = '00000000-0000-4000-8000-00000000c101'), 'a line takes the game''s score, opponent and the kid''s record');
+do $$ begin
+  perform public.save_game_box_score('00000000-0000-4000-8000-00000000c101', '[{"player_id": "00000000-0000-4000-8000-000000002001", "batting": {}}]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: box score lines are for the team''s own players';
+end $$;
+-- Typed pitch counts for the next game (free): a count-only line.
+select pg_temp.expect(public.save_game_box_score('00000000-0000-4000-8000-00000000c102', '[{"player_id": "00000000-0000-4000-8000-000000001003", "pitches": 41, "strikes": 25}]', true) = 1, 'a coach types a pitch count');
+select pg_temp.expect((select pitch_only and (pitching ->> 'pitches')::int = 41 from public.player_game_stat where game_id = '00000000-0000-4000-8000-00000000c102'), 'a typed count is a pitch-count-only line');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false);
+select pg_temp.expect((select count(*) from public.player_game_stat where source = 'coach') = 3, 'managers see box scores too');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.player_game_stat where source = 'coach') = 0, 'outsiders see no box scores');
+-- Parents: the coach's lines need a player pass.
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from public.player_game_stat where source = 'coach') = 0, 'without a pass, parents don''t see the coach''s lines');
+do $$ begin
+  insert into public.pitch_session (athlete_id, kind, session_date, pitches) values ((select athlete_id from bx_kid), 'bullpen', current_date, 30);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: logging pitches needs a player pass';
+end $$;
+reset role;
+select public.grant_family_pass('aaaaaaaa-0000-4000-8000-000000000002', 1, array[(select athlete_id from bx_kid)]);
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from public.player_game_stat where source = 'coach') = 2, 'with a pass, parents see their own kid''s coach lines only');
+update public.player_game_stat set batting = '{"ab": 9}' where source = 'coach';
+select pg_temp.expect((select count(*) from public.player_game_stat where batting ->> 'ab' = '9') = 0, 'parents can''t change the coach''s lines');
+insert into public.pitch_session (athlete_id, kind, session_date, pitches, strikes, game_id, stat_id)
+  values ((select athlete_id from bx_kid), 'game', current_date - 2, 48, 30, '00000000-0000-4000-8000-00000000c101',
+          (select id from public.player_game_stat where source = 'coach' and game_id = '00000000-0000-4000-8000-00000000c101'));
+select pg_temp.expect((select count(*) from public.pitch_session) = 1, 'a parent approves the coach''s count');
+insert into public.pitch_dismissal (stat_id, athlete_id, pitches)
+  values ((select id from public.player_game_stat where game_id = '00000000-0000-4000-8000-00000000c102'), (select athlete_id from bx_kid), 41);
+select pg_temp.expect((select count(*) from public.pitch_dismissal) = 1, 'a parent says no to a count');
+insert into public.pitch_session (athlete_id, kind, session_date, pitches, label) values ((select athlete_id from bx_kid), 'lesson', current_date, 35, 'Coach Ray');
+do $$ begin
+  insert into public.pitch_session (athlete_id, kind, session_date, pitches, game_id) values ((select athlete_id from bx_kid), 'game', current_date, 20, 'eeeeeeee-0000-4000-8000-000000000020');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: a session''s team game must be the kid''s';
+end $$;
+do $$ begin
+  insert into public.pitch_session (athlete_id, kind, session_date, pitches, strikes) values ((select athlete_id from bx_kid), 'bullpen', current_date, 20, 25);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: strikes can''t be more than pitches';
+end $$;
+select public.set_pitch_ages((select athlete_id from bx_kid), '9-10');
+select pg_temp.expect((select pitch_ages from public.athlete where id = (select athlete_id from bx_kid)) = '9-10', 'parents pick the Pitch Smart ages');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select count(*) from public.pitch_session) = 0, 'coaches never see a family''s pitch log');
+do $$ begin
+  perform public.set_pitch_ages((select athlete_id from bx_kid), '7-8');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: only parents set a kid''s ages';
+end $$;
+-- Replacing the box score keeps the line (and the parent's approval); leaving a kid out drops theirs.
+select public.save_game_box_score('00000000-0000-4000-8000-00000000c101', '[{"player_id": "00000000-0000-4000-8000-000000001003", "batting": {"ab": 4, "h": 2}, "pitching": {"outs": 9, "pitches": 50, "strikes": 31}}]');
+select pg_temp.expect((select count(*) from public.player_game_stat where game_id = '00000000-0000-4000-8000-00000000c101') = 1, 'a new box score replaces the old one');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select stat_id is not null from public.pitch_session where kind = 'game'), 'an approved count stays tied to the coach''s line');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.clear_game_box_score('00000000-0000-4000-8000-00000000c102');
+select pg_temp.expect((select count(*) from public.player_game_stat where game_id = '00000000-0000-4000-8000-00000000c102') = 0, 'a coach removes a box score');
+-- Every stats import is kept for streaks; the Stats page reads the latest.
+insert into public.team_stats (season_id, file_name, data) values ('00000000-0000-4000-8000-000000000101', 'week1.csv', '{"columns": [], "players": []}')
+  on conflict (season_id) do update set file_name = excluded.file_name, data = excluded.data, imported_at = now();
+update public.team_stats set file_name = 'week2.csv', data = '{"columns": [], "players": [], "totals": null}', imported_at = now() where season_id = '00000000-0000-4000-8000-000000000101';
+select pg_temp.expect((select count(*) from public.team_stats_import where season_id = '00000000-0000-4000-8000-000000000101') >= 2, 'every import is kept');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from public.team_stats_import) = 0, 'parents never see past imports');
+do $$ begin
+  insert into public.team_stats_import (season_id, data) values ('00000000-0000-4000-8000-000000000101', '{}');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: past imports are only written by the database';
+end $$;
+reset role;
+delete from public.pitch_session;
+delete from public.game where id in ('00000000-0000-4000-8000-00000000c101', '00000000-0000-4000-8000-00000000c102');
 \echo ALL RLS TESTS PASSED

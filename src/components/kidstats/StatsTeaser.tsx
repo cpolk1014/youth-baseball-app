@@ -39,7 +39,8 @@ export function StatsTeaser({
         <h2 className="text-xl font-black">Follow {first}&apos;s stats, season after season</h2>
         <ul className="mt-2 flex flex-col gap-1 text-base text-slate-700">
           <li>
-            ✓ Import each game&apos;s GameChanger box score; AVG, OBP, OPS and pitching add up
+            ✓ {first}&apos;s line from every box score the coaches add; AVG, OBP, OPS and pitching
+            add up
           </li>
           <li>✓ Charts of how {first} is trending, game by game and year over year</li>
           <li>✓ Stays with {first} on every team, year after year</li>
@@ -49,7 +50,7 @@ export function StatsTeaser({
           onClick={onUpgrade}
           className="mt-3 flex h-14 w-full items-center justify-center rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]"
         >
-          Unlock · {dollars(FIRST_KID_CENTS)} a year
+          Get the Player pass · {dollars(FIRST_KID_CENTS)} a season
         </button>
       </section>
 

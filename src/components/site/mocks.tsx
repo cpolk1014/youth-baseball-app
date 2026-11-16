@@ -366,7 +366,7 @@ export function PlayerStatsScreen() {
           <path d={path} fill="none" stroke={ACCENT} strokeWidth="3" strokeLinecap="round" />
         </svg>
       </Card>
-      <Sparkle>AI read the box score: Mason&apos;s line only</Sparkle>
+      <Sparkle>From the coach&apos;s box score: Mason&apos;s line</Sparkle>
       <Card>
         <p className="font-bold">vs Gulf Coast Gators · W 7–4</p>
         <p className="text-[11px] text-slate-600">2-3, 2B, 2 RBI, R</p>
@@ -497,6 +497,80 @@ export function ParentGameDayScreen() {
         <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-bold text-green-800">
           Quiz 5/5 ✓
         </span>
+      </Card>
+    </PhoneScreen>
+  );
+}
+
+/** Counting pitches live from the bleachers: one tap per pitch. */
+export function PitchCounterScreen() {
+  return (
+    <PhoneScreen title="Mason R." subtitle="Pitch count · vs Bandits">
+      <div className="py-2 text-center">
+        <p className="text-[64px] leading-none font-black tabular-nums">37</p>
+        <p className="mt-1 text-[12px] text-slate-600">pitches · 25 strikes, 12 balls</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex h-24 items-center justify-center rounded-2xl bg-slate-700 text-[22px] font-black text-white">
+          Ball
+        </div>
+        <div className="flex h-24 items-center justify-center rounded-2xl bg-[#15803D] text-[22px] font-black text-white">
+          Strike
+        </div>
+      </div>
+      <div className="flex h-9 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-[12px] font-bold">
+        Undo last pitch
+      </div>
+      <div className="rounded-xl bg-amber-50 p-2.5 text-amber-950">
+        <p className="text-[12px] font-black">Up to 38 more today</p>
+        <p className="text-[11px]">Pitch Smart: 75 a day for ages 9-10</p>
+      </div>
+      <Btn>Done · save 37 pitches</Btn>
+    </PhoneScreen>
+  );
+}
+
+/** A kid's pitch log: rest days, the coach's count to approve, every team and lesson. */
+export function PitchLogScreen() {
+  const rows: [string, string, string, number][] = [
+    ["⚾", "Game · Bandits", "Sat · from the coach", 55],
+    ["🧑‍🏫", "Pitching lesson", "Fri · Coach Ray", 30],
+    ["🔁", "Subbed for the Gators", "Tue", 41],
+    ["🎯", "Practice bullpen", "Mon", 25],
+  ];
+  return (
+    <PhoneScreen title="Mason R." subtitle="My player · Pitch count">
+      <div className="rounded-xl bg-amber-50 p-2.5 text-amber-950">
+        <p className="text-[15px] leading-tight font-black">Resting · can pitch Wednesday</p>
+        <p className="mt-0.5 text-[11px]">55 pitches on Saturday means 3 days of rest.</p>
+        <p className="mt-0.5 text-[10px]">Last 7 days: 151 pitches (96 in games)</p>
+      </div>
+      <Card className="border-[#1B2A4A]">
+        <p className="font-bold">Coach&apos;s count: 55 pitches vs Bandits</p>
+        <p className="text-[11px] text-slate-600">You logged 52 for this game.</p>
+        <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+          <span className="flex h-8 items-center justify-center rounded-lg bg-[#1B2A4A] text-[11px] font-bold text-white">
+            Use 55
+          </span>
+          <span className="flex h-8 items-center justify-center rounded-lg border-2 border-slate-300 text-[11px] font-bold">
+            Keep 52
+          </span>
+        </div>
+      </Card>
+      <Card className="p-0">
+        {rows.map(([icon, what, when, n]) => (
+          <div
+            key={what}
+            className="flex items-center gap-2 border-b border-slate-100 px-2.5 py-1.5 last:border-0"
+          >
+            <span>{icon}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-semibold">{what}</span>
+              <span className="block text-[10px] text-slate-500">{when}</span>
+            </span>
+            <span className="text-[16px] font-black tabular-nums">{n}</span>
+          </div>
+        ))}
       </Card>
     </PhoneScreen>
   );

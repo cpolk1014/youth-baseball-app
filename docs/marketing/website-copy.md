@@ -216,13 +216,13 @@ Parents set up their own kid's walk-up, and the coach approves it.
 ## The flyer becomes your uniform list.
 Snap or upload the uniform flyer. AI lists every combo, ready to pick for each game.
 
-### 7. AI box score reader (for parents)
-## Your player's stats, from one upload.
-Parents upload a GameChanger box score after the game. AI finds **their player's line and only theirs**, matched by jersey number and name. Season totals and trends add up, private to the family. *(Player stats add-on, $10 a season.)*
+### 7. AI box score reader (for coaches)
+## One upload. Everyone's stats and pitch counts.
+After the game, the coach uploads GameChanger's box score. AI reads **every kid's line**, matched to the roster by jersey number and name. Competitive lineups get game-by-game numbers (and spot who's hot), and each family sees only their own kid's line and pitch count. *(Part of the team's season. Families get their kid's line with the Player pass.)*
 
 ### AI you can trust around kids
 - **You check everything.** AI shows what it found, and nothing is saved until you confirm.
-- **Only what's needed.** Practice plans never send player names. A box score is read only for your own child's line, and the file isn't kept.
+- **Only what's needed.** Practice plans never send player names. A box score is read for your own team only, each family sees only their own kid's line, and the file isn't kept.
 - **Your data isn't used to train AI models.** [Confirm against each provider's current terms before publishing.]
 - **Kid-safe by design:** original, clean lyrics, and no messaging with kids, ever.
 
@@ -247,7 +247,7 @@ From the first practice to the last bracket game. Built for the dugout: big butt
 - **Rules in plain English.**
 - **AI walk-up songs, lyrics and announcer.**
 - **AI uniform flyer reader.**
-- **AI box score reader** for parents' Player stats.
+- **AI box score reader:** every kid's line and pitch count from one upload.
 [See how each one works →](/ai)
 
 ### Lineups & fair play
@@ -344,9 +344,9 @@ And the tools that run your season:
 
 **[Start a club]**
 
-**Add-on for parents: Player stats, $10 a season**
-✨ AI reads your player's GameChanger box scores. Season totals and trends, private to your family, and they follow your player to every team. $5 for each additional child.
-[See Player stats](/parents)
+**Add-on for parents: the Player pass, $10 a season**
+✨ Pine Tar Productions highlight reels with a stadium announcer and slow-mo. A pitch count that follows your player to every team, lesson and bullpen, with Pitch Smart rest days. And their stats from the coaches' box scores, season after season. $5 for each additional child.
+[See the Player pass](/parents)
 
 ### Low risk, built in
 - **14 days of everything,** AI included. No credit card.
@@ -362,13 +362,13 @@ It reads things so you don't have to type them (schedules, tournament pages and 
 It's RallyCap's own smart engine. It follows your fair-play rules exactly, gives the same result every time, and explains every spot. It's free forever.
 
 **What's a season?**
-August 1 to July 31, for teams, clubs and Player stats alike. Paid features keep working for 5 days after July 31 while you renew.
+August 1 to July 31, for teams, clubs and the Player pass alike. Paid features keep working for 5 days after July 31 while you renew.
 
 **Joining mid-season?**
 You only pay for the innings left. Sign up after August 1 and the price is prorated by the days left in the season, so a team joining in mid-November pays about $91, not $129. It never drops below a quarter of the price, because even the bottom of the ninth has a cover charge. From June 1 you buy next season instead, and the rest of this one is on the house.
 
 **Do parents have to pay?**
-No. Parents use RallyCap free with your team. *Player stats* is an optional add-on for their own child.
+No. Parents use RallyCap free with your team. *The Player pass* (highlight reels, pitch count and stats) is an optional add-on for their own child.
 
 **What happens after the free trial?**
 Free features keep working. AI and other paid tools pause, and everything you made stays. Renew at any time.
@@ -377,7 +377,7 @@ Free features keep working. AI and other paid tools pause, and everything you ma
 No. Your club's code covers your team's season.
 
 **Is my kids' information safe with AI?**
-AI only sees what a feature needs. Practice plans get no player names, and box scores are read only for your own child. Your data isn't used to train AI models [confirm against each provider's current terms before publishing]. [Read our Privacy Policy](/privacy).
+AI only sees what a feature needs. Practice plans get no player names, and each family sees only their own child's box score line. Your data isn't used to train AI models [confirm against each provider's current terms before publishing]. [Read our Privacy Policy](/privacy).
 
 **[Start your free 14-day trial]**
 
@@ -426,13 +426,30 @@ Club admins can **view** lineups, playing time, rules and team stats while a tea
 
 # 6. Parents `/parents`
 
-**Page title:** RallyCap for Parents: Game Day Info & AI-Powered Player Stats
-**Description:** Know when and where to be, what to wear and what you owe, free with your team. Upload a box score and AI tracks your player's stats season after season, for $10 a season.
+**Page title:** RallyCap for Parents: Highlight Reels & Pitch Counts
+**Description:** Turn your clips into highlight reels with a stadium announcer, and keep a pitch count that follows your kid to every team, lesson and bullpen, with Pitch Smart rest days. Free with your team; the Player pass is $10 a season.
 
-# Everything you need for game day. And your player's stats, powered by AI.
-RallyCap is free for parents on your team.
+# Highlight reels that look like TV. A pitch count that follows their arm.
+Turn the clip you filmed from the fence into a highlight with your kid's name on screen and a stadium announcer. Count every pitch, at every game, lesson and bullpen, for every team, and know when they can pitch again. The Player pass is $10 a season; everything else for parents is free with your team.
+**[Get the Player pass]** · [How the pitch count works]
+[Visual: the Pine Tar phone behind the live pitch counter phone]
 
-### Free with your team
+### ✨ Pine Tar Productions
+## Your kid's highlight reel. Network quality. Bleacher budget.
+(As before: AI writes the call, name and number on screen, slow-mo replay, made and saved on your phone.) Part of the Player pass, $10 a season.
+
+### Pitch count · Player pass
+## Their arm doesn't care which team they pitched for.
+Saturday for the travel team, Tuesday for the rec team, a lesson on Thursday. No coach sees all of it. You do. RallyCap adds it up and tells you when they can pitch again.
+- **Count it as it happens:** big Ball and Strike buttons, one thumb, from the bleachers. Or type the total after.
+- **Every session:** games, practice bullpens, pitching lessons, and the Saturday they subbed for another team.
+- **Rest days, figured out:** MLB and USA Baseball's Pitch Smart limits for their age. "55 pitches Saturday: rest until Wednesday." A bullpen on a rest day gets flagged.
+- **The coach's count lands for you:** when the coach adds the game's box score, the count shows up to approve. Already logged it? You pick which to keep.
+- **Follows them everywhere:** every team, every season. Private to your family.
+*Pitch Smart is a guide; your league's rules may be stricter.*
+
+### Free with your team: know where to be, what to wear and what you owe
+Without asking the group chat. Your coach sends the link.
 - **When and where:** every game and practice, with *arrive by*, the field and one-tap directions.
 - **What to wear:** the uniform for each game.
 - **What you owe:** your family's balance and due dates.
@@ -440,17 +457,15 @@ RallyCap is free for parents on your team.
 - **Your player's walk-up song** at every game (made with AI if your team's plan includes it, or upload your own), approved by the coach.
 - **Homework:** watch the assigned plays and take the quiz together.
 
-### Player stats: $10 a season
-## Upload the box score. AI does the rest.
-[Visual: a blurred sample of the stats page with the trend chart]
-- **AI reads the GameChanger box score** and finds your player's line, and only your player's, by jersey number and name.
+### ✨ Also in the Player pass
+## Their stats, straight from the coach's box score.
+- **Nothing to upload:** when the coaches add a game's GameChanger box score, your player's line shows up.
 - **Season totals:** AVG, OBP, SLG, OPS and pitching, plus every game.
 - **Trends** that show how they're improving.
 - **Year after year, team after team.** The stats follow your player.
-- **Private to your family.** Not coaches, not other parents.
 
-$10 for one player, $5 for each additional child, for a full year.
-**[Get Player stats]** → [sign in → My profile]
+The Player pass: Pine Tar Productions, pitch count and stats. $10 for one player, $5 for each additional child, for the season.
+**[Get the Player pass]** → [sign in → My profile]
 
 ---
 
@@ -497,6 +512,6 @@ Founder, RallyCap · 7U head coach
 | Short CTA (phones, top bar) | **Start free trial** |
 | Club CTA | **Start a club** |
 | Free plan | **Get started free** |
-| Parents' add-on | **Get Player stats** |
+| Parents' add-on | **Get the Player pass** |
 | Under main CTAs | 14 days of everything, AI included · No credit card |
 | AI labels | ✨ before every AI feature name, everywhere |

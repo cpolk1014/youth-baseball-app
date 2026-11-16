@@ -23,7 +23,7 @@ If you have questions, email **[privacy@rallycap.team]**.
 
 - **Kids:** we collect only what a team needs to run its season. That means a first and last name (or however the coach enters it), a jersey number, positions, and lineups and playing time. We never ask for a player's email, phone, address, school, birthday or photo.
 - **Team information stays with the team.** Only people the coach invites can see it, and different roles see different things.
-- **A player's own stats stay with their family.** Coaches can't see the box scores parents import.
+- **A player's pitch count stays with their family.** Coaches never see a family's pitch log, and each family sees only their own child's box score line.
 - **We don't sell personal information,** we don't show ads, and we don't use tracking or advertising cookies in the app.
 - **Some features use trusted service providers** (listed in section 6), such as AI that reads a screenshot you upload. They may use your data only to provide that service to us.
 - **You can see, correct, export or delete** your information. Email us, or use the controls in the app.
@@ -48,8 +48,10 @@ Added by the team's coaches, managers or the player's parents or guardians:
 
 - **Roster details:** name, jersey number, preferred positions, whether they pitch or catch, and whether they're active.
 - **Lineups and playing time:** positions by inning, batting order, attendance, and season playing-time totals.
-- **Team stats:** if a coach imports the team's GameChanger stats export, the season stats for each player. Only the team's coaches and managers can see these.
-- **A player's own box score stats:** if a parent imports their child's box score from GameChanger, that game's line for their child only (hits, at-bats, pitching and so on). Only that child's linked parents can see these, not coaches and not other families. When a box score is uploaded, we read only that child's line and **do not keep the file**.
+- **Team stats:** if a coach imports the team's GameChanger stats export, the season stats for each player (each import is kept, to show streaks). Only the team's coaches and managers can see these.
+- **Game box scores:** if a coach or manager uploads a game's box score from GameChanger, or types pitch counts, each player's line for that game (hits, at-bats, pitching, pitch counts and so on). The team's coaches and managers can see these; each child's linked parents can see their own child's line (with a Player pass). When a box score is uploaded, we read it and **do not keep the file**.
+- **A player's pitch count:** if a parent keeps one, each session (the date, what it was, such as a game, bullpen or lesson, the pitch count, and optionally strikes and an opponent, team or instructor name). Only that child's linked parents can see these, not coaches and not other families.
+- **A player's own box score stats (older):** box scores parents imported for their own child before uploads moved to coaches. Only that child's linked parents can see these.
 - **Walk-up songs and announcements:** a song a parent uploads or makes with AI, how to say the child's name and number, and the announcer recording. Coaches approve walk-ups, and anyone on the team can play approved walk-ups at a game.
 - **Homework results:** which plays a family watched and quiz scores.
 
@@ -97,7 +99,7 @@ We use information to:
 - build advertising profiles
 - use children's information for marketing
 
-**AI and your data:** we use AI providers (section 6) to process content for the features above. We send only what a feature needs. For example, AI practice plans send no player names, and a box score is read only to find your child's line. **We do not allow our AI providers to use your content to train their models** [confirm against each provider's current terms: commercial API terms generally exclude training].
+**AI and your data:** we use AI providers (section 6) to process content for the features above. We send only what a feature needs. For example, AI practice plans send no player names, and a box score is read only for the uploading coach's own team. **We do not allow our AI providers to use your content to train their models** [confirm against each provider's current terms: commercial API terms generally exclude training].
 
 ## 5. Who can see what
 
@@ -106,10 +108,10 @@ RallyCap enforces these rules in its database, not just in the app:
 | Who | Can see |
 |---|---|
 | **Everyone on the team** (anyone the coach invited) | The roster (names and numbers), games, practices, places, uniforms, approved walk-ups at a game, tournament schedules and standings, team money totals, and teammates' names and any phone numbers they chose to share |
-| **Coaches and managers** | Also: lineups and the lineup tools, playing time, the team's imported GameChanger stats, parent–player links, and homework results |
+| **Coaches and managers** | Also: lineups and the lineup tools, playing time, the team's imported GameChanger stats and game box scores, parent–player links, and homework results |
 | **Coaches and treasurers** | Team money in full (every entry and every family's balance) |
-| **Parents** | Also: their own children's money charges, the team's expenses (Walkoffs), their own children's homework, and their own children's box score stats (if they've imported or unlocked them). Parents do **not** see other children's box score stats, other families' money details, or lineup tools |
-| **A club's directors and admins** (only while the team holds that club's code) | View-only: the team's players, games, lineups, playing time, fair-play rules, imported team stats, and coaches' names. **Never** team money, parents or family links, walk-ups, GroupMe, or families' own box score stats |
+| **Parents** | Also: their own children's money charges, the team's expenses (Walkoffs), their own children's homework, and their own children's box score lines and pitch counts (with a Player pass). Parents do **not** see other children's box score lines or pitch counts, other families' money details, or lineup tools |
+| **A club's directors and admins** (only while the team holds that club's code) | View-only: the team's players, games, lineups, playing time, fair-play rules, imported team stats and game box scores, and coaches' names. **Never** team money, parents or family links, walk-ups, GroupMe, or families' pitch counts and own box score stats |
 | **RallyCap staff** | Only as needed to provide support, keep RallyCap secure, or comply with the law |
 
 **Things you post to GroupMe** through RallyCap are sent to your team's GroupMe group, and from then on are governed by GroupMe's terms and privacy policy.
@@ -148,7 +150,7 @@ RallyCap is meant for adults who run and support youth teams, and children do no
 ## 8. How long we keep information
 
 - **Team information** stays while the team exists. Coaches can option (archive) a team and then delete it. Deleting a team deletes its roster, games, lineups, money, uniforms, walk-ups and other team content.
-- **A player's own box score stats** belong to that child's family, not to a team. They stay available to the child's linked parents even if a team is deleted or a coach removes them. They're deleted when the parents delete them or close their accounts.
+- **A player's pitch count and own box score stats** belong to that child's family, not to a team. They stay available to the child's linked parents even if a team is deleted or a coach removes them. They're deleted when the parents delete them or close their accounts. Game box scores a coach uploads belong to the team and go with it.
 - **Your account** stays until you ask us to delete it.
 - **Purchase records** are kept as long as needed for accounting and legal requirements, typically [7] years.
 - **Uploaded files we only read** (schedules, box scores, screenshots) aren't kept after reading.

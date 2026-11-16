@@ -15,12 +15,12 @@ import type { AppData } from "@/lib/data/types";
 import { AppShell, Loading } from "../AppShell";
 import { kidsOf } from "../KidPicker";
 import { Sheet } from "../Sheet";
-import { ImportBoxScore } from "./ImportBoxScore";
 import { KidTeams } from "./KidTeams";
 import { longDate, useStatsPasses } from "./familyPass";
 import { StatsTeaser } from "./StatsTeaser";
 import { KidWalkup } from "./KidWalkup";
 import { PineTar } from "../highlights/PineTar";
+import { PitchCount } from "../pitching/PitchCount";
 import { StrikeChart, TrendChart } from "../charts/Charts";
 import { useToday } from "../useToday";
 import { battingTrend, pitchingTrend } from "@/lib/boxscore/trends";
@@ -36,7 +36,10 @@ import {
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 
-/** A parent's own kid's stats, from GameChanger box scores they import game by game. */
+/**
+ * A parent's own kid: Pine Tar highlight reels, their pitch count, and their stats from the
+ * coaches' box scores, following them from team to team.
+ */
 export function KidStatsScreen() {
   const data = useAppData();
   if (!data) {
@@ -56,15 +59,14 @@ function KidStats({ data }: { data: AppData }) {
     () => new URLSearchParams(window.location.search).get("player") ?? kids[0]?.id ?? null,
   );
   const kid = kids.find((k) => k.id === kidId) ?? kids[0] ?? null;
-  const { games, kidTeams, loading, error, save, remove, link, split } = useKidGames(
+  const { games, kidTeams, loading, error, remove, link, split } = useKidGames(
     kids.map((k) => k.id),
   );
-  const [importing, setImporting] = useState(false);
   const [filming, setFilming] = useState(false);
   const [open, setOpen] = useState<KidGame | null>(null);
   const fam = useStatsPasses();
   const router = useRouter();
-  // Player stats are bought on My profile.
+  // The Player pass is bought on My profile.
   const toBuy = () => router.push("/profile#player-stats");
   // The years picked, per kid (opens on this year when there's more than one).
   const [pickBy, setPickBy] = useState<Record<string, YearPick>>({});
@@ -82,8 +84,8 @@ function KidStats({ data }: { data: AppData }) {
   if (!kid) {
     return shell(
       <p className="text-lg">
-        This is for parents: once you&apos;re linked to your player on this team, you can import
-        their GameChanger box scores here.
+        This is for parents: once you&apos;re linked to your player on this team, their highlight
+        reels, pitch count and stats live here.
       </p>,
     );
   }
@@ -94,13 +96,15 @@ function KidStats({ data }: { data: AppData }) {
     (g) => g.playerId === kid.id || (athlete !== null && g.athleteId === athlete),
   );
   const teamCount = new Set(mine.map((g) => g.teamName ?? "")).size;
-  // Box score stats are a family add-on (a pass for this kid, from any parent in the family).
+  // Games with a batting line (typed pitch counts aren't games batted).
+  const batted = mine.filter((g) => !g.pitchOnly);
+  // The Player pass, bought by this parent for this kid.
   const unlocked = fam.covers(athlete);
   const expires = fam.expiresFor(athlete);
   const year = Number((today || "2026").slice(0, 4));
-  const years = yearsOf(mine);
+  const years = yearsOf(batted);
   const pick = pickBy[kid.id] ?? defaultYears(years, year);
-  const shown = inYears(mine, pick);
+  const shown = inYears(batted, pick);
   const span = years.length <= 1 ? "season" : yearsLabel(pick);
   const t = seasonTotals(shown);
   const b = t.batting;
@@ -136,13 +140,6 @@ function KidStats({ data }: { data: AppData }) {
       )}
 
       <button
-        onClick={() => (unlocked ? setImporting(true) : toBuy())}
-        className="mb-4 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[var(--team)] text-lg font-bold text-white"
-      >
-        + Import a box score
-      </button>
-
-      <button
         onClick={() => (unlocked ? setFilming(true) : toBuy())}
         className="mb-4 flex w-full items-center gap-3 rounded-xl border-2 border-slate-900 bg-slate-900 p-3 text-left text-white active:bg-slate-800"
       >
@@ -153,10 +150,22 @@ function KidStats({ data }: { data: AppData }) {
           <span className="text-lg font-black">Pine Tar Productions</span>
           <span className="text-sm text-white/80">
             Turn a clip into a highlight: name on screen, stadium announcer, slow-mo replay.
-            {unlocked ? "" : " 🔒 Comes with Player stats."}
+            {unlocked ? "" : " 🔒 Comes with the Player pass."}
           </span>
         </span>
       </button>
+
+      <PitchCount
+        key={`pitch-${kid.id}`}
+        kid={kid}
+        athleteId={athlete}
+        ageGroup={data.team.ageGroup ?? null}
+        games={data.games}
+        coachLines={mine}
+        today={today || new Date().toISOString().slice(0, 10)}
+        unlocked={unlocked}
+        onUnlock={toBuy}
+      />
 
       <KidWalkup key={kid.id} data={data} kid={kid} />
 
@@ -177,10 +186,11 @@ function KidStats({ data }: { data: AppData }) {
         <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-800">
           Couldn&apos;t load stats ({error}).
         </p>
-      ) : mine.length === 0 ? (
+      ) : batted.length === 0 ? (
         <p className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-4 text-base">
-          No games yet. After each game, import its GameChanger box score and {kid.name}&apos;s
-          season stats add up here. Only you and {kid.name}&apos;s other linked parents see them.
+          No stats yet. When the coaches add a game&apos;s GameChanger box score, {kid.name}&apos;s
+          line shows up here and the season adds up. Only you and {kid.name}&apos;s other linked
+          parents see it.
         </p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 md:items-start">
@@ -220,7 +230,7 @@ function KidStats({ data }: { data: AppData }) {
             </h2>
             {expires && (
               <p className="-mt-1 mb-2 text-sm text-slate-600">
-                Stats unlocked through {longDate(expires)}.{" "}
+                Player pass through {longDate(expires)}.{" "}
                 <a href="/profile#player-stats" className="underline">
                   Renew
                 </a>
@@ -324,23 +334,6 @@ function KidStats({ data }: { data: AppData }) {
         {filming && <PineTar data={data} kid={kid} />}
       </Sheet>
 
-      <Sheet open={importing} title="Import a box score" onClose={() => setImporting(false)}>
-        {importing && (
-          <ImportBoxScore
-            kid={kid}
-            existing={mine}
-            games={data.games}
-            onCancel={() => setImporting(false)}
-            onSave={async (g, replaces) => {
-              await save(g, data.season.id);
-              // An earlier import of this game saved without it (or under another game): drop it.
-              if (replaces && replaces.gameId !== g.gameId) await remove(replaces.id);
-              setImporting(false);
-            }}
-          />
-        )}
-      </Sheet>
-
       <Sheet
         open={open !== null}
         title={open ? `vs ${open.opponent}` : ""}
@@ -369,16 +362,20 @@ function KidStats({ data }: { data: AppData }) {
                 {open.teamName ? `, ${open.teamName}` : ""}.
               </p>
             )}
-            <button
-              onClick={() => {
-                const id = open.id;
-                setOpen(null);
-                void remove(id);
-              }}
-              className="h-12 text-base font-semibold text-red-700 underline"
-            >
-              Remove this game
-            </button>
+            {open.source === "parent" ? (
+              <button
+                onClick={() => {
+                  const id = open.id;
+                  setOpen(null);
+                  void remove(id);
+                }}
+                className="h-12 text-base font-semibold text-red-700 underline"
+              >
+                Remove this game
+              </button>
+            ) : (
+              <p className="text-sm text-slate-600">From the coaches&apos; box score.</p>
+            )}
           </div>
         )}
       </Sheet>

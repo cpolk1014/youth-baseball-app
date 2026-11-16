@@ -183,9 +183,9 @@ function StartClubForm() {
         <p className="mt-1 text-slate-700">
           Running several teams? Starting a club is free. Set up your club&apos;s logo, colors,
           uniforms and practice plans now. When you&apos;re ready to bring teams in, buy a code for
-          each team ({dollars(clubNow())} per team for the season); head coaches enter
-          it, and you can see every team&apos;s lineups, playing time and stats (view only) and post
-          to all your teams&apos; GroupMe groups.
+          each team ({dollars(clubNow())} per team for the season); head coaches enter it, and you
+          can see every team&apos;s lineups, playing time and stats (view only) and post to all your
+          teams&apos; GroupMe groups.
         </p>
       </div>
       <form

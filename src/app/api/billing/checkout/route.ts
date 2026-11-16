@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const kind = body?.kind;
-  // Player stats are for the season on sale, like everything else.
+  // The Player pass is for the season on sale, like everything else.
   const season =
     kind === "family"
       ? seasonsOnSale(new Date())[0]!
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     name = team.name;
     back = "/members";
   } else if (kind === "family") {
-    // Player stats for a number of the parent's own kids ($10, then $5 each), for a year.
+    // The Player pass for a number of the parent's own kids ($10, then $5 each), for the season.
     const kids = body?.kids;
     if (!validKids(kids)) return errorResponse(400, `Pick between 1 and ${MAX_KIDS} players.`);
     const { data: mine } = await supabase.rpc("my_athletes");
@@ -116,8 +116,8 @@ export async function POST(request: NextRequest) {
     quantity = 1;
     unit = quote(statsPriceCents(kids), season).cents;
     name = picked.length
-      ? `Player stats: ${picked.map((a) => own.get(a)).join(", ")}`
-      : `Player stats for ${kids} player${kids === 1 ? "" : "s"}`;
+      ? `Player pass: ${picked.map((a) => own.get(a)).join(", ")}`
+      : `Player pass for ${kids} player${kids === 1 ? "" : "s"}`;
     back = "/profile";
   } else {
     return errorResponse(400, "Something's missing. Reload and try again.");

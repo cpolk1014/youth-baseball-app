@@ -25,7 +25,7 @@ export interface PurchaseMeta {
   clubId?: string;
   clubName?: string;
   teamId?: string;
-  /** Player stats: how many kids, and the ones picked (athlete ids, comma separated). */
+  /** Player pass: how many kids, and the ones picked (athlete ids, comma separated). */
   kids?: string;
   athletes?: string;
 }

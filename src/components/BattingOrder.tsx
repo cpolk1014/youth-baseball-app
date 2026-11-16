@@ -23,7 +23,10 @@ export function BattingOrder({
   onChange,
   onSetBatting,
   readOnly = false,
+  marks,
 }: {
+  /** A small mark after a name: 🔥 for a kid who's hot lately (coaches only). */
+  marks?: Map<string, { icon: string; label: string }>;
   order: string[];
   notBatting: string[];
   players: Map<string, Player>;
@@ -92,6 +95,12 @@ export function BattingOrder({
               <span className="min-w-0 flex-1 truncate text-lg font-semibold">
                 {p?.name ?? id}{" "}
                 <span className="font-normal text-slate-600">#{p?.jerseyNumber ?? "–"}</span>
+                {marks?.get(id) && (
+                  <span title={marks.get(id)!.label} aria-label={marks.get(id)!.label}>
+                    {" "}
+                    {marks.get(id)!.icon}
+                  </span>
+                )}
               </span>
               {!readOnly && (
                 <button

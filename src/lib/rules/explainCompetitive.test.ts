@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { competitivePlan, type StatLine } from "./competitive";
-import { resolveRuleConfig } from "./config";
+import { DEFAULT_RULE_CONFIG, resolveRuleConfig } from "./config";
 import { explainCompetitive } from "./explainCompetitive";
 import { lineupFromGrid, makePlayer } from "./test-utils";
 
@@ -72,5 +72,60 @@ describe("explainCompetitive", () => {
     const blind = explainCompetitive(roster, lineup, config, [], null, null);
     expect(blind.intro?.[0]).toMatch(/Competitive lineup/);
     expect(blind.players.every((p) => p.reasons.length === 0)).toBe(true);
+  });
+});
+
+describe("explainCompetitive recent form", () => {
+  it("says who's hot and why they moved up", () => {
+    const kids = [makePlayer("a"), makePlayer("b")];
+    const base = {
+      pa: 60,
+      ip: 0,
+      whip: null,
+      era: null,
+      fpct: null,
+      chances: 0,
+      innings: {},
+    };
+    const plan = competitivePlan(
+      kids,
+      new Map([
+        ["a", { ...base, obp: 0.4, slg: 0.4, ops: 0.8 }],
+        ["b", { ...base, obp: 0.28, slg: 0.25, ops: 0.53 }],
+      ]),
+      new Map([
+        [
+          "b",
+          {
+            pa: 22,
+            ab: 20,
+            h: 9,
+            avg: 0.45,
+            obp: 0.5,
+            slg: 0.6,
+            ops: 1.1,
+            from: "2026-11-01",
+            to: "2026-11-14",
+            games: 6,
+            source: "box" as const,
+          },
+        ],
+      ]),
+    );
+    const order = { innings: 1, slots: [], battingOrder: ["a", "b"], notBatting: [], absent: [] };
+    const why = explainCompetitive(
+      kids,
+      order,
+      DEFAULT_RULE_CONFIG,
+      [],
+      plan,
+      null,
+      "the team's box scores",
+    );
+    expect(why.intro?.[0]).toBe("Competitive lineup: built to win from the team's box scores.");
+    const b = why.players.find((p) => p.playerId === "b")!;
+    expect(
+      b.reasons.some((r) => r.startsWith("🔥 Hot lately: 9 for 20 (.450) over the last 6 games")),
+    ).toBe(true);
   });
 });

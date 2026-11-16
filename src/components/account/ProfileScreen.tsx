@@ -50,7 +50,7 @@ export function ProfileScreen() {
     () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("paid"),
   );
   const { reload: reloadStats } = stats;
-  // From "Unlock" on a player's page: bring Player stats into view once it's there.
+  // From "Unlock" on a player's page: bring the Player pass into view once it's there.
   const kidsLoaded = myKids !== null;
   useEffect(() => {
     if (kidsLoaded && window.location.hash === "#player-stats") {
@@ -347,13 +347,13 @@ export function ProfileScreen() {
 
       {myKids && myKids.length > 0 && (
         <section id="player-stats" className={`${card} scroll-mt-20`}>
-          <h2 className={heading}>Player stats</h2>
+          <h2 className={heading}>Player pass</h2>
           {justPaid && (
             <p
               role="status"
               className="mb-3 rounded-xl bg-green-50 p-3 text-base font-semibold text-green-900"
             >
-              Thanks! Your player stats are unlocking; it can take a few seconds.
+              Thanks! Your Player pass is unlocking; it can take a few seconds.
             </p>
           )}
           {stats.loading ? (

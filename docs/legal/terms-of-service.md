@@ -53,7 +53,7 @@ RallyCap has free features, paid team features, and an optional add-on for paren
   - team money
   - the GameChanger stats import and competitive lineups
   - homework.
-- **Player stats (for parents):** box score imports and season trends for your own children, sold separately. They are **not** included in a team season or club code.
+- **The Player pass (for parents):** Pine Tar Productions highlight reels, a pitch count, and your own children's stats from their teams' box scores, sold separately. It is **not** included in a team season or club code. Pitch count rest days follow published Pitch Smart guidelines and are information only, not medical advice; follow your league's rules and your child's doctor.
 
 ### 4.2 Prices and periods
 

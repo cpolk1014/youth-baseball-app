@@ -31,6 +31,11 @@ import type { Lineup } from "@/lib/rules/types";
 import { validateLineup } from "@/lib/rules/validate";
 import { ROLE_LABEL, isCoach, permissionsFor } from "@/lib/data/permissions";
 import { statLines } from "@/lib/stats/profile";
+import { boxSeasonLines, recentFromBoxScores, recentFromImports } from "@/lib/stats/form";
+import { computeParticipation } from "@/lib/rules/participation";
+import type { FieldPosition } from "@/lib/rules/types";
+import { GameBoxScore } from "./boxscore/GameBoxScore";
+import { useSeasonBoxScores, useStatsImports } from "./boxscore/boxData";
 import { AppShell, Loading } from "./AppShell";
 import { Attendance } from "./Attendance";
 import { BattingOrder } from "./BattingOrder";
@@ -73,6 +78,9 @@ export function GameScreen({ gameId }: { gameId: string }) {
   // Only coaches and managers can see stats (the database enforces it).
   const seesStats = !!data && (isCoach(data.me.role) || data.me.role === "manager");
   const stats = useTeamStats(data?.season.id ?? "", seesStats);
+  // The team's box scores (stats and pitch counts) and every past import (for streaks).
+  const box = useSeasonBoxScores(data?.season.id ?? "", seesStats);
+  const imports = useStatsImports(data?.season.id ?? "", seesStats);
 
   if (!data) {
     return (
@@ -109,9 +117,33 @@ export function GameScreen({ gameId }: { gameId: string }) {
   const style = game.lineupStyle ?? "fair";
   const absent = new Set(lineup.absent ?? []);
   const active = data.players.filter((p) => p.active !== false && !absent.has(p.id));
-  const lines = stats.stats ? statLines(stats.stats.data) : null;
+  // Season numbers: GameChanger's import when there is one (it's complete), else the team's
+  // box scores (fielding innings from RallyCap's own lineups).
+  const csvLines = stats.stats ? statLines(stats.stats.data) : null;
+  const boxLines = box.lines.filter((l) => l.playerId);
+  const useBox = !(csvLines && csvLines.size > 0) && boxLines.some((l) => !l.pitchOnly);
+  const lines = useBox
+    ? boxSeasonLines(
+        boxLines,
+        Object.fromEntries(
+          Object.entries(computeParticipation(history, [])).map(([id, p]) => [
+            id,
+            Object.fromEntries(
+              Object.entries(p.byPosition).filter(([pos]) => pos !== "BENCH"),
+            ) as Partial<Record<FieldPosition, number>>,
+          ]),
+        ),
+      )
+    : csvLines;
   const hasStats = !!lines && lines.size > 0;
-  const plan = hasStats ? competitivePlan(active, lines) : null;
+  // Lately: the last two weeks of box scores, or the latest import minus an earlier one.
+  const fromBox = recentFromBoxScores(boxLines, game.date);
+  const recent = fromBox.size > 0 ? fromBox : recentFromImports(imports);
+  const plan = hasStats ? competitivePlan(active, lines, recent) : null;
+  const boxGames = new Set(boxLines.filter((l) => !l.pitchOnly).map((l) => l.gameId)).size;
+  const statsFrom = useBox
+    ? `the team's box scores (${boxGames} game${boxGames === 1 ? "" : "s"})`
+    : undefined;
   const importedOn = stats.stats
     ? new Date(stats.stats.importedAt).toLocaleDateString(undefined, {
         month: "short",
@@ -305,6 +337,11 @@ export function GameScreen({ gameId }: { gameId: string }) {
         </section>
       )}
 
+      {/* After the game: the box score and pitch counts (coaches and managers). */}
+      {seesStats && (isFinal || game.date <= todayIso) && (
+        <GameBoxScore game={game} players={data.players} lineup={lineup} box={box} />
+      )}
+
       <div
         role="tablist"
         className="mb-4 grid grid-cols-3 rounded-xl border-2 border-[var(--team)] p-1"
@@ -344,7 +381,11 @@ export function GameScreen({ gameId }: { gameId: string }) {
                     disabled={
                       s === "competitive" && (!hasStats || !paid) && style !== "competitive"
                     }
-                    title={s === "fair" ? "Everyone plays evenly" : "From GameChanger stats"}
+                    title={
+                      s === "fair"
+                        ? "Everyone plays evenly"
+                        : "From GameChanger stats or box scores"
+                    }
                     onClick={() => setLineupStyle(game.id, s)}
                     className={`h-10 rounded-lg text-base font-bold disabled:opacity-40 ${
                       style === s ? "bg-[var(--team)] text-white" : "text-slate-800"
@@ -389,7 +430,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
                   <Link href="/stats" className="font-semibold underline">
                     GameChanger stats
                   </Link>{" "}
-                  imported first.
+                  imported, or box scores added on past games.
                 </>
               ) : (
                 "Competitive lineups use GameChanger stats, which coaches and managers import."
@@ -473,6 +514,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
                             violations,
                             plan,
                             importedOn,
+                            statsFrom,
                           )
                         : explainLineup(data.players, lineup, config, history, violations)
                     }
@@ -497,6 +539,18 @@ export function GameScreen({ gameId }: { gameId: string }) {
           onChange={(battingOrder) => change({ ...lineup, battingOrder })}
           onSetBatting={(playerId, bats) => change(setBatting(lineup, playerId, bats))}
           readOnly={lineupLocked}
+          marks={
+            plan
+              ? new Map(
+                  [...plan.form].map(([id, f]) => [
+                    id,
+                    f.trend === "hot"
+                      ? { icon: "🔥", label: "Hot lately" }
+                      : { icon: "🧊", label: "Cold lately" },
+                  ]),
+                )
+              : undefined
+          }
         />
       )}
 

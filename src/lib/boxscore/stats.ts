@@ -50,6 +50,10 @@ export interface KidGame {
   pitching: GamePitching | null;
   errors: number;
   positions: string[];
+  /** A coach's typed pitch count only: no batting line, so it isn't a game batted. */
+  pitchOnly?: boolean;
+  /** "coach": from the team's box score; "parent": a parent's own import (no longer offered). */
+  source?: "coach" | "parent";
 }
 
 /** Innings for youth ERA: most youth games are 6. */
@@ -117,7 +121,9 @@ export interface SeasonTotals {
 const div = (a: number, b: number) => (b > 0 ? a / b : null);
 
 /** Season totals and rates from a kid's game lines. */
-export function seasonTotals(games: KidGame[]): SeasonTotals {
+export function seasonTotals(all: KidGame[]): SeasonTotals {
+  // Typed pitch counts add pitches, not games batted.
+  const games = all.filter((g) => !g.pitchOnly);
   const b = Object.fromEntries(BATTING_KEYS.map((k) => [k, 0])) as GameBatting;
   for (const g of games) for (const k of BATTING_KEYS) b[k] += g.batting[k];
   const singles = Math.max(0, b.h - b.doubles - b.triples - b.hr);
@@ -127,7 +133,7 @@ export function seasonTotals(games: KidGame[]): SeasonTotals {
   const obp = div(b.h + b.bb + b.hbp, b.ab + b.bb + b.hbp + b.sf);
   const slg = div(tb, b.ab);
 
-  const pitched = games.filter((g) => g.pitching);
+  const pitched = all.filter((g) => g.pitching);
   let pitching: SeasonTotals["pitching"] = null;
   if (pitched.length) {
     const p = Object.fromEntries(PITCHING_KEYS.map((k) => [k, 0])) as GamePitching;

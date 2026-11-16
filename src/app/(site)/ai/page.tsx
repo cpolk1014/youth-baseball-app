@@ -134,16 +134,20 @@ export default function AiPage() {
 
           <FeatureRow
             flip
-            label={<Ai>Box score reader · for parents</Ai>}
-            title="Your player's stats, from one upload."
+            label={<Ai>Box score reader · for coaches</Ai>}
+            title="One upload. Everyone's stats and pitch counts."
             visual={<PlayerStatsScreen />}
           >
             <p>
-              Parents upload a GameChanger box score after the game. AI finds{" "}
-              <b className="text-[#1B2A4A]">their player&apos;s line and only theirs</b>, matched by
-              jersey number and name. Season totals and trends add up, private to the family.
+              After the game, the coach uploads GameChanger&apos;s box score. AI reads{" "}
+              <b className="text-[#1B2A4A]">every kid&apos;s line</b>, matched to the roster by
+              jersey number and name. Competitive lineups get game-by-game numbers (and spot
+              who&apos;s hot), and each family sees only their own kid&apos;s line and pitch count.
             </p>
-            <p className="text-base text-slate-500">Player stats add-on, $10 a season.</p>
+            <p className="text-base text-slate-500">
+              Part of the team&apos;s season. Families get their kid&apos;s line with the Player
+              pass.
+            </p>
           </FeatureRow>
 
           <div className="mx-auto max-w-2xl rounded-3xl bg-slate-50 p-8 text-center">
@@ -171,8 +175,8 @@ export default function AiPage() {
             </Check>
             <Check>
               <b className="text-[#1B2A4A]">Only what&apos;s needed.</b> Practice plans never send
-              player names. A box score is read only for your own child&apos;s line, and the file
-              isn&apos;t kept.
+              player names. A box score is read for your own team only, each family sees only their
+              own kid&apos;s line, and the file isn&apos;t kept.
             </Check>
             <Check>
               <b className="text-[#1B2A4A]">Kid-safe by design:</b> original, clean lyrics, and no

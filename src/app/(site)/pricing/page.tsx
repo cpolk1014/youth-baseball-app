@@ -32,7 +32,7 @@ const FAQ: [string, React.ReactNode][] = [
   ],
   [
     "What's a season?",
-    "August 1 to July 31, for teams, clubs and Player stats alike. Paid features keep working for 5 days after July 31 while you renew.",
+    "August 1 to July 31, for teams, clubs and the Player pass alike. Paid features keep working for 5 days after July 31 while you renew.",
   ],
   [
     "Joining mid-season?",
@@ -40,7 +40,7 @@ const FAQ: [string, React.ReactNode][] = [
   ],
   [
     "Do parents have to pay?",
-    "No. Parents use RallyCap free with your team. Player stats is an optional add-on for their own child.",
+    "No. Parents use RallyCap free with your team. The Player pass (highlight reels, pitch count and stats) is an optional add-on for their own child.",
   ],
   [
     "What happens after the free trial?",
@@ -50,8 +50,8 @@ const FAQ: [string, React.ReactNode][] = [
   [
     "Is my kids' information safe with AI?",
     <>
-      AI only sees what a feature needs. Practice plans get no player names, and box scores are read
-      only for your own child.{" "}
+      AI only sees what a feature needs. Practice plans get no player names, and each family sees
+      only their own child&apos;s box score line.{" "}
       <Link href="/privacy" className={link}>
         Read our Privacy Policy
       </Link>
@@ -77,16 +77,17 @@ export default function PricingPage() {
               Add-on for parents
             </p>
             <h2 className="mt-2 text-2xl font-black text-[#1B2A4A]">
-              Player stats: $10 a season <Ai />
+              The Player pass: $10 a season <Ai />
             </h2>
             <p className="mt-2 max-w-2xl text-slate-600">
-              AI reads your player&apos;s GameChanger box scores. Season totals and trends, private
-              to your family, and they follow your player to every team. Plus Pine Tar Productions:
-              highlight reels with a stadium announcer and slow-mo. $5 for each additional child.
+              Pine Tar Productions: highlight reels with a stadium announcer and slow-mo. A pitch
+              count that follows your player to every team, lesson and bullpen, with Pitch Smart
+              rest days. And their stats from the coaches&apos; box scores, season after season. $5
+              for each additional child.
             </p>
           </div>
           <Cta href="/parents" variant="outline" size="md">
-            See Player stats
+            See the Player pass
           </Cta>
         </div>
         <LowRisk />

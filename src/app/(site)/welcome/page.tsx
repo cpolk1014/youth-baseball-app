@@ -3,12 +3,15 @@ import Link from "next/link";
 import {
   AiPracticeScreen,
   AiScheduleScreen,
+  PineTarScreen,
+  PitchCounterScreen,
   TournamentScreen,
   TypedRuleScreen,
   WalkupScreen,
 } from "@/components/site/mocks";
 import {
   Ai,
+  Check,
   CLUB_HREF,
   Cta,
   Eyebrow,
@@ -297,6 +300,42 @@ export default function HomePage() {
         </ol>
         <div className="mt-10 text-center">
           <Cta />
+        </div>
+      </Section>
+
+      {/* For parents: what families get (and pay for). */}
+      <Section>
+        <div className="grid items-center gap-10 md:grid-cols-[1.2fr_1fr]">
+          <div>
+            <Eyebrow>For parents</Eyebrow>
+            <h2 className="text-3xl leading-tight font-black tracking-tight text-balance text-[#1B2A4A] md:text-5xl">
+              Highlight reels that look like TV. A pitch count that follows their arm.
+            </h2>
+            <ul className="mt-6 flex flex-col gap-3 text-lg text-slate-700">
+              <Check>
+                <b className="text-[#1B2A4A]">Pine Tar Productions:</b> the clip from the fence
+                becomes a highlight with their name on screen and a stadium announcer.
+              </Check>
+              <Check>
+                <b className="text-[#1B2A4A]">Pitch count:</b> every game, bullpen and lesson, on
+                every team, and Pitch Smart rest days. The coach&apos;s count lands for the parent
+                to approve.
+              </Check>
+            </ul>
+            <div className="mt-8">
+              <Cta href="/parents" variant="outline">
+                See what parents get
+              </Cta>
+            </div>
+          </div>
+          <div className="relative mx-auto w-full max-w-[420px]">
+            <div className="w-[72%] -rotate-3">
+              <PineTarScreen />
+            </div>
+            <div className="absolute top-[18%] right-0 w-[64%] rotate-3">
+              <PitchCounterScreen />
+            </div>
+          </div>
         </div>
       </Section>
 

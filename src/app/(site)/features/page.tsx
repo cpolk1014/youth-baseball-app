@@ -27,7 +27,7 @@ const AI_TOOLS = [
   "Rules in plain English",
   "AI walk-up songs, lyrics and announcer",
   "AI uniform flyer reader",
-  "AI box score reader for parents' Player stats",
+  "AI box score reader: every kid's line and pitch count from one upload",
 ];
 
 const GROUPS: { icon: string; title: string; items: [string, string][] }[] = [

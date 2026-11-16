@@ -113,7 +113,7 @@ export function useMyKids(): MyKid[] | null {
 }
 
 /**
- * My profile: buy player stats (box score imports and trends) for a number of
+ * My profile: buy the Player pass (Pine Tar, pitch count, stats) for a number of
  * kids, $10 for the first and $5 each after, for the season (through July 31; prorated once
  * it has started).
  */
@@ -176,9 +176,10 @@ export function BuyPlayerStats({
   return (
     <div className="flex flex-col gap-4">
       <p className="text-base text-slate-700">
-        Import each game&apos;s GameChanger box score and watch your player&apos;s AVG, OBP, OPS and
-        pitching add up, with charts of how they trend. Stays with your player on every team. Runs
-        through July 31, like the team&apos;s season.
+        Pine Tar Productions highlight reels, a pitch count that follows your player to every team,
+        lesson and bullpen (with Pitch Smart rest days), and their stats from the coaches&apos; box
+        scores. Stays with your player on every team. Runs through July 31, like the team&apos;s
+        season.
       </p>
       {covered.length > 0 && (
         <ul className="flex flex-col gap-1 rounded-xl bg-green-50 p-3 text-base text-green-950">
@@ -284,8 +285,8 @@ export function BuyPlayerStats({
         {busy ? "Opening checkout…" : `Buy for ${dollars(q.cents)}`}
       </button>
       <p className="text-sm text-slate-600">
-        Just for you. Another parent who wants the stats gets their own. Payment is by Stripe;
-        RallyCap never sees your card.
+        Just for you. Another parent who wants it gets their own. Payment is by Stripe; RallyCap
+        never sees your card.
       </p>
     </div>
   );

@@ -67,8 +67,8 @@ export function ImportStats({
       <p className="text-base text-slate-700">
         Use GameChanger&apos;s team stats export (a .csv file with Batting, Pitching and Fielding).{" "}
         {replacing
-          ? `This replaces the stats imported ${replacing}.`
-          : "Each import replaces the last one."}
+          ? `This becomes the stats shown here (last imported ${replacing}). Earlier imports are kept for hot and cold streaks.`
+          : "Import once a week: earlier imports are kept for hot and cold streaks."}
       </p>
 
       <label className="flex h-14 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-slate-400 bg-white text-lg font-bold text-slate-800 active:bg-slate-100">
@@ -157,7 +157,7 @@ export function ImportStats({
           disabled={!file || doubled || busy}
           className="h-14 flex-[2] rounded-xl bg-[var(--team)] text-lg font-bold text-white disabled:opacity-40"
         >
-          {busy ? "Saving…" : replacing ? "Replace stats" : "Import stats"}
+          {busy ? "Saving…" : "Import stats"}
         </button>
       </div>
     </div>

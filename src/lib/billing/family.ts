@@ -1,6 +1,6 @@
-// Player stats (box score imports and trends): a parent's own purchase on My
-// profile, for a number of their kids, for one year from the day they buy. Not part of a
-// team pass or club code; another parent who wants the stats buys their own.
+// The Player pass (Pine Tar highlight reels, pitch count, stats from the coaches' box
+// scores): a parent's own purchase on My profile, for a number of their kids, for the
+// season. Not part of a team pass or club code; another parent who wants it buys their own.
 
 export const FIRST_KID_CENTS = 1000;
 export const MORE_KID_CENTS = 500;

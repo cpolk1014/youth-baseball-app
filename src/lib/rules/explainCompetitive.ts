@@ -24,6 +24,12 @@ const inn = (x: number) => {
   return `${whole}${third === 1 ? "⅓" : third === 2 ? "⅔" : ""}`;
 };
 const nth = (n: number) => ordinal(n);
+const shortDate = (iso: string) =>
+  new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 
 /**
  * Explain a competitive lineup. Without a plan (people who can't see stats, like parents)
@@ -36,6 +42,8 @@ export function explainCompetitive(
   violations: Violation[],
   plan: CompetitivePlan | null,
   importedOn: string | null,
+  /** Where the stats came from when it isn't a GameChanger import ("the team's box scores"). */
+  statsFrom?: string,
 ): LineupExplanation {
   const absentIds = new Set(lineup.absent ?? []);
   const players = roster.filter((p) => p.active !== false && !absentIds.has(p.id));
@@ -57,13 +65,14 @@ export function explainCompetitive(
     (v) => `${v.severity === "block" ? "Must fix: " : ""}${v.message}`,
   );
   const intro = [
-    `Competitive lineup: built to win from GameChanger stats${importedOn ? ` (imported ${importedOn})` : ""}.`,
+    `Competitive lineup: built to win from ${statsFrom ?? `GameChanger stats${importedOn ? ` (imported ${importedOn})` : ""}`}.`,
     "Must rules still apply. Warn rules were set aside, so anything they flag is listed under trade-offs.",
   ];
   if (plan) {
     intro.push(
       "Batting: best on-base % lead off and bat 2nd, the best overall hitter (OPS) 3rd, the most power (SLG) 4th, then by OPS. Fielding: kids play where they've played most and fielded best; the strongest pitcher by WHIP starts. The weakest by stats sit first.",
       `Small samples are pulled toward the team average, and kids with under ${MIN_PA} plate appearances or ${MIN_IP} innings pitched rank after the rest.`,
+      "Recent form counts a little: a kid hitting well above their season over the last two weeks moves up a spot or two, and one in a slump moves down.",
     );
   }
 
@@ -139,6 +148,25 @@ export function explainCompetitive(
       reasons.push(`Bats ${nth(spot)}: most power left (${rate(line.slg!)} SLG)${small}.`);
     } else {
       reasons.push(`Bats ${nth(spot)}: ${rate(line.ops)} OPS${small}.`);
+    }
+
+    // Hot or cold lately.
+    const f = plan.form.get(p.id);
+    if (f && line) {
+      const r = f.recent;
+      const span =
+        r.games !== null
+          ? `the last ${r.games} game${r.games === 1 ? "" : "s"}`
+          : `since ${shortDate(r.from)}`;
+      const hits =
+        r.ab > 0
+          ? `${r.h} for ${r.ab}${r.avg !== null ? ` (${rate(r.avg)})` : ""}`
+          : `${r.pa} plate appearances`;
+      reasons.push(
+        f.trend === "hot"
+          ? `🔥 Hot lately: ${hits} over ${span}, ${rate(r.ops!)} OPS against ${rate(line.ops!)} for the season, so they move up a little.`
+          : `🧊 Cold lately: ${hits} over ${span}, ${rate(r.ops!)} OPS against ${rate(line.ops!)} for the season, so they move down a little.`,
+      );
     }
 
     // Positions.

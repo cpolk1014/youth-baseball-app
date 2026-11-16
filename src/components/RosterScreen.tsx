@@ -202,7 +202,7 @@ export function RosterScreen() {
       {!canEdit && myKids.size > 0 && (
         <p className="mb-3 flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-base text-slate-700">
           <SwingingBat />
-          Tap your player to see their stats and upload box scores.
+          Tap your player for their pitch count, highlight reels and stats.
         </p>
       )}
 
