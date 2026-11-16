@@ -11,10 +11,20 @@ const EMBED_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY ?? "";
 
 /**
  * Where a game (or practice) is: location and field, the address, a map, and "Open in…" for
- * this device. `bare` leaves off the card and heading, to sit inside another card.
+ * this device. `bare` leaves off the card and heading, to sit inside another card; `compact`
+ * keeps the heading but tucks the map behind a button (the coach's game page).
  */
-export function GamePlaceCard({ game, bare = false }: { game: PlaceFields; bare?: boolean }) {
+export function GamePlaceCard({
+  game,
+  bare = false,
+  compact = false,
+}: {
+  game: PlaceFields;
+  bare?: boolean;
+  compact?: boolean;
+}) {
   const [links, setLinks] = useState<{ app: string; href: string }[]>([]);
+  const [mapOpen, setMapOpen] = useState(false);
   const [online, setOnline] = useState(true);
   const place: GamePlace = {
     name: game.location ?? "",
@@ -42,6 +52,54 @@ export function GamePlaceCard({ game, bare = false }: { game: PlaceFields; bare?
       ? `${place.lat},${place.lng}`
       : place.address;
   const showMap = !!EMBED_KEY && !!mapQuery && online;
+
+  if (compact) {
+    return (
+      <div>
+        <h2 className="text-sm font-bold tracking-wide text-slate-600 uppercase">Where</h2>
+        <p className="text-lg leading-snug font-bold">{game.location || game.field}</p>
+        {game.location && game.field && <p className="text-base font-semibold">{game.field}</p>}
+        {place.address && <p className="text-sm text-slate-600">{place.address}</p>}
+        {((place.name && links.length > 0) || showMap) && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {place.name &&
+              links.map((l) => (
+                <a
+                  key={l.app}
+                  href={l.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Open in ${l.app}`}
+                  title={`Open in ${l.app}`}
+                  className="flex size-11 items-center justify-center rounded-xl border-2 border-slate-200 bg-white active:bg-slate-100"
+                >
+                  <MapAppIcon app={l.app} />
+                </a>
+              ))}
+            {showMap && (
+              <button
+                onClick={() => setMapOpen(!mapOpen)}
+                aria-expanded={mapOpen}
+                className="h-11 rounded-xl border-2 border-slate-200 px-3 text-sm font-bold text-slate-700 active:bg-slate-100"
+              >
+                {mapOpen ? "Hide map" : "Show map"}
+              </button>
+            )}
+          </div>
+        )}
+        {showMap && mapOpen && (
+          <iframe
+            title={`Map of ${game.location}`}
+            src={`https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(EMBED_KEY)}&q=${encodeURIComponent(mapQuery!)}`}
+            className="mt-2 block h-48 w-full rounded-lg border-0"
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <section

@@ -14,10 +14,13 @@ export function GameUniformCard({
   game,
   combos,
   canEdit,
+  compact = false,
 }: {
   game: Game;
   combos: UniformCombo[];
   canEdit: boolean;
+  /** Inside the game page's Game day card: no card of its own. */
+  compact?: boolean;
 }) {
   const [picking, setPicking] = useState<"list" | "custom" | null>(null);
   const shown = gameUniformShown(game.uniform, combos);
@@ -30,7 +33,7 @@ export function GameUniformCard({
   };
 
   return (
-    <section className="mb-4 rounded-xl border-2 border-slate-200 bg-white p-3">
+    <section className={compact ? "" : "mb-4 rounded-xl border-2 border-slate-200 bg-white p-3"}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-sm font-bold tracking-wide text-slate-600 uppercase">Uniform</h2>

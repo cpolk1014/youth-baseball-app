@@ -50,6 +50,7 @@ import { ViolationList } from "./ViolationList";
 import { GamePlaceCard } from "./GamePlaceCard";
 import { TournamentTag } from "./tournaments/TournamentTag";
 import { GameUniformCard } from "./uniforms/GameUniformCard";
+import { gameUniformShown } from "@/lib/uniforms";
 import { WhyLineup } from "./WhyLineup";
 
 type View = "field" | "batting" | "attendance";
@@ -190,6 +191,17 @@ export function GameScreen({ gameId }: { gameId: string }) {
   const result = gameResult(game);
   const arrival = arriveBy(game, data.team.gameDay ? data.team.gameDay.arriveMinutes : 60);
 
+  // The game's day has passed (local date): time to mark it final.
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const played = !isFinal && game.date < todayIso;
+  const showArrival = !isFinal && !!arrival;
+  const hasPlace = !!placeLabel(game);
+  const showUniform = perms.editTeam || !!gameUniformShown(game.uniform, data.uniforms);
+  // Parts of the Game day card: a line between them (beside each other on wide screens).
+  const infoPart =
+    "border-slate-100 [&:not(:first-child)]:border-t-2 [&:not(:first-child)]:pt-3 md:[&:not(:first-child)]:border-t-0 md:[&:not(:first-child)]:border-l-2 md:[&:not(:first-child)]:pt-0 md:[&:not(:first-child)]:pl-5";
+
   // Parents: uniform, where to go and their kid's box score; no lineup.
   if (data.me.role === "parent") return <ParentGame data={data} game={game} arrival={arrival} />;
 
@@ -246,47 +258,52 @@ export function GameScreen({ gameId }: { gameId: string }) {
           View only · you&apos;re on this team as a {ROLE_LABEL[data.me.role].toLowerCase()}.
         </p>
       ) : (
-        <div className="mb-4 grid grid-cols-2 gap-2">
-          <button
-            onClick={() => setEditing(true)}
-            className="h-12 rounded-xl border-2 border-slate-400 bg-white text-base font-bold active:bg-slate-100"
-          >
-            Edit game
-          </button>
-          <button
-            onClick={markFinal}
-            className="h-12 rounded-xl border-2 border-slate-700 bg-white text-base font-bold active:bg-slate-100"
-          >
-            Mark final
-          </button>
-          {lineup.battingOrder.length > 0 && (
+        played && (
+          // The game's over but not marked final yet: ask right at the top.
+          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border-2 border-slate-700 bg-white p-3">
+            <p className="min-w-0 flex-1 text-base font-semibold">
+              Game over? Mark it final so it counts toward playing time.
+            </p>
             <button
-              onClick={() => setSharing(true)}
-              className="col-span-2 h-12 rounded-xl border-2 border-[var(--team)] bg-white text-base font-bold text-[var(--team)] active:bg-slate-100"
+              onClick={markFinal}
+              className="h-11 shrink-0 rounded-lg bg-slate-800 px-4 text-base font-bold text-white active:bg-slate-900"
             >
-              Share batting order picture
+              Mark final
             </button>
-          )}
-          {data.groupme && lineup.battingOrder.length > 0 && (
-            <button
-              onClick={() => setPosting(true)}
-              className="col-span-2 h-12 rounded-xl bg-[#00aff0] text-base font-bold text-white active:bg-[#0096cc]"
-            >
-              Post batting order to GroupMe
-            </button>
-          )}
-        </div>
-      )}
-
-      {!isFinal && arrival && (
-        <p className="mb-3 rounded-xl bg-white px-3 py-2 text-lg font-bold">Arrive by {arrival}</p>
+          </div>
+        )
       )}
 
       <TournamentTag gameId={game.id} />
 
-      <GamePlaceCard game={game} />
-
-      <GameUniformCard game={game} combos={data.uniforms} canEdit={perms.editTeam} />
+      {/* Game day: when to be there, where, and what to wear, in one card. */}
+      {(showArrival || hasPlace || showUniform) && (
+        <section className="mb-4 flex flex-col gap-3 rounded-xl border-2 border-slate-200 bg-white p-3 md:flex-row md:gap-5">
+          {showArrival && (
+            <div className={infoPart}>
+              <h2 className="text-sm font-bold tracking-wide text-slate-600 uppercase">
+                Arrive by
+              </h2>
+              <p className="text-2xl font-black whitespace-nowrap">{arrival}</p>
+            </div>
+          )}
+          {hasPlace && (
+            <div className={`${infoPart} md:flex-1`}>
+              <GamePlaceCard game={game} compact />
+            </div>
+          )}
+          {showUniform && (
+            <div className={`${infoPart} md:flex-1`}>
+              <GameUniformCard
+                game={game}
+                combos={data.uniforms}
+                canEdit={perms.editTeam}
+                compact
+              />
+            </div>
+          )}
+        </section>
+      )}
 
       <div
         role="tablist"
@@ -312,11 +329,12 @@ export function GameScreen({ gameId }: { gameId: string }) {
       {view === "field" ? (
         <>
           {!lineupLocked && (
-            <div className="mb-3">
+            <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center">
+              {/* How auto-fill builds it: a small switch, not two big cards. */}
               <div
                 role="radiogroup"
                 aria-label="How auto-fill builds the lineup"
-                className="grid grid-cols-2 gap-2"
+                className="grid shrink-0 grid-cols-2 rounded-xl border-2 border-slate-300 bg-white p-1 md:w-72"
               >
                 {(["fair", "competitive"] as const).map((s) => (
                   <button
@@ -326,62 +344,58 @@ export function GameScreen({ gameId }: { gameId: string }) {
                     disabled={
                       s === "competitive" && (!hasStats || !paid) && style !== "competitive"
                     }
+                    title={s === "fair" ? "Everyone plays evenly" : "From GameChanger stats"}
                     onClick={() => setLineupStyle(game.id, s)}
-                    className={`min-h-12 rounded-xl px-2 py-1 text-base font-bold disabled:opacity-40 ${
-                      style === s
-                        ? "bg-[var(--team)] text-white"
-                        : "border-2 border-slate-300 bg-white text-slate-800 active:bg-slate-100"
+                    className={`h-10 rounded-lg text-base font-bold disabled:opacity-40 ${
+                      style === s ? "bg-[var(--team)] text-white" : "text-slate-800"
                     }`}
                   >
                     {s === "fair" ? "Fair play" : paid ? "Competitive" : "🔒 Competitive"}
-                    <span className="block text-xs font-semibold opacity-80">
-                      {s === "fair" ? "Everyone plays evenly" : "From GameChanger stats"}
-                    </span>
                   </button>
                 ))}
               </div>
-              {!hasStats && !stats.loading && (
-                <p className="mt-2 text-sm text-slate-700">
-                  {seesStats ? (
-                    <>
-                      To build a competitive lineup,{" "}
-                      <Link href="/stats" className="font-semibold underline">
-                        import GameChanger stats
-                      </Link>{" "}
-                      first.
-                    </>
-                  ) : (
-                    "Competitive lineups use GameChanger stats, which coaches and managers import."
-                  )}
-                </p>
-              )}
+              <div className="flex flex-1 gap-2">
+                <button
+                  onClick={autoFill}
+                  disabled={style === "competitive" && !plan}
+                  className="h-12 flex-1 rounded-xl bg-green-700 text-lg font-bold text-white active:bg-green-800 disabled:opacity-40"
+                >
+                  {lineup.slots.length ? "Auto-fill again" : "Auto-fill"}
+                </button>
+                <button
+                  onClick={() => {
+                    undoLast();
+                  }}
+                  disabled={!undo}
+                  className="h-12 w-20 rounded-xl border-2 border-slate-400 bg-white text-base font-bold disabled:opacity-40"
+                >
+                  Undo
+                </button>
+                <button
+                  onClick={() => change({ ...lineup, slots: [] })}
+                  disabled={lineup.slots.length === 0}
+                  className="h-12 w-20 rounded-xl border-2 border-slate-400 bg-white text-base font-bold disabled:opacity-40"
+                >
+                  Clear
+                </button>
+              </div>
             </div>
           )}
-          <div className={`mb-3 flex gap-2 ${lineupLocked ? "hidden" : ""}`}>
-            <button
-              onClick={autoFill}
-              disabled={style === "competitive" && !plan}
-              className="h-14 flex-1 rounded-xl bg-green-700 text-lg font-bold text-white active:bg-green-800 disabled:opacity-40"
-            >
-              {lineup.slots.length ? "Auto-fill again" : "Auto-fill"}
-            </button>
-            <button
-              onClick={() => {
-                undoLast();
-              }}
-              disabled={!undo}
-              className="h-14 w-20 rounded-xl border-2 border-slate-400 bg-white text-base font-bold disabled:opacity-40"
-            >
-              Undo
-            </button>
-            <button
-              onClick={() => change({ ...lineup, slots: [] })}
-              disabled={lineup.slots.length === 0}
-              className="h-14 w-20 rounded-xl border-2 border-slate-400 bg-white text-base font-bold disabled:opacity-40"
-            >
-              Clear
-            </button>
-          </div>
+          {!lineupLocked && !hasStats && !stats.loading && style === "fair" && (
+            <p className="-mt-1 mb-3 text-sm text-slate-600">
+              {seesStats ? (
+                <>
+                  Competitive lineups need{" "}
+                  <Link href="/stats" className="font-semibold underline">
+                    GameChanger stats
+                  </Link>{" "}
+                  imported first.
+                </>
+              ) : (
+                "Competitive lineups use GameChanger stats, which coaches and managers import."
+              )}
+            </p>
+          )}
 
           {absentNames.length > 0 && (
             <p className="mb-3 rounded-xl bg-slate-200 px-3 py-2 text-base">
@@ -484,6 +498,47 @@ export function GameScreen({ gameId }: { gameId: string }) {
           onSetBatting={(playerId, bats) => change(setBatting(lineup, playerId, bats))}
           readOnly={lineupLocked}
         />
+      )}
+
+      {perms.editTeam && !isFinal && lineup.battingOrder.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">
+            Share the batting order
+          </h2>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              onClick={() => setSharing(true)}
+              className="h-12 rounded-xl border-2 border-[var(--team)] bg-white text-base font-bold text-[var(--team)] active:bg-slate-100"
+            >
+              Picture
+            </button>
+            {data.groupme && (
+              <button
+                onClick={() => setPosting(true)}
+                className="h-12 rounded-xl bg-[#00aff0] text-base font-bold text-white active:bg-[#0096cc]"
+              >
+                Post to GroupMe
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
+      {perms.editTeam && !isFinal && (
+        <div className="mt-6 grid grid-cols-2 gap-2 border-t-2 border-slate-200 pt-4 sm:flex sm:justify-end">
+          <button
+            onClick={() => setEditing(true)}
+            className="h-12 rounded-xl border-2 border-slate-400 bg-white px-6 text-base font-bold active:bg-slate-100"
+          >
+            Edit game
+          </button>
+          <button
+            onClick={markFinal}
+            className="h-12 rounded-xl border-2 border-slate-700 bg-white px-6 text-base font-bold active:bg-slate-100"
+          >
+            Mark final
+          </button>
+        </div>
       )}
 
       <Sheet
