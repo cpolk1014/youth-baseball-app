@@ -433,19 +433,29 @@ function AddSession({
 }) {
   const [kind, setKind] = useState<SessionKind>("game");
   const [date, setDate] = useState(today);
-  const [gameId, setGameId] = useState<string>("");
+  // Today's game, if there is one, so counting live at the field is one tap.
+  const [gameId, setGameId] = useState<string>(
+    () =>
+      games
+        .filter((g) => g.date === today)
+        .sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""))[0]?.id ?? "",
+  );
   const [label, setLabel] = useState("");
   const [how, setHow] = useState<"live" | "total">("live");
   const [pitches, setPitches] = useState("");
   const [strikes, setStrikes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // The team's games around now, newest first.
-  const nearby = games
-    .filter((g) => g.date <= today && g.date >= `${Number(today.slice(0, 4)) - 1}${today.slice(4)}`)
+  // The player's team's games: played (and today's), newest first, then the ones coming up.
+  const played = games
+    .filter((g) => g.date <= today)
     .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 20);
-  const game = nearby.find((g) => g.id === gameId) ?? null;
+    .slice(0, 30);
+  const upcoming = games
+    .filter((g) => g.date > today)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 30);
+  const game = games.find((g) => g.id === gameId) ?? null;
   const draft = (): NewSession => ({
     kind,
     date: game ? game.date : date,
@@ -487,11 +497,24 @@ function AddSession({
             className={`${input} mt-1`}
           >
             <option value="">Another game (type it below)</option>
-            {nearby.map((g) => (
-              <option key={g.id} value={g.id}>
-                vs {g.opponent} · {formatGameDate(g)}
-              </option>
-            ))}
+            {played.length > 0 && (
+              <optgroup label="Played">
+                {played.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    vs {g.opponent} · {formatGameDate(g)}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {upcoming.length > 0 && (
+              <optgroup label="Coming up">
+                {upcoming.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    vs {g.opponent} · {formatGameDate(g)}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </label>
       )}
