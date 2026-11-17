@@ -151,6 +151,9 @@ export function planRequestText(input: {
   return lines.join("\n");
 }
 
+/** The longest a drill's how-to notes can be. */
+export const DRILL_NOTES_MAX = 2000;
+
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 /**
@@ -184,7 +187,8 @@ export function cleanPlan(
       if (!title || !Number.isFinite(asked) || asked < 1 || left <= 0) continue;
       const minutes = Math.min(asked, 60, left);
       left -= minutes;
-      const notes = str(drill.notes, 400);
+      // A drill's how-to can run long (station rotations, games, scoring): keep it whole.
+      const notes = str(drill.notes, DRILL_NOTES_MAX);
       plan.push({ id: makeId(), title, minutes, ...(notes ? { notes } : {}) });
     }
     const focus = (PRACTICE_FOCUSES as readonly string[]).includes(x.focus as string)

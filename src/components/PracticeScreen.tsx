@@ -61,6 +61,14 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
       subtitle={placeLabel(practice) ?? "Practice"}
       backHref="/practices"
       tab="practice"
+      action={
+        <Link
+          href={`/practices/${practice.id}/print`}
+          className="flex h-11 shrink-0 items-center rounded-lg bg-white px-3 text-base font-bold text-[var(--team)] active:bg-slate-200"
+        >
+          Print
+        </Link>
+      }
     >
       {practice.canceled && (
         <p className="mb-3 rounded-xl bg-red-700 p-3 text-base font-bold text-white">
@@ -115,7 +123,9 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-lg leading-snug font-semibold">{item.title}</p>
-                    {item.notes && <p className="text-sm text-slate-600">{item.notes}</p>}
+                    {item.notes && (
+                      <p className="text-sm whitespace-pre-line text-slate-600">{item.notes}</p>
+                    )}
                   </div>
                   {!canEdit && (
                     <span className="shrink-0 text-base font-bold">{item.minutes} min</span>

@@ -129,6 +129,29 @@ describe("cleanPlan", () => {
     expect(plan.practices[0]!.plan[0]!.notes).toBe("Jog and stretch");
   });
 
+  it("keeps a long drill how-to whole", () => {
+    const long = "ROTATION SETUP (read first): split into Red and Blue. ".repeat(14).trim();
+    expect(long.length).toBeGreaterThan(400);
+    const plan = cleanPlan(
+      {
+        practices: [
+          {
+            id: "p1",
+            focus: "Hitting",
+            theme: "",
+            coach_note: "",
+            play_ids: [],
+            drills: [{ title: "Station 1", minutes: 18, notes: long }],
+          },
+        ],
+      },
+      practices,
+      plays,
+      makeId,
+    );
+    expect(plan.practices[0]!.plan[0]!.notes).toBe(long);
+  });
+
   it("survives a reply with nothing in it", () => {
     expect(cleanPlan(null, practices, plays)).toEqual({ seasonNotes: "", practices: [] });
   });
