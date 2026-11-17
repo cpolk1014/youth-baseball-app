@@ -9,6 +9,8 @@ import { validateLineup } from "@/lib/rules/validate";
 import { AppShell, Loading } from "./AppShell";
 import { LineupCardPage, type CardSize } from "./LineupCard";
 import { logoUrl } from "@/lib/branding/logo";
+import { RALLY_LOGO, loadPdfImage } from "@/lib/print/phone";
+import { PrintButton } from "./PrintButton";
 
 const PAGE_WIDTH_PX = 816; // 8.5in at 96dpi
 
@@ -100,12 +102,17 @@ export function LineupCardScreen({ gameId }: { gameId: string }) {
           </p>
         )}
 
-        <button
-          onClick={() => window.print()}
-          className="h-14 rounded-xl bg-green-700 text-lg font-bold text-white active:bg-green-800"
-        >
-          Print
-        </button>
+        <PrintButton
+          name={`${data.team.name} lineup vs ${game.opponent}`}
+          makePdf={async () => {
+            const [{ lineupCardPdf }, teamLogo, rallyLogo] = await Promise.all([
+              import("@/lib/print/lineupPdf"),
+              loadPdfImage(header.logoUrl),
+              loadPdfImage(RALLY_LOGO),
+            ]);
+            return lineupCardPdf(size, { ...header, teamLogo, rallyLogo }, card).blob();
+          }}
+        />
         <p className="text-sm text-slate-600">
           {size === "half"
             ? "Prints two copies on one letter page. Cut on the dashed line: one for the umpire, one for the dugout."

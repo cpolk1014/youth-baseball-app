@@ -8,6 +8,8 @@ import { formatPracticeWhen } from "@/lib/practice/format";
 import { practiceMonths, type PrintRange } from "@/lib/practice/print";
 import { planMinutes } from "@/lib/practice/schedule";
 import { useState } from "react";
+import { RALLY_LOGO, loadPdfImage, teamColor } from "@/lib/print/phone";
+import { PrintButton } from "./PrintButton";
 import { AppShell, Loading } from "./AppShell";
 
 // Letter paper with half-inch margins; the page flows onto as many sheets as it needs.
@@ -77,13 +79,24 @@ export function PracticeScheduleScreen() {
           />
           Include drills and plays
         </label>
-        <button
-          onClick={() => window.print()}
-          disabled={count === 0}
-          className="h-12 rounded-xl bg-green-700 px-6 text-lg font-bold text-white active:bg-green-800 disabled:opacity-40 md:ml-auto"
-        >
-          Print
-        </button>
+        <div className="md:ml-auto">
+          <PrintButton
+            name={`${data.team.name} practice schedule`}
+            disabled={count === 0}
+            makePdf={async () => {
+              const [{ practiceSchedulePdf }, teamLogo, rallyLogo] = await Promise.all([
+                import("@/lib/print/practicePdf"),
+                loadPdfImage(logo),
+                loadPdfImage(RALLY_LOGO),
+              ]);
+              return practiceSchedulePdf(
+                data.practices,
+                { teamName: data.team.name, teamColor: teamColor(), teamLogo, rallyLogo, printed },
+                { seasonName: data.season.name, range, today, withPlans },
+              ).blob();
+            }}
+          />
+        </div>
       </div>
 
       {/* The page: looks like paper on screen, prints as is. */}

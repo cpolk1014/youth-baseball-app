@@ -9,6 +9,8 @@ import { formatPracticeWhen } from "@/lib/practice/format";
 import { drillTimes } from "@/lib/practice/print";
 import { planMinutes } from "@/lib/practice/schedule";
 import { useState } from "react";
+import { RALLY_LOGO, loadPdfImage, teamColor } from "@/lib/print/phone";
+import { PrintButton } from "./PrintButton";
 import { AppShell, Loading } from "./AppShell";
 
 // Letter paper with half-inch margins; long plans flow onto more sheets.
@@ -66,12 +68,32 @@ export function PracticePrintScreen({ practiceId }: { practiceId: string }) {
             Include each position&apos;s job in the plays
           </label>
         )}
-        <button
-          onClick={() => window.print()}
-          className="h-12 rounded-xl bg-green-700 px-6 text-lg font-bold text-white active:bg-green-800 sm:ml-auto"
-        >
-          Print
-        </button>
+        <div className="sm:ml-auto">
+          <PrintButton
+            name={`${data.team.name} practice ${practice.date}`}
+            makePdf={async () => {
+              const [{ practicePlanPdf }, teamLogo, rallyLogo] = await Promise.all([
+                import("@/lib/print/practicePdf"),
+                loadPdfImage(logo),
+                loadPdfImage(RALLY_LOGO),
+              ]);
+              return practicePlanPdf(
+                practice,
+                {
+                  teamName: data.team.name,
+                  teamColor: teamColor(),
+                  teamLogo,
+                  rallyLogo,
+                  printed: new Date().toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  }),
+                },
+                withPlays,
+              ).blob();
+            }}
+          />
+        </div>
       </div>
 
       <article className="mx-auto w-full max-w-[8.5in] bg-white p-5 text-slate-900 shadow-lg ring-1 ring-slate-300 sm:p-10 print:max-w-none print:p-0 print:shadow-none print:ring-0">
