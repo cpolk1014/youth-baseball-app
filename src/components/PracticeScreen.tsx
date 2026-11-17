@@ -15,6 +15,7 @@ import { useClubLibrary } from "./club/useClubLibrary";
 import { PlayPicker } from "./PlayPicker";
 import { PracticeForm } from "./PracticeForms";
 import { GamePlaceCard } from "./GamePlaceCard";
+import { CalendarButton } from "./CalendarButton";
 import { placeLabel, recentPlaces } from "@/lib/data/game";
 import { QuizButton, quizNames } from "./QuizButton";
 import { Sheet } from "./Sheet";
@@ -94,6 +95,16 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
       </section>
 
       <GamePlaceCard game={practice} />
+
+      {!practice.canceled && (
+        <CalendarButton
+          practices={[practice]}
+          teamName={data.team.name}
+          timezone={data.team.gameDay?.timezone}
+          what={`practice ${practice.date}`}
+          className="mb-4"
+        />
+      )}
 
       <section className="mb-4">
         <div className="mb-2 flex items-baseline justify-between">

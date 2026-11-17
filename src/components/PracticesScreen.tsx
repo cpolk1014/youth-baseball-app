@@ -15,6 +15,7 @@ import {
 } from "@/lib/data/store";
 import { clearPlan, hasPlan } from "@/lib/practice/aiPlan";
 import { toast } from "./shell/Toast";
+import { CalendarButton } from "./CalendarButton";
 import type { Practice } from "@/lib/data/types";
 import { formatPracticeWhen } from "@/lib/practice/format";
 import { planMinutes } from "@/lib/practice/schedule";
@@ -125,7 +126,12 @@ export function PracticesScreen() {
       )}
 
       {sorted.length > 0 && (
-        <div className="mb-3 flex justify-end">
+        <div className="mb-3 flex flex-wrap justify-end gap-2">
+          <CalendarButton
+            practices={upcoming}
+            teamName={data.team.name}
+            timezone={data.team.gameDay?.timezone}
+          />
           <Link
             href="/practices/print"
             className="flex h-11 items-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-4 text-base font-bold text-slate-800 active:bg-slate-100"
