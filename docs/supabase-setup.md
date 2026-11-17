@@ -108,3 +108,23 @@ Start the app (`npm run dev`), sign in with your email, and then either:
 
 If sign-in emails fail and nothing shows in Resend's logs, re-enter the SMTP password in
 Supabase (it can be cleared when other SMTP fields are saved).
+
+## Starting a fresh project (live, Nov 2026; also how to make the demo project)
+
+In November 2026 the original project (full of test data) became **`rallycap-dev`**, for
+branch previews and localhost, and live moved to a new, empty project. To build any new
+project the same way:
+
+1. **Make the project** (Pro plan, same region as the others). Keep the Data API on, with new
+   tables exposed automatically. Keep the database password to yourself.
+2. **Build the database:** `supabase/combine.sh <folder>` writes `part1.sql` and `part2.sql`.
+   In the SQL Editor, run part 1, then part 2 (part 1 adds the "owner" role, which Postgres
+   can't use in the same run). Both are tested from empty, each as one transaction.
+3. **Sign-in:** URL Configuration (Site URL and redirect URLs, as in Production setup above),
+   SMTP through Resend, and the Magic Link and Confirm signup templates (step 5).
+4. **Vercel:** set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (the publishable
+   key) and `SUPABASE_SERVICE_ROLE_KEY` (the secret key) for that environment only. Live uses
+   **Production**; `rallycap-dev` is **Preview** and **Development**, and `.env.local`.
+5. **Redeploy** that environment, then sign in and create a team.
+
+Never copy live data into another project: it holds kids' names and parents' phone numbers.
