@@ -23,7 +23,7 @@ type Step =
 const MAX_IMAGE_EDGE = 2000;
 
 /** Shrink big phone photos so the upload stays small; other files pass through. */
-async function prepareFile(file: File): Promise<File> {
+export async function prepareFile(file: File): Promise<File> {
   if (!file.type.startsWith("image/") || file.type === "image/gif") return file;
   try {
     const bitmap = await createImageBitmap(file);

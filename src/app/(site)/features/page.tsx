@@ -22,6 +22,7 @@ export const metadata: Metadata = {
 
 const AI_TOOLS = [
   "AI schedule import: photos, PDFs, spreadsheets",
+  "AI roster import: names, numbers and positions from any list",
   "AI practice plans for your age group",
   "AI tournament reader: event pages, schedules, brackets, tie-breakers and results",
   "Rules in plain English",

@@ -356,7 +356,7 @@ And the tools that run your season:
 
 ### FAQ
 **What does the AI actually do?**
-It reads things so you don't have to type them (schedules, tournament pages and brackets, tie-breaker rules, results, uniform flyers and box scores). It turns rules you type into lineup rules, plans age-appropriate practices, and makes walk-up songs and announcer calls. You check everything before it's saved. [See the AI page](/ai).
+It reads things so you don't have to type them (rosters, schedules, tournament pages and brackets, tie-breaker rules, results, uniform flyers and box scores). It turns rules you type into lineup rules, plans age-appropriate practices, and makes walk-up songs and announcer calls. You check everything before it's saved. [See the AI page](/ai).
 
 **Is the lineup builder AI?**
 It's RallyCap's own smart engine. It follows your fair-play rules exactly, gives the same result every time, and explains every spot. It's free forever.

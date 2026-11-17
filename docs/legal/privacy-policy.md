@@ -63,7 +63,7 @@ Team name, age group, colors and logo; seasons; games and practices (dates, time
 
 ### 3.4 Files and content you upload
 
-- **Images, PDFs and spreadsheets** you upload so RallyCap can read them: schedules, uniform flyers, tournament screenshots, tie-break rules, box scores, and pictures of your team colors. We send these to our AI provider to read them. We don't keep the original file unless the feature says so.
+- **Images, PDFs and spreadsheets** you upload so RallyCap can read them: rosters (only each player's name, number and positions are kept, never other details the file may show), schedules, uniform flyers, tournament screenshots, tie-break rules, box scores, and pictures of your team colors. We send these to our AI provider to read them. We don't keep the original file unless the feature says so.
 - **Files we keep:** team and club logos; expense receipts, which are private to the team; and walk-up songs and team sounds, which are private to the team.
 
 ### 3.5 Payment information

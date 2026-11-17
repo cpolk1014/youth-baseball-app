@@ -29,10 +29,13 @@ import { kidsOf } from "./KidPicker";
 import { Phone, useCanCall } from "./phone";
 import { PlayerForm, Toggle } from "./PlayerForm";
 import { Sheet } from "./Sheet";
+import { ImportRoster } from "./ImportRoster";
+import { PaidGate } from "./paywall";
 
 export function RosterScreen() {
   const data = useAppData();
   const [editing, setEditing] = useState<Player | null>(null);
+  const [importing, setImporting] = useState(false);
   const { mode } = useStoreState();
   const router = useRouter();
   const parentView = data?.me.role === "parent";
@@ -251,13 +254,31 @@ export function RosterScreen() {
       )}
 
       {canEdit && (
-        <button
-          onClick={startAdd}
-          className="mt-4 h-14 w-full rounded-xl border-2 border-dashed border-slate-400 text-lg font-bold text-slate-700 active:bg-slate-100"
-        >
-          + Add player
-        </button>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <button
+            onClick={startAdd}
+            className="h-14 w-full rounded-xl border-2 border-dashed border-slate-400 text-lg font-bold text-slate-700 active:bg-slate-100"
+          >
+            + Add player
+          </button>
+          {mode === "supabase" && (
+            <button
+              onClick={() => setImporting(true)}
+              className="h-14 w-full rounded-xl border-2 border-[var(--team)] bg-white text-lg font-bold text-[var(--team)] active:bg-slate-100"
+            >
+              ✨ Import from a file
+            </button>
+          )}
+        </div>
       )}
+
+      <Sheet open={importing} title="Import a roster" onClose={() => setImporting(false)}>
+        {importing && (
+          <PaidGate feature="Roster import">
+            <ImportRoster data={data} onClose={() => setImporting(false)} />
+          </PaidGate>
+        )}
+      </Sheet>
 
       <Sheet
         open={editing !== null}

@@ -16,7 +16,7 @@ const FAQ: [string, React.ReactNode][] = [
   [
     "What does the AI actually do?",
     <>
-      It reads things so you don&apos;t have to type them (schedules, tournament pages and brackets,
+      It reads things so you don&apos;t have to type them (rosters, schedules, tournament pages and brackets,
       tie-breaker rules, results, uniform flyers and box scores). It turns rules you type into
       lineup rules, plans age-appropriate practices, and makes walk-up songs and announcer calls.
       You check everything before it&apos;s saved.{" "}
