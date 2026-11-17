@@ -43,7 +43,18 @@ export function AiPracticePlan({
 }) {
   const open = upcoming.filter((p) => !p.canceled);
   const empty = open.filter((p) => p.plan.length === 0);
-  const [onlyEmpty, setOnlyEmpty] = useState(empty.length > 0 && empty.length < open.length);
+  // Which practices to plan: the ones without drills when some have them, else all (up to
+  // the most one run can plan). The coach can pick one, some or all.
+  const [picked, setPicked] = useState(
+    () =>
+      new Set(
+        (empty.length > 0 && empty.length < open.length ? empty : open)
+          .slice(0, MAX_PLANNED)
+          .map((p) => p.id),
+      ),
+  );
+  const pickOnly = (list: Practice[]) =>
+    setPicked(new Set(list.slice(0, MAX_PLANNED).map((p) => p.id)));
   // The goals the coach used last time (remembered on this device). The box starts empty
   // with them as grey hint text, so typing or dictating starts fresh; one tap brings
   // them back to edit.
@@ -57,8 +68,8 @@ export function AiPracticePlan({
   const [goals, setGoals] = useState("");
   const [step, setStep] = useState<Step>({ kind: "ask" });
   const [error, setError] = useState<string | null>(null);
-  const chosen = (onlyEmpty ? empty : open).slice(0, MAX_PLANNED);
-  const extra = (onlyEmpty ? empty : open).length - chosen.length;
+  const chosen = open.filter((p) => picked.has(p.id));
+  const full = chosen.length >= MAX_PLANNED;
 
   const plan = async () => {
     if (!goals.trim()) {
@@ -185,34 +196,72 @@ export function AiPracticePlan({
           Clear to start over
         </button>
       )}
-      {empty.length > 0 && empty.length < open.length && (
-        <div role="radiogroup" aria-label="Which practices" className="flex flex-col gap-2">
-          {(
-            [
-              [true, `Only practices without drills yet (${empty.length})`],
-              [false, `All upcoming practices (${open.length}); replaces their drills`],
-            ] as const
-          ).map(([v, label]) => (
-            <label
-              key={String(v)}
-              className={`flex min-h-12 items-center gap-3 rounded-xl border-2 px-3 ${onlyEmpty === v ? "border-[var(--team)]" : "border-slate-200"} bg-white`}
-            >
-              <input
-                type="radio"
-                checked={onlyEmpty === v}
-                onChange={() => setOnlyEmpty(v)}
-                className="size-5 accent-[var(--team)]"
-              />
-              <span className="text-base">{label}</span>
-            </label>
-          ))}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-base font-semibold">
+            Which practices ({chosen.length} of {open.length})
+          </span>
+          <div className="flex flex-wrap gap-1">
+            {(
+              [
+                ["All", open],
+                [`Without drills (${empty.length})`, empty],
+                ["None", []],
+              ] as const
+            ).map(([label, list]) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => pickOnly([...list])}
+                disabled={label.startsWith("Without") && empty.length === 0}
+                className="h-10 rounded-full border-2 border-slate-300 bg-white px-3 text-sm font-bold active:bg-slate-100 disabled:opacity-40"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
-      {extra > 0 && (
-        <p className="text-sm text-slate-600">
-          Plans the next {MAX_PLANNED}; run it again later for the other {extra}.
-        </p>
-      )}
+        <ul className="flex max-h-72 flex-col overflow-y-auto rounded-xl border-2 border-slate-200 bg-white">
+          {open.map((p) => {
+            const on = picked.has(p.id);
+            return (
+              <li key={p.id} className="border-b border-slate-100 last:border-0">
+                <label
+                  className={`flex min-h-12 cursor-pointer items-center gap-3 px-3 py-2 ${!on && full ? "opacity-50" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    disabled={!on && full}
+                    onChange={() =>
+                      setPicked((s) => {
+                        const next = new Set(s);
+                        if (next.has(p.id)) next.delete(p.id);
+                        else next.add(p.id);
+                        return next;
+                      })
+                    }
+                    className="size-5 shrink-0 accent-[var(--team)]"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-base font-semibold">{formatPracticeWhen(p)}</span>
+                    <span className="block text-sm text-slate-600">
+                      {p.plan.length > 0
+                        ? `${p.focus ?? "Planned"} · ${p.plan.length} drills (replaced)`
+                        : "No drills yet"}
+                    </span>
+                  </span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+        {full && (
+          <p className="text-sm text-slate-600">
+            One run plans up to {MAX_PLANNED} practices; run it again for the rest.
+          </p>
+        )}
+      </div>
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">
           {error}

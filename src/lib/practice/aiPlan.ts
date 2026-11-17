@@ -211,20 +211,50 @@ export function cleanPlan(
   return { seasonNotes: str(r.season_notes, 800), practices: out };
 }
 
+/** The coach's own notes, without the themes and coach notes AI plans added ("Theme: …"). */
+export function withoutAiNotes(notes: string | null): string | null {
+  const kept = (notes ?? "")
+    .split(/\n{2,}/)
+    .map((x) => x.trim())
+    .filter((x) => x && !x.startsWith("Theme: "));
+  return kept.join("\n\n") || null;
+}
+
 /**
  * A practice with its AI plan applied: drills, plays and focus replace what was there; the
- * theme and coach note go in the notes, after anything the coach already wrote.
+ * theme and coach note go in the notes, after anything the coach already wrote (replacing an
+ * earlier AI plan's theme, so running it again doesn't pile them up).
  */
 export function applyPlan(practice: Practice, planned: PlannedPractice): Practice {
   const note = [planned.theme && `Theme: ${planned.theme}`, planned.coachNote]
     .filter(Boolean)
     .join("\n");
-  const existing = practice.notes?.trim();
+  // An AI note without a theme still starts with "Theme: " so it can be found again.
+  const tagged = note && !note.startsWith("Theme: ") ? `Theme: ${note}` : note;
+  const existing = withoutAiNotes(practice.notes);
   return {
     ...practice,
     focus: planned.focus ?? practice.focus,
     plan: planned.plan,
     plays: planned.plays,
-    notes: [existing, note].filter(Boolean).join("\n\n") || null,
+    notes: [existing, tagged].filter(Boolean).join("\n\n") || null,
   };
 }
+
+/** A practice with its plan taken off: no drills, plays, focus or AI notes (the coach's own notes stay). */
+export function clearPlan(practice: Practice): Practice {
+  return {
+    ...practice,
+    focus: null,
+    plan: [],
+    plays: [],
+    notes: withoutAiNotes(practice.notes),
+  };
+}
+
+/** Whether a practice has anything a plan put there. */
+export const hasPlan = (p: Practice) =>
+  p.plan.length > 0 ||
+  p.plays.length > 0 ||
+  !!p.focus ||
+  withoutAiNotes(p.notes) !== (p.notes?.trim() || null);

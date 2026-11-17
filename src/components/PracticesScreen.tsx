@@ -5,7 +5,16 @@ import Link from "next/link";
 import { useState } from "react";
 import { localDateString, placeLabel, recentPlaces } from "@/lib/data/game";
 import { permissionsFor } from "@/lib/data/permissions";
-import { addPractices, newId, savePractice, useAppData, useStoreState } from "@/lib/data/store";
+import {
+  addPractices,
+  importSchedule,
+  newId,
+  savePractice,
+  useAppData,
+  useStoreState,
+} from "@/lib/data/store";
+import { clearPlan, hasPlan } from "@/lib/practice/aiPlan";
+import { toast } from "./shell/Toast";
 import type { Practice } from "@/lib/data/types";
 import { formatPracticeWhen } from "@/lib/practice/format";
 import { planMinutes } from "@/lib/practice/schedule";
@@ -22,6 +31,7 @@ export function PracticesScreen() {
   const [showPast, setShowPast] = useState(false);
   const [importing, setImporting] = useState(false);
   const [planning, setPlanning] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const { mode } = useStoreState();
 
   if (!data) {
@@ -105,6 +115,15 @@ export function PracticesScreen() {
         </button>
       )}
 
+      {canEdit && sorted.some(hasPlan) && (
+        <button
+          onClick={() => setClearing(true)}
+          className="mb-4 -mt-2 h-10 text-sm font-semibold text-red-700 underline"
+        >
+          Remove practice plans…
+        </button>
+      )}
+
       {sorted.length > 0 && (
         <div className="mb-3 flex justify-end">
           <Link
@@ -180,6 +199,12 @@ export function PracticesScreen() {
         )}
       </Sheet>
 
+      <Sheet open={clearing} title="Remove practice plans" onClose={() => setClearing(false)}>
+        {clearing && (
+          <RemovePlans upcoming={upcoming} all={sorted} onDone={() => setClearing(false)} />
+        )}
+      </Sheet>
+
       <Sheet open={building} title="Build season schedule" onClose={() => setBuilding(false)}>
         {building && (
           <ScheduleBuilder
@@ -231,5 +256,87 @@ function PracticeCard({ practice: p }: { practice: Practice }) {
         </p>
       </Link>
     </li>
+  );
+}
+
+/**
+ * Take the plans off practices (upcoming, or the whole season) to start over, e.g. before
+ * running AI practice plans again with new goals. Undo puts them back.
+ */
+function RemovePlans({
+  upcoming,
+  all,
+  onDone,
+}: {
+  upcoming: Practice[];
+  all: Practice[];
+  onDone: () => void;
+}) {
+  const [range, setRange] = useState<"upcoming" | "season">("upcoming");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const targets = (range === "upcoming" ? upcoming : all).filter(hasPlan);
+  const remove = async () => {
+    setBusy(true);
+    setError(null);
+    const before = targets;
+    try {
+      await importSchedule(before.map(clearPlan), []);
+      toast(`Removed plans from ${before.length} practice${before.length === 1 ? "" : "s"}`, {
+        label: "Undo",
+        run: () => void importSchedule(before, []),
+      });
+      onDone();
+    } catch (e) {
+      setError(
+        `Couldn't remove them (${e instanceof Error ? e.message : String(e)}). Check your connection and try again.`,
+      );
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-base text-slate-700">
+        Takes off each practice&apos;s drills, plays, focus and the AI&apos;s themes, so you can
+        plan them again (say, with new goals). Dates, times, places and your own notes stay.
+      </p>
+      <div role="radiogroup" aria-label="Which practices" className="flex flex-col gap-2">
+        {(
+          [
+            ["upcoming", "Upcoming practices", upcoming.filter(hasPlan).length],
+            ["season", "The whole season, past ones too", all.filter(hasPlan).length],
+          ] as const
+        ).map(([value, label, n]) => (
+          <label
+            key={value}
+            className={`flex min-h-12 items-center gap-3 rounded-xl border-2 bg-white px-3 ${range === value ? "border-[var(--team)]" : "border-slate-200"}`}
+          >
+            <input
+              type="radio"
+              checked={range === value}
+              onChange={() => setRange(value)}
+              className="size-5 accent-[var(--team)]"
+            />
+            <span className="text-base">
+              {label} ({n} with plans)
+            </span>
+          </label>
+        ))}
+      </div>
+      {error && (
+        <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">
+          {error}
+        </p>
+      )}
+      <button
+        onClick={() => void remove()}
+        disabled={busy || targets.length === 0}
+        className="h-14 rounded-xl bg-red-700 text-lg font-bold text-white active:bg-red-800 disabled:opacity-40"
+      >
+        {busy
+          ? "Removing…"
+          : `Remove plans from ${targets.length} practice${targets.length === 1 ? "" : "s"}`}
+      </button>
+    </div>
   );
 }

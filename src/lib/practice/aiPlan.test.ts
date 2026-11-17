@@ -5,8 +5,11 @@ import {
   ageGuidance,
   applyPlan,
   cleanPlan,
+  clearPlan,
+  hasPlan,
   planRequestText,
   practiceLength,
+  withoutAiNotes,
 } from "./aiPlan";
 
 const practice = (id: string, extra: Partial<Practice> = {}): Practice => ({
@@ -203,5 +206,31 @@ describe("age guidance", () => {
     };
     expect(planRequestText({ ...base, ageGroup: "13U" })).toContain("Ages 13U (13-14)");
     expect(planRequestText({ ...base, ageGroup: "7U" })).toContain("Ages 7U (8 and under)");
+  });
+});
+
+describe("planning again and clearing", () => {
+  const planned = {
+    practiceId: "p1",
+    focus: "Hitting",
+    theme: "Gator week",
+    plan: [{ id: "x", title: "Catch", minutes: 10 }],
+    plays: ["rundown"],
+    coachNote: "Celebrate effort.",
+  };
+
+  it("replaces the last AI theme instead of piling them up", () => {
+    const once = applyPlan(practice("p1", { notes: "Bring helmets" }), planned);
+    const twice = applyPlan(once, { ...planned, theme: "Rally week", coachNote: "" });
+    expect(twice.notes).toBe("Bring helmets\n\nTheme: Rally week");
+  });
+
+  it("clears drills, plays, focus and AI notes, keeping the coach's own notes", () => {
+    const filled = applyPlan(practice("p1", { notes: "Bring helmets" }), planned);
+    expect(hasPlan(filled)).toBe(true);
+    const cleared = clearPlan(filled);
+    expect(cleared).toMatchObject({ focus: null, plan: [], plays: [], notes: "Bring helmets" });
+    expect(hasPlan(cleared)).toBe(false);
+    expect(withoutAiNotes("Theme: A\nnote")).toBeNull();
   });
 });
