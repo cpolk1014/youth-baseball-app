@@ -105,6 +105,17 @@ export function PracticesScreen() {
         </button>
       )}
 
+      {sorted.length > 0 && (
+        <div className="mb-3 flex justify-end">
+          <Link
+            href="/practices/print"
+            className="flex h-11 items-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-4 text-base font-bold text-slate-800 active:bg-slate-100"
+          >
+            <span aria-hidden="true">🖨️</span> Print schedule
+          </Link>
+        </div>
+      )}
+
       {upcoming.length === 0 ? (
         <p className="rounded-xl border-2 border-slate-200 bg-white p-4 text-base text-slate-700">
           {canEdit
