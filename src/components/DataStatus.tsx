@@ -2,17 +2,12 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
+import { seasonFor } from "@/lib/billing/season";
 import { createTeam, dismissSaveError, reloadData, signOut, useStoreState } from "@/lib/data/store";
 import { useMyClubs } from "./club/useMyClubs";
 import { KidsPrompt } from "./KidPicker";
 
 const AGE_GROUPS = ["7U", "8U", "9U", "10U", "11U", "12U", "13U", "14U"];
-
-function defaultSeasonName(today: Date): string {
-  const month = today.getMonth(); // 0 = Jan
-  const term = month < 5 ? "Spring" : month < 8 ? "Summer" : "Fall";
-  return `${term} ${today.getFullYear()}`;
-}
 
 /** Wraps screen content: first-time setup, load errors, and failed-save notices. */
 export function DataStatus({ children }: { children: ReactNode }) {
@@ -172,11 +167,10 @@ export function TeamSetup({
   const [teamName, setTeamName] = useState("");
   const [ageGroup, setAgeGroup] = useState("10U");
   const [coachPitch, setCoachPitch] = useState(false);
-  const [seasonName, setSeasonName] = useState(() => defaultSeasonName(new Date()));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const valid = (hasTeam || teamName.trim() !== "") && seasonName.trim() !== "";
+  const valid = hasTeam || teamName.trim() !== "";
   const field =
     "h-12 w-full rounded-lg border-2 border-slate-400 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
 
@@ -192,7 +186,8 @@ export function TeamSetup({
             teamName: teamName.trim(),
             ageGroup,
             coachPitch,
-            seasonName: seasonName.trim(),
+            // Seasons run August 1 to July 31, like what teams pay for ("2026-27").
+            seasonName: seasonFor(new Date()),
           });
           onCreated?.();
         } catch (err) {
@@ -255,16 +250,6 @@ export function TeamSetup({
           </span>
         </label>
       )}
-
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-semibold text-slate-700">Season</span>
-        <input
-          value={seasonName}
-          onChange={(e) => setSeasonName(e.target.value)}
-          maxLength={40}
-          className={field}
-        />
-      </label>
 
       <button
         type="submit"
