@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { forgetLook, LOOK_KEY, LOOK_SCRIPT, rememberLook } from "./remembered";
+import { clearLook, forgetLook, LOOK_KEY, LOOK_SCRIPT, rememberLook } from "./remembered";
 
 // Small stand-ins for the browser's storage and <html> style (no DOM library needed).
 let store: Map<string, string>;
@@ -15,7 +15,12 @@ beforeEach(() => {
     removeItem: (k: string) => void store.delete(k),
   };
   const document = {
-    documentElement: { style: { setProperty: (k: string, v: string) => void style.set(k, v) } },
+    documentElement: {
+      style: {
+        setProperty: (k: string, v: string) => void style.set(k, v),
+        removeProperty: (k: string) => void style.delete(k),
+      },
+    },
   };
   vi.stubGlobal("localStorage", localStorage);
   vi.stubGlobal("window", { localStorage });
@@ -55,5 +60,13 @@ describe("remembered team colors", () => {
     expect(store.has(LOOK_KEY)).toBe(false);
     store.set(LOOK_KEY, "not json");
     expect(runScript).not.toThrow();
+  });
+
+  it("clears an old team's colors when there's no team to show", () => {
+    rememberLook(["#006400", "#ffd700"]);
+    expect(style.get("--team")).toBe("#006400");
+    clearLook();
+    expect(store.has(LOOK_KEY)).toBe(false);
+    expect(style.size).toBe(0);
   });
 });

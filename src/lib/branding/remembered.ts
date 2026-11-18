@@ -26,6 +26,21 @@ export function forgetLook(): void {
 }
 
 /**
+ * No team to show (signed in with no team yet): forget the last team's colors and take them
+ * off <html>, so the page is in RallyCap's own colors, not an old team's.
+ */
+export function clearLook(): void {
+  forgetLook();
+  try {
+    for (const k of Object.keys(themeVars(undefined))) {
+      document.documentElement.style.removeProperty(k);
+    }
+  } catch {
+    // No page to clear.
+  }
+}
+
+/**
  * Runs in <head> before the first paint: puts the remembered colors on <html>, where every
  * screen picks them up until its team's data arrives. Only well-formed colors are used.
  */

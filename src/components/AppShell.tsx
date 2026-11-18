@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { BRAND_CRIMSON, BRAND_NAVY } from "@/lib/branding/brand-mark";
-import { rememberLook } from "@/lib/branding/remembered";
+import { clearLook, rememberLook } from "@/lib/branding/remembered";
 import { themeVars } from "@/lib/branding/theme";
 import { LoadingCurtain } from "./LoadingCurtain";
 import { myUserId, signOut, syncNow, useAppData, useStoreState } from "@/lib/data/store";
@@ -67,9 +67,13 @@ export function AppShell({
   const rail = useRail();
   const teamColors = data?.team.colors;
   const hasTeam = !!data;
+  // Signed in with no team yet (team setup): RallyCap's own colors, never an old team's.
+  const { status } = useStoreState();
+  const noTeam = status.kind === "setup" && status.team === null;
   useEffect(() => {
-    if (!brand && hasTeam) rememberLook(teamColors);
-  }, [brand, hasTeam, teamColors]);
+    if (noTeam) clearLook();
+    else if (!brand && hasTeam) rememberLook(teamColors);
+  }, [brand, hasTeam, teamColors, noTeam]);
   return (
     // The team's colors, for everything inside (bars, buttons, badges).
     <div
@@ -77,7 +81,7 @@ export function AppShell({
       // While a team loads, no colors here: the page keeps the last team's colors that were
       // put on <html> before the first paint (rememberLook), not RallyCap's defaults.
       style={
-        (brand
+        (brand || noTeam
           ? themeVars([BRAND_NAVY, BRAND_CRIMSON])
           : data
             ? themeVars(data.team.colors)
