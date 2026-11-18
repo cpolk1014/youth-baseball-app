@@ -23,6 +23,17 @@ describe("sign-in error messages", () => {
     expect(signInErrorMessage({ message: "Failed to fetch" })).toMatch(/connection/);
   });
 
+  it("never blames the code when the email couldn't be sent", () => {
+    const sent = signInErrorMessage(
+      { status: 500, message: "Error sending confirmation email" },
+      "send",
+    );
+    expect(sent).toMatch(/couldn't send your code \(Error sending confirmation email\)/);
+    expect(signInErrorMessage({ message: "Email address is invalid" }, "send")).not.toMatch(
+      /swing and a miss/,
+    );
+  });
+
   it("passes anything else through", () => {
     expect(signInErrorMessage({ message: "Signups not allowed" })).toBe(
       "That didn't work: Signups not allowed",

@@ -56,7 +56,7 @@ export function LoginScreen() {
         setNotice(`A code was just sent. You can send another in ${seconds} seconds.`);
         // A recent email to this address is still good: go to the code screen.
         setStep({ kind: "sent", email: address });
-      } else setError(signInErrorMessage(error));
+      } else setError(signInErrorMessage(error, "send"));
       return;
     }
     setCode("");
