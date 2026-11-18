@@ -991,6 +991,7 @@ export async function signOut(): Promise<void> {
   try {
     window.localStorage.removeItem(SNAPSHOT_KEY);
     window.localStorage.removeItem(OUTBOX_KEY);
+    window.localStorage.removeItem("rallycap:weather");
     for (const key of await caches.keys()) await caches.delete(key);
   } catch {
     // Storage unavailable: nothing to clear.

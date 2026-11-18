@@ -15,6 +15,7 @@ import { useClubLibrary } from "./club/useClubLibrary";
 import { PlayPicker } from "./PlayPicker";
 import { PracticeForm } from "./PracticeForms";
 import { GamePlaceCard } from "./GamePlaceCard";
+import { WeatherCard } from "./Weather";
 import { CalendarButton } from "./CalendarButton";
 import { placeLabel, recentPlaces } from "@/lib/data/game";
 import { QuizButton, quizNames } from "./QuizButton";
@@ -95,6 +96,18 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
       </section>
 
       <GamePlaceCard game={practice} />
+
+      {!practice.canceled && (
+        <WeatherCard
+          place={practice}
+          date={practice.date}
+          time={practice.startTime}
+          hours={Math.max(
+            1,
+            Math.ceil((practiceMinutes(practice.startTime, practice.endTime) ?? 90) / 60),
+          )}
+        />
+      )}
 
       {!practice.canceled && (
         <CalendarButton

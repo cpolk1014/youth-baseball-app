@@ -53,6 +53,7 @@ import { Sheet } from "./Sheet";
 import { useTeamStats } from "./stats/statsData";
 import { ViolationList } from "./ViolationList";
 import { GamePlaceCard } from "./GamePlaceCard";
+import { WeatherCard } from "./Weather";
 import { TournamentTag } from "./tournaments/TournamentTag";
 import { GameUniformCard } from "./uniforms/GameUniformCard";
 import { gameUniformShown } from "@/lib/uniforms";
@@ -336,6 +337,8 @@ export function GameScreen({ gameId }: { gameId: string }) {
           )}
         </section>
       )}
+
+      {!isFinal && <WeatherCard place={game} date={game.date} time={game.startTime} />}
 
       {/* After the game: the box score and pitch counts (coaches and managers). */}
       {seesStats && (isFinal || game.date <= todayIso) && (

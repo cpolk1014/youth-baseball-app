@@ -25,6 +25,7 @@ import { homeworkStatus } from "@/lib/plays/homework";
 import { resolveRuleConfig } from "@/lib/rules/config";
 import { seasonSummary } from "@/lib/season/summary";
 import { detectPlatform, isPhoneOrTablet, openInLinks } from "@/lib/places/maps";
+import { WeatherTile } from "./Weather";
 import { gameUniformShown } from "@/lib/uniforms";
 import { AppShell, Loading } from "./AppShell";
 import { RunsChart } from "./charts/Charts";
@@ -181,6 +182,7 @@ function NextGame({ game, data, today }: { game: Game; data: AppData; today: str
         )}
         <Fact label="Arrive by" value={arrive ?? "—"} />
         <Fact label="Uniform" value={uniform ? (uniform.name ?? "Custom") : "Not set"} />
+        <WeatherTile place={game} date={game.date} time={game.startTime} />
         {parent && <Directions game={game} />}
         <Link
           href={`/games/${game.id}`}

@@ -6,6 +6,7 @@ import { myUserId } from "@/lib/data/store";
 import type { AppData, Game } from "@/lib/data/types";
 import { AppShell } from "./AppShell";
 import { GamePlaceCard } from "./GamePlaceCard";
+import { WeatherCard } from "./Weather";
 import { TournamentTag } from "./tournaments/TournamentTag";
 import { GamesPane } from "./GamesScreen";
 import { kidsOf } from "./KidPicker";
@@ -77,6 +78,8 @@ export function ParentGame({
       <TournamentTag gameId={game.id} />
 
       <GamePlaceCard game={game} />
+
+      {!isFinal && <WeatherCard place={game} date={game.date} time={game.startTime} />}
 
       {hasUniform ? (
         <GameUniformCard game={game} combos={data.uniforms} canEdit={false} />
