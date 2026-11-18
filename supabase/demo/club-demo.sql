@@ -18,9 +18,10 @@ declare
   -- Fixed ids, so a re-run (and the cleanup) finds the last demo copy.
   v_org constant uuid := 'de30c1ab-0000-4000-8000-000000000001';
   v_team_ids constant uuid[] := array[
-    'de30c1ab-0000-4000-8000-000000000108', 'de30c1ab-0000-4000-8000-000000000109',
-    'de30c1ab-0000-4000-8000-000000000110', 'de30c1ab-0000-4000-8000-000000000111',
-    'de30c1ab-0000-4000-8000-000000000112', 'de30c1ab-0000-4000-8000-000000000113'
+    'de30c1ab-0000-4000-8000-000000000107', 'de30c1ab-0000-4000-8000-000000000108',
+    'de30c1ab-0000-4000-8000-000000000109', 'de30c1ab-0000-4000-8000-000000000110',
+    'de30c1ab-0000-4000-8000-000000000111', 'de30c1ab-0000-4000-8000-000000000112',
+    'de30c1ab-0000-4000-8000-000000000113', 'de30c1ab-0000-4000-8000-000000000114'
   ]::uuid[];
   v_bombers constant uuid := 'de30c1ab-0000-4000-8000-000000000110';
   v_director uuid;
@@ -105,21 +106,23 @@ begin
     array['#13294B', '#F2A900', '#C8102E', '#FFFFFF', '#5B7FA6'], array['#13294B', '#F2A900']);
   insert into public.club_admin (organization_id, user_id, role) values (v_org, v_director, 'director');
 
-  -- Eight codes for 2026-27: six used by the teams below, two left for new teams.
-  for v_code in select * from public.create_club_codes(v_org, 8, '2026-27') loop
+  -- Ten codes for 2026-27: eight used by the teams below, two left for new teams.
+  for v_code in select * from public.create_club_codes(v_org, 10, '2026-27') loop
     v_codes := v_codes || v_code;
   end loop;
 
-  -- ── Six teams ──
+  -- ── Eight teams, 7U to 14U ──
   v_idx := 0;
   for v_def in
     select * from (values
+      ('7U',  'Bayou Bombers 7U',  'Blake Mouton',    true,  array['#F2A900', '#13294B'], 'W,W,L,W,,W,L,W'),
       ('8U',  'Bayou Bombers 8U',  'Ryan Hebert',     true,  array['#13294B', '#F2A900'], 'W,L,W,W,L,W,,W'),
       ('9U',  'Bayou Bombers 9U',  'Chris Fontenot',  false, array['#13294B', '#C8102E'], 'L,W,W,L,W,L,W,'),
       ('10U', 'Bayou Bombers 10U', 'Dave Reyes',      false, array['#13294B', '#F2A900'], 'W,W,W,L,W,W,W,W'),
       ('11U', 'Bayou Bombers 11U', 'Marcus Hill',     false, array['#5B7FA6', '#F2A900'], 'W,L,W,W,W,L,W,'),
       ('12U', 'Bayou Bombers 12U', 'Trey Boudreaux',  false, array['#C8102E', '#13294B'], 'L,L,W,L,W,L,,W'),
-      ('13U', 'Bayou Bombers 13U', 'Jason Guidry',    false, array['#13294B', '#5B7FA6'], ',,,W,T,W,L,W')
+      ('13U', 'Bayou Bombers 13U', 'Jason Guidry',    false, array['#13294B', '#5B7FA6'], ',,,W,T,W,L,W'),
+      ('14U', 'Bayou Bombers 14U', 'Keith Domingue',  false, array['#13294B', '#C8102E'], 'L,W,W,W,L,W,W,L')
     ) as t(age, name, coach_name, coach_pitch, colors, results)
   loop
     v_idx := v_idx + 1;
@@ -214,7 +217,7 @@ begin
     -- Coming up: this Saturday and next (no lineup yet, so auto-fill can be shown live).
     insert into public.game (season_id, game_date, start_time, opponent, location, field, innings, field_players, status)
     values
-      (v_season, v_next_sat, (array['09:00','11:00','13:00','09:30','11:30','14:00'])[v_idx]::time,
+      (v_season, v_next_sat, (array['08:30','09:00','11:00','13:00','09:30','11:30','14:00','16:00'])[v_idx]::time,
         v_opponents[((v_idx + 3) % array_length(v_opponents, 1)) + 1], 'Bayou Park', 'Field ' || (1 + v_idx % 4), 6, array_length(v_fielders, 1), 'scheduled'),
       (v_season, v_next_sat + 7, '10:00', v_opponents[((v_idx + 6) % array_length(v_opponents, 1)) + 1],
         'Acadiana Sports Complex', 'Field 2', 6, array_length(v_fielders, 1), 'scheduled');
@@ -293,9 +296,9 @@ begin
       returning id into v_award;
     v_awards := v_awards || v_award;
   end loop;
-  -- 8U, 9U and 10U have picked every award; 11U two of four; 12U and 13U none yet.
-  for v_idx in 1 .. 4 loop
-    for v_i in 1 .. (case when v_idx = 4 then 2 else 4 end) loop
+  -- 7U through 11U have picked every award; 12U two of four; 13U and 14U none yet.
+  for v_idx in 1 .. 6 loop
+    for v_i in 1 .. (case when v_idx = 6 then 2 else 4 end) loop
       select array_agg(id order by jersey_number) into v_players from public.player where team_id = v_team_ids[v_idx];
       insert into public.club_award_pick (award_id, team_id, player_id, note, picked_by, picked_at)
         values (v_awards[v_i], v_team_ids[v_idx], v_players[((v_i * 3 + v_idx) % array_length(v_players, 1)) + 1],
@@ -326,4 +329,4 @@ select t.age_group, t.name, (select count(*) from public.player p where p.team_i
   c.code
 from public.team t join public.club_code c on c.team_id = t.id
 where t.organization_id = 'de30c1ab-0000-4000-8000-000000000001'
-order by t.age_group;
+order by length(t.age_group), t.age_group;
