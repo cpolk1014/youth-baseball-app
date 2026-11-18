@@ -123,6 +123,12 @@ export async function clubOverview(clubId: string): Promise<ClubTeam[]> {
       last_lineup_at: string | null;
     }[]
   >(await getBrowserSupabase().rpc("club_overview", { p_org: clubId }));
+  // Youngest first by number (8U before 10U), not as text.
+  rows.sort(
+    (a, b) =>
+      a.age_group.localeCompare(b.age_group, undefined, { numeric: true }) ||
+      a.team_name.localeCompare(b.team_name),
+  );
   return rows.map((r) => ({
     teamId: r.team_id,
     name: r.team_name,
@@ -493,7 +499,11 @@ export async function clubTargets(clubId: string): Promise<ClubTarget[]> {
       ageGroup: r.age_group,
       connected: r.connected,
     }))
-    .sort((a, b) => a.ageGroup.localeCompare(b.ageGroup) || a.name.localeCompare(b.name));
+    .sort(
+      (a, b) =>
+        a.ageGroup.localeCompare(b.ageGroup, undefined, { numeric: true }) ||
+        a.name.localeCompare(b.name),
+    );
 }
 
 /** Post to the coaches group and/or team groups; returns how many groups it went to. */
