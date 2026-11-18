@@ -16,7 +16,7 @@ export function signInErrorMessage(
     return "Too many tries in a row. Wait a minute, then send a new code.";
   }
   if (msg.includes("fetch") || msg.includes("network")) {
-    return "Couldn't reach RallyCap. Check your connection and try again.";
+    return "Couldn't reach Fungo. Check your connection and try again.";
   }
   if (step === "send") {
     return `We couldn't send your code (${error.message}). Try again in a minute; if it keeps happening, let us know.`;

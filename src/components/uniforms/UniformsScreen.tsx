@@ -105,8 +105,8 @@ function Uniforms({ data }: { data: AppData }) {
       )}
       {own.length === 0 && fromClub.length === 0 ? (
         <p className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-4 text-base">
-          No combos yet. Add one, or take a picture of the uniform flyer and RallyCap builds them
-          for you.
+          No combos yet. Add one, or take a picture of the uniform flyer and Fungo builds them for
+          you.
         </p>
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">

@@ -67,9 +67,9 @@ export function planLine(plan: TeamPlan): string {
     case "grace":
       return `The season ended ${day(plan.ends!)}. Paid features keep working through ${day(plan.until!)}; renew to keep them.`;
     case "trial":
-      return `Free trial: all of RallyCap through ${day(plan.until!)}.`;
+      return `Free trial: all of Fungo through ${day(plan.until!)}.`;
     case "launch":
-      return `Free through ${day(plan.until!)}: thanks for being one of RallyCap's first teams.`;
+      return `Free through ${day(plan.until!)}: thanks for being one of Fungo's first teams.`;
     default:
       return "Paid features are locked. Everything your team made stays; renew to add more.";
   }

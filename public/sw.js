@@ -1,4 +1,4 @@
-// RallyCap service worker: lets the app open in a dugout with no signal.
+// Fungo service worker: lets the app open in a dugout with no signal.
 //
 // - App code (/_next/static, fingerprinted): kept after first use, served from the device.
 // - Pages: always fresh from the network when there's signal; the last copy when there isn't.
@@ -11,7 +11,7 @@ const PAGES = `rallycap-pages-${VERSION}`;
 const STATIC = `rallycap-static-${VERSION}`;
 
 const OFFLINE_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>Offline · RallyCap</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Offline · Fungo</title>
 <style>body{font-family:system-ui,sans-serif;background:#f3f5f8;color:#0f172a;margin:0;padding:24px}
 .c{max-width:420px;margin:15vh auto;background:#fff;border:2px solid #e2e8f0;border-radius:16px;padding:20px}
 h1{font-size:22px;margin:0 0 8px}p{font-size:17px;line-height:1.4}

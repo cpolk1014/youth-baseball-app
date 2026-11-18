@@ -632,7 +632,7 @@ function ScoresImport({
     return (
       <div className="flex flex-col gap-4">
         <p className="text-base text-slate-700">
-          Screenshot the tournament&apos;s schedule or bracket with scores on it. RallyCap reads the
+          Screenshot the tournament&apos;s schedule or bracket with scores on it. Fungo reads the
           final scores and matches them to the games here; you check them before they&apos;re saved.
         </p>
         {files.length > 0 && (
@@ -868,8 +868,8 @@ function ScheduleImport({
       <div className="flex flex-col gap-4">
         <p className="text-base text-slate-700">
           {mode === "bracket"
-            ? "Take screenshots of the bracket (several if it's big). RallyCap reads the seeds and game numbers and draws it on View bracket; your bracket games also go on the team's Games once seeds are locked."
-            : "Take screenshots of the pool play schedule (several if it's long). RallyCap lists every game; your games also go on the team's Games."}{" "}
+            ? "Take screenshots of the bracket (several if it's big). Fungo reads the seeds and game numbers and draws it on View bracket; your bracket games also go on the team's Games once seeds are locked."
+            : "Take screenshots of the pool play schedule (several if it's long). Fungo lists every game; your games also go on the team's Games."}{" "}
           Updated? Add the new screenshots and you&apos;ll see only what changed.
         </p>
         {files.length > 0 && (

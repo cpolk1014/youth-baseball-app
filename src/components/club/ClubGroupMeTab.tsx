@@ -154,7 +154,7 @@ export function ClubGroupMeTab({ clubId }: { clubId: string }) {
           {busy ? "Posting…" : `Post to ${groups} group${groups === 1 ? "" : "s"}`}
         </button>
         <p className="text-sm text-slate-600">
-          Team groups post through each team&apos;s own RallyCap bot, set up by its coach. Up to 20
+          Team groups post through each team&apos;s own Fungo bot, set up by its coach. Up to 20
           club posts an hour.
         </p>
       </section>
@@ -213,7 +213,7 @@ function CoachesGroupForm({
       const m = await backend();
       await m.saveClubGroupMe(clubId, id, group.trim() || null);
       // A test post proves the bot works and is in the right group.
-      await m.clubPost(clubId, true, [], "👋 RallyCap is connected to the club's coaches group.");
+      await m.clubPost(clubId, true, [], "👋 Fungo is connected to the club's coaches group.");
       onDone({ botId: id, groupName: group.trim() || null });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -230,7 +230,7 @@ function CoachesGroupForm({
           On dev.groupme.com, sign in and choose <b>Bots → Create Bot</b>.
         </li>
         <li>
-          Pick the club&apos;s coaches group and name the bot <b>RallyCap</b>.
+          Pick the club&apos;s coaches group and name the bot <b>Fungo</b>.
         </li>
         <li>
           Copy its <b>Bot ID</b> and paste it here.

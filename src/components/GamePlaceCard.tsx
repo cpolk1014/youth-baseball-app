@@ -6,7 +6,7 @@ import { placeLabel, type PlaceFields } from "@/lib/data/game";
 import { MapAppIcon } from "./MapAppIcon";
 import { detectPlatform, isPhoneOrTablet, openInLinks, type GamePlace } from "@/lib/places/maps";
 
-/** The browser key for showing maps (Maps Embed API only, locked to RallyCap's site). */
+/** The browser key for showing maps (Maps Embed API only, locked to Fungo's site). */
 const EMBED_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY ?? "";
 
 /**

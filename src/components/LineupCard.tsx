@@ -170,7 +170,7 @@ function Card({
         {/* eslint-disable-next-line @next/next/no-img-element -- prints as-is */}
         <img
           src="/brand/rallycap-horizontal-color.svg"
-          alt="RallyCap"
+          alt="Fungo"
           className="h-[0.22in] w-auto shrink-0"
         />
       </div>

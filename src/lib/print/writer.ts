@@ -1,4 +1,4 @@
-// A small layer over jsPDF for RallyCap's printouts: letter paper in inches, wrapped text
+// A small layer over jsPDF for Fungo's printouts: letter paper in inches, wrapped text
 // that flows onto new pages, and characters the built-in PDF fonts can show.
 import { jsPDF } from "jspdf";
 

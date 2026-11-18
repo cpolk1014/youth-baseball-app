@@ -207,7 +207,7 @@ export interface AppData {
   clubAwards?: TeamAward[];
 }
 
-/** Whether a team can use RallyCap's paid features, and why (see `team_plan`). */
+/** Whether a team can use Fungo's paid features, and why (see `team_plan`). */
 export interface TeamPlan {
   paid: boolean;
   /** club / pass: paid through `until`; grace: ended `ends`, works through `until`;

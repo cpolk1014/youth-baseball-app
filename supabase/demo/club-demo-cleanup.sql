@@ -1,4 +1,4 @@
--- Removes the RallyCap demo club (club-demo.sql): its six teams and everything on them, the
+-- Removes the Fungo demo club (club-demo.sql): its six teams and everything on them, the
 -- club, its codes, awards and library, and the demo parent's Mason Reyes record. The demo
 -- people's own accounts stay (delete them under Authentication → Users if you like).
 -- Run in the Supabase SQL Editor.

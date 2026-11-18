@@ -119,7 +119,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
   const absent = new Set(lineup.absent ?? []);
   const active = data.players.filter((p) => p.active !== false && !absent.has(p.id));
   // Season numbers: GameChanger's import when there is one (it's complete), else the team's
-  // box scores (fielding innings from RallyCap's own lineups).
+  // box scores (fielding innings from Fungo's own lineups).
   const csvLines = stats.stats ? statLines(stats.stats.data) : null;
   const boxLines = box.lines.filter((l) => l.playerId);
   const useBox = !(csvLines && csvLines.size > 0) && boxLines.some((l) => !l.pitchOnly);

@@ -9,7 +9,7 @@ import { forecastFor, parseAlerts, parseHourly, type WeatherResult } from "./for
  */
 const BASE = "https://api.weather.gov";
 const HEADERS = {
-  "User-Agent": "RallyCap (rallycap.team)",
+  "User-Agent": "Fungo (rallycap.team)",
   Accept: "application/geo+json",
 };
 

@@ -14,7 +14,7 @@ import {
 import { WalkupScreen } from "@/components/site/mocks";
 
 export const metadata: Metadata = {
-  title: { absolute: "Features: AI Schedules, Fair Lineups, GroupMe & Tournaments | RallyCap" },
+  title: { absolute: "Features: AI Schedules, Fair Lineups, GroupMe & Tournaments | Fungo" },
   description:
     "Youth baseball's AI assistant coach: AI schedule import and practice plans, a smart fair-play lineup engine, GroupMe game day posts, team money, tournaments and walk-up songs.",
   alternates: { canonical: "/features" },
@@ -156,7 +156,7 @@ export default function FeaturesPage() {
               Ask any 10-year-old. The batting stance is optional. The walk-up song is not. Some
               kids spend more time picking it than practicing, and honestly? Fair.
             </p>
-            <p className="mt-3 text-xl font-bold">RallyCap makes sure every kid has a good one.</p>
+            <p className="mt-3 text-xl font-bold">Fungo makes sure every kid has a good one.</p>
             <ul className="mt-8 flex flex-col gap-3 text-lg text-white/85">
               <Check light>
                 <b className="text-white">AI makes an original song</b> in the style and vibe they
@@ -270,7 +270,7 @@ export default function FeaturesPage() {
         </div>
         <Laptop
           src="/site/home.jpg"
-          alt="RallyCap's Home dashboard on a laptop"
+          alt="Fungo's Home dashboard on a laptop"
           className="mt-10 max-w-5xl"
         />
       </Section>

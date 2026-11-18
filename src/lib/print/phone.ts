@@ -73,6 +73,6 @@ export function pdfFileName(name: string): string {
     name
       .replace(/[^\w .,()-]+/g, "")
       .replace(/\s+/g, " ")
-      .trim() || "RallyCap"
+      .trim() || "Fungo"
   }.pdf`;
 }

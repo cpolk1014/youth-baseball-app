@@ -79,7 +79,7 @@ const SYSTEM_PROMPT = `You read one youth baseball box score (usually a GameChan
 
 Steps:
 1. List the two team names exactly as printed (teams).
-2. Decide which team is the coach's (our_team). If the coach chose a team, use it. Otherwise pick the team whose name clearly matches the RallyCap team name given, or whose players match the roster given (names and jersey numbers). If you can't tell, set needs_team to true, players to an empty list, and stop.
+2. Decide which team is the coach's (our_team). If the coach chose a team, use it. Otherwise pick the team whose name clearly matches the Fungo team name given, or whose players match the roster given (names and jersey numbers). If you can't tell, set needs_team to true, players to an empty list, and stop.
 3. For every player in our team's lineup and every pitcher on our team (a pitcher who didn't bat still gets a line): box_name and box_number as printed (box_number null if not printed); their batting line (AB, R, H, RBI, BB, SO from the lineup table; doubles, triples, HR, SB, CS, HBP, SAC, SF counted from the lists under our team, where "Name 2" means 2 and a name alone means 1); their pitching line if they pitched (ip as printed, like "3.2"; pitches and strikes from the pitches-strikes list, e.g. "Name 77-49"; bf from "BF:"), otherwise pitched false with zeros; their errors from "E:"; the positions shown next to their name.
 4. Game details: game_date as YYYY-MM-DD, our team's runs (our_runs) and the other team's (their_runs) from the final score.
 Only our team's players. Use 0 for stats not shown and null for game details you can't read. Don't guess.`;
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
 
   const kids = (roster ?? []) as { id: string; name: string; jersey_number: number | null }[];
   const ask = [
-    `RallyCap team name: ${team.name}`,
+    `Fungo team name: ${team.name}`,
     `This game: ${game.game_date} against ${game.opponent}`,
     `Roster: ${kids.map((k) => `${k.name}${k.jersey_number === null ? "" : ` #${k.jersey_number}`}`).join("; ")}`,
     chosenTeam ? `The coach says their team in this box score is: ${chosenTeam}` : null,

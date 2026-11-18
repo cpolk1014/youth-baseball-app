@@ -91,7 +91,7 @@ export function AddTournament({ data, onSaved }: { data: AppData; onSaved: (id: 
     <div className="flex flex-col gap-4">
       <p className="text-base text-slate-700">
         Take screenshots of the tournament&apos;s page: the top with the name, dates and city, and
-        the Teams tab if teams are listed (more than one if the list is long). RallyCap fills in the
+        the Teams tab if teams are listed (more than one if the list is long). Fungo fills in the
         details and adds the teams in your division.
       </p>
       {files.length > 0 && (

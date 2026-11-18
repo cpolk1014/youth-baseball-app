@@ -4,7 +4,7 @@ import { ClubDashboardScreen } from "@/components/site/mocks";
 import { SUPPORT_EMAIL } from "@/components/site/SiteFooter";
 
 export const metadata: Metadata = {
-  title: { absolute: "RallyCap for Clubs: An AI Assistant Coach for Every Team" },
+  title: { absolute: "Fungo for Clubs: An AI Assistant Coach for Every Team" },
   description:
     "Give every coach in your club AI schedule import, AI practice plans, fair lineups, GroupMe posts and tournaments, with a club dashboard, club colors and a shared library. $99 per team.",
   alternates: { canonical: "/clubs" },
@@ -63,7 +63,7 @@ export default function ClubsPage() {
 
       <Section>
         <h2 className="text-3xl font-black tracking-tight text-[#1B2A4A] md:text-4xl">
-          Why clubs choose RallyCap
+          Why clubs choose Fungo
         </h2>
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {WHY.map(([icon, t, b]) => (

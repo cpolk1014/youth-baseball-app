@@ -1,4 +1,4 @@
--- RallyCap demo: the Bayou Baseball Club (made-up), for showing RallyCap to a club director.
+-- Fungo demo: the Bayou Baseball Club (made-up), for showing Fungo to a club director.
 --
 -- Run in the Supabase SQL Editor. Running it again first removes the last demo copy, then
 -- builds a fresh one with dates relative to today (there's always a game this Saturday).
@@ -78,10 +78,10 @@ begin
   select u.id into v_coach from auth.users u join demo_people d on lower(u.email) = lower(trim(d.email)) where d.role = 'coach';
   select u.id into v_parent from auth.users u join demo_people d on lower(u.email) = lower(trim(d.email)) where d.role = 'parent';
   if v_director is null then
-    raise exception 'No RallyCap account for the director email yet. Sign up with it on rallycap.team first.';
+    raise exception 'No Fungo account for the director email yet. Sign up with it on rallycap.team first.';
   end if;
   if v_coach is null then
-    raise exception 'No RallyCap account for the coach email yet. Sign up with it on rallycap.team first.';
+    raise exception 'No Fungo account for the coach email yet. Sign up with it on rallycap.team first.';
   end if;
 
   -- ── Start over: remove the last demo copy ──

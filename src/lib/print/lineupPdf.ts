@@ -138,7 +138,7 @@ function card(
     );
   }
 
-  // Signatures at the bottom of the box, with the RallyCap logo.
+  // Signatures at the bottom of the box, with the Fungo logo.
   const sy = box.y + box.h - 0.12;
   doc.setLineWidth(0.75 * PT);
   doc.setDrawColor(0, 0, 0);

@@ -146,7 +146,7 @@ export function BuyCodes({ clubId, onCancel }: { clubId?: string; onCancel?: () 
         </button>
       </div>
       <p className="text-sm text-slate-600">
-        Payment is handled by Stripe. RallyCap never sees your card.
+        Payment is handled by Stripe. Fungo never sees your card.
       </p>
     </div>
   );

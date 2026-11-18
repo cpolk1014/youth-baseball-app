@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 // Lets coaches add the app to their home screen; it opens full screen like an app.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "RallyCap",
-    short_name: "RallyCap",
+    name: "Fungo",
+    short_name: "Fungo",
     description:
       "Run your travel baseball team: fair lineups, lineup cards, and season playing time.",
     start_url: "/games",

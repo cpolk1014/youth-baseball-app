@@ -33,9 +33,9 @@ export function SiteHeader() {
       className={`sticky top-0 z-40 border-b bg-white/90 backdrop-blur transition ${scrolled ? "border-slate-200 shadow-sm" : "border-transparent"}`}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
-        <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="RallyCap home">
+        <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="Fungo home">
           {/* eslint-disable-next-line @next/next/no-img-element -- the logo */}
-          <img src="/brand/rallycap-horizontal-color.svg" alt="RallyCap" className="h-11 w-auto" />
+          <img src="/brand/rallycap-horizontal-color.svg" alt="Fungo" className="h-11 w-auto" />
           <span className="hidden text-xs font-bold tracking-wide text-slate-500 uppercase 2xl:inline">
             Youth baseball&apos;s AI assistant coach
           </span>

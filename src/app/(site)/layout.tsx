@@ -5,14 +5,14 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.rallycap.team"),
   openGraph: {
-    siteName: "RallyCap",
+    siteName: "Fungo",
     type: "website",
     images: [
       {
         url: "/site/og.png",
         width: 1200,
         height: 630,
-        alt: "RallyCap: youth baseball's AI assistant coach",
+        alt: "Fungo: youth baseball's AI assistant coach",
       },
     ],
   },

@@ -73,7 +73,7 @@ export function AiPracticePlan({
 
   const plan = async () => {
     if (!goals.trim()) {
-      setError("Tell RallyCap what you want from practice this season.");
+      setError("Tell Fungo what you want from practice this season.");
       return;
     }
     try {
@@ -148,9 +148,9 @@ export function AiPracticePlan({
   return (
     <div className="flex flex-col gap-4">
       <p className="text-base text-slate-700">
-        Tell RallyCap about your team and what matters most this season. It plans each practice:
-        drills that fit the practice&apos;s time, plays to walk through, a theme, and a teammate
-        lesson. You review everything before it&apos;s saved.
+        Tell Fungo about your team and what matters most this season. It plans each practice: drills
+        that fit the practice&apos;s time, plays to walk through, a theme, and a teammate lesson.
+        You review everything before it&apos;s saved.
       </p>
       <label className="flex flex-col gap-1">
         <span className="text-base font-semibold">Your goals for the season</span>

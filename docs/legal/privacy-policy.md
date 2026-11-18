@@ -1,13 +1,13 @@
-# RallyCap Privacy Policy
+# Fungo Privacy Policy
 
 > **DRAFT for review by a lawyer. Not legal advice.** Items in [brackets] need to be filled in or decided before this is published.
 
 **Effective date:** [Month Day, 2026]
 **Last updated:** [Month Day, 2026]
 
-RallyCap ("RallyCap," "we," "us") is a web app that helps youth travel and select baseball teams run their season: lineups, schedules, team money, team communication, tournaments, and players' own stats. RallyCap is operated by [legal entity name], [mailing address].
+Fungo ("Fungo," "we," "us") is a web app that helps youth travel and select baseball teams run their season: lineups, schedules, team money, team communication, tournaments, and players' own stats. Fungo is operated by [legal entity name], [mailing address].
 
-Youth baseball means kids, so we built RallyCap to collect as little as we can about them, to keep it inside their team and family, and never to sell it. This policy explains what we collect, why, who can see it, who helps us run RallyCap, and the choices you have.
+Youth baseball means kids, so we built Fungo to collect as little as we can about them, to keep it inside their team and family, and never to sell it. This policy explains what we collect, why, who can see it, who helps us run Fungo, and the choices you have.
 
 If you have questions, email **[privacy@rallycap.team]**.
 
@@ -15,7 +15,7 @@ If you have questions, email **[privacy@rallycap.team]**.
 
 ## 1. Who this policy covers
 
-- **Adults who use RallyCap:** coaches, team managers, treasurers, parents and guardians, and club directors and admins. You must be 18 or older to have a RallyCap account.
+- **Adults who use Fungo:** coaches, team managers, treasurers, parents and guardians, and club directors and admins. You must be 18 or older to have a Fungo account.
 - **Players (kids).** Players don't have accounts and don't sign in. Information about a player is added by an adult on their team: a coach adds them to the roster, and a parent or guardian may add their own child's stats and walk-up song.
 - **Visitors** to our public website.
 
@@ -55,7 +55,7 @@ Added by the team's coaches, managers or the player's parents or guardians:
 - **Walk-up songs and announcements:** a song a parent uploads or makes with AI, how to say the child's name and number, and the announcer recording. Coaches approve walk-ups, and anyone on the team can play approved walk-ups at a game.
 - **Homework results:** which plays a family watched and quiz scores.
 
-**We never collect a player's** email, phone number, home address, school, date of birth, photo, or anything that lets someone contact a child directly. RallyCap has **no private messaging**: team messages go to the team's group, never to an individual child.
+**We never collect a player's** email, phone number, home address, school, date of birth, photo, or anything that lets someone contact a child directly. Fungo has **no private messaging**: team messages go to the team's group, never to an individual child.
 
 ### 3.3 Team information
 
@@ -63,7 +63,7 @@ Team name, age group, colors and logo; seasons; games and practices (dates, time
 
 ### 3.4 Files and content you upload
 
-- **Images, PDFs and spreadsheets** you upload so RallyCap can read them: rosters (only each player's name, number and positions are kept, never other details the file may show), schedules, uniform flyers, tournament screenshots, tie-break rules, box scores, and pictures of your team colors. We send these to our AI provider to read them. We don't keep the original file unless the feature says so.
+- **Images, PDFs and spreadsheets** you upload so Fungo can read them: rosters (only each player's name, number and positions are kept, never other details the file may show), schedules, uniform flyers, tournament screenshots, tie-break rules, box scores, and pictures of your team colors. We send these to our AI provider to read them. We don't keep the original file unless the feature says so.
 - **Files we keep:** team and club logos; expense receipts, which are private to the team; and walk-up songs and team sounds, which are private to the team.
 
 ### 3.5 Payment information
@@ -73,8 +73,8 @@ Payments are handled by **Stripe**. **We never see or store your card number.** 
 ### 3.6 Information collected automatically
 
 - **Sign-in cookies.** We use cookies only to keep you signed in. We do not use advertising or cross-site tracking cookies in the app.
-- **On your device:** to work at the field with no signal, RallyCap saves a copy of your team's information and pages on your phone or computer (browser storage and a service worker), plus small preferences such as your last open team. Signing out clears it.
-- **Dictation:** if you tap the microphone on an AI prompt box, your browser turns your speech into text using its own speech service (for example Google in Chrome or Apple in Safari), under that company's terms. RallyCap never receives or stores the audio, only the words that land in the box.
+- **On your device:** to work at the field with no signal, Fungo saves a copy of your team's information and pages on your phone or computer (browser storage and a service worker), plus small preferences such as your last open team. Signing out clears it.
+- **Dictation:** if you tap the microphone on an AI prompt box, your browser turns your speech into text using its own speech service (for example Google in Chrome or Apple in Safari), under that company's terms. Fungo never receives or stores the audio, only the words that land in the box.
 - **Server logs:** our hosting providers keep standard logs (such as IP address, browser type, and the pages and errors requested) for security, troubleshooting and abuse prevention.
 - **Website analytics:** [We don't currently use analytics. If we add privacy-friendly analytics to our public website, we'll update this section first. We will not add session recording or advertising pixels inside the app.]
 
@@ -86,12 +86,12 @@ When you add a game or practice location, you search for a place, and we store t
 
 We use information to:
 
-1. Provide RallyCap. That covers building lineups, showing schedules and maps, posting to your team's GroupMe, tracking team money, running tournaments, and showing your child's stats.
+1. Provide Fungo. That covers building lineups, showing schedules and maps, posting to your team's GroupMe, tracking team money, running tournaments, and showing your child's stats.
 2. Power features you choose to use. Examples: reading an uploaded schedule, box score or screenshot; suggesting practice plans; making a walk-up song or announcer call.
 3. Keep accounts secure, prevent abuse, and enforce the rules about who can see what.
 4. Process payments and unlock what you've paid for.
 5. Send service messages, such as sign-in links, receipts, and notices about important changes. **We don't send marketing email without your consent**, and you can unsubscribe at any time.
-6. Fix problems and improve RallyCap.
+6. Fix problems and improve Fungo.
 
 **We do not:**
 - sell or rent personal information
@@ -103,7 +103,7 @@ We use information to:
 
 ## 5. Who can see what
 
-RallyCap enforces these rules in its database, not just in the app:
+Fungo enforces these rules in its database, not just in the app:
 
 | Who | Can see |
 |---|---|
@@ -112,13 +112,13 @@ RallyCap enforces these rules in its database, not just in the app:
 | **Coaches and treasurers** | Team money in full (every entry and every family's balance) |
 | **Parents** | Also: their own children's money charges, the team's expenses (Walkoffs), their own children's homework, and their own children's box score lines and pitch counts (with a Player pass). Parents do **not** see other children's box score lines or pitch counts, other families' money details, or lineup tools |
 | **A club's directors and admins** (only while the team holds that club's code) | View-only: the team's players, games, lineups, playing time, fair-play rules, imported team stats and game box scores, and coaches' names. **Never** team money, parents or family links, walk-ups, GroupMe, or families' pitch counts and own box score stats |
-| **RallyCap staff** | Only as needed to provide support, keep RallyCap secure, or comply with the law |
+| **Fungo staff** | Only as needed to provide support, keep Fungo secure, or comply with the law |
 
-**Things you post to GroupMe** through RallyCap are sent to your team's GroupMe group, and from then on are governed by GroupMe's terms and privacy policy.
+**Things you post to GroupMe** through Fungo are sent to your team's GroupMe group, and from then on are governed by GroupMe's terms and privacy policy.
 
 ## 6. Service providers
 
-We use these companies to run RallyCap. They act on our behalf and may use your information only to provide their service to us:
+We use these companies to run Fungo. They act on our behalf and may use your information only to provide their service to us:
 
 | Provider | What they do | Information involved |
 |---|---|---|
@@ -127,22 +127,22 @@ We use these companies to run RallyCap. They act on our behalf and may use your 
 | **Anthropic** (Claude) | AI that reads uploads and drafts plans, rules and lyrics | The content you upload or type for that feature |
 | **ElevenLabs** | AI walk-up songs, announcer voice and sounds | Song settings and lyrics, and how to say a player's name and number |
 | **Google Maps Platform** | Place search, addresses and maps | Place searches and the places you pick |
-| **Stripe** | Payments | Your email and payment details (entered with Stripe, not RallyCap) |
+| **Stripe** | Payments | Your email and payment details (entered with Stripe, not Fungo) |
 | **GroupMe** (Microsoft) | Posting to your team's group | The messages you or your team's automatic game day posts send |
 | [Email provider, if separate from Supabase] | Sign-in emails | Your email address |
 
 Data is stored and processed in the **United States** [confirm the Supabase and Vercel regions].
 
 We may also disclose information:
-- **if required by law** or to protect someone's safety, the rights of others, or RallyCap
+- **if required by law** or to protect someone's safety, the rights of others, or Fungo
 - **in a business transfer** (such as a merger or sale), in which case the new owner must honor this policy or give you notice and choices.
 
 ## 7. Children's privacy
 
-RallyCap is meant for adults who run and support youth teams, and children do not create accounts. Information about players under 13 is provided by their coaches and parents or guardians to run the team. We collect only what's described in section 3.2, and we use it only to provide RallyCap to that team and family.
+Fungo is meant for adults who run and support youth teams, and children do not create accounts. Information about players under 13 is provided by their coaches and parents or guardians to run the team. We collect only what's described in section 3.2, and we use it only to provide Fungo to that team and family.
 
 - **Coaches** confirm, when they add players, that they have the families' permission to add them (see our Terms).
-- **Parents and guardians** can ask us to review, correct or delete their child's information at any time (section 9), even if they don't use RallyCap.
+- **Parents and guardians** can ask us to review, correct or delete their child's information at any time (section 9), even if they don't use Fungo.
 - If we learn that a child under 13 has created an account, or that we've collected a child's information in a way this policy doesn't allow, we'll delete it.
 
 [Have your lawyer confirm the COPPA posture: information about children is provided by adults, not collected from children, and handled as described here.]

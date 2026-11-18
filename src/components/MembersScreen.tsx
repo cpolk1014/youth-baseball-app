@@ -407,8 +407,8 @@ function ShareLink({ role, url }: { role: MemberRole; url: string }) {
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
   const message =
     role === "parent"
-      ? "Join our team on RallyCap to see lineups and playing time:"
-      : `You're invited to help ${role === "coach" ? "coach" : "manage"} our team on RallyCap:`;
+      ? "Join our team on Fungo to see lineups and playing time:"
+      : `You're invited to help ${role === "coach" ? "coach" : "manage"} our team on Fungo:`;
   return (
     <div className="flex flex-col gap-3">
       <p className="text-base text-slate-700">
@@ -420,7 +420,7 @@ function ShareLink({ role, url }: { role: MemberRole; url: string }) {
       {canShare && (
         <button
           onClick={() =>
-            void navigator.share({ title: "RallyCap invite", text: message, url }).catch(() => {})
+            void navigator.share({ title: "Fungo invite", text: message, url }).catch(() => {})
           }
           className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]"
         >

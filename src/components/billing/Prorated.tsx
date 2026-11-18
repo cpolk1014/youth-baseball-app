@@ -1,4 +1,4 @@
-// The price of a season bought today and why, in RallyCap's bleacher voice. Prices come
+// The price of a season bought today and why, in Fungo's bleacher voice. Prices come
 // from `quote` (src/lib/billing/season.ts), the same one the checkout charges.
 import { dollars, type Quote } from "@/lib/billing/season";
 

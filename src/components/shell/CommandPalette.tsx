@@ -196,7 +196,7 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Search RallyCap"
+        aria-label="Search Fungo"
         className="relative flex max-h-[70vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
         onKeyDown={onKey}
       >

@@ -9,7 +9,7 @@ import {
 import { Ai, Check, Cta, Eyebrow, PageHero, Section, TRIAL_HREF } from "@/components/site/parts";
 
 export const metadata: Metadata = {
-  title: { absolute: "RallyCap for Parents: Highlight Reels & Pitch Counts" },
+  title: { absolute: "Fungo for Parents: Highlight Reels & Pitch Counts" },
   description:
     "Turn your clips into highlight reels with a stadium announcer, and keep a pitch count that follows your kid to every team, lesson and bullpen, with Pitch Smart rest days. Free with your team; the Player pass is $10 a season.",
   alternates: { canonical: "/parents" },
@@ -131,7 +131,7 @@ export default function ParentsPage() {
             </h2>
             <p className="mt-6 text-lg leading-relaxed text-slate-700">
               Saturday for the travel team, Tuesday for the rec team, a lesson on Thursday. No coach
-              sees all of it. You do. RallyCap adds it up and tells you when they can pitch again.
+              sees all of it. You do. Fungo adds it up and tells you when they can pitch again.
             </p>
             <ul className="mt-6 flex flex-col gap-3 text-lg text-slate-700">
               <Check>
@@ -191,7 +191,7 @@ export default function ParentsPage() {
           </div>
           <div className="relative mx-auto w-full max-w-[300px] lg:rotate-2">
             <ParentGameDayScreen />
-            {/* The group chat questions RallyCap answers before anyone asks. */}
+            {/* The group chat questions Fungo answers before anyone asks. */}
             <div
               aria-hidden
               className="absolute top-[44%] -left-4 -rotate-6 rounded-2xl rounded-bl-sm bg-white px-3 py-2 text-sm font-semibold text-slate-500 shadow-xl ring-1 ring-slate-200 sm:-left-24"

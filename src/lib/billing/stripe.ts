@@ -59,7 +59,7 @@ export function purchaseFromEvent(event: Stripe.Event): Fulfillment | null {
   if (s.payment_status !== "paid") return null;
   const m = (s.metadata ?? {}) as Partial<PurchaseMeta>;
   if ((m.kind !== "club" && m.kind !== "team" && m.kind !== "family") || !m.buyer || !m.season) {
-    throw new Error(`Checkout ${s.id} is missing RallyCap details.`);
+    throw new Error(`Checkout ${s.id} is missing Fungo details.`);
   }
   return {
     session: s.id,

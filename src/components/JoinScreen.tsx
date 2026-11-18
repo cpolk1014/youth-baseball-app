@@ -69,7 +69,7 @@ export function JoinScreen({ token }: { token: string }) {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-8">
-      <h1 className="text-3xl font-bold">RallyCap</h1>
+      <h1 className="text-3xl font-bold">Fungo</h1>
       <div className="mt-6">
         {!isSupabaseConfigured ? (
           <p className="text-lg">

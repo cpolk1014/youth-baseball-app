@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
   const ids = Array.isArray(body?.practiceIds)
     ? body.practiceIds.filter((x): x is string => typeof x === "string")
     : [];
-  if (!teamId || !goals) return errorResponse(400, "Tell RallyCap what you want from practice.");
+  if (!teamId || !goals) return errorResponse(400, "Tell Fungo what you want from practice.");
   if (ids.length === 0) return errorResponse(400, "Pick at least one practice to plan.");
   if (ids.length > MAX_PLANNED) {
     return errorResponse(400, `Plan up to ${MAX_PLANNED} practices at a time.`);

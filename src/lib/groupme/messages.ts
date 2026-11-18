@@ -53,7 +53,7 @@ export function battingOrderMessage(input: BattingOrderMessageInput): string {
   if (sitting.length) lines.push("", `Not batting today: ${sitting.join(", ")}`);
   const absent = (lineup.absent ?? []).map(name);
   if (absent.length) lines.push("", `Not at this game: ${absent.join(", ")}`);
-  lines.push("", "Sent from RallyCap.");
+  lines.push("", "Sent from Fungo.");
   return lines.join("\n");
 }
 
@@ -91,6 +91,6 @@ export function batAroundMessage(input: BatAroundMessageInput): string {
   } else if (installments[0]) {
     lines.push(`Due ${formatDate(installments[0].dueDate)}.`);
   }
-  lines.push("", `See your balance in RallyCap: ${input.link}`);
+  lines.push("", `See your balance in Fungo: ${input.link}`);
   return lines.join("\n");
 }

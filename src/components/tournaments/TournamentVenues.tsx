@@ -285,8 +285,8 @@ function AddVenue({
         <div className="flex flex-col gap-2">
           <ScreenshotButton onFiles={(f) => void read(f)} label="📷 Upload a picture" />
           <p className="text-sm text-slate-600">
-            A flyer, the event page or a map. RallyCap reads the park and finds it on the map, and
-            you check it before it&apos;s saved. The picture isn&apos;t kept.
+            A flyer, the event page or a map. Fungo reads the park and finds it on the map, and you
+            check it before it&apos;s saved. The picture isn&apos;t kept.
           </p>
         </div>
       </PaidGate>

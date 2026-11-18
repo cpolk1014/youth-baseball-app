@@ -10,9 +10,9 @@ import {
 import { Ai, Check, Cta, EndCta, FeatureRow, PageHero, Section } from "@/components/site/parts";
 
 export const metadata: Metadata = {
-  title: { absolute: "AI for Youth Baseball: Schedules, Practice Plans & Tournaments | RallyCap" },
+  title: { absolute: "AI for Youth Baseball: Schedules, Practice Plans & Tournaments | Fungo" },
   description:
-    "RallyCap's AI reads your schedules, tournament screenshots and box scores, plans age-appropriate practices, turns plain-English rules into lineup rules, and makes walk-up songs.",
+    "Fungo's AI reads your schedules, tournament screenshots and box scores, plans age-appropriate practices, turns plain-English rules into lineup rules, and makes walk-up songs.",
   alternates: { canonical: "/ai" },
 };
 
@@ -20,7 +20,7 @@ export default function AiPage() {
   return (
     <>
       <PageHero
-        eyebrow="✨ RallyCap AI"
+        eyebrow="✨ Fungo AI"
         title="Meet youth baseball's AI assistant coach."
         lead="AI that does the stuff you used to do at 11 p.m. Schedules, practice plans, tournament brackets, walk-up songs. It does the work, you check it, everybody thinks you're very organized."
       >
@@ -55,7 +55,7 @@ export default function AiPage() {
             visual={<AiPracticeScreen />}
           >
             <p>
-              Tell RallyCap what you want this season, in your own words. AI plans{" "}
+              Tell Fungo what you want this season, in your own words. AI plans{" "}
               <b className="text-[#1B2A4A]">every upcoming practice</b>:
             </p>
             <ul className="flex flex-col gap-2">
@@ -92,7 +92,7 @@ export default function AiPage() {
               </Check>
             </ul>
             <p>
-              Then RallyCap&apos;s smart engine runs the standings and answers{" "}
+              Then Fungo&apos;s smart engine runs the standings and answers{" "}
               <b className="text-[#1B2A4A]">What time do we play tomorrow?</b>
             </p>
           </FeatureRow>
@@ -105,8 +105,8 @@ export default function AiPage() {
           >
             <p>
               Type a lineup rule the way you&apos;d say it to your assistant coach. Unlike your
-              assistant coach, AI actually listens. It turns it into a rule RallyCap can follow,
-              asks if anything&apos;s unclear, and checks it against your roster before you save it.
+              assistant coach, AI actually listens. It turns it into a rule Fungo can follow, asks
+              if anything&apos;s unclear, and checks it against your roster before you save it.
             </p>
           </FeatureRow>
 

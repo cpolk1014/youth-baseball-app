@@ -13,7 +13,7 @@ import {
 } from "@/components/site/parts";
 
 export const metadata: Metadata = {
-  title: { absolute: "RallyCap for Coaches: Fair Lineups, AI Practice Plans & Game Day" },
+  title: { absolute: "Fungo for Coaches: Fair Lineups, AI Practice Plans & Game Day" },
   description:
     "For youth baseball coaches: fair inning-by-inning lineups in two minutes, AI practice plans for your age group, schedules from a photo, GroupMe game day posts and tournament weekends.",
   alternates: { canonical: "/coaches" },
@@ -62,7 +62,7 @@ export default function CoachesPage() {
     <>
       <PageHero
         eyebrow="For coaches"
-        title="You coach. RallyCap carries the clipboard."
+        title="You coach. Fungo carries the clipboard."
         lead="Head coaches, assistant coaches, and the dad who got volunteered at the first parent meeting. Fair lineups in two minutes, practice plans written for you, and a game day that mostly runs itself."
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -117,7 +117,7 @@ export default function CoachesPage() {
             visual={<AiPracticeScreen />}
           >
             <p>
-              Tell RallyCap what your team needs this season, out loud if you want (there&apos;s a
+              Tell Fungo what your team needs this season, out loud if you want (there&apos;s a
               mic). AI plans every practice: drills that fill your time, plays to walk through, a
               theme and a teammate lesson, written for 7U or 14U.
             </p>
@@ -199,7 +199,7 @@ export default function CoachesPage() {
             href="/clubs"
             className="font-bold text-[#DC143C] underline-offset-4 hover:underline"
           >
-            RallyCap for clubs →
+            Fungo for clubs →
           </Link>
         </p>
       </Section>

@@ -1,7 +1,7 @@
 "use client";
 
 // While the app loads a team (opening the app, or switching teams): the page blurs and the
-// RallyCap cap shows with a bat taking swings, so it's clear something is happening.
+// Fungo cap shows with a bat taking swings, so it's clear something is happening.
 import type { CSSProperties } from "react";
 import { themeVars } from "@/lib/branding/theme";
 import { useStoreState } from "@/lib/data/store";

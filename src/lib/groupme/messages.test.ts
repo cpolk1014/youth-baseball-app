@@ -66,7 +66,7 @@ describe("battingOrderMessage", () => {
         "",
         "Not at this game: Sam P.",
         "",
-        "Sent from RallyCap.",
+        "Sent from Fungo.",
       ].join("\n"),
     );
   });
@@ -105,7 +105,7 @@ describe("batAroundMessage", () => {
         "• $25.00 due Mar 15",
         "• $25.00 due Apr 15",
         "",
-        "See your balance in RallyCap: https://www.rallycap.team/money",
+        "See your balance in Fungo: https://www.rallycap.team/money",
       ].join("\n"),
     );
   });

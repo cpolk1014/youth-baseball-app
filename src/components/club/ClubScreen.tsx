@@ -148,7 +148,7 @@ function StartClub() {
       <p role="status" className="rounded-xl border-2 border-green-700 bg-green-50 p-4 text-lg">
         {waited < 10
           ? "Payment received. Setting up your club…"
-          : "Payment received. Your club is taking longer than usual to appear; reload in a minute, or contact RallyCap if it doesn't."}
+          : "Payment received. Your club is taking longer than usual to appear; reload in a minute, or contact Fungo if it doesn't."}
       </p>
     );
   }

@@ -4,7 +4,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const PAID_FEATURE_MESSAGE =
-  "This is part of RallyCap's paid features. A coach can renew the team on Coaches & parents.";
+  "This is part of Fungo's paid features. A coach can renew the team on Coaches & parents.";
 
 /** Whether the team has paid (or is still free). A failed check counts as not paid. */
 export async function teamHasPaid(supabase: SupabaseClient, teamId: string): Promise<boolean> {

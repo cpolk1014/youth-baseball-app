@@ -63,7 +63,7 @@ export function GroupMeScreen() {
         </span>
         <p className="min-w-0 flex-1 text-base">
           Connected to <strong>{data.groupme.groupName ?? "your team's group"}</strong>. Posts show
-          up from the RallyCap bot.
+          up from the Fungo bot.
         </p>
       </section>
 
@@ -123,7 +123,7 @@ function ConnectForm({
     try {
       await saveGroupMe(cleanId, group.trim() || null);
       // A test post proves the bot ID works and that it's in the right group.
-      await postToGroupMe("👋 RallyCap is connected. Lineups and team updates will show up here.");
+      await postToGroupMe("👋 Fungo is connected. Lineups and team updates will show up here.");
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't connect.");
@@ -137,7 +137,7 @@ function ConnectForm({
       <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
         <h2 className="mb-2 text-lg font-bold">Connect your team&apos;s GroupMe</h2>
         <p className="mb-3 text-base text-slate-700">
-          A one-time setup. You add a “RallyCap” bot to the team&apos;s group, and the app posts
+          A one-time setup. You add a “Fungo” bot to the team&apos;s group, and the app posts
           through it.
         </p>
         <ol className="flex list-decimal flex-col gap-2 pl-5 text-base">
@@ -155,7 +155,7 @@ function ConnectForm({
           </li>
           <li>
             Tap <strong>Create Bot</strong>. Pick your team&apos;s group, name it{" "}
-            <strong>RallyCap</strong>, and leave the other boxes empty.
+            <strong>Fungo</strong>, and leave the other boxes empty.
           </li>
           <li>
             Copy the <strong>Bot ID</strong> it shows (a long string of letters and numbers) and

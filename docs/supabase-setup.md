@@ -57,14 +57,14 @@ Authentication → URL Configuration:
 
 Sign-in is code only: no link in the email (email scanners and other browsers used up links
 before people tapped them). Authentication → Emails → **Magic Link** template, subject
-`Your RallyCap code: {{ .Token }}` (the code shows in the phone's notification), body:
+`Your Fungo code: {{ .Token }}` (the code shows in the phone's notification), body:
 
 ```html
-<h2>Here's your RallyCap code</h2>
+<h2>Here's your Fungo code</h2>
 <p style="font-size:32px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
 <p>Type it on the sign-in screen and you're in. No password, no signs to steal.</p>
 <p>Didn't ask for this? Ignore it. Nobody gets in without the code.</p>
-<p>RallyCap · Youth baseball's AI assistant coach</p>
+<p>Fungo · Youth baseball's AI assistant coach</p>
 ```
 
 Use the same subject and body in the **Confirm signup** template (first-time sign-ins use it).
@@ -102,7 +102,7 @@ Start the app (`npm run dev`), sign in with your email, and then either:
   `https://youth-baseball-app-lime.vercel.app/**`, `http://localhost:3000/**`.
 - **Email:** Resend, domain `rallycap.team` verified (DNS records in Vercel). Supabase custom
   SMTP: host `smtp.resend.com`, port `465`, username `resend`, password = a Resend API key
-  with sending access, sender `RallyCap <signin@rallycap.team>`.
+  with sending access, sender `Fungo <signin@rallycap.team>`.
 - **Email templates** (Magic Link and Confirm signup): code only (`{{ .Token }}`, also in the
   subject), no link; the text follows the sign-in screen's (see step 5).
 

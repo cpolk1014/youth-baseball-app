@@ -213,7 +213,7 @@ export function PracticePrintScreen({ practiceId }: { practiceId: string }) {
             Printed {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </span>
           {/* eslint-disable-next-line @next/next/no-img-element -- printed brand mark */}
-          <img src="/brand/rallycap-horizontal-color.svg" alt="RallyCap" className="h-5" />
+          <img src="/brand/rallycap-horizontal-color.svg" alt="Fungo" className="h-5" />
         </footer>
       </article>
     </AppShell>

@@ -43,7 +43,7 @@ export function useCanDictate() {
 }
 
 const ERRORS: Record<string, string> = {
-  "not-allowed": "Allow the microphone for RallyCap to talk instead of typing.",
+  "not-allowed": "Allow the microphone for Fungo to talk instead of typing.",
   "service-not-allowed": "Dictation is off on this device. Try the mic on your keyboard.",
   "audio-capture": "No microphone found.",
   network: "Dictation needs a connection.",

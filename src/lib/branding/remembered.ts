@@ -1,4 +1,4 @@
-// The last team's colors, kept on this device so the app opens in them (not RallyCap's
+// The last team's colors, kept on this device so the app opens in them (not Fungo's
 // navy and crimson) before the team's data arrives.
 import { themeVars } from "./theme";
 
@@ -27,7 +27,7 @@ export function forgetLook(): void {
 
 /**
  * No team to show (signed in with no team yet): forget the last team's colors and take them
- * off <html>, so the page is in RallyCap's own colors, not an old team's.
+ * off <html>, so the page is in Fungo's own colors, not an old team's.
  */
 export function clearLook(): void {
   forgetLook();

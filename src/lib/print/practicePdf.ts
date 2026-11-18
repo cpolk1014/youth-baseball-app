@@ -197,7 +197,7 @@ export function practiceSchedulePdf(
   footer(
     w,
     brand,
-    `${count} practice${count === 1 ? "" : "s"} · Printed ${brand.printed} · Check RallyCap for changes`,
+    `${count} practice${count === 1 ? "" : "s"} · Printed ${brand.printed} · Check Fungo for changes`,
   );
   return w;
 }

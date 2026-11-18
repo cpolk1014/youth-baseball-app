@@ -285,8 +285,8 @@ export function BuyPlayerStats({
         {busy ? "Opening checkout…" : `Buy for ${dollars(q.cents)}`}
       </button>
       <p className="text-sm text-slate-600">
-        Just for you. Another parent who wants it gets their own. Payment is by Stripe; RallyCap
-        never sees your card.
+        Just for you. Another parent who wants it gets their own. Payment is by Stripe; Fungo never
+        sees your card.
       </p>
     </div>
   );

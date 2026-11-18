@@ -1,7 +1,7 @@
-# RallyCap website copy (Phase 3, draft 2: AI-forward)
+# Fungo website copy (Phase 3, draft 2: AI-forward)
 
 > For review. **[Brackets]** are build notes, not copy.
-> **What counts as AI.** "AI" here means the features that really use AI (Claude and ElevenLabs): reading schedules, flyers, box scores and tournament screenshots; turning typed rules into lineup rules; planning practices; and making walk-up songs, lyrics and the announcer. Auto-fill and the tournament standings and scenarios are RallyCap's own engine, so they're called **smart**, never AI.
+> **What counts as AI.** "AI" here means the features that really use AI (Claude and ElevenLabs): reading schedules, flyers, box scores and tournament screenshots; turning typed rules into lineup rules; planning practices; and making walk-up songs, lyrics and the announcer. Auto-fill and the tournament standings and scenarios are Fungo's own engine, so they're called **smart**, never AI.
 > **AI features are part of the Team and Club plans** (and every 14-day trial). The free plan has the smart lineup engine but no AI tools. The copy says so wherever it matters.
 > **Main button:** **Start your free 14-day trial**. Second: **Start a club**.
 
@@ -16,7 +16,7 @@
 
 ## Tagline
 
-**Recommended (updated 2026-11-05):** **RallyCap: Youth baseball's AI assistant coach.** (Was: AI-powered youth baseball.)
+**Recommended (updated 2026-11-05):** **Fungo: Youth baseball's AI assistant coach.** (Was: AI-powered youth baseball.)
 
 Alternatives to test:
 - *The AI assistant coach for travel ball.*
@@ -30,11 +30,11 @@ The tagline goes under the logo in the top bar, in the hero eyebrow, in Google t
 
 ## Shared: top bar and footer
 
-**Top bar:** [RallyCap logo] *AI-powered youth baseball* · Features · AI · Pricing · Clubs · Parents · Our story · **Sign in** · **[Start your free 14-day trial]**
+**Top bar:** [Fungo logo] *AI-powered youth baseball* · Features · AI · Pricing · Clubs · Parents · Our story · **Sign in** · **[Start your free 14-day trial]**
 (On phones: logo, **Start free trial**, and a ☰ menu.)
 
 **Footer:**
-- **RallyCap.** AI-powered youth baseball.
+- **Fungo.** AI-powered youth baseball.
 - Product: Features · AI · Pricing · Clubs · Parents
 - Company: Our story · Contact [support@rallycap.team] · Privacy · Terms
 - Small print: © 2026 [legal entity]. Not affiliated with GameChanger, GroupMe or any tournament organization.
@@ -43,7 +43,7 @@ The tagline goes under the logo in the top bar, in the hero eyebrow, in Google t
 
 # 1. Home `/`
 
-**Page title (Google):** RallyCap: AI-Powered Youth Baseball | Lineups, Schedules & Tournaments
+**Page title (Google):** Fungo: AI-Powered Youth Baseball | Lineups, Schedules & Tournaments
 **Description (Google):** Snap your schedule and AI adds every game. Get practice plans for your age group and fair lineups in two minutes. Built by a travel ball coach. Free 14-day trial.
 
 ### Section 1: Hero
@@ -51,7 +51,7 @@ The tagline goes under the logo in the top bar, in the hero eyebrow, in Google t
 
 # Your AI assistant coach.
 
-**Subhead:** Snap a picture of your schedule and AI adds every game. Tell it what your team needs and it plans every practice. Then get a fair lineup in two minutes. You coach. RallyCap handles the rest.
+**Subhead:** Snap a picture of your schedule and AI adds every game. Tell it what your team needs and it plans every practice. Then get a fair lineup in two minutes. You coach. Fungo handles the rest.
 
 **[Start your free 14-day trial]** &nbsp; *See AI in action ↓*
 
@@ -112,7 +112,7 @@ Snap the uniform flyer, and AI lists every combo: shirt, pants, hat, belt and so
 ## AI clears your plate. The smart engine runs your game.
 
 **⚾ Fair lineups in two minutes**
-Tap Auto-fill. RallyCap's smart lineup engine builds every inning to your fair-play rules: no one sits twice before everyone's sat, everyone plays the infield, and pitchers and catchers stay in your limits. *Why this lineup?* explains every spot.
+Tap Auto-fill. Fungo's smart lineup engine builds every inning to your fair-play rules: no one sits twice before everyone's sat, everyone plays the infield, and pitchers and catchers stay in your limits. *Why this lineup?* explains every spot.
 
 **📣 Game day on autopilot**
 The game day post goes to your team's GroupMe automatically: opponent, field, time, *arrive by* and uniform.
@@ -139,7 +139,7 @@ Fees split across the roster, payments, expenses and receipts. Every family know
 >
 > The baseball was never the hard part. It was typing in schedules, planning practices at midnight, redoing lineups so every kid got fair innings, and figuring out tournament seeding with a pencil.
 >
-> So I built RallyCap and put AI on the busywork. Now I snap the schedule instead of typing it. I tell it what my team needs and get a practice plan. And I spend my time coaching kids."
+> So I built Fungo and put AI on the busywork. Now I snap the schedule instead of typing it. I tell it what my team needs and get a practice plan. And I spend my time coaching kids."
 >
 > **Craig**, founder, 7U head coach
 
@@ -158,7 +158,7 @@ Fees split across the roster, payments, expenses and receipts. Every family know
 **[See full pricing →](/pricing)**
 
 ### Section 9: Final call to action
-[Full-width band in RallyCap navy with the crimson accent]
+[Full-width band in Fungo navy with the crimson accent]
 ## Let AI run the busywork. You coach the kids.
 Snap your schedule tonight. Have a fair lineup before first pitch.
 **[Start your free 14-day trial]**
@@ -168,8 +168,8 @@ Snap your schedule tonight. Have a fair lineup before first pitch.
 
 # 2. AI `/ai` (new page)
 
-**Page title:** AI for Youth Baseball: Schedules, Practice Plans & Tournaments | RallyCap
-**Description:** RallyCap's AI reads your schedules, tournament screenshots and box scores, plans age-appropriate practices, turns plain-English rules into lineup rules, and makes walk-up songs.
+**Page title:** AI for Youth Baseball: Schedules, Practice Plans & Tournaments | Fungo
+**Description:** Fungo's AI reads your schedules, tournament screenshots and box scores, plans age-appropriate practices, turns plain-English rules into lineup rules, and makes walk-up songs.
 
 # AI-powered youth baseball.
 The work behind a travel team, from schedules to practice plans to tournament weekends, done by AI and checked by you.
@@ -183,7 +183,7 @@ No more typing in 40 games one at a time.
 
 ### 2. AI practice plans
 ## A season of practices, planned for your age group.
-Tell RallyCap what you want this season, in your own words. AI plans **every upcoming practice**:
+Tell Fungo what you want this season, in your own words. AI plans **every upcoming practice**:
 - drills that fill the exact time you have
 - the situations to work on, from our library of 57 animated plays
 - a focus and a fun theme for each day
@@ -199,11 +199,11 @@ Screenshot it and AI reads it:
 - **the tie-breaker rules:** saved by name ("2D Tiebreak") to reuse at that organization's next event
 - **the results page:** scores for every game, matched to your schedule.
 
-Then RallyCap's smart engine runs the standings and answers ***What time do we play tomorrow?***
+Then Fungo's smart engine runs the standings and answers ***What time do we play tomorrow?***
 
 ### 4. Rules in plain English
 ## Just say what you want.
-Type a lineup rule the way you'd say it to an assistant coach. AI turns it into a rule RallyCap can follow, asks if anything's unclear, and checks it against your roster before you save it.
+Type a lineup rule the way you'd say it to an assistant coach. AI turns it into a rule Fungo can follow, asks if anything's unclear, and checks it against your roster before you save it.
 
 ### 5. AI walk-up songs & announcer
 ## Every kid gets a big-league moment.
@@ -232,7 +232,7 @@ After the game, the coach uploads GameChanger's box score. AI reads **every kid'
 
 # 3. Features `/features`
 
-**Page title:** Features: AI Schedules, Fair Lineups, GroupMe & Tournaments | RallyCap
+**Page title:** Features: AI Schedules, Fair Lineups, GroupMe & Tournaments | Fungo
 **Description:** AI-powered youth baseball: AI schedule import and practice plans, a smart fair-play lineup engine, GroupMe game day posts, team money, tournaments and walk-up songs.
 
 # Everything your season runs on. AI where it saves you time.
@@ -295,8 +295,8 @@ From the first practice to the last bracket game. Built for the dugout: big butt
 
 # 4. Pricing `/pricing`
 
-**Page title:** Pricing | RallyCap: AI-Powered Youth Baseball from $0
-**Description:** RallyCap's smart lineup engine is free forever. Every AI tool, plus GroupMe, team money and tournaments, is $129 a season per team, or $99 per team for clubs. 14-day free trial.
+**Page title:** Pricing | Fungo: AI-Powered Youth Baseball from $0
+**Description:** Fungo's smart lineup engine is free forever. Every AI tool, plus GroupMe, team money and tournaments, is $129 a season per team, or $99 per team for clubs. 14-day free trial.
 
 # Simple pricing. AI included.
 Start free. Try every AI tool for 14 days. Pay once a season, never automatically.
@@ -359,7 +359,7 @@ And the tools that run your season:
 It reads things so you don't have to type them (rosters, schedules, tournament pages and brackets, tie-breaker rules, results, uniform flyers and box scores). It turns rules you type into lineup rules, plans age-appropriate practices, and makes walk-up songs and announcer calls. You check everything before it's saved. [See the AI page](/ai).
 
 **Is the lineup builder AI?**
-It's RallyCap's own smart engine. It follows your fair-play rules exactly, gives the same result every time, and explains every spot. It's free forever.
+It's Fungo's own smart engine. It follows your fair-play rules exactly, gives the same result every time, and explains every spot. It's free forever.
 
 **What's a season?**
 August 1 to July 31, for teams, clubs and the Player pass alike. Paid features keep working for 5 days after July 31 while you renew.
@@ -368,7 +368,7 @@ August 1 to July 31, for teams, clubs and the Player pass alike. Paid features k
 You only pay for the innings left. Sign up after August 1 and the price is prorated by the days left in the season, so a team joining in mid-November pays about $91, not $129. It never drops below a quarter of the price, because even the bottom of the ninth has a cover charge. From June 1 you buy next season instead, and the rest of this one is on the house.
 
 **Do parents have to pay?**
-No. Parents use RallyCap free with your team. *The Player pass* (highlight reels, pitch count and stats) is an optional add-on for their own child.
+No. Parents use Fungo free with your team. *The Player pass* (highlight reels, pitch count and stats) is an optional add-on for their own child.
 
 **What happens after the free trial?**
 Free features keep working. AI and other paid tools pause, and everything you made stays. Renew at any time.
@@ -385,17 +385,17 @@ AI only sees what a feature needs. Practice plans get no player names, and each 
 
 # 5. Clubs `/clubs`
 
-**Page title:** RallyCap for Clubs: AI-Powered Youth Baseball for Every Team
+**Page title:** Fungo for Clubs: AI-Powered Youth Baseball for Every Team
 **Description:** Give every coach in your club AI schedule import, AI practice plans, fair lineups, GroupMe posts and tournaments, with a club dashboard, club colors and a shared library. $99 per team.
 
 # Give every coach in your club an AI assistant.
-One code per team. Every coach gets RallyCap's full Team plan, AI included, and you get the whole club at a glance.
+One code per team. Every coach gets Fungo's full Team plan, AI included, and you get the whole club at a glance.
 
 **[Start a club]** &nbsp; *Free to set up · Pay when your teams are ready*
 
 [Visual: the club dashboard with several teams, in club colors]
 
-### Why clubs choose RallyCap
+### Why clubs choose Fungo
 **✨ AI for every coach**
 Schedule import, age-appropriate practice plans and the tournament reader, for your volunteer coaches who don't have time to type schedules or plan drills.
 
@@ -426,7 +426,7 @@ Club admins can **view** lineups, playing time, rules and team stats while a tea
 
 # 6. Parents `/parents`
 
-**Page title:** RallyCap for Parents: Highlight Reels & Pitch Counts
+**Page title:** Fungo for Parents: Highlight Reels & Pitch Counts
 **Description:** Turn your clips into highlight reels with a stadium announcer, and keep a pitch count that follows your kid to every team, lesson and bullpen, with Pitch Smart rest days. Free with your team; the Player pass is $10 a season.
 
 # Highlight reels that look like TV. A pitch count that follows their arm.
@@ -440,7 +440,7 @@ Turn the clip you filmed from the fence into a highlight with your kid's name on
 
 ### Pitch count · Player pass
 ## Their arm doesn't care which team they pitched for.
-Saturday for the travel team, Tuesday for the rec team, a lesson on Thursday. No coach sees all of it. You do. RallyCap adds it up and tells you when they can pitch again.
+Saturday for the travel team, Tuesday for the rec team, a lesson on Thursday. No coach sees all of it. You do. Fungo adds it up and tells you when they can pitch again.
 - **Count it as it happens:** big Ball and Strike buttons, one thumb, from the bleachers. Or type the total after.
 - **Every session:** games, practice bullpens, pitching lessons, and the Saturday they subbed for another team.
 - **Rest days, figured out:** MLB and USA Baseball's Pitch Smart limits for their age. "55 pitches Saturday: rest until Wednesday." A bullpen on a rest day gets flagged.
@@ -471,8 +471,8 @@ The Player pass: Pine Tar Productions, pitch count and stats. $10 for one player
 
 # 7. Our story `/story`
 
-**Page title:** Our Story | RallyCap, AI-Powered Youth Baseball Built by a Coach
-**Description:** RallyCap was built by Craig, a 7U head coach and travel ball stepdad and uncle, who put AI to work on the busywork of running a youth baseball team.
+**Page title:** Our Story | Fungo, AI-Powered Youth Baseball Built by a Coach
+**Description:** Fungo was built by Craig, a 7U head coach and travel ball stepdad and uncle, who put AI to work on the busywork of running a youth baseball team.
 
 # Built in the dugout. Powered by AI.
 
@@ -484,19 +484,19 @@ Here's what I learned: the hardest part of coaching travel ball usually isn't th
 
 It's typing in a schedule one game at a time. It's planning practice the night before. It's redoing the lineup at midnight so every kid gets fair innings, then explaining it in the parking lot. It's working out Saturday night's seeding with a pencil.
 
-That's exactly the kind of work AI is good at. So I built **RallyCap** and put AI on the busywork:
+That's exactly the kind of work AI is good at. So I built **Fungo** and put AI on the busywork:
 
 - **I snap the schedule** instead of typing it.
 - **I tell it what my team needs** and get a practice plan for the whole season, made for 7-year-olds.
 - **I screenshot the tournament** and it reads the teams, the games and the tie-breakers.
 - **Every kid gets a walk-up song** with an announcer calling their name.
 
-And for the things that have to be exactly right, like fair lineups, playing time and standings, RallyCap's smart engine follows your rules to the letter and shows its work.
+And for the things that have to be exactly right, like fair lineups, playing time and standings, Fungo's smart engine follows your rules to the letter and shows its work.
 
 Youth baseball should be about the kids. AI gives me my time back to coach them. I hope it does the same for you.
 
 **Craig**
-Founder, RallyCap · 7U head coach
+Founder, Fungo · 7U head coach
 
 **[Start your free 14-day trial]**
 *Questions or ideas? I read every email: [support@rallycap.team]*

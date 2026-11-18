@@ -1,6 +1,6 @@
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
-// My RallyCap: the signed-in person across all their teams and clubs.
+// My Fungo: the signed-in person across all their teams and clubs.
 
 // Untyped client: joined rows (player:player_id(...)) come back as one object.
 function check<T>(result: { data: unknown; error: { message: string } | null }): T {

@@ -3,9 +3,9 @@ import { Cta, Section } from "@/components/site/parts";
 import { SUPPORT_EMAIL } from "@/components/site/SiteFooter";
 
 export const metadata: Metadata = {
-  title: { absolute: "Our Story | RallyCap, the AI Assistant Coach Built by a Coach" },
+  title: { absolute: "Our Story | Fungo, the AI Assistant Coach Built by a Coach" },
   description:
-    "RallyCap was built by Craig, a software developer, 7U head coach and youth baseball stepdad and uncle, who put AI to work on the busywork of running a youth baseball team.",
+    "Fungo was built by Craig, a software developer, 7U head coach and youth baseball stepdad and uncle, who put AI to work on the busywork of running a youth baseball team.",
   alternates: { canonical: "/story" },
 };
 
@@ -59,8 +59,8 @@ export default function StoryPage() {
           <p>
             Every developer has a moment where they look at something tedious and think,{" "}
             <i>a computer should be doing this.</i> Mine came somewhere around the fortieth
-            &ldquo;what time do we play?&rdquo; text. So I built <b className={b}>RallyCap</b> and
-            put AI on the busywork:
+            &ldquo;what time do we play?&rdquo; text. So I built <b className={b}>Fungo</b> and put
+            AI on the busywork:
           </p>
           <ul className="flex flex-col gap-3 pl-2">
             {[
@@ -88,11 +88,11 @@ export default function StoryPage() {
           </ul>
           <p>
             And because I write software for a living, I know where AI shouldn&apos;t guess. Fair
-            lineups, playing time and standings run on RallyCap&apos;s own engine. It follows your
+            lineups, playing time and standings run on Fungo&apos;s own engine. It follows your
             rules to the letter, gives the same answer every time, and shows its work.
           </p>
           <p>
-            Youth baseball should be about the kids. RallyCap gives me my time back to coach them. I
+            Youth baseball should be about the kids. Fungo gives me my time back to coach them. I
             hope it does the same for you.
           </p>
           <div className="mt-2 flex items-center gap-4">
@@ -102,7 +102,7 @@ export default function StoryPage() {
             <p className="text-base leading-snug">
               <b className="text-lg text-[#1B2A4A]">Craig</b>
               <br />
-              Founder &amp; developer, RallyCap · 7U head coach
+              Founder &amp; developer, Fungo · 7U head coach
             </p>
           </div>
           <div className="mt-6">

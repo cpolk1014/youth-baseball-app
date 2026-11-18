@@ -108,8 +108,8 @@ export function FlyerImport({
       {!found && (
         <>
           <p className="text-base text-slate-700">
-            Take a picture of the uniform flyer (or pick a screenshot or PDF). RallyCap reads each
-            look into a combo, and you check them before they&apos;re saved.
+            Take a picture of the uniform flyer (or pick a screenshot or PDF). Fungo reads each look
+            into a combo, and you check them before they&apos;re saved.
           </p>
           <label className="flex h-14 cursor-pointer items-center justify-center rounded-xl bg-[var(--team)] text-lg font-bold text-white">
             {busy ?? "Choose the flyer"}

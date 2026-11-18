@@ -201,10 +201,10 @@ export function PracticeScheduleScreen() {
 
         <footer className="mt-8 flex items-center justify-between border-t border-slate-200 pt-3 text-xs text-slate-500">
           <span>
-            {count} practice{count === 1 ? "" : "s"} · Check RallyCap for changes.
+            {count} practice{count === 1 ? "" : "s"} · Check Fungo for changes.
           </span>
           {/* eslint-disable-next-line @next/next/no-img-element -- printed brand mark */}
-          <img src="/brand/rallycap-horizontal-color.svg" alt="RallyCap" className="h-5" />
+          <img src="/brand/rallycap-horizontal-color.svg" alt="Fungo" className="h-5" />
         </footer>
       </article>
     </AppShell>

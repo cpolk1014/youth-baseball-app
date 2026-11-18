@@ -2,7 +2,7 @@
 
 // Pine Tar Productions: a parent turns a clip of their kid into a highlight with a name
 // banner, an AI announcer call and a slow-motion replay. It's made on the phone and saved
-// to the phone; RallyCap never stores the video.
+// to the phone; Fungo never stores the video.
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AppData } from "@/lib/data/types";
 import type { Player } from "@/lib/rules/types";
@@ -272,7 +272,7 @@ export function PineTar({ data, kid }: { data: AppData; kid: Player }) {
           ⬇️ Save to my phone
         </button>
         <p className="text-sm text-slate-600">
-          RallyCap doesn&apos;t keep your video. Save it now: it&apos;s gone when you close this. On
+          Fungo doesn&apos;t keep your video. Save it now: it&apos;s gone when you close this. On
           iPhone, tap Save Video in the share menu.
         </p>
         <button

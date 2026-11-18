@@ -149,8 +149,8 @@ export async function POST(request: NextRequest) {
             product_data: {
               name:
                 kind === "family"
-                  ? `RallyCap player stats (${season} season)`
-                  : `RallyCap ${season} season${kind === "club" ? " (club team)" : ""}`,
+                  ? `Fungo player stats (${season} season)`
+                  : `Fungo ${season} season${kind === "club" ? " (club team)" : ""}`,
               description: `${name}. ${terms}`,
             },
           },

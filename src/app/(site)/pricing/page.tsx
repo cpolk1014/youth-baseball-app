@@ -4,9 +4,9 @@ import { Ai, Cta, EndCta, PageHero, Section } from "@/components/site/parts";
 import { LowRisk, PricingGrid } from "@/components/site/Pricing";
 
 export const metadata: Metadata = {
-  title: { absolute: "Pricing | RallyCap: Youth Baseball's AI Assistant Coach, from $0" },
+  title: { absolute: "Pricing | Fungo: Youth Baseball's AI Assistant Coach, from $0" },
   description:
-    "RallyCap's smart lineup engine is free forever. Every AI tool, plus GroupMe, team money and tournaments, is $129 a season per team, or $99 per team for clubs. 14-day free trial.",
+    "Fungo's smart lineup engine is free forever. Every AI tool, plus GroupMe, team money and tournaments, is $129 a season per team, or $99 per team for clubs. 14-day free trial.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -16,10 +16,10 @@ const FAQ: [string, React.ReactNode][] = [
   [
     "What does the AI actually do?",
     <>
-      It reads things so you don&apos;t have to type them (rosters, schedules, tournament pages and brackets,
-      tie-breaker rules, results, uniform flyers and box scores). It turns rules you type into
-      lineup rules, plans age-appropriate practices, and makes walk-up songs and announcer calls.
-      You check everything before it&apos;s saved.{" "}
+      It reads things so you don&apos;t have to type them (rosters, schedules, tournament pages and
+      brackets, tie-breaker rules, results, uniform flyers and box scores). It turns rules you type
+      into lineup rules, plans age-appropriate practices, and makes walk-up songs and announcer
+      calls. You check everything before it&apos;s saved.{" "}
       <Link href="/ai" className={link}>
         See the AI page
       </Link>
@@ -28,7 +28,7 @@ const FAQ: [string, React.ReactNode][] = [
   ],
   [
     "Is the lineup builder AI?",
-    "It's RallyCap's own smart engine. It follows your fair-play rules exactly, gives the same result every time, and explains every spot. It's free forever.",
+    "It's Fungo's own smart engine. It follows your fair-play rules exactly, gives the same result every time, and explains every spot. It's free forever.",
   ],
   [
     "What's a season?",
@@ -40,7 +40,7 @@ const FAQ: [string, React.ReactNode][] = [
   ],
   [
     "Do parents have to pay?",
-    "No. Parents use RallyCap free with your team. The Player pass (highlight reels, pitch count and stats) is an optional add-on for their own child.",
+    "No. Parents use Fungo free with your team. The Player pass (highlight reels, pitch count and stats) is an optional add-on for their own child.",
   ],
   [
     "What happens after the free trial?",

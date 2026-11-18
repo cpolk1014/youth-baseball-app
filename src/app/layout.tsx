@@ -9,10 +9,9 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: { default: "RallyCap", template: "%s · RallyCap" },
-  description:
-    "Run your youth baseball team: fair lineups, lineup cards, and season playing time.",
-  appleWebApp: { capable: true, title: "RallyCap", statusBarStyle: "default" },
+  title: { default: "Fungo", template: "%s · Fungo" },
+  description: "Run your youth baseball team: fair lineups, lineup cards, and season playing time.",
+  appleWebApp: { capable: true, title: "Fungo", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

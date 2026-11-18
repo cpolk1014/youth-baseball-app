@@ -114,7 +114,7 @@ function practiceEvent(p: Practice, o: CalendarOptions): string[] {
     p.plan.length
       ? `Drills: ${p.plan.map((d) => `${d.title} (${d.minutes} min)`).join("; ")}`
       : null,
-    `In RallyCap: ${link}`,
+    `In Fungo: ${link}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -140,7 +140,7 @@ export function practicesCalendar(practices: Practice[], o: CalendarOptions): st
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//RallyCap//Practices//EN",
+    "PRODID:-//Fungo//Practices//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${icsText(`${o.teamName} practices`)}`,
@@ -157,5 +157,5 @@ export function calendarFileName(teamName: string, what = "practices"): string {
     .replace(/[^\w .-]+/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  return `${name || "RallyCap"}.ics`;
+  return `${name || "Fungo"}.ics`;
 }

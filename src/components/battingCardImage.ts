@@ -147,7 +147,7 @@ export async function renderBattingCard(
     fit(ctx, note, 600, 28, CARD_WIDTH - 120);
     ctx.fillText(note, 60, 1240 + i * 38);
   });
-  // Footer: the white RallyCap logo, with the web address beside it.
+  // Footer: the white Fungo logo, with the web address beside it.
   const brand = await loadImage("/brand/rallycap-horizontal-white.svg");
   const logoH = 52;
   const logoW = brand ? (logoH * 710) / 266 : 0;
@@ -156,7 +156,7 @@ export async function renderBattingCard(
   ctx.textAlign = "right";
   ctx.font = `700 24px ${FONT}`;
   ctx.fillText(
-    brand ? "rallycap.team" : "RallyCap · rallycap.team",
+    brand ? "rallycap.team" : "Fungo · rallycap.team",
     CARD_WIDTH - 60 - logoW - (brand ? 12 : 0),
     CARD_HEIGHT - 44,
   );

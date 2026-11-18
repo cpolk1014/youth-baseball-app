@@ -1,15 +1,15 @@
-# Demo and development versions of RallyCap: the plan
+# Demo and development versions of Fungo: the plan
 
 Status: plan only, nothing built. Written November 9, 2026.
 
 ## The short version
 
-Run three copies of RallyCap from the one codebase. Each gets its own database, so nothing
+Run three copies of Fungo from the one codebase. Each gets its own database, so nothing
 done in one can touch another.
 
 |                    | Live                  | Demo                            | Development                                   |
 | ------------------ | --------------------- | ------------------------------- | --------------------------------------------- |
-| **For**            | Real teams            | Showing RallyCap to people      | Building and testing                          |
+| **For**            | Real teams            | Showing Fungo to people      | Building and testing                          |
 | **Address**        | www.rallycap.team     | demo.rallycap.team              | dev.rallycap.team, branch previews, localhost |
 | **Git branch**     | `main`                | `demo`                          | `develop` and feature branches                |
 | **Database**       | Today's Supabase      | New Supabase project            | New Supabase project                          |
@@ -52,7 +52,7 @@ So Supabase comes to about **$45/month** for all three copies.
 
 The free Supabase plan would save about $20 a month, but free projects pause after a week of
 low activity. A demo that's asleep when you open it in front of a club director is the worst
-way for this to fail, so I'd pay. I can't see which plans RallyCap is on today. A product
+way for this to fail, so I'd pay. I can't see which plans Fungo is on today. A product
 taking payments should be on Vercel Pro and have Supabase backups regardless of this plan.
 
 Not recommended for now: Supabase Branching (a database per git branch). It bills per branch
@@ -114,7 +114,7 @@ webhook for it.
 
 **I build:**
 
-1. **One-tap demo sign-in.** RallyCap only has magic link and code today, which is no good in a
+1. **One-tap demo sign-in.** Fungo only has magic link and code today, which is no good in a
    meeting. The demo's sign-in page offers **Coach**, **Parent** and **Club director**, each a
    fixed made-up account. It's a server route that uses the service role key, so it refuses to
    run unless the environment is `demo` **and** the Supabase project is the demo project.

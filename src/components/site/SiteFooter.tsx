@@ -13,7 +13,7 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element -- the logo */}
-          <img src="/brand/rallycap-horizontal-white.svg" alt="RallyCap" className="h-14 w-auto" />
+          <img src="/brand/rallycap-horizontal-white.svg" alt="Fungo" className="h-14 w-auto" />
           <p className="mt-3 text-lg font-bold">Youth baseball&apos;s AI assistant coach.</p>
           <p className="mt-1 text-white/70">
             Built by a youth baseball coach who writes code. For 7U–14U teams.
@@ -72,7 +72,7 @@ export function SiteFooter() {
         </div>
       </div>
       <p className="mx-auto mt-12 max-w-6xl border-t border-white/10 pt-6 text-sm text-white/50">
-        © 2026 RallyCap. Not affiliated with GameChanger, GroupMe or any tournament organization.
+        © 2026 Fungo. Not affiliated with GameChanger, GroupMe or any tournament organization.
       </p>
     </footer>
   );

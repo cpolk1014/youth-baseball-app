@@ -25,7 +25,7 @@ import { LowRisk, PricingGrid } from "@/components/site/Pricing";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "RallyCap: Youth Baseball's AI Assistant Coach | Lineups, Schedules & Tournaments",
+    absolute: "Fungo: Youth Baseball's AI Assistant Coach | Lineups, Schedules & Tournaments",
   },
   description:
     "Snap your schedule and AI adds every game. Get practice plans for your age group and fair lineups in two minutes. Built by a youth baseball coach who writes software for a living. Free 14-day trial.",
@@ -86,9 +86,9 @@ export default function HomePage() {
               Finally, an assistant coach with no kid on the team.
             </h1>
             <p className="mt-6 max-w-xl text-xl leading-relaxed text-white/85 text-pretty">
-              RallyCap&apos;s AI types in your schedule, plans your practices and reads the
-              tournament bracket. <b className="text-white">You just coach.</b> (And find your
-              kid&apos;s other batting glove.)
+              Fungo&apos;s AI types in your schedule, plans your practices and reads the tournament
+              bracket. <b className="text-white">You just coach.</b> (And find your kid&apos;s other
+              batting glove.)
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Cta />
@@ -103,7 +103,7 @@ export default function HomePage() {
           <div className="relative mx-auto w-full max-w-[260px] sm:max-w-2xl sm:pt-6 sm:pb-16 sm:pl-[12%] lg:-mr-10 lg:max-w-none xl:-mr-24">
             <Laptop
               src="/site/home.jpg"
-              alt="RallyCap's Home dashboard: next game, season record and to-dos"
+              alt="Fungo's Home dashboard: next game, season record and to-dos"
               className="hidden sm:block"
             />
             <div className="relative sm:absolute sm:bottom-0 sm:left-0 sm:w-[29%]">
@@ -357,7 +357,7 @@ export default function HomePage() {
             </p>
             <p>
               One night, somewhere between the third lineup rewrite and the fortieth “what time do
-              we play?” text, the developer in me snapped. So I built RallyCap and put AI on the
+              we play?” text, the developer in me snapped. So I built Fungo and put AI on the
               busywork. Now I snap the schedule instead of typing it.{" "}
               <b className="text-[#1B2A4A]">And I spend my time coaching kids.</b>
             </p>

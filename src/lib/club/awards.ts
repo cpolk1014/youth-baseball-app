@@ -181,7 +181,7 @@ export function liveMessage(
   dueOn: string,
 ): string {
   const list = awards.map((a) => `${a.emoji ? `${a.emoji} ` : ""}${a.name}`).join("\n");
-  return `${clubName} season awards are open!\n${list}\nCoaches: pick your winners in RallyCap (it's on your Home To do) by ${dueText(dueOn)}. Picks stay private until the awards show.`;
+  return `${clubName} season awards are open!\n${list}\nCoaches: pick your winners in Fungo (it's on your Home To do) by ${dueText(dueOn)}. Picks stay private until the awards show.`;
 }
 
 /** The coaches group nudge: which teams still have picks to make. */
@@ -198,7 +198,7 @@ export function reminderMessage(
   const head = late
     ? `Award picks were due ${dueText(dueOn!)}. Still waiting on:`
     : `Reminder: award picks are due${dueOn ? ` ${dueText(dueOn)}` : " soon"}. Still waiting on:`;
-  return `${head}\n${lines.join("\n")}\nPick yours in RallyCap from your Home To do. Thanks, coaches!`;
+  return `${head}\n${lines.join("\n")}\nPick yours in Fungo from your Home To do. Thanks, coaches!`;
 }
 
 /** Winners for the awards show: each award, then age group order. */

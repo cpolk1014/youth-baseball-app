@@ -96,9 +96,9 @@ describe("Stripe payment notices", () => {
     expect(() => stripe.webhooks.constructEvent(payload, header, SECRET)).toThrow();
   });
 
-  it("complains about a paid checkout without RallyCap details", () => {
+  it("complains about a paid checkout without Fungo details", () => {
     const e = signedEvent("checkout.session.completed", { payment_status: "paid", metadata: {} });
-    expect(() => purchaseFromEvent(e)).toThrow(/missing RallyCap details/);
+    expect(() => purchaseFromEvent(e)).toThrow(/missing Fungo details/);
   });
 });
 

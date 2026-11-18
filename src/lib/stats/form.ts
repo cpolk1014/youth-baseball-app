@@ -73,7 +73,7 @@ export function recentFromBoxScores(
   return out;
 }
 
-/** Season lines from the team's box scores (fielding innings come from RallyCap's lineups). */
+/** Season lines from the team's box scores (fielding innings come from Fungo's lineups). */
 export function boxSeasonLines(
   lines: KidGame[],
   innings: Record<string, Partial<Record<FieldPosition, number>>>,

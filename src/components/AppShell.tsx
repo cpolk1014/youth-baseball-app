@@ -55,7 +55,7 @@ export function AppShell({
   action?: ReactNode;
   /** Club pages: shown even with no team of your own (no team setup or team notices). */
   bare?: boolean;
-  /** The person's own pages (profile, teams, clubs): RallyCap's colors and logo, not a team's. */
+  /** The person's own pages (profile, teams, clubs): Fungo's colors and logo, not a team's. */
   brand?: boolean;
   /** Wide screens: a list beside the page (e.g. every game, next to one game). */
   pane?: ReactNode;
@@ -67,7 +67,7 @@ export function AppShell({
   const rail = useRail();
   const teamColors = data?.team.colors;
   const hasTeam = !!data;
-  // Signed in with no team yet (team setup): RallyCap's own colors, never an old team's.
+  // Signed in with no team yet (team setup): Fungo's own colors, never an old team's.
   const { status } = useStoreState();
   const noTeam = status.kind === "setup" && status.team === null;
   useEffect(() => {
@@ -79,7 +79,7 @@ export function AppShell({
     <div
       className="min-h-dvh lg:flex lg:bg-slate-50 print:block print:min-h-0 print:bg-white"
       // While a team loads, no colors here: the page keeps the last team's colors that were
-      // put on <html> before the first paint (rememberLook), not RallyCap's defaults.
+      // put on <html> before the first paint (rememberLook), not Fungo's defaults.
       style={
         (brand || noTeam
           ? themeVars([BRAND_NAVY, BRAND_CRIMSON])
@@ -132,7 +132,7 @@ export function AppShell({
           {!backHref && brand && (
             <span className="mr-1 lg:hidden">
               {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}
-              <img src="/brand/rallycap-icon-white.svg" alt="RallyCap" className="size-10" />
+              <img src="/brand/rallycap-icon-white.svg" alt="Fungo" className="size-10" />
             </span>
           )}
           {!backHref && data && !brand && (
@@ -314,7 +314,7 @@ function MenuHeader({
   const { mode } = useStoreState();
   const rail = variant === "rail";
   if (!data || brand) {
-    // No team yet (club pages, first sign-in), or the person's own pages: the RallyCap logo.
+    // No team yet (club pages, first sign-in), or the person's own pages: the Fungo logo.
     const src = collapsed
       ? "/brand/rallycap-icon-color.svg"
       : rail
@@ -323,7 +323,7 @@ function MenuHeader({
     return (
       <p className={rail ? "mb-3 px-1" : "mb-4 px-1 pt-1"}>
         {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}
-        <img src={src} alt="RallyCap" className={collapsed ? "size-10" : "h-11 w-auto"} />
+        <img src={src} alt="Fungo" className={collapsed ? "size-10" : "h-11 w-auto"} />
       </p>
     );
   }
@@ -343,7 +343,7 @@ function MenuHeader({
             {data.team.name}
           </span>
           <span className={`block text-xs font-semibold tracking-wide uppercase text-white/60`}>
-            {mode === "supabase" ? "Switch team ▾" : "RallyCap"}
+            {mode === "supabase" ? "Switch team ▾" : "Fungo"}
           </span>
         </span>
       )}
@@ -483,8 +483,8 @@ function MenuLinks({
 }
 
 /**
- * My RallyCap: the person's own corner of the app (profile, teams, clubs, their players),
- * in RallyCap's colors whatever team is open: it isn't about any one team.
+ * My Fungo: the person's own corner of the app (profile, teams, clubs, their players),
+ * in Fungo's colors whatever team is open: it isn't about any one team.
  */
 function AccountMenu({
   tab,
@@ -533,7 +533,7 @@ function AccountMenu({
   return (
     <div
       className={`mt-auto ${
-        // Its own RallyCap-navy panel, apart from the team's colors.
+        // Its own Fungo-navy panel, apart from the team's colors.
         rail
           ? "rounded-xl bg-[#1B2A4A] p-1.5"
           : "mt-6 rounded-2xl bg-[#1B2A4A] p-2 shadow-lg ring-1 ring-white/10"
@@ -543,8 +543,8 @@ function AccountMenu({
         // Folded rail: no room for the list, so go straight to the profile.
         onClick={() => (collapsed ? router.push("/profile") : setOpen(!open))}
         aria-expanded={collapsed ? undefined : open}
-        aria-label={collapsed ? "My RallyCap" : undefined}
-        title={collapsed ? (me?.name ?? "My RallyCap") : undefined}
+        aria-label={collapsed ? "My Fungo" : undefined}
+        title={collapsed ? (me?.name ?? "My Fungo") : undefined}
         className={`flex w-full items-center gap-3 rounded-lg text-left ${
           rail
             ? `min-h-12 px-1.5 text-white hover:bg-white/10 ${collapsed ? "justify-center" : ""}`
@@ -565,12 +565,12 @@ function AccountMenu({
               <span
                 className={`block truncate leading-tight font-bold ${rail ? "text-sm" : "text-base"}`}
               >
-                {me?.name ?? me?.email ?? "My RallyCap"}
+                {me?.name ?? me?.email ?? "My Fungo"}
               </span>
               <span
                 className={`block text-xs font-semibold tracking-wide uppercase ${rail ? "text-slate-400" : "text-white/60"}`}
               >
-                My RallyCap
+                My Fungo
               </span>
             </span>
             <span aria-hidden="true" className="text-white/70">

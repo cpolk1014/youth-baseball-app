@@ -213,7 +213,7 @@ function UploadBoxScore({
       <div className="flex flex-col gap-3">
         <p className="text-base">
           In GameChanger, open the game, then <b>Box Score</b> and export the PDF (or take a
-          screenshot). RallyCap reads every player on your team. The file isn&apos;t kept.
+          screenshot). Fungo reads every player on your team. The file isn&apos;t kept.
         </p>
         <label className="flex h-14 cursor-pointer items-center justify-center rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)]">
           Choose the box score

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { teamColors, themeVars } from "./theme";
 
 describe("team theme", () => {
-  it("falls back to RallyCap colors and ignores non-colors", () => {
+  it("falls back to Fungo colors and ignores non-colors", () => {
     expect(teamColors(undefined)).toEqual({ main: "#1b2a4a", accent: "#dc143c" });
     expect(teamColors(["navy", "gold"])).toEqual({ main: "#1b2a4a", accent: "#dc143c" });
   });
