@@ -13,7 +13,7 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element -- the logo */}
-          <img src="/brand/rallycap-horizontal-white.svg" alt="Fungo" className="h-14 w-auto" />
+          <img src="/brand/fungo-horizontal-white.svg" alt="Fungo" className="h-14 w-auto" />
           <p className="mt-3 text-lg font-bold">Youth baseball&apos;s AI assistant coach.</p>
           <p className="mt-1 text-white/70">
             Built by a youth baseball coach who writes code. For 7U–14U teams.

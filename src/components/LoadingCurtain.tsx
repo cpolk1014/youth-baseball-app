@@ -1,7 +1,7 @@
 "use client";
 
 // While the app loads a team (opening the app, or switching teams): the page blurs and the
-// Fungo cap shows with a bat taking swings, so it's clear something is happening.
+// Fungo mark shows with a bat taking swings, so it's clear something is happening.
 import type { CSSProperties } from "react";
 import { themeVars } from "@/lib/branding/theme";
 import { useStoreState } from "@/lib/data/store";
@@ -33,7 +33,7 @@ export function Curtain({ text, colors }: { text: string; colors?: string[] }) {
       >
         <div className="relative flex h-32 w-52 items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}
-          <img src="/brand/rallycap-icon-color.svg" alt="" className="size-28" />
+          <img src="/brand/fungo-icon-color.svg" alt="" className="size-28" />
           <svg
             viewBox="0 0 24 24"
             aria-hidden="true"

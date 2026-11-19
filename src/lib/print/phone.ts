@@ -43,7 +43,7 @@ export function teamColor(): string | null {
   return getComputedStyle(document.documentElement).getPropertyValue("--team").trim() || null;
 }
 
-export const RALLY_LOGO = "/brand/rallycap-horizontal-color.svg";
+export const BRAND_LOGO = "/brand/fungo-horizontal-color.svg";
 
 /** Hand a PDF to the share sheet, or download it where sharing files isn't possible. */
 export async function sharePdf(file: File): Promise<"shared" | "downloaded" | "canceled"> {

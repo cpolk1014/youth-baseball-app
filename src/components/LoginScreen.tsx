@@ -83,7 +83,7 @@ export function LoginScreen() {
       <h1>
         {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}
         <img
-          src="/brand/rallycap-horizontal-color.svg"
+          src="/brand/fungo-horizontal-color.svg"
           alt="Fungo"
           width={710}
           height={266}

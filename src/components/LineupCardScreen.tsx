@@ -9,7 +9,7 @@ import { validateLineup } from "@/lib/rules/validate";
 import { AppShell, Loading } from "./AppShell";
 import { LineupCardPage, type CardSize } from "./LineupCard";
 import { logoUrl } from "@/lib/branding/logo";
-import { RALLY_LOGO, loadPdfImage } from "@/lib/print/phone";
+import { BRAND_LOGO, loadPdfImage } from "@/lib/print/phone";
 import { PrintButton } from "./PrintButton";
 
 const PAGE_WIDTH_PX = 816; // 8.5in at 96dpi
@@ -108,7 +108,7 @@ export function LineupCardScreen({ gameId }: { gameId: string }) {
             const [{ lineupCardPdf }, teamLogo, rallyLogo] = await Promise.all([
               import("@/lib/print/lineupPdf"),
               loadPdfImage(header.logoUrl),
-              loadPdfImage(RALLY_LOGO),
+              loadPdfImage(BRAND_LOGO),
             ]);
             return lineupCardPdf(size, { ...header, teamLogo, rallyLogo }, card).blob();
           }}

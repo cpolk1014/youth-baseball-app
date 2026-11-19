@@ -148,7 +148,7 @@ export async function renderBattingCard(
     ctx.fillText(note, 60, 1240 + i * 38);
   });
   // Footer: the white Fungo logo, with the web address beside it.
-  const brand = await loadImage("/brand/rallycap-horizontal-white.svg");
+  const brand = await loadImage("/brand/fungo-horizontal-white.svg");
   const logoH = 52;
   const logoW = brand ? (logoH * 710) / 266 : 0;
   ctx.globalAlpha = 0.85;

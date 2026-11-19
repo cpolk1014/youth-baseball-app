@@ -132,7 +132,7 @@ export function AppShell({
           {!backHref && brand && (
             <span className="mr-1 lg:hidden">
               {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}
-              <img src="/brand/rallycap-icon-white.svg" alt="Fungo" className="size-10" />
+              <img src="/brand/fungo-icon-white.svg" alt="Fungo" className="size-10" />
             </span>
           )}
           {!backHref && data && !brand && (
@@ -316,10 +316,10 @@ function MenuHeader({
   if (!data || brand) {
     // No team yet (club pages, first sign-in), or the person's own pages: the Fungo logo.
     const src = collapsed
-      ? "/brand/rallycap-icon-color.svg"
+      ? "/brand/fungo-icon-color.svg"
       : rail
-        ? "/brand/rallycap-horizontal-color.svg"
-        : "/brand/rallycap-horizontal-white.svg";
+        ? "/brand/fungo-horizontal-color.svg"
+        : "/brand/fungo-horizontal-white.svg";
     return (
       <p className={rail ? "mb-3 px-1" : "mb-4 px-1 pt-1"}>
         {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}

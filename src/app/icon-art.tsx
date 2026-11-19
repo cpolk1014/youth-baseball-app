@@ -1,11 +1,10 @@
-import { BRAND_CRIMSON, CAP_MARK_SVG } from "@/lib/branding/brand-mark";
+import { MARK_SVG } from "@/lib/branding/brand-mark";
 
-// App icon: the navy rally cap on crimson, from the brand kit. Full-bleed square (phones
-// round the corners); the cap stays inside the central circle so round and maskable icons
-// don't cut it off.
+// App icon: the navy F and baseball on white. Full-bleed square (phones round the corners);
+// the mark stays inside the central circle so round and maskable icons don't cut it off.
 const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
-<rect width="320" height="320" fill="${BRAND_CRIMSON}"/>
-${CAP_MARK_SVG.replace("<svg ", '<svg x="-6" y="2" width="332" height="332" ').replace(/ width="320" height="320"/, "")}
+<rect width="320" height="320" fill="#FFFFFF"/>
+${MARK_SVG.replace("<svg ", '<svg x="32" y="32" width="256" height="256" ').replace(/ width="320" height="320"/, "")}
 </svg>`;
 
 const ICON_SRC = `data:image/svg+xml;utf8,${encodeURIComponent(ICON_SVG)}`;

@@ -8,7 +8,7 @@ import { formatPracticeWhen } from "@/lib/practice/format";
 import { practiceMonths, type PrintRange } from "@/lib/practice/print";
 import { planMinutes } from "@/lib/practice/schedule";
 import { useState } from "react";
-import { RALLY_LOGO, loadPdfImage, teamColor } from "@/lib/print/phone";
+import { BRAND_LOGO, loadPdfImage, teamColor } from "@/lib/print/phone";
 import { PrintButton } from "./PrintButton";
 import { AppShell, Loading } from "./AppShell";
 
@@ -87,7 +87,7 @@ export function PracticeScheduleScreen() {
               const [{ practiceSchedulePdf }, teamLogo, rallyLogo] = await Promise.all([
                 import("@/lib/print/practicePdf"),
                 loadPdfImage(logo),
-                loadPdfImage(RALLY_LOGO),
+                loadPdfImage(BRAND_LOGO),
               ]);
               return practiceSchedulePdf(
                 data.practices,
@@ -204,7 +204,7 @@ export function PracticeScheduleScreen() {
             {count} practice{count === 1 ? "" : "s"} · Check Fungo for changes.
           </span>
           {/* eslint-disable-next-line @next/next/no-img-element -- printed brand mark */}
-          <img src="/brand/rallycap-horizontal-color.svg" alt="Fungo" className="h-5" />
+          <img src="/brand/fungo-horizontal-color.svg" alt="Fungo" className="h-5" />
         </footer>
       </article>
     </AppShell>
