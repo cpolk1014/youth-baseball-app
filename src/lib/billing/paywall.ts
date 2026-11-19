@@ -11,3 +11,17 @@ export async function teamHasPaid(supabase: SupabaseClient, teamId: string): Pro
   const { data, error } = await supabase.rpc("team_paid", { p_team: teamId });
   return !error && data === true;
 }
+
+export const CLUB_PAID_FEATURE_MESSAGE =
+  "Reading a flyer is a paid feature. Buy codes for your teams on the club page, then try again.";
+
+/** Whether a club has bought codes that haven't expired. A failed check counts as not paid. */
+export async function clubHasPaid(supabase: SupabaseClient, clubId: string): Promise<boolean> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { count, error } = await supabase
+    .from("club_code")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", clubId)
+    .gte("expires_on", today);
+  return !error && (count ?? 0) > 0;
+}

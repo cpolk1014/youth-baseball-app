@@ -1949,4 +1949,41 @@ end $$;
 reset role;
 delete from public.pitch_session;
 delete from public.game where id in ('00000000-0000-4000-8000-00000000c101', '00000000-0000-4000-8000-00000000c102');
+-- A team's free period, creator and club are set only by the database, never from the browser.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+insert into public.team (id, name, age_group, created_by, free_until, free_kind, organization_id)
+  values ('dddddddd-0000-4000-8000-000000000001', 'Forever Free', '9U', auth.uid(), '2099-12-31', 'launch', null);
+select pg_temp.expect((select free_until = current_date + 14 and free_kind = 'trial' from public.team
+  where id = 'dddddddd-0000-4000-8000-000000000001'), 'a new team always starts on the 14-day trial');
+reset role;
+insert into public.team (id, name, age_group, created_by, free_until, free_kind)
+  values ('dddddddd-0000-4000-8000-000000000002', 'Expired', '9U', null, current_date - 30, 'trial');
+insert into public.member (team_id, user_id, role) values ('dddddddd-0000-4000-8000-000000000002', 'aaaaaaaa-0000-4000-8000-000000000003', 'coach')
+  on conflict do nothing;
+insert into public.season (id, team_id, name) values ('dddddddd-0000-4000-8000-000000000003', 'dddddddd-0000-4000-8000-000000000002', 'Spring');
+grant select on club_t to authenticated;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+do $$ begin
+  update public.team set free_until = '2099-12-31', free_kind = 'launch' where id = 'dddddddd-0000-4000-8000-000000000002';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: coaches can''t extend their own free period';
+end $$;
+do $$ begin
+  update public.team set organization_id = (select org from club_t) where id = 'dddddddd-0000-4000-8000-000000000002';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: coaches can''t join a club without a code';
+end $$;
+do $$ begin
+  update public.team set created_by = 'aaaaaaaa-0000-4000-8000-000000000001' where id = 'dddddddd-0000-4000-8000-000000000002';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a team''s creator can''t be changed';
+end $$;
+update public.team set name = 'Expired Bombers' where id = 'dddddddd-0000-4000-8000-000000000002';
+select pg_temp.expect((select name from public.team where id = 'dddddddd-0000-4000-8000-000000000002') = 'Expired Bombers', 'coaches still rename their team');
+select pg_temp.expect(not public.team_paid('dddddddd-0000-4000-8000-000000000002'), 'an expired team stays locked');
+reset role;
+delete from public.team where id in ('dddddddd-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000002');
+
 \echo ALL RLS TESTS PASSED

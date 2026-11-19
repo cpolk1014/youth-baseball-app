@@ -1,4 +1,9 @@
-import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
+import {
+  CLUB_PAID_FEATURE_MESSAGE,
+  PAID_FEATURE_MESSAGE,
+  clubHasPaid,
+  teamHasPaid,
+} from "@/lib/billing/paywall";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
@@ -84,6 +89,8 @@ export async function POST(request: NextRequest) {
       supabase.from("organization").select("name").eq("id", clubId).maybeSingle(),
     ]);
     if (!admin || !club) return errorResponse(403, "Only club admins set up club uniforms.");
+    if (!(await clubHasPaid(supabase, clubId)))
+      return errorResponse(402, CLUB_PAID_FEATURE_MESSAGE);
     ownerName = club.name;
   } else {
     const [{ data: roles }, { data: team }] = await Promise.all([
