@@ -26,7 +26,7 @@ export type MenuTab = {
   staffOnly?: boolean;
   /** Hidden from parents (other kids' playing time). */
   notParents?: boolean;
-  /** Only once the team has a tournament. */
+  /** Coaches and managers always (to add the first one); everyone else once the team has one. */
   needsTournament?: boolean;
   /** Only while the team's club has awards live (coaches and managers). */
   needsAwards?: boolean;
@@ -71,7 +71,7 @@ export function visibleTabs(tabs: MenuTab[], data: AppData | null): MenuTab[] {
     (t) =>
       (!t.staffOnly || staff) &&
       (!t.notParents || data?.me.role !== "parent") &&
-      (!t.needsTournament || (data?.tournamentCount ?? 0) > 0) &&
+      (!t.needsTournament || staff || (data?.tournamentCount ?? 0) > 0) &&
       (!t.needsAwards || (data?.clubAwards?.length ?? 0) > 0),
   );
 }

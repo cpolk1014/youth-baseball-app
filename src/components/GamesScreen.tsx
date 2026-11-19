@@ -90,6 +90,14 @@ export function GamesScreen() {
       <AwardsBanner data={data} />
       <MoneyNudge />
       {upcoming[0] && <NextGame game={upcoming[0]} data={data} />}
+      {canEdit && mode === "supabase" && !data.tournamentCount && (
+        <Link
+          href="/tournaments"
+          className="mb-4 flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 text-base font-semibold text-[var(--team)] active:bg-slate-100"
+        >
+          🏆 Playing in a tournament? Add it
+        </Link>
+      )}
       <Section title="Upcoming" games={upcoming} data={data} empty="No upcoming games." />
       {final.length > 0 && <Section title="Final" games={final} data={data} />}
 
@@ -100,14 +108,6 @@ export function GamesScreen() {
         >
           + Add game
         </button>
-      )}
-      {canEdit && mode === "supabase" && !data.tournamentCount && (
-        <Link
-          href="/tournaments"
-          className="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-xl text-base font-semibold text-[var(--team)] underline"
-        >
-          🏆 Playing in a tournament? Add it
-        </Link>
       )}
 
       <TeamSwitcher
