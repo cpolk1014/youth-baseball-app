@@ -36,7 +36,7 @@ Nothing in the demo posts to GroupMe (no bot is connected) and nothing charges a
 
 If there's time, show the other two sides:
 
-- **Coach (the coach account, 10U):** Saturday's game → **Auto-fill** → *Why this lineup?*;
+- **Coach (the coach account, 10U):** Saturday's game (its map and the weekend forecast) → **Auto-fill** → *Why this lineup?*;
   Competitive puts Luke Hill up for his hot streak (🔥); a practice → **Print**.
 - **Parent (the parent account):** My player → Mason's **pitch count** (the coach's counts
   waiting to approve, Pitch Smart rest days), Pine Tar Productions.

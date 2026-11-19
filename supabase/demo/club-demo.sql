@@ -215,12 +215,16 @@ begin
     end loop;
 
     -- Coming up: this Saturday and next (no lineup yet, so auto-fill can be shown live).
-    insert into public.game (season_id, game_date, start_time, opponent, location, field, innings, field_players, status)
+    -- With map pins (Baton Rouge and Lafayette), so Where shows a map and the forecast shows.
+    insert into public.game (season_id, game_date, start_time, opponent, location, field, innings, field_players, status,
+      location_address, location_lat, location_lng)
     values
       (v_season, v_next_sat, (array['08:30','09:00','11:00','13:00','09:30','11:30','14:00','16:00'])[v_idx]::time,
-        v_opponents[((v_idx + 3) % array_length(v_opponents, 1)) + 1], 'Bayou Park', 'Field ' || (1 + v_idx % 4), 6, array_length(v_fielders, 1), 'scheduled'),
+        v_opponents[((v_idx + 3) % array_length(v_opponents, 1)) + 1], 'Bayou Park', 'Field ' || (1 + v_idx % 4), 6, array_length(v_fielders, 1), 'scheduled',
+        'Baton Rouge, LA', 30.4515, -91.1871),
       (v_season, v_next_sat + 7, '10:00', v_opponents[((v_idx + 6) % array_length(v_opponents, 1)) + 1],
-        'Acadiana Sports Complex', 'Field 2', 6, array_length(v_fielders, 1), 'scheduled');
+        'Acadiana Sports Complex', 'Field 2', 6, array_length(v_fielders, 1), 'scheduled',
+        'Lafayette, LA', 30.2241, -92.0198);
   end loop;
 
   -- ── The 10U in depth ──
