@@ -26,6 +26,7 @@ export interface ChatterPost {
   authorId: string | null;
   body: string;
   quotePostId: string | null;
+  kind: "post" | "poll";
   photos: ChatterPhoto[];
   createdAt: string;
   editedAt: string | null;
@@ -39,6 +40,7 @@ export interface ChatterPostRow {
   author_id: string | null;
   body: string;
   quote_post_id: string | null;
+  kind?: string;
   photos?: unknown;
   created_at: string;
   edited_at: string | null;
@@ -53,6 +55,7 @@ export function postFromRow(r: ChatterPostRow): ChatterPost {
     authorId: r.author_id,
     body: r.body,
     quotePostId: r.quote_post_id,
+    kind: r.kind === "poll" ? "poll" : "post",
     photos: photosFrom(r.photos),
     createdAt: r.created_at,
     editedAt: r.edited_at,
@@ -72,8 +75,12 @@ function photosFrom(value: unknown): ChatterPhoto[] {
 }
 
 /** What a post says in one line: its words, or its photos. */
-export function previewText(post: Pick<ChatterPost, "body" | "photos">, max = 120): string {
+export function previewText(
+  post: Pick<ChatterPost, "body" | "photos"> & { kind?: ChatterPost["kind"] },
+  max = 120,
+): string {
   const words = snippet(post.body, max);
+  if (post.kind === "poll") return `📊 Poll: ${words}`;
   const n = post.photos.length;
   const photos = n ? (n === 1 ? "📷 Photo" : `📷 ${n} photos`) : "";
   return words && photos ? `${photos} · ${words}` : words || photos;
@@ -229,4 +236,136 @@ export type ReportReason = (typeof REPORT_REASONS)[number]["id"];
 export const PAUSES = [
   { label: "1 day", hours: 24 },
   { label: "1 week", hours: 24 * 7 },
+] as const;
+
+// ── Polls ──
+
+export const POLL_OPTIONS_MAX = 10;
+export const POLL_OPTION_MAX = 120;
+
+export interface ChatterPoll {
+  postId: string;
+  options: string[];
+  multi: boolean;
+  anonymous: boolean;
+  closesAt: string | null;
+  closedAt: string | null;
+  version: number;
+}
+
+export interface ChatterPollRow {
+  post_id: string;
+  options: string[];
+  multi: boolean;
+  anonymous: boolean;
+  closes_at: string | null;
+  closed_at: string | null;
+  version: number;
+}
+
+export function pollFromRow(r: ChatterPollRow): ChatterPoll {
+  return {
+    postId: r.post_id,
+    options: r.options,
+    multi: r.multi,
+    anonymous: r.anonymous,
+    closesAt: r.closes_at,
+    closedAt: r.closed_at,
+    version: r.version,
+  };
+}
+
+export function pollOpen(poll: ChatterPoll, now = new Date()): boolean {
+  if (poll.closedAt) return false;
+  return !poll.closesAt || new Date(poll.closesAt).getTime() > now.getTime();
+}
+
+/** One choice's results. voters is null on anonymous polls. */
+export interface PollChoice {
+  votes: number;
+  mine: boolean;
+  voters: string[] | null;
+}
+
+export interface PollTally {
+  choices: {
+    label: string;
+    votes: number;
+    share: number;
+    mine: boolean;
+    voters: string[] | null;
+    leading: boolean;
+  }[];
+  /** People who voted (a person picking two choices counts once, when names are known). */
+  voters: number;
+  votes: number;
+}
+
+/** Results ready to draw: share of votes per choice and which choice leads (ties all lead). */
+export function tally(poll: ChatterPoll, results: PollChoice[] | undefined): PollTally {
+  const rows = poll.options.map((_, i) => results?.[i] ?? { votes: 0, mine: false, voters: [] });
+  const votes = rows.reduce((n, r) => n + r.votes, 0);
+  const top = Math.max(0, ...rows.map((r) => r.votes));
+  const people = poll.anonymous
+    ? poll.multi
+      ? null
+      : votes
+    : new Set(rows.flatMap((r) => r.voters ?? [])).size;
+  return {
+    choices: poll.options.map((label, i) => {
+      const r = rows[i]!;
+      return {
+        label,
+        votes: r.votes,
+        share: votes ? r.votes / votes : 0,
+        mine: r.mine,
+        voters: r.voters,
+        leading: top > 0 && r.votes === top,
+      };
+    }),
+    voters: people ?? votes,
+    votes,
+  };
+}
+
+/** My choices after tapping one: a single-choice poll switches (or takes back), multi toggles. */
+export function nextVote(poll: ChatterPoll, mine: number[], tapped: number): number[] {
+  if (poll.multi) {
+    return mine.includes(tapped)
+      ? mine.filter((i) => i !== tapped)
+      : [...mine, tapped].sort((a, b) => a - b);
+  }
+  return mine.length === 1 && mine[0] === tapped ? [] : [tapped];
+}
+
+/** "Closes Sat 9:00 PM", "Closed", or "" for a poll with no end. */
+export function pollStatus(poll: ChatterPoll, now = new Date()): string {
+  if (!pollOpen(poll, now)) return "Closed";
+  if (!poll.closesAt) return "";
+  const d = new Date(poll.closesAt);
+  const sameDay = d.toDateString() === now.toDateString();
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return sameDay
+    ? `Closes at ${time}`
+    : `Closes ${d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}, ${time}`;
+}
+
+/** Clean up choices typed in the form: trimmed, blanks dropped. Returns an error to show, if any. */
+export function checkPoll(question: string, options: string[]): string | null {
+  const choices = options.map((o) => o.trim()).filter(Boolean);
+  if (!question.trim()) return "Ask a question first.";
+  if (choices.length < 2) return "A poll needs at least 2 choices.";
+  if (choices.length > POLL_OPTIONS_MAX) return `Up to ${POLL_OPTIONS_MAX} choices.`;
+  if (new Set(choices.map((c) => c.toLowerCase())).size < choices.length)
+    return "Two of the choices are the same.";
+  if (choices.some((c) => c.length > POLL_OPTION_MAX)) return "Keep each choice short.";
+  return null;
+}
+
+export const POLL_ENDS = [
+  { label: "No end", hours: null },
+  { label: "1 hour", hours: 1 },
+  { label: "1 day", hours: 24 },
+  { label: "3 days", hours: 72 },
+  { label: "1 week", hours: 168 },
 ] as const;

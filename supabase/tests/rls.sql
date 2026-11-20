@@ -2150,6 +2150,68 @@ select pg_temp.expect((select photos = '[]'::jsonb from public.chatter_post wher
 delete from storage.objects where bucket_id = 'chatter-photos';
 select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'chatter-photos') = 0, 'the poster deletes their photo files');
 
+-- Chatter polls (from the coach, who is under the 10-minute post limit).
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+create temp table poll_t as select public.create_chatter_poll('00000000-0000-4000-8000-000000000001',
+  'Pizza or tacos after Saturday?', array['Pizza', ' Tacos ', ''], false, false, null) as id;
+grant select on poll_t to authenticated;
+select pg_temp.expect((select options = array['Pizza', 'Tacos'] from public.chatter_poll where post_id = (select id from poll_t)), 'a poll keeps its trimmed choices');
+select pg_temp.expect((select kind = 'poll' and body = 'Pizza or tacos after Saturday?' from public.chatter_post where id = (select id from poll_t)), 'a poll is a post');
+do $$ begin
+  perform public.create_chatter_poll('00000000-0000-4000-8000-000000000001', 'One choice?', array['Only'], false, false, null);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when invalid_parameter_value then raise notice 'ok: a poll needs 2 choices';
+end $$;
+do $$ begin
+  perform public.add_chatter_poll((select id from poll_t), array['a', 'b'], false, false, null);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a poll''s choices can''t be replaced';
+end $$;
+select public.vote_chatter_poll((select id from poll_t), array[0]);
+
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+do $$ begin
+  perform public.vote_chatter_poll((select id from poll_t), array[0, 1]);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when invalid_parameter_value then raise notice 'ok: one choice on a single-choice poll';
+end $$;
+do $$ begin
+  perform public.vote_chatter_poll((select id from poll_t), array[5]);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when invalid_parameter_value then raise notice 'ok: only the poll''s choices';
+end $$;
+select public.vote_chatter_poll((select id from poll_t), array[1]);
+select public.vote_chatter_poll((select id from poll_t), array[0]);
+select pg_temp.expect((select votes from public.chatter_poll_results(array[(select id from poll_t)]) where option = 0) = 2, 'changing a vote moves it');
+select pg_temp.expect((select votes from public.chatter_poll_results(array[(select id from poll_t)]) where option = 1) = 0, 'the old choice loses it');
+select pg_temp.expect((select mine and array_length(voters, 1) = 2 from public.chatter_poll_results(array[(select id from poll_t)]) where option = 0), 'results show my vote and who voted');
+select pg_temp.expect((select count(*) from public.chatter_poll_vote) = 1, 'people see only their own vote rows');
+do $$ begin
+  perform public.close_chatter_poll((select id from poll_t));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents can''t close the coach''s poll';
+end $$;
+create temp table anon_poll as select public.create_chatter_poll('00000000-0000-4000-8000-000000000001',
+  'Anonymous?', array['Yes', 'No'], true, true, now() + interval '1 day') as id;
+select public.vote_chatter_poll((select id from anon_poll), array[0, 1]);
+select pg_temp.expect((select bool_and(voters is null) and sum(votes) = 2 from public.chatter_poll_results(array[(select id from anon_poll)])), 'anonymous polls count votes without names');
+
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.close_chatter_poll((select id from poll_t));
+do $$ begin
+  perform public.vote_chatter_poll((select id from poll_t), array[1]);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: closed polls take no votes';
+end $$;
+
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.chatter_poll_results(array[(select id from poll_t)])) = 0, 'outsiders see no results');
+select pg_temp.expect((select count(*) from public.chatter_poll) = 0, 'outsiders see no polls');
+do $$ begin
+  perform public.vote_chatter_poll((select id from poll_t), array[1]);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: outsiders can''t vote';
+end $$;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'chatter-photos') = 0, 'outsiders see no photos');
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);

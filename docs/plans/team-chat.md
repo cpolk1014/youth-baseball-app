@@ -1,6 +1,6 @@
 # Chatter: team chat in Fungo, the plan
 
-Status: phase 1 (the feed with moderation) and phase 2 (photos) built November 20, 2026; the rest is planned. Written November 20, 2026, after the club director demo.
+Status: phase 1 (the feed with moderation) and phase 2 (photos) and polls built November 20, 2026; the rest is planned. Written November 20, 2026, after the club director demo.
 The director asked for GroupMe's job to move into Fungo.
 
 ## The short version

@@ -6,6 +6,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BODY_MAX,
   PHOTOS_MAX,
+  POLL_ENDS,
+  POLL_OPTIONS_MAX,
+  POLL_OPTION_MAX,
+  checkPoll,
+  nextVote,
+  pollOpen,
+  pollStatus,
+  tally,
   PAUSES,
   REPORT_REASONS,
   authorOf,
@@ -18,6 +26,8 @@ import {
   previewText,
   timeLabel,
   type ChatterPhoto,
+  type ChatterPoll,
+  type PollChoice,
   type ChatterPost,
   type ReportReason,
 } from "@/lib/chatter/feed";
@@ -87,6 +97,10 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
   const [urls, setUrls] = useState<Record<string, string>>({});
   const asked = useRef<Set<string>>(new Set());
   const [viewer, setViewer] = useState<{ photos: ChatterPhoto[]; index: number } | null>(null);
+  const [polls, setPolls] = useState<Record<string, ChatterPoll>>({});
+  const [results, setResults] = useState<Record<string, PollChoice[]>>({});
+  const pollsAsked = useRef<Set<string>>(new Set());
+  const [askingPoll, setAskingPoll] = useState(false);
 
   const bottom = useRef<HTMLDivElement>(null);
   const nearBottom = useRef(true);
@@ -157,6 +171,13 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
           if (moderator) void refreshModeration().catch(() => undefined);
         },
         setOnline,
+        (poll) => {
+          setPolls((prev) => ({ ...prev, [poll.postId]: poll }));
+          void m
+            .pollResults([poll.postId])
+            .then((r) => setResults((prev) => ({ ...prev, ...r })))
+            .catch(() => undefined);
+        },
       );
     })();
     return () => {
@@ -187,6 +208,59 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
       )
       .catch(() => undefined);
   }, [posts, quoted]);
+
+  // Polls on screen and their results.
+  useEffect(() => {
+    const want = [...posts, ...Object.values(quoted)]
+      .filter((p) => p.kind === "poll" && !p.removedAt && !pollsAsked.current.has(p.id))
+      .map((p) => p.id);
+    if (!want.length) return;
+    for (const id of want) pollsAsked.current.add(id);
+    void backend()
+      .then(async (m) => {
+        const [found, res] = await Promise.all([m.loadPolls(want), m.pollResults(want)]);
+        setPolls((prev) => ({ ...prev, ...Object.fromEntries(found.map((p) => [p.postId, p])) }));
+        setResults((prev) => ({ ...prev, ...res }));
+      })
+      .catch(() => {
+        for (const id of want) pollsAsked.current.delete(id);
+      });
+  }, [posts, quoted]);
+
+  const castVote = async (poll: ChatterPoll, tapped: number) => {
+    const current = results[poll.postId] ?? [];
+    const mine = current.flatMap((c, i) => (c?.mine ? [i] : []));
+    const next = nextVote(poll, mine, tapped);
+    // Show it right away; the server's count follows.
+    setResults((prev) => ({
+      ...prev,
+      [poll.postId]: poll.options.map((_, i) => {
+        const c = current[i] ?? { votes: 0, mine: false, voters: poll.anonymous ? null : [] };
+        const was = mine.includes(i);
+        const now = next.includes(i);
+        return {
+          votes: c.votes + (now ? 1 : 0) - (was ? 1 : 0),
+          mine: now,
+          voters:
+            c.voters === null
+              ? null
+              : now && !was
+                ? [...c.voters, me]
+                : !now && was
+                  ? c.voters.filter((v) => v !== me)
+                  : c.voters,
+        };
+      }),
+    }));
+    const m = await backend();
+    try {
+      await m.vote(poll.postId, next);
+    } catch (e) {
+      toast(message(e));
+    }
+    const fresh = await m.pollResults([poll.postId]).catch(() => null);
+    if (fresh) setResults((prev) => ({ ...prev, ...fresh }));
+  };
 
   // Links to the feed's thumbnails (the bucket is private; links last a few hours).
   useEffect(() => {
@@ -335,6 +409,9 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
                 onActions={() => setActionsFor(post)}
                 urls={urls}
                 onPhoto={(index) => setViewer({ photos: post.photos, index })}
+                poll={polls[post.id] ?? null}
+                results={results[post.id]}
+                onVote={(poll, i) => void castVote(poll, i)}
               />
             </li>
           ))}
@@ -355,6 +432,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
           replyAuthor={replyTo ? authorOf(replyTo.authorId, team).name : ""}
           onCancelReply={() => setReplyTo(null)}
           canPostPhotos={photoSetting === "everyone" || moderator}
+          onNewPoll={() => setAskingPoll(true)}
           onSend={async (body, files) => {
             const m = await backend();
             const uploaded: ChatterPhoto[] = [];
@@ -410,6 +488,34 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
               setActionsFor(null);
             }}
             refreshModeration={refreshModeration}
+            openPoll={
+              actionsFor.kind === "poll" &&
+              !!polls[actionsFor.id] &&
+              pollOpen(polls[actionsFor.id]!) &&
+              (actionsFor.authorId === me || moderator)
+            }
+            onClosePoll={async () => {
+              await (await backend()).closePoll(actionsFor.id);
+              setPolls((prev) => ({
+                ...prev,
+                [actionsFor.id]: { ...prev[actionsFor.id]!, closedAt: new Date().toISOString() },
+              }));
+            }}
+          />
+        )}
+      </Sheet>
+
+      <Sheet open={askingPoll} title="New poll" onClose={() => setAskingPoll(false)}>
+        {askingPoll && (
+          <PollForm
+            onSend={async (question, options, multi, anonymous, closesAt) => {
+              const m = await backend();
+              const id = await m.createPoll(teamId, question, options, multi, anonymous, closesAt);
+              const [found] = await m.loadPostsById([id]);
+              if (found) setPosts((prev) => mergePosts(prev, [found]));
+              setAskingPoll(false);
+              scrollToEnd(true);
+            }}
           />
         )}
       </Sheet>
@@ -533,6 +639,9 @@ function PostBubble({
   onActions,
   urls,
   onPhoto,
+  poll,
+  results,
+  onVote,
 }: {
   post: ChatterPost;
   mine: boolean;
@@ -543,6 +652,9 @@ function PostBubble({
   onActions: () => void;
   urls: Record<string, string>;
   onPhoto: (index: number) => void;
+  poll: ChatterPoll | null;
+  results: PollChoice[] | undefined;
+  onVote: (poll: ChatterPoll, choice: number) => void;
 }) {
   const author = authorOf(post.authorId, team);
   if (post.removedAt) {
@@ -589,7 +701,18 @@ function PostBubble({
       )}
       {post.photos.length > 0 && <PhotoGrid photos={post.photos} urls={urls} onPhoto={onPhoto} />}
       <div className="flex items-end gap-2">
-        <p className="min-w-0 flex-1 text-lg break-words whitespace-pre-wrap">{post.body}</p>
+        {post.kind === "poll" ? (
+          <div className="min-w-0 flex-1">
+            <p className="text-lg font-bold break-words whitespace-pre-wrap">📊 {post.body}</p>
+            {poll ? (
+              <PollCard poll={poll} results={results} team={team} onVote={onVote} />
+            ) : (
+              <p className="text-base text-slate-500">Loading the poll…</p>
+            )}
+          </div>
+        ) : (
+          <p className="min-w-0 flex-1 text-lg break-words whitespace-pre-wrap">{post.body}</p>
+        )}
         <button
           onClick={onActions}
           aria-label={`More for ${author.name}'s post`}
@@ -610,6 +733,7 @@ function Composer({
   replyAuthor,
   onCancelReply,
   canPostPhotos,
+  onNewPoll,
   onSend,
 }: {
   disabledReason: string | null;
@@ -618,6 +742,7 @@ function Composer({
   replyAuthor: string;
   onCancelReply: () => void;
   canPostPhotos: boolean;
+  onNewPoll: () => void;
   onSend: (body: string, photos: File[]) => Promise<void>;
 }) {
   const [text, setText] = useState("");
@@ -698,6 +823,14 @@ function Composer({
         </ul>
       )}
       <div className="flex items-end gap-2">
+        <button
+          onClick={onNewPoll}
+          disabled={busy}
+          aria-label="Ask the team a poll"
+          className="flex h-[52px] w-11 shrink-0 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-2xl active:bg-slate-100 disabled:opacity-40"
+        >
+          📊
+        </button>
         {canPostPhotos && (
           <>
             <input
@@ -722,7 +855,7 @@ function Composer({
               onClick={() => picker.current?.click()}
               disabled={busy || files.length >= PHOTOS_MAX}
               aria-label="Add photos"
-              className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-2xl active:bg-slate-100 disabled:opacity-40"
+              className="flex h-[52px] w-11 shrink-0 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-2xl active:bg-slate-100 disabled:opacity-40"
             >
               📷
             </button>
@@ -769,6 +902,8 @@ function PostActions({
   onEdit,
   onReport,
   refreshModeration,
+  openPoll,
+  onClosePoll,
 }: {
   post: ChatterPost;
   me: string;
@@ -782,6 +917,8 @@ function PostActions({
   onEdit: () => void;
   onReport: () => void;
   refreshModeration: () => Promise<void>;
+  openPoll: boolean;
+  onClosePoll: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -818,6 +955,15 @@ function PostActions({
       >
         Copy text
       </button>
+      {openPoll && (
+        <button
+          disabled={busy}
+          className={secondary}
+          onClick={() => run(onClosePoll, "Poll closed")}
+        >
+          Close the poll
+        </button>
+      )}
       {canEdit(post, me) && (
         <button className={secondary} onClick={onEdit}>
           Edit
@@ -1293,6 +1439,196 @@ function Settings({
         Photos are shrunk on the phone and their location is removed before they upload. Only people
         on this team can open them.
       </p>
+    </div>
+  );
+}
+
+function PollCard({
+  poll,
+  results,
+  team,
+  onVote,
+}: {
+  poll: ChatterPoll;
+  results: PollChoice[] | undefined;
+  team: Parameters<typeof authorOf>[1];
+  onVote: (poll: ChatterPoll, choice: number) => void;
+}) {
+  const open = pollOpen(poll);
+  const t = tally(poll, results);
+  const status = pollStatus(poll);
+  const names = (ids: string[]) => {
+    const all = ids.map((id) => authorOf(id, team).name);
+    return all.length > 3 ? `${all.slice(0, 3).join(", ")} +${all.length - 3}` : all.join(", ");
+  };
+  return (
+    <div className="mt-2 flex flex-col gap-2">
+      {poll.multi && open && <p className="text-sm text-slate-600">Pick as many as you like.</p>}
+      <ul className="flex flex-col gap-2">
+        {t.choices.map((c, i) => (
+          <li key={i}>
+            <button
+              onClick={() => open && onVote(poll, i)}
+              disabled={!open}
+              aria-pressed={c.mine}
+              className={`relative flex min-h-12 w-full items-center gap-2 overflow-hidden rounded-xl border-2 px-3 py-2 text-left ${c.mine ? "border-[var(--team)]" : "border-slate-300"} bg-white disabled:cursor-default`}
+            >
+              <span
+                aria-hidden="true"
+                className={`absolute inset-y-0 left-0 ${c.mine ? "bg-[color-mix(in_srgb,var(--team)_22%,white)]" : "bg-slate-100"}`}
+                style={{ width: `${Math.round(c.share * 100)}%` }}
+              />
+              <span className="relative flex-1 text-base font-bold break-words">
+                {c.mine && "✓ "}
+                {c.label}
+                {!open && c.leading && " 🏆"}
+              </span>
+              <span className="relative shrink-0 text-base font-bold tabular-nums">
+                {c.votes > 0 ? `${Math.round(c.share * 100)}%` : ""}
+              </span>
+            </button>
+            {c.voters && c.voters.length > 0 && (
+              <p className="mt-0.5 px-1 text-sm text-slate-500">{names(c.voters)}</p>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="text-sm text-slate-500">
+        {t.voters === 1 ? "1 vote" : `${t.voters} votes`}
+        {poll.anonymous ? " · Anonymous" : ""}
+        {status ? ` · ${status}` : ""}
+        {open && !t.choices.some((c) => c.mine) ? " · Tap to vote" : ""}
+      </p>
+    </div>
+  );
+}
+
+function PollForm({
+  onSend,
+}: {
+  onSend: (
+    question: string,
+    options: string[],
+    multi: boolean,
+    anonymous: boolean,
+    closesAt: string | null,
+  ) => Promise<void>;
+}) {
+  const [question, setQuestion] = useState("");
+  const [options, setOptions] = useState(["", ""]);
+  const [multi, setMulti] = useState(false);
+  const [anonymous, setAnonymous] = useState(false);
+  const [ends, setEnds] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const toggle = (on: boolean, set: (v: boolean) => void, label: string, hint: string) => (
+    <button
+      role="switch"
+      aria-checked={on}
+      onClick={() => set(!on)}
+      className="flex items-center gap-3 rounded-xl border-2 border-slate-200 bg-white p-3 text-left"
+    >
+      <span
+        aria-hidden="true"
+        className={`flex h-7 w-12 shrink-0 items-center rounded-full p-1 transition-colors ${on ? "bg-[var(--team)]" : "bg-slate-300"}`}
+      >
+        <span
+          className={`h-5 w-5 rounded-full bg-white transition-transform ${on ? "translate-x-5" : ""}`}
+        />
+      </span>
+      <span>
+        <span className="block text-base font-bold">{label}</span>
+        <span className="block text-sm text-slate-600">{hint}</span>
+      </span>
+    </button>
+  );
+  return (
+    <div className="flex flex-col gap-3">
+      <MicField multiline value={question} onChange={setQuestion} maxLength={BODY_MAX}>
+        <textarea
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          maxLength={BODY_MAX}
+          rows={2}
+          placeholder="Ask the team… (Who can make Saturday?)"
+          aria-label="Question"
+          className="block w-full rounded-xl border-2 border-slate-300 p-3 pr-12 text-lg"
+        />
+      </MicField>
+      <ol className="flex flex-col gap-2">
+        {options.map((o, i) => (
+          <li key={i} className="flex items-center gap-2">
+            <input
+              value={o}
+              onChange={(e) =>
+                setOptions((prev) => prev.map((x, j) => (j === i ? e.target.value : x)))
+              }
+              maxLength={POLL_OPTION_MAX}
+              placeholder={`Choice ${i + 1}`}
+              aria-label={`Choice ${i + 1}`}
+              className="h-12 min-w-0 flex-1 rounded-xl border-2 border-slate-300 px-3 text-lg"
+            />
+            {options.length > 2 && (
+              <button
+                onClick={() => setOptions((prev) => prev.filter((_, j) => j !== i))}
+                aria-label={`Remove choice ${i + 1}`}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl text-slate-500 active:bg-slate-100"
+              >
+                ×
+              </button>
+            )}
+          </li>
+        ))}
+      </ol>
+      {options.length < POLL_OPTIONS_MAX && (
+        <button className={secondary} onClick={() => setOptions((prev) => [...prev, ""])}>
+          + Add a choice
+        </button>
+      )}
+      {toggle(multi, setMulti, "Let people pick more than one", "Like: which days work for you?")}
+      {toggle(anonymous, setAnonymous, "Anonymous", "Show the counts, not who voted")}
+      <label className="flex flex-col gap-1">
+        <span className="text-base font-bold">Closes</span>
+        <select
+          value={ends ?? ""}
+          onChange={(e) => setEnds(e.target.value ? Number(e.target.value) : null)}
+          className="h-12 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg"
+        >
+          {POLL_ENDS.map((e) => (
+            <option key={e.label} value={e.hours ?? ""}>
+              {e.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {error && <p className="rounded-xl bg-red-50 p-3 text-base text-red-900">{error}</p>}
+      <button
+        disabled={busy}
+        className={primary}
+        onClick={async () => {
+          const problem = checkPoll(question, options);
+          if (problem) {
+            setError(problem);
+            return;
+          }
+          setBusy(true);
+          setError(null);
+          try {
+            await onSend(
+              question.trim(),
+              options.map((o) => o.trim()).filter(Boolean),
+              multi,
+              anonymous,
+              ends ? new Date(Date.now() + ends * 3_600_000).toISOString() : null,
+            );
+          } catch (e) {
+            setError(message(e));
+            setBusy(false);
+          }
+        }}
+      >
+        📊 Post the poll
+      </button>
     </div>
   );
 }

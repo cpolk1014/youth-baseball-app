@@ -3,6 +3,10 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   photoPaths,
+  pollFromRow,
+  type ChatterPoll,
+  type ChatterPollRow,
+  type PollChoice,
   postFromRow,
   type ChatterPhoto,
   type ChatterPost,
@@ -12,7 +16,7 @@ import {
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 const COLUMNS =
-  "id, team_id, author_id, body, quote_post_id, photos, created_at, edited_at, pinned_at, removed_at";
+  "id, team_id, author_id, body, quote_post_id, kind, photos, created_at, edited_at, pinned_at, removed_at";
 export const PAGE = 50;
 
 /** Device copy of the last posts, so the feed opens in the dugout with no signal. */
@@ -307,6 +311,7 @@ export function subscribe(
   teamId: string,
   onPost: (post: ChatterPost) => void,
   onStatus?: (live: boolean) => void,
+  onPoll?: (poll: ChatterPoll) => void,
 ): () => void {
   const supabase = getBrowserSupabase();
   const channel: RealtimeChannel = supabase
@@ -317,6 +322,14 @@ export function subscribe(
       (payload) => {
         const row = payload.new as Partial<ChatterPostRow> | undefined;
         if (row && row.id && row.team_id === teamId) onPost(postFromRow(row as ChatterPostRow));
+      },
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "chatter_poll", filter: `team_id=eq.${teamId}` },
+      (payload) => {
+        const row = payload.new as Partial<ChatterPollRow> | undefined;
+        if (row && row.post_id) onPoll?.(pollFromRow(row as ChatterPollRow));
       },
     )
     .subscribe((status) => onStatus?.(status === "SUBSCRIBED"));
@@ -331,7 +344,11 @@ export function readCache(teamId: string): ChatterPost[] {
     const posts = raw ? (JSON.parse(raw) as unknown) : [];
     // Copies saved before photos existed have none.
     return Array.isArray(posts)
-      ? (posts as ChatterPost[]).map((p) => ({ ...p, photos: p.photos ?? [] }))
+      ? (posts as ChatterPost[]).map((p) => ({
+          ...p,
+          kind: p.kind ?? "post",
+          photos: p.photos ?? [],
+        }))
       : [];
   } catch {
     return [];
@@ -344,4 +361,67 @@ export function writeCache(teamId: string, posts: ChatterPost[]): void {
   } catch {
     // Storage full or blocked: the feed still works online.
   }
+}
+
+// ── Polls ──
+
+export async function createPoll(
+  teamId: string,
+  question: string,
+  options: string[],
+  multi: boolean,
+  anonymous: boolean,
+  closesAt: string | null,
+): Promise<string> {
+  const { data, error } = await getBrowserSupabase().rpc("create_chatter_poll", {
+    p_team: teamId,
+    p_question: question,
+    p_options: options,
+    p_multi: multi,
+    p_anonymous: anonymous,
+    p_closes_at: closesAt,
+  });
+  fail(error);
+  return data as string;
+}
+
+export async function loadPolls(postIds: string[]): Promise<ChatterPoll[]> {
+  if (!postIds.length) return [];
+  const { data, error } = await getBrowserSupabase()
+    .from("chatter_poll")
+    .select("post_id, options, multi, anonymous, closes_at, closed_at, version")
+    .in("post_id", postIds);
+  fail(error);
+  return ((data ?? []) as ChatterPollRow[]).map(pollFromRow);
+}
+
+/** Each poll's results, choice by choice. */
+export async function pollResults(postIds: string[]): Promise<Record<string, PollChoice[]>> {
+  if (!postIds.length) return {};
+  const { data, error } = await getBrowserSupabase().rpc("chatter_poll_results", {
+    p_posts: postIds,
+  });
+  fail(error);
+  const out: Record<string, PollChoice[]> = {};
+  for (const r of (data ?? []) as {
+    post_id: string;
+    option: number;
+    votes: number;
+    mine: boolean;
+    voters: string[] | null;
+  }[]) {
+    (out[r.post_id] ??= [])[r.option] = { votes: r.votes, mine: r.mine, voters: r.voters };
+  }
+  return out;
+}
+
+export async function vote(postId: string, options: number[]): Promise<void> {
+  fail(
+    (await getBrowserSupabase().rpc("vote_chatter_poll", { p_post: postId, p_options: options }))
+      .error,
+  );
+}
+
+export async function closePoll(postId: string): Promise<void> {
+  fail((await getBrowserSupabase().rpc("close_chatter_poll", { p_post: postId })).error);
 }

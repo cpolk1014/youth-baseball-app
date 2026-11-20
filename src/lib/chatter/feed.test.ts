@@ -9,7 +9,13 @@ import {
   dayLabel,
   feedItems,
   mergePosts,
+  checkPoll,
+  nextVote,
   photoPaths,
+  pollOpen,
+  pollStatus,
+  tally,
+  type ChatterPoll,
   pinnedPost,
   postFromRow,
   previewText,
@@ -47,6 +53,7 @@ const post = (over: Partial<ChatterPost>): ChatterPost => ({
   authorId: "u-mom",
   body: "Hi",
   quotePostId: null,
+  kind: "post",
   photos: [],
   createdAt: "2026-11-20T18:00:00.000Z",
   editedAt: null,
@@ -175,5 +182,76 @@ describe("photos", () => {
       path: "team/me/x.jpg",
       thumb: "team/me/x-t.jpg",
     });
+  });
+});
+
+describe("polls", () => {
+  const poll = (over: Partial<ChatterPoll> = {}): ChatterPoll => ({
+    postId: "p",
+    options: ["Pizza", "Tacos", "Burgers"],
+    multi: false,
+    anonymous: false,
+    closesAt: null,
+    closedAt: null,
+    version: 0,
+    ...over,
+  });
+
+  it("knows when a poll is open", () => {
+    const now = new Date("2026-11-20T18:00:00Z");
+    expect(pollOpen(poll(), now)).toBe(true);
+    expect(pollOpen(poll({ closesAt: "2026-11-20T17:59:00Z" }), now)).toBe(false);
+    expect(pollOpen(poll({ closedAt: "2026-11-20T10:00:00Z" }), now)).toBe(false);
+    expect(pollStatus(poll({ closedAt: "2026-11-20T10:00:00Z" }), now)).toBe("Closed");
+    expect(pollStatus(poll(), now)).toBe("");
+  });
+
+  it("tallies shares, my vote, ties and people", () => {
+    const t = tally(poll(), [
+      { votes: 2, mine: true, voters: ["a", "b"] },
+      { votes: 2, mine: false, voters: ["c", "d"] },
+      { votes: 0, mine: false, voters: [] },
+    ]);
+    expect(t.votes).toBe(4);
+    expect(t.voters).toBe(4);
+    expect(t.choices.map((c) => c.share)).toEqual([0.5, 0.5, 0]);
+    expect(t.choices.map((c) => c.leading)).toEqual([true, true, false]);
+    expect(t.choices[0]!.mine).toBe(true);
+  });
+
+  it("counts a person once on multi-choice polls", () => {
+    const t = tally(poll({ multi: true }), [
+      { votes: 2, mine: true, voters: ["a", "b"] },
+      { votes: 1, mine: false, voters: ["a"] },
+    ]);
+    expect(t.voters).toBe(2);
+    expect(t.votes).toBe(3);
+  });
+
+  it("shows an empty poll before results load", () => {
+    const t = tally(poll(), undefined);
+    expect(t.votes).toBe(0);
+    expect(t.choices.every((c) => !c.leading)).toBe(true);
+  });
+
+  it("switches, takes back and toggles votes", () => {
+    expect(nextVote(poll(), [], 1)).toEqual([1]);
+    expect(nextVote(poll(), [1], 2)).toEqual([2]);
+    expect(nextVote(poll(), [2], 2)).toEqual([]);
+    expect(nextVote(poll({ multi: true }), [2], 0)).toEqual([0, 2]);
+    expect(nextVote(poll({ multi: true }), [0, 2], 2)).toEqual([0]);
+  });
+
+  it("checks a new poll", () => {
+    expect(checkPoll("", ["a", "b"])).toBe("Ask a question first.");
+    expect(checkPoll("Q?", ["a", " "])).toBe("A poll needs at least 2 choices.");
+    expect(checkPoll("Q?", ["Yes", "yes "])).toBe("Two of the choices are the same.");
+    expect(checkPoll("Q?", ["Yes", "No", ""])).toBeNull();
+  });
+
+  it("previews a poll in one line", () => {
+    expect(previewText({ body: "Pizza or tacos?", photos: [], kind: "poll" })).toBe(
+      "📊 Poll: Pizza or tacos?",
+    );
   });
 });
