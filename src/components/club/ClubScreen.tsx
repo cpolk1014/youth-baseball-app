@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { ClubCode, ClubTeam } from "@/lib/data/club-backend";
 import { CLUB_PRICE_CENTS, dollars, quote, seasonsOnSale } from "@/lib/billing/season";
 
-/** Today's price per team (prorated once the season has started). */
+/** Today's price per team (one price all season). */
 const clubNow = () => quote(CLUB_PRICE_CENTS, seasonsOnSale(new Date())[0]!).cents;
 import { codeMessage } from "@/lib/club";
 import { formatClock } from "@/lib/data/game";

@@ -36,7 +36,7 @@ const FAQ: [string, React.ReactNode][] = [
   ],
   [
     "Joining mid-season?",
-    "You only pay for the innings left. Sign up after August 1 and the price is prorated by the days left in the season, so a team joining in mid-November pays about $91, not $129. It never drops below a quarter of the price, because even the bottom of the ninth has a cover charge. From June 1 you buy next season instead, and the rest of this one is on the house.",
+    "Pay for the season you'll play. Sign up any time from August through December and $129 covers fall and spring. Starting in January? Spring is $89 for a team, January through July. Clubs pay $99 a team and the Player pass is the same price all season. From June 1 you buy next season instead, and the rest of this one is on the house.",
   ],
   [
     "Do parents have to pay?",

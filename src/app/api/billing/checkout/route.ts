@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   CLUB_PRICE_CENTS,
   MAX_CLUB_TEAMS,
-  TEAM_PRICE_CENTS,
   quote,
+  teamQuote,
   seasonEnds,
   seasonsOnSale,
 } from "@/lib/billing/season";
@@ -17,8 +17,8 @@ function errorResponse(status: number, error: string) {
 
 /**
  * Start paying for a season (through July 31): a club's team codes ($99 each; a new club for
- * a first-time buyer), one team's season ($129), or a parent's player stats ($10, then $5 a
- * kid). Prorated by the days left once the season has started (`quote`). Returns Stripe
+ * a first-time buyer), one team's season ($129, or $89 for spring from January 1), or a
+ * parent's player stats ($10, then $5 a kid). Priced by `quote` / `teamQuote`. Returns Stripe
  * Checkout's URL; nothing is recorded until Stripe confirms the payment (see
  * /api/stripe/webhook).
  */
@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
   let quantity = 1;
   let name: string;
   let back: string;
+  let spring = false;
 
   if (kind === "club") {
     quantity = Number(body?.teams);
@@ -93,7 +94,9 @@ export async function POST(request: NextRequest) {
     if (pass) return errorResponse(409, `This team is already paid for ${season}.`);
     meta.kind = "team";
     meta.teamId = teamId;
-    unit = quote(TEAM_PRICE_CENTS, season).cents;
+    const price = teamQuote(season);
+    unit = price.cents;
+    spring = price.spring;
     name = team.name;
     back = "/members";
   } else if (kind === "family") {
@@ -132,8 +135,8 @@ export async function POST(request: NextRequest) {
   const terms =
     q.bonusDays > 0
       ? `Runs through ${through}, and the rest of this season is free.`
-      : q.daysLeft < q.seasonDays
-        ? `Runs through ${through}. Prorated: ${q.daysLeft} of ${q.seasonDays} days left.`
+      : spring
+        ? `Spring season: January through ${through}.`
         : `Runs through ${through}.`;
 
   const origin = request.nextUrl.origin;

@@ -1,5 +1,5 @@
 // The price of a season bought today and why, in Fungo's bleacher voice. Prices come
-// from `quote` (src/lib/billing/season.ts), the same one the checkout charges.
+// from `quote` / `teamQuote` (src/lib/billing/season.ts), the same ones the checkout charges.
 import { dollars, type Quote } from "@/lib/billing/season";
 
 const longDate = (iso: string) =>
@@ -9,7 +9,7 @@ const longDate = (iso: string) =>
     year: "numeric",
   });
 
-/** "$91" with the full price struck through when it's less. */
+/** "$89" with the full price struck through when it's less. */
 export function PriceTag({ cents, fullCents }: { cents: number; fullCents: number }) {
   return (
     <span className="whitespace-nowrap">
@@ -24,7 +24,7 @@ export function PriceTag({ cents, fullCents }: { cents: number; fullCents: numbe
 }
 
 /** Why the price is what it is today. */
-export function ProrateNote({ q, per = "" }: { q: Quote; per?: string }) {
+export function SeasonNote({ q, per = "" }: { q: Quote; per?: string }) {
   const each = per ? ` ${per}` : "";
   const until = longDate(q.ends);
   let text: React.ReactNode;
@@ -35,28 +35,18 @@ export function ProrateNote({ q, per = "" }: { q: Quote; per?: string }) {
         {q.bonusDays} day{q.bonusDays === 1 ? "" : "s"} left in this one come with it, on the house.
       </>
     );
-  } else if (q.daysLeft >= q.seasonDays) {
+  } else if (q.spring) {
     text = (
       <>
-        <b>Opening day pricing.</b> Every pitch from now through {until}.
-      </>
-    );
-  } else if (q.floor) {
-    text = (
-      <>
-        <b>Bottom of the ninth.</b> Only {q.daysLeft} days are left in the season (it runs August 1
-        to July 31). Prorating stops at a quarter of the price, because even the last inning has a
-        cover charge. Hold out until June 1 and buying next season throws in the rest of this one
-        free.
+        <b>Spring pricing.</b> Fall&apos;s in the books, so you pay for the season you&apos;ll play:{" "}
+        {dollars(q.cents)}
+        {each} instead of {dollars(q.fullCents)}, January through {until}.
       </>
     );
   } else {
     text = (
       <>
-        <b>Late to the dugout? No problem.</b> The season runs August 1 to July 31, and {q.daysLeft}{" "}
-        of its {q.seasonDays} days are left. You pay for those, not the innings you already missed:{" "}
-        {dollars(q.cents)}
-        {each} instead of {dollars(q.fullCents)}, through {until}.
+        <b>The whole season.</b> Every pitch from now through {until}.
       </>
     );
   }

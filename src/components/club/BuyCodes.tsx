@@ -10,7 +10,7 @@ import {
   seasonEnds,
   seasonsOnSale,
 } from "@/lib/billing/season";
-import { PriceTag, ProrateNote } from "../billing/Prorated";
+import { PriceTag, SeasonNote } from "../billing/Prorated";
 
 const field =
   "h-12 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
@@ -120,7 +120,7 @@ export function BuyCodes({ clubId, onCancel }: { clubId?: string; onCancel?: () 
           {endDate(season)}. One code per team.
         </p>
         <div className="mt-2">
-          <ProrateNote q={q} per="a team" />
+          <SeasonNote q={q} per="a team" />
         </div>
       </div>
       {error && (

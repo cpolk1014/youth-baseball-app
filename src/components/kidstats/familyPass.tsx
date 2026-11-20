@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { MAX_KIDS, statsPriceCents } from "@/lib/billing/family";
 import { quote, seasonsOnSale } from "@/lib/billing/season";
-import { PriceTag, ProrateNote } from "../billing/Prorated";
+import { PriceTag, SeasonNote } from "../billing/Prorated";
 import { dollars } from "@/lib/billing/season";
 import { useStoreState } from "@/lib/data/store";
 import { getBrowserSupabase } from "@/lib/supabase/client";
@@ -114,8 +114,8 @@ export function useMyKids(): MyKid[] | null {
 
 /**
  * My profile: buy the Player pass (Pine Tar, pitch count, stats) for a number of
- * kids, $10 for the first and $5 each after, for the season (through July 31; prorated once
- * it has started).
+ * kids, $10 for the first and $5 each after, for the season (through July 31; one price
+ * all season).
  */
 export function BuyPlayerStats({
   kids,
@@ -270,7 +270,7 @@ export function BuyPlayerStats({
         <p className="mb-1 text-sm text-slate-600">
           For the {q.season} season, through {longDate(q.ends)}.
         </p>
-        <ProrateNote q={q} />
+        <SeasonNote q={q} />
       </div>
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-900">

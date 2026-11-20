@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { TEAM_PRICE_CENTS, dollars, quote, seasonsOnSale } from "@/lib/billing/season";
-import { PriceTag, ProrateNote } from "../billing/Prorated";
+import { dollars, seasonsOnSale, teamQuote } from "@/lib/billing/season";
+import { PriceTag, SeasonNote } from "../billing/Prorated";
 import type { TeamClub } from "@/lib/data/club-backend";
 import { clearPaidFlag } from "./paidFlag";
 import { refreshData } from "@/lib/data/store";
@@ -121,7 +121,7 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
     }
   };
 
-  const teamQuote = quote(TEAM_PRICE_CENTS, seasonsOnSale(new Date())[0]!);
+  const price = teamQuote(seasonsOnSale(new Date())[0]!);
   return (
     <section
       id="plan"
@@ -217,21 +217,21 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
           ) : canJoin ? (
             <>
               <p className="text-base text-slate-700">
-                Not part of a club? Pay for this team&apos;s {teamQuote.season} season:{" "}
+                Not part of a club? Pay for this team&apos;s {price.season} season:{" "}
                 <b className="text-lg">
-                  <PriceTag cents={teamQuote.cents} fullCents={teamQuote.fullCents} />
+                  <PriceTag cents={price.cents} fullCents={price.fullCents} />
                 </b>
-                , through {until(teamQuote.ends)}.
+                , through {until(price.ends)}.
               </p>
               <div className="mt-1 mb-2">
-                <ProrateNote q={teamQuote} />
+                <SeasonNote q={price} />
               </div>
               <button
                 onClick={() => void payForTeam()}
                 disabled={paying}
                 className="h-12 w-full rounded-xl border-2 border-[var(--team)] bg-white text-base font-bold text-[var(--team)] disabled:opacity-40"
               >
-                {paying ? "Opening checkout…" : `Pay ${dollars(teamQuote.cents)} for the season`}
+                {paying ? "Opening checkout…" : `Pay ${dollars(price.cents)} for the season`}
               </button>
             </>
           ) : null}

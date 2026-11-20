@@ -79,7 +79,7 @@ export function PricingGrid({ full = false }: { full?: boolean }) {
           <Cta>Start your free 14-day trial</Cta>
         </div>
         <p className="mt-3 text-sm text-white/70">
-          One team, through July 31. Pay once a season, prorated if you join late.
+          One team, through July 31. Starting in January? Spring is $89.
         </p>
       </div>
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CLUB_PRICE_CENTS,
   dollars,
   isSeasonLabel,
   nextSeason,
@@ -7,6 +8,8 @@ import {
   seasonEnds,
   seasonFor,
   seasonsOnSale,
+  springStarts,
+  teamQuote,
 } from "./season";
 
 const d = (s: string) => new Date(`${s}T12:00:00`);
@@ -30,32 +33,35 @@ describe("seasons", () => {
     expect(seasonsOnSale(d("2027-08-01"))).toEqual(["2027-28"]);
   });
 
-  it("prorate by the days left, in whole dollars, never under a quarter", () => {
-    // August 1: the whole season.
-    expect(quote(12900, "2026-27", d("2026-08-01"))).toMatchObject({
-      cents: 12900,
-      daysLeft: 365,
-      seasonDays: 365,
-      floor: false,
+  it("charge teams the full season through December, then the spring price", () => {
+    expect(teamQuote("2026-27", d("2026-08-01"))).toMatchObject({ cents: 12900, spring: false });
+    expect(teamQuote("2026-27", d("2026-11-16"))).toMatchObject({ cents: 12900, spring: false });
+    expect(teamQuote("2026-27", d("2026-12-31"))).toMatchObject({ cents: 12900, spring: false });
+    expect(teamQuote("2026-27", d("2027-01-01"))).toMatchObject({
+      cents: 8900,
+      fullCents: 12900,
+      spring: true,
+      ends: "2027-07-31",
     });
-    // November 16: 258 of 365 days left (counting today), 129 × 258 / 365 = 91.19, so $91.
-    expect(quote(12900, "2026-27", d("2026-11-16"))).toMatchObject({ cents: 9100, daysLeft: 258 });
-    expect(quote(9900, "2026-27", d("2026-11-16")).cents).toBe(7000);
-    expect(quote(1000, "2026-27", d("2026-11-16")).cents).toBe(700);
-    // May 20: 73 days left would be $26, but a quarter of $129 rounds up to $33.
-    expect(quote(12900, "2026-27", d("2027-05-20"))).toMatchObject({
-      cents: 3300,
-      daysLeft: 73,
-      floor: true,
-    });
-    expect(quote(1000, "2026-27", d("2027-05-31")).cents).toBe(300);
-    // A leap year has 366 days.
-    expect(quote(12900, "2027-28", d("2027-08-01")).seasonDays).toBe(366);
+    expect(teamQuote("2026-27", d("2027-05-31")).cents).toBe(8900);
+    expect(springStarts("2026-27")).toBe("2027-01-01");
+  });
+
+  it("charge clubs and the Player pass one price all season", () => {
+    for (const day of ["2026-08-01", "2026-11-16", "2027-02-01", "2027-05-31"]) {
+      expect(quote(CLUB_PRICE_CENTS, "2026-27", d(day))).toMatchObject({
+        cents: 9900,
+        spring: false,
+      });
+      expect(quote(1500, "2026-27", d(day)).cents).toBe(1500);
+    }
   });
 
   it("charge next season in full, with the rest of this one free", () => {
-    expect(quote(12900, "2027-28", d("2027-06-15"))).toMatchObject({
+    // June 15: next season isn't spring yet, so even a team pays the full price.
+    expect(teamQuote("2027-28", d("2027-06-15"))).toMatchObject({
       cents: 12900,
+      spring: false,
       bonusDays: 47,
       ends: "2028-07-31",
     });

@@ -333,7 +333,7 @@ And the tools that run your season:
 - Plays homework for families
 
 **[Start your free 14-day trial]**
-*One team, through July 31. Pay once a season, prorated if you join late.*
+*One team, through July 31. Starting in January? Spring is $89.*
 
 **Club: $99 per team, per season**
 - Everything in Team, AI included, for every team that joins
@@ -365,7 +365,7 @@ It's Fungo's own smart engine. It follows your fair-play rules exactly, gives th
 August 1 to July 31, for teams, clubs and the Player pass alike. Paid features keep working for 5 days after July 31 while you renew.
 
 **Joining mid-season?**
-You only pay for the innings left. Sign up after August 1 and the price is prorated by the days left in the season, so a team joining in mid-November pays about $91, not $129. It never drops below a quarter of the price, because even the bottom of the ninth has a cover charge. From June 1 you buy next season instead, and the rest of this one is on the house.
+Pay for the season you'll play. Sign up any time from August through December and $129 covers fall and spring. Starting in January? Spring is $89 for a team, January through July. Clubs pay $99 a team and the Player pass is the same price all season. From June 1 you buy next season instead, and the rest of this one is on the house.
 
 **Do parents have to pay?**
 No. Parents use Fungo free with your team. *The Player pass* (highlight reels, pitch count and stats) is an optional add-on for their own child.
