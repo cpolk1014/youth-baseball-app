@@ -12,6 +12,7 @@ export type Tab =
   | "plays"
   | "season"
   | "stats"
+  | "chatter"
   | "roster"
   | "money"
   | "awards"
@@ -45,6 +46,7 @@ export const GAME_DAY: MenuTab[] = [
   { id: "pa", href: "/pa", label: "Gameday PA", icon: "pa" },
 ];
 export const TEAM: MenuTab[] = [
+  { id: "chatter", href: "/chatter", label: "Chatter", icon: "chatter" },
   { id: "roster", href: "/roster", label: "Roster", icon: "roster" },
   { id: "practice", href: "/practices", label: "Practice", icon: "practice" },
   { id: "plays", href: "/plays", label: "Plays", icon: "plays" },

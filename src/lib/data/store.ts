@@ -992,6 +992,10 @@ export async function signOut(): Promise<void> {
     window.localStorage.removeItem(SNAPSHOT_KEY);
     window.localStorage.removeItem(OUTBOX_KEY);
     window.localStorage.removeItem("rallycap:weather");
+    // Chatter's device copy of each team's feed.
+    for (const key of Object.keys(window.localStorage)) {
+      if (key.startsWith("rallycap:chatter:")) window.localStorage.removeItem(key);
+    }
     for (const key of await caches.keys()) await caches.delete(key);
   } catch {
     // Storage unavailable: nothing to clear.

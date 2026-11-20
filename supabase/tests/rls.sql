@@ -1986,4 +1986,129 @@ select pg_temp.expect(not public.team_paid('dddddddd-0000-4000-8000-000000000002
 reset role;
 delete from public.team where id in ('dddddddd-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000002');
 
+-- ── Chatter (team chat) ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body)
+  values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'Hi');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: no posting before agreeing to the rules';
+end $$;
+select public.agree_chatter('00000000-0000-4000-8000-000000000001');
+insert into public.chatter_post (id, team_id, author_id, body) values
+  ('cccccccc-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-000000000001',
+   'aaaaaaaa-0000-4000-8000-000000000001', '  Practice moved to 6:00  ');
+select pg_temp.expect((select body from public.chatter_post where id = 'cccccccc-0000-4000-8000-00000000c001') = 'Practice moved to 6:00', 'coach posts (trimmed)');
+
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select public.agree_chatter('00000000-0000-4000-8000-000000000001');
+select pg_temp.expect(public.chatter_unread('00000000-0000-4000-8000-000000000001') = 0, 'agreeing marks the feed read');
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body)
+  values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'Pretending to be the coach');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: nobody posts as someone else';
+end $$;
+insert into public.chatter_post (id, team_id, author_id, body, quote_post_id) values
+  ('cccccccc-0000-4000-8000-00000000c002', '00000000-0000-4000-8000-000000000001',
+   'aaaaaaaa-0000-4000-8000-000000000002', 'We''ll be there', 'cccccccc-0000-4000-8000-00000000c001');
+select pg_temp.expect((select count(*) from public.chatter_post) = 2, 'parent sees the team''s posts');
+select public.edit_chatter_post('cccccccc-0000-4000-8000-00000000c002', 'We''ll be there!');
+select pg_temp.expect((select edited_at is not null from public.chatter_post where id = 'cccccccc-0000-4000-8000-00000000c002'), 'author edits their post');
+do $$ begin
+  perform public.edit_chatter_post('cccccccc-0000-4000-8000-00000000c001', 'Practice canceled');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents can''t edit the coach''s post';
+end $$;
+do $$ begin
+  perform public.remove_chatter_post('cccccccc-0000-4000-8000-00000000c001');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents can''t remove others'' posts';
+end $$;
+do $$ begin
+  perform public.pin_chatter_post('cccccccc-0000-4000-8000-00000000c001', true);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents can''t pin';
+end $$;
+do $$ begin
+  perform public.mute_chatter_member('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', now() + interval '1 day');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents can''t pause anyone';
+end $$;
+select public.report_chatter_post('cccccccc-0000-4000-8000-00000000c001', 'spam', 'testing');
+select pg_temp.expect((select count(*) from public.chatter_report) = 1, 'reporters see their own report');
+do $$ begin
+  update public.chatter_post set body = 'sneaky' where id = 'cccccccc-0000-4000-8000-00000000c001';
+  if exists (select 1 from public.chatter_post where body = 'sneaky') then
+    raise exception 'FAIL: direct update changed a post' using errcode = 'T0001';
+  end if;
+  raise notice 'ok: posts can''t be changed directly';
+end $$;
+
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect(public.chatter_unread('00000000-0000-4000-8000-000000000001') = 1, 'coach has 1 unread post');
+select public.mark_chatter_read('00000000-0000-4000-8000-000000000001');
+select pg_temp.expect(public.chatter_unread('00000000-0000-4000-8000-000000000001') = 0, 'reading clears unread');
+select pg_temp.expect((select count(*) from public.chatter_report where resolved_at is null) = 1, 'coach sees the open report');
+select public.resolve_chatter_report((select id from public.chatter_report limit 1));
+select public.pin_chatter_post('cccccccc-0000-4000-8000-00000000c001', true);
+select public.remove_chatter_post('cccccccc-0000-4000-8000-00000000c002');
+select pg_temp.expect((select body = '' and removed_at is not null from public.chatter_post where id = 'cccccccc-0000-4000-8000-00000000c002'), 'coach removes a parent''s post; its text leaves the feed');
+do $$ begin
+  perform count(*) from public.chatter_removed_post;
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: removed text is out of everyone''s reach';
+end $$;
+do $$ begin
+  perform public.mute_chatter_member('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', now() + interval '1 day');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: coaches can''t be paused';
+end $$;
+select public.mute_chatter_member('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', now() + interval '1 day');
+
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body)
+  values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 'Hello?');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a paused parent can''t post';
+end $$;
+
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.mute_chatter_member('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', null);
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body, quote_post_id)
+  values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 'x', 'cccccccc-0000-4000-8000-00000000c002');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when foreign_key_violation then raise notice 'ok: can''t quote a removed post';
+end $$;
+do $$ declare i int; begin
+  for i in 1..40 loop
+    insert into public.chatter_post (team_id, author_id, body)
+    values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 'post ' || i);
+  end loop;
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when sqlstate 'P0429' then raise notice 'ok: 30 posts in 10 minutes, then a breather';
+end $$;
+
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.chatter_post) = 0, 'outsiders see no posts');
+do $$ begin
+  perform public.agree_chatter('00000000-0000-4000-8000-000000000001');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: outsiders can''t join Chatter';
+end $$;
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body)
+  values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000003', 'Hi');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: outsiders can''t post';
+end $$;
+reset role;
+select pg_temp.expect((select count(*) from public.chatter_removed_post) = 1, 'the removed text is kept for review');
+delete from public.chatter_post where team_id = '00000000-0000-4000-8000-000000000001';
+delete from public.chatter_member where team_id = '00000000-0000-4000-8000-000000000001';
+
 \echo ALL RLS TESTS PASSED
