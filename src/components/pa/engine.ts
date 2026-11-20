@@ -23,10 +23,15 @@ let playing: { id: string; until: number } | null = null;
 
 function build(): AudioContext {
   // iPhones mute web audio with the ring/silent switch unless the page says it's playback.
+  // Only on phones and tablets: desktop Safari has the same switch, and setting it there
+  // left the PA silent.
   const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
-  if (session) session.type = "playback";
-  else keepAwakeTrack();
+  if (session) {
+    if (navigator.maxTouchPoints > 0) session.type = "playback";
+  } else keepAwakeTrack();
   const c = new AudioContext();
+  // Safari can start a context paused even during a tap; ask it to run.
+  if (c.state !== "running") void c.resume().catch(() => undefined);
   const comp = c.createDynamicsCompressor();
   comp.threshold.value = -10;
   comp.ratio.value = 4;
@@ -95,8 +100,17 @@ function keepAwakeTrack() {
   void silentTrack.play().catch(() => undefined);
 }
 
+/**
+ * The context the sound being built belongs to. Only the entry points (a tap) call
+ * `audio()`, which may replace a stuck context; everything they build afterwards must use
+ * the same one, or connecting nodes from two contexts throws and nothing plays.
+ */
+function cur(): AudioContext {
+  return ctx ?? audio();
+}
+
 function freshBus(): GainNode {
-  const c = audio();
+  const c = cur();
   bus = c.createGain();
   bus.connect(master!);
   return bus;
@@ -148,7 +162,7 @@ function setPlaying(p: { id: string; seconds: number } | null) {
 
 /** A drawbar organ note: stacked sine partials with a little rotary-speaker wobble. */
 function organNote(out: AudioNode, freq: number, at: number, seconds: number, level = 0.16) {
-  const c = audio();
+  const c = cur();
   const env = c.createGain();
   env.gain.setValueAtTime(0, at);
   env.gain.linearRampToValueAtTime(level, at + 0.012);
@@ -182,7 +196,7 @@ function organNote(out: AudioNode, freq: number, at: number, seconds: number, le
 }
 
 function noiseBuffer(seconds: number): AudioBuffer {
-  const c = audio();
+  const c = cur();
   const b = c.createBuffer(1, Math.ceil(c.sampleRate * seconds), c.sampleRate);
   const d = b.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -202,7 +216,7 @@ function noise(
     attack?: number;
   } = {},
 ) {
-  const c = audio();
+  const c = cur();
   const src = c.createBufferSource();
   src.buffer = noiseBuffer(seconds);
   const f = c.createBiquadFilter();
@@ -233,7 +247,7 @@ function tone(
   to: number = from,
   level = 0.3,
 ) {
-  const c = audio();
+  const c = cur();
   const o = c.createOscillator();
   o.type = type;
   o.frequency.setValueAtTime(from, at);
@@ -334,7 +348,7 @@ function playEffect(out: AudioNode, id: string, at: number): number {
       return 0.85;
     case "quack": {
       for (const t of [0, 0.3]) {
-        const c = audio();
+        const c = cur();
         const f = c.createBiquadFilter();
         f.type = "bandpass";
         f.frequency.value = 1100;
@@ -346,7 +360,7 @@ function playEffect(out: AudioNode, id: string, at: number): number {
     }
     case "boing": {
       const o = tone(out, "sine", at, 0.7, 180, 500, 0.35);
-      const c = audio();
+      const c = cur();
       const lfo = c.createOscillator();
       const depth = c.createGain();
       lfo.frequency.value = 14;
