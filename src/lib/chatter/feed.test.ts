@@ -9,7 +9,10 @@ import {
   dayLabel,
   feedItems,
   mergePosts,
+  photoPaths,
   pinnedPost,
+  postFromRow,
+  previewText,
   snippet,
   type ChatterPost,
 } from "./feed";
@@ -44,6 +47,7 @@ const post = (over: Partial<ChatterPost>): ChatterPost => ({
   authorId: "u-mom",
   body: "Hi",
   quotePostId: null,
+  photos: [],
   createdAt: "2026-11-20T18:00:00.000Z",
   editedAt: null,
   pinnedAt: null,
@@ -138,5 +142,38 @@ describe("the feed", () => {
   it("shortens a quoted post", () => {
     expect(snippet("Practice\n\nmoved   to 6")).toBe("Practice moved to 6");
     expect(snippet("a".repeat(200), 10)).toBe("aaaaaaaaa…");
+  });
+});
+
+describe("photos", () => {
+  const photo = { path: "t/u/a.jpg", thumb: "t/u/a-t.jpg", w: 1600, h: 1200 };
+  it("reads photos from a row and skips anything odd", () => {
+    const row = {
+      id: "a",
+      team_id: "t",
+      author_id: "u",
+      body: "",
+      quote_post_id: null,
+      photos: [photo, { path: 3 }, null, { path: "x", thumb: "y" }],
+      created_at: "2026-11-20T18:00:00Z",
+      edited_at: null,
+      pinned_at: null,
+      removed_at: null,
+    };
+    expect(postFromRow(row).photos).toEqual([photo, { path: "x", thumb: "y", w: 0, h: 0 }]);
+    expect(postFromRow({ ...row, photos: undefined }).photos).toEqual([]);
+  });
+  it("describes photo posts in one line", () => {
+    expect(previewText({ body: "", photos: [photo] })).toBe("📷 Photo");
+    expect(previewText({ body: "Great game!", photos: [photo, photo] })).toBe(
+      "📷 2 photos · Great game!",
+    );
+    expect(previewText({ body: "Hi", photos: [] })).toBe("Hi");
+  });
+  it("puts photos in the poster's own folder", () => {
+    expect(photoPaths("team", "me", "x")).toEqual({
+      path: "team/me/x.jpg",
+      thumb: "team/me/x-t.jpg",
+    });
   });
 });

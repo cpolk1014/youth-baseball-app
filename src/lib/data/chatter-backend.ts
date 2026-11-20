@@ -2,7 +2,9 @@
 // database decides who reads and posts (team members only) and enforces every rule.
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
+  photoPaths,
   postFromRow,
+  type ChatterPhoto,
   type ChatterPost,
   type ChatterPostRow,
   type ReportReason,
@@ -10,7 +12,7 @@ import {
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 const COLUMNS =
-  "id, team_id, author_id, body, quote_post_id, created_at, edited_at, pinned_at, removed_at";
+  "id, team_id, author_id, body, quote_post_id, photos, created_at, edited_at, pinned_at, removed_at";
 export const PAGE = 50;
 
 /** Device copy of the last posts, so the feed opens in the dugout with no signal. */
@@ -133,14 +135,86 @@ export async function sendPost(
   authorId: string,
   body: string,
   quotePostId: string | null,
+  photos: ChatterPhoto[] = [],
 ): Promise<ChatterPost> {
   const { data, error } = await getBrowserSupabase()
     .from("chatter_post")
-    .insert({ team_id: teamId, author_id: authorId, body, quote_post_id: quotePostId })
+    .insert({ team_id: teamId, author_id: authorId, body, quote_post_id: quotePostId, photos })
     .select(COLUMNS)
     .single();
   fail(error);
   return postFromRow(data as ChatterPostRow);
+}
+
+const PHOTOS = "chatter-photos";
+
+/** Upload a photo (already shrunk and stripped) to the poster's own folder. */
+export async function uploadPhoto(
+  teamId: string,
+  userId: string,
+  photo: { full: Blob; thumb: Blob; w: number; h: number },
+): Promise<ChatterPhoto> {
+  const { path, thumb } = photoPaths(teamId, userId, crypto.randomUUID());
+  const bucket = getBrowserSupabase().storage.from(PHOTOS);
+  const opts = { contentType: "image/jpeg", cacheControl: "31536000", upsert: false };
+  const [a, b] = await Promise.all([
+    bucket.upload(path, photo.full, opts),
+    bucket.upload(thumb, photo.thumb, opts),
+  ]);
+  const error = a.error ?? b.error;
+  if (error) {
+    void bucket.remove([path, thumb]);
+    throw new ChatterError(
+      /row-level security|unauthorized|403/i.test(error.message)
+        ? "On this team, only coaches and managers post photos."
+        : "Couldn't upload that photo. Try again.",
+    );
+  }
+  return { path, thumb, w: photo.w, h: photo.h };
+}
+
+/** Delete photo files (a removed post's, or uploads that never got posted). */
+export async function deletePhotos(photos: ChatterPhoto[]): Promise<void> {
+  if (!photos.length) return;
+  await getBrowserSupabase()
+    .storage.from(PHOTOS)
+    .remove(photos.flatMap((p) => [p.path, p.thumb]));
+}
+
+/** Links to photos, good for 6 hours (the bucket is private). */
+export async function photoUrls(paths: string[]): Promise<Record<string, string>> {
+  if (!paths.length) return {};
+  const { data, error } = await getBrowserSupabase()
+    .storage.from(PHOTOS)
+    .createSignedUrls(paths, 6 * 3600);
+  if (error) return {};
+  return Object.fromEntries(
+    (data ?? []).flatMap((d) => (d.path && d.signedUrl ? [[d.path, d.signedUrl]] : [])),
+  );
+}
+
+export type PhotoSetting = "everyone" | "staff";
+
+export async function photoSetting(teamId: string): Promise<PhotoSetting> {
+  const { data, error } = await getBrowserSupabase()
+    .from("team")
+    .select("chatter_photos")
+    .eq("id", teamId)
+    .maybeSingle();
+  fail(error);
+  return (data as { chatter_photos?: PhotoSetting } | null)?.chatter_photos === "staff"
+    ? "staff"
+    : "everyone";
+}
+
+export async function setPhotoSetting(teamId: string, value: PhotoSetting): Promise<void> {
+  const { data, error } = await getBrowserSupabase()
+    .from("team")
+    .update({ chatter_photos: value })
+    .eq("id", teamId)
+    .select("id");
+  fail(error);
+  if (!data?.length) throw new ChatterError("Only coaches and managers change this.");
 }
 
 export async function editPost(postId: string, body: string): Promise<void> {
@@ -255,7 +329,10 @@ export function readCache(teamId: string): ChatterPost[] {
   try {
     const raw = window.localStorage.getItem(CACHE_PREFIX + teamId);
     const posts = raw ? (JSON.parse(raw) as unknown) : [];
-    return Array.isArray(posts) ? (posts as ChatterPost[]) : [];
+    // Copies saved before photos existed have none.
+    return Array.isArray(posts)
+      ? (posts as ChatterPost[]).map((p) => ({ ...p, photos: p.photos ?? [] }))
+      : [];
   } catch {
     return [];
   }

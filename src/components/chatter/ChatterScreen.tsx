@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BODY_MAX,
+  PHOTOS_MAX,
   PAUSES,
   REPORT_REASONS,
   authorOf,
@@ -14,8 +15,9 @@ import {
   feedItems,
   mergePosts,
   pinnedPost,
-  snippet,
+  previewText,
   timeLabel,
+  type ChatterPhoto,
   type ChatterPost,
   type ReportReason,
 } from "@/lib/chatter/feed";
@@ -26,7 +28,8 @@ import { AppShell, Loading } from "../AppShell";
 import { MicField } from "../Dictate";
 import { Sheet } from "../Sheet";
 import { toast } from "../shell/Toast";
-import type { ChatterReport, ChatterState } from "@/lib/data/chatter-backend";
+import type { ChatterReport, ChatterState, PhotoSetting } from "@/lib/data/chatter-backend";
+import { preparePhoto } from "./photo";
 
 const backend = () => import("@/lib/data/chatter-backend");
 const primary =
@@ -79,6 +82,11 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
   const [editing, setEditing] = useState<ChatterPost | null>(null);
   const [reporting, setReporting] = useState<ChatterPost | null>(null);
   const [showReports, setShowReports] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [photoSetting, setPhotoSetting] = useState<PhotoSetting>("everyone");
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const asked = useRef<Set<string>>(new Set());
+  const [viewer, setViewer] = useState<{ photos: ChatterPhoto[]; index: number } | null>(null);
 
   const bottom = useRef<HTMLDivElement>(null);
   const nearBottom = useRef(true);
@@ -126,6 +134,10 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
         if (mine.agreedAt) void m.markRead(teamId).catch(() => undefined);
         scrollToEnd();
         void refreshModeration().catch(() => undefined);
+        void m
+          .photoSetting(teamId)
+          .then(setPhotoSetting)
+          .catch(() => undefined);
       } catch (e) {
         if (!cancelled) setLoadError(cached.length ? null : message(e));
         if (!cancelled && !cached.length) setState(null);
@@ -174,6 +186,23 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
         setQuoted((prev) => ({ ...prev, ...Object.fromEntries(found.map((p) => [p.id, p])) })),
       )
       .catch(() => undefined);
+  }, [posts, quoted]);
+
+  // Links to the feed's thumbnails (the bucket is private; links last a few hours).
+  useEffect(() => {
+    const want = [
+      ...new Set(
+        [...posts, ...Object.values(quoted)].flatMap((p) => p.photos.map((ph) => ph.thumb)),
+      ),
+    ].filter((path) => !asked.current.has(path));
+    if (!want.length) return;
+    for (const path of want) asked.current.add(path);
+    void backend()
+      .then((m) => m.photoUrls(want))
+      .then((found) => setUrls((prev) => ({ ...prev, ...found })))
+      .catch(() => {
+        for (const path of want) asked.current.delete(path);
+      });
   }, [posts, quoted]);
 
   useEffect(() => {
@@ -234,7 +263,21 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
   const pin = pinned ?? pinnedPost(posts);
 
   return (
-    <AppShell title="Chatter" subtitle={data.team.name} tab="chatter">
+    <AppShell
+      title="Chatter"
+      subtitle={data.team.name}
+      tab="chatter"
+      action={
+        moderator ? (
+          <button
+            onClick={() => setShowSettings(true)}
+            className="h-11 rounded-lg px-3 text-base font-bold active:bg-black/10"
+          >
+            Settings
+          </button>
+        ) : undefined
+      }
+    >
       <div className="mx-auto flex max-w-3xl flex-col">
         {moderator && reports.length > 0 && (
           <button
@@ -252,7 +295,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
             <span aria-hidden="true">📌</span>
             <span className="min-w-0">
               <span className="block text-sm font-bold text-amber-900">Pinned by the coaches</span>
-              <span className="block truncate text-base">{snippet(pin.body)}</span>
+              <span className="block truncate text-base">{previewText(pin)}</span>
             </span>
           </button>
         )}
@@ -290,6 +333,8 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
                 quote={findPost(post.quotePostId)}
                 onQuoteTap={jumpTo}
                 onActions={() => setActionsFor(post)}
+                urls={urls}
+                onPhoto={(index) => setViewer({ photos: post.photos, index })}
               />
             </li>
           ))}
@@ -309,9 +354,25 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
           replyTo={replyTo}
           replyAuthor={replyTo ? authorOf(replyTo.authorId, team).name : ""}
           onCancelReply={() => setReplyTo(null)}
-          onSend={async (body) => {
+          canPostPhotos={photoSetting === "everyone" || moderator}
+          onSend={async (body, files) => {
             const m = await backend();
-            const post = await m.sendPost(teamId, me, body, replyTo?.id ?? null);
+            const uploaded: ChatterPhoto[] = [];
+            try {
+              for (const file of files) {
+                uploaded.push(await m.uploadPhoto(teamId, me, await preparePhoto(file)));
+              }
+            } catch (e) {
+              void m.deletePhotos(uploaded).catch(() => undefined);
+              throw e;
+            }
+            let post: ChatterPost;
+            try {
+              post = await m.sendPost(teamId, me, body, replyTo?.id ?? null, uploaded);
+            } catch (e) {
+              void m.deletePhotos(uploaded).catch(() => undefined);
+              throw e;
+            }
             setPosts((prev) => mergePosts(prev, [post]));
             setReplyTo(null);
             scrollToEnd(true);
@@ -380,6 +441,28 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
         )}
       </Sheet>
 
+      <Sheet open={showSettings} title="Chatter settings" onClose={() => setShowSettings(false)}>
+        <Settings
+          value={photoSetting}
+          onChange={async (v) => {
+            await (await backend()).setPhotoSetting(teamId, v);
+            setPhotoSetting(v);
+            toast(
+              v === "staff" ? "Only coaches and managers post photos" : "Everyone posts photos",
+            );
+          }}
+        />
+      </Sheet>
+
+      {viewer && (
+        <PhotoViewer
+          photos={viewer.photos}
+          start={viewer.index}
+          thumbs={urls}
+          onClose={() => setViewer(null)}
+        />
+      )}
+
       <Sheet open={showReports} title="Reported posts" onClose={() => setShowReports(false)}>
         <ReportsList
           reports={reports}
@@ -391,7 +474,9 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
           onRemoved={(id) =>
             setPosts((prev) =>
               prev.map((p) =>
-                p.id === id ? { ...p, body: "", removedAt: new Date().toISOString() } : p,
+                p.id === id
+                  ? { ...p, body: "", photos: [], removedAt: new Date().toISOString() }
+                  : p,
               ),
             )
           }
@@ -446,6 +531,8 @@ function PostBubble({
   quote,
   onQuoteTap,
   onActions,
+  urls,
+  onPhoto,
 }: {
   post: ChatterPost;
   mine: boolean;
@@ -454,6 +541,8 @@ function PostBubble({
   quote: ChatterPost | null;
   onQuoteTap: (id: string) => void;
   onActions: () => void;
+  urls: Record<string, string>;
+  onPhoto: (index: number) => void;
 }) {
   const author = authorOf(post.authorId, team);
   if (post.removedAt) {
@@ -489,9 +578,7 @@ function PostBubble({
           {quote && !quote.removedAt ? (
             <>
               <span className="block text-sm font-bold">{authorOf(quote.authorId, team).name}</span>
-              <span className="line-clamp-2 text-sm text-slate-600">
-                {snippet(quote.body, 160)}
-              </span>
+              <span className="line-clamp-2 text-sm text-slate-600">{previewText(quote, 160)}</span>
             </>
           ) : (
             <span className="text-sm text-slate-500 italic">
@@ -500,6 +587,7 @@ function PostBubble({
           )}
         </button>
       )}
+      {post.photos.length > 0 && <PhotoGrid photos={post.photos} urls={urls} onPhoto={onPhoto} />}
       <div className="flex items-end gap-2">
         <p className="min-w-0 flex-1 text-lg break-words whitespace-pre-wrap">{post.body}</p>
         <button
@@ -521,6 +609,7 @@ function Composer({
   replyTo,
   replyAuthor,
   onCancelReply,
+  canPostPhotos,
   onSend,
 }: {
   disabledReason: string | null;
@@ -528,9 +617,14 @@ function Composer({
   replyTo: ChatterPost | null;
   replyAuthor: string;
   onCancelReply: () => void;
-  onSend: (body: string) => Promise<void>;
+  canPostPhotos: boolean;
+  onSend: (body: string, photos: File[]) => Promise<void>;
 }) {
   const [text, setText] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
+  useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
+  const picker = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const input = useRef<HTMLDivElement>(null);
@@ -547,12 +641,13 @@ function Composer({
   }
   const body = text.trim();
   const send = async () => {
-    if (!body || busy) return;
+    if ((!body && !files.length) || busy) return;
     setBusy(true);
     setError(null);
     try {
-      await onSend(body);
+      await onSend(body, files);
       setText("");
+      setFiles([]);
     } catch (e) {
       setError(message(e));
     } finally {
@@ -568,7 +663,7 @@ function Composer({
         <div className="flex items-start gap-2 rounded-xl border-l-4 border-[var(--team)] bg-white px-3 py-2">
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-bold">Replying to {replyAuthor}</span>
-            <span className="block truncate text-sm text-slate-600">{snippet(replyTo.body)}</span>
+            <span className="block truncate text-sm text-slate-600">{previewText(replyTo)}</span>
           </span>
           <button
             onClick={onCancelReply}
@@ -585,7 +680,54 @@ function Composer({
         </p>
       )}
       {error && <p className="rounded-xl bg-red-50 p-2 text-base text-red-900">{error}</p>}
+      {files.length > 0 && (
+        <ul className="flex gap-2" aria-label="Photos to post">
+          {previews.map((url, i) => (
+            <li key={url} className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a local preview */}
+              <img src={url} alt="" className="h-20 w-20 rounded-xl object-cover" />
+              <button
+                onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                aria-label={`Remove photo ${i + 1}`}
+                className="absolute -top-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-lg text-white"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="flex items-end gap-2">
+        {canPostPhotos && (
+          <>
+            <input
+              ref={picker}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => {
+                const picked = Array.from(e.target.files ?? []).filter((f) =>
+                  f.type.startsWith("image/"),
+                );
+                e.target.value = "";
+                setFiles((prev) => {
+                  const next = [...prev, ...picked];
+                  if (next.length > PHOTOS_MAX) toast(`Up to ${PHOTOS_MAX} photos a post`);
+                  return next.slice(0, PHOTOS_MAX);
+                });
+              }}
+            />
+            <button
+              onClick={() => picker.current?.click()}
+              disabled={busy || files.length >= PHOTOS_MAX}
+              aria-label="Add photos"
+              className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-2xl active:bg-slate-100 disabled:opacity-40"
+            >
+              📷
+            </button>
+          </>
+        )}
         <div className="min-w-0 flex-1">
           <MicField multiline value={text} onChange={setText} maxLength={BODY_MAX}>
             <textarea
@@ -604,10 +746,10 @@ function Composer({
         </div>
         <button
           onClick={send}
-          disabled={!body || busy}
+          disabled={(!body && !files.length) || busy}
           className="h-[52px] shrink-0 rounded-xl bg-[var(--team)] px-5 text-lg font-bold text-white active:bg-[var(--team-press)] disabled:opacity-40"
         >
-          {busy ? "…" : "Post"}
+          {busy ? (files.length ? "Sending…" : "…") : "Post"}
         </button>
       </div>
     </div>
@@ -660,7 +802,7 @@ function PostActions({
   return (
     <div className="flex flex-col gap-2">
       <p className="line-clamp-3 rounded-xl bg-slate-50 p-3 text-base text-slate-700">
-        <b>{authorName}:</b> {snippet(post.body, 200)}
+        <b>{authorName}:</b> {previewText(post, 200)}
       </p>
       {error && <p className="rounded-xl bg-red-50 p-3 text-base text-red-900">{error}</p>}
       <button className={primary} onClick={onReply}>
@@ -743,7 +885,11 @@ function PostActions({
           className="flex h-12 w-full items-center justify-center rounded-xl border-2 border-red-300 bg-white text-base font-bold text-red-700 active:bg-red-50"
           onClick={() => {
             if (!window.confirm("Remove this post for everyone?")) return;
-            void run(async () => (await backend()).removePost(post.id), "Post removed");
+            void run(async () => {
+              const m = await backend();
+              await m.removePost(post.id);
+              await m.deletePhotos(post.photos).catch(() => undefined);
+            }, "Post removed");
           }}
         >
           Remove post
@@ -896,7 +1042,7 @@ function ReportsList({
                   <i>Already removed</i>
                 ) : (
                   <>
-                    <b>{authorName(post)}:</b> {snippet(post.body, 200)}
+                    <b>{authorName(post)}:</b> {previewText(post, 200)}
                   </>
                 )
               ) : (
@@ -912,6 +1058,7 @@ function ReportsList({
                     act(async () => {
                       const m = await backend();
                       await m.removePost(r.postId);
+                      await m.deletePhotos(post.photos).catch(() => undefined);
                       await m.resolveReport(r.id);
                       onRemoved(r.postId);
                     })
@@ -932,5 +1079,220 @@ function ReportsList({
         );
       })}
     </ul>
+  );
+}
+
+function PhotoGrid({
+  photos,
+  urls,
+  onPhoto,
+}: {
+  photos: ChatterPhoto[];
+  urls: Record<string, string>;
+  onPhoto: (index: number) => void;
+}) {
+  const one = photos.length === 1;
+  return (
+    <div className={one ? "" : "grid grid-cols-2 gap-1"}>
+      {photos.map((ph, i) => {
+        const url = urls[ph.thumb];
+        const ratio = one && ph.w && ph.h ? Math.min(Math.max(ph.w / ph.h, 0.75), 1.8) : 1;
+        return (
+          <button
+            key={ph.thumb}
+            onClick={() => onPhoto(i)}
+            aria-label={`Open photo ${i + 1} of ${photos.length}`}
+            className={`block w-full overflow-hidden rounded-xl bg-slate-200 ${one ? "max-w-md" : ""}`}
+            style={{ aspectRatio: String(ratio) }}
+          >
+            {url ? (
+              // eslint-disable-next-line @next/next/no-img-element -- private, signed links
+              <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-3xl text-slate-400">
+                📷
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Full-screen photos: swipe or arrows between them, Save to the phone. */
+function PhotoViewer({
+  photos,
+  start,
+  thumbs,
+  onClose,
+}: {
+  photos: ChatterPhoto[];
+  start: number;
+  thumbs: Record<string, string>;
+  onClose: () => void;
+}) {
+  const [index, setIndex] = useState(start);
+  const [full, setFull] = useState<Record<string, string>>({});
+  const touch = useRef<number | null>(null);
+  const photo = photos[index]!;
+  const go = useCallback(
+    (step: number) => setIndex((i) => Math.min(photos.length - 1, Math.max(0, i + step))),
+    [photos.length],
+  );
+
+  useEffect(() => {
+    void backend()
+      .then((m) => m.photoUrls(photos.map((p) => p.path)))
+      .then(setFull)
+      .catch(() => undefined);
+  }, [photos]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight") go(1);
+      if (e.key === "ArrowLeft") go(-1);
+    };
+    window.addEventListener("keydown", onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, [go, onClose]);
+
+  const src = full[photo.path] ?? thumbs[photo.thumb];
+  const save = async () => {
+    const url = full[photo.path];
+    if (!url) return;
+    try {
+      const blob = await (await fetch(url)).blob();
+      const file = new File([blob], `chatter-photo-${index + 1}.jpg`, { type: "image/jpeg" });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file] });
+        return;
+      }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = file.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === "AbortError"))
+        toast("Couldn't save the photo.");
+    }
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Photo ${index + 1} of ${photos.length}`}
+      className="fixed inset-0 z-50 flex flex-col bg-black text-white"
+      onTouchStart={(e) => (touch.current = e.touches[0]?.clientX ?? null)}
+      onTouchEnd={(e) => {
+        const startX = touch.current;
+        const endX = e.changedTouches[0]?.clientX;
+        touch.current = null;
+        if (startX == null || endX == null || Math.abs(endX - startX) < 50) return;
+        go(endX < startX ? 1 : -1);
+      }}
+    >
+      <div className="flex items-center gap-2 p-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
+        <button
+          onClick={onClose}
+          className="h-12 rounded-xl px-4 text-lg font-bold active:bg-white/10"
+        >
+          ✕ Close
+        </button>
+        <span className="flex-1 text-center text-base">
+          {photos.length > 1 ? `${index + 1} of ${photos.length}` : ""}
+        </span>
+        <button
+          onClick={save}
+          disabled={!full[photo.path]}
+          className="h-12 rounded-xl px-4 text-lg font-bold active:bg-white/10 disabled:opacity-40"
+        >
+          Save
+        </button>
+      </div>
+      <div className="relative flex min-h-0 flex-1 items-center justify-center">
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element -- private, signed links
+          <img src={src} alt="" className="max-h-full max-w-full object-contain" />
+        ) : (
+          <span className="text-lg">Loading…</span>
+        )}
+        {index > 0 && (
+          <button
+            onClick={() => go(-1)}
+            aria-label="Previous photo"
+            className="absolute left-2 hidden h-14 w-14 items-center justify-center rounded-full bg-white/15 text-3xl md:flex"
+          >
+            ‹
+          </button>
+        )}
+        {index < photos.length - 1 && (
+          <button
+            onClick={() => go(1)}
+            aria-label="Next photo"
+            className="absolute right-2 hidden h-14 w-14 items-center justify-center rounded-full bg-white/15 text-3xl md:flex"
+          >
+            ›
+          </button>
+        )}
+      </div>
+      <div className="pb-[max(0.5rem,env(safe-area-inset-bottom))]" />
+    </div>
+  );
+}
+
+function Settings({
+  value,
+  onChange,
+}: {
+  value: PhotoSetting;
+  onChange: (v: PhotoSetting) => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const options: { id: PhotoSetting; label: string; hint: string }[] = [
+    { id: "everyone", label: "Everyone", hint: "Coaches and parents post photos" },
+    { id: "staff", label: "Coaches and managers", hint: "Parents post words only" },
+  ];
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-lg font-bold">Who can post photos</p>
+      <div className="flex flex-col gap-2" role="radiogroup" aria-label="Who can post photos">
+        {options.map((o) => (
+          <button
+            key={o.id}
+            role="radio"
+            aria-checked={value === o.id}
+            disabled={busy}
+            onClick={async () => {
+              if (o.id === value) return;
+              setBusy(true);
+              try {
+                await onChange(o.id);
+              } catch (e) {
+                toast(message(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+            className={`rounded-xl border-2 p-3 text-left ${value === o.id ? "border-[var(--team)] bg-[color-mix(in_srgb,var(--team)_10%,white)]" : "border-slate-300 bg-white"}`}
+          >
+            <span className="block text-lg font-bold">{o.label}</span>
+            <span className="block text-base text-slate-600">{o.hint}</span>
+          </button>
+        ))}
+      </div>
+      <p className="text-base text-slate-600">
+        Photos are shrunk on the phone and their location is removed before they upload. Only people
+        on this team can open them.
+      </p>
+    </div>
   );
 }

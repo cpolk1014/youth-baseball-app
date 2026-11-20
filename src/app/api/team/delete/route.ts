@@ -1,3 +1,4 @@
+import { postFromRow, type ChatterPostRow } from "@/lib/chatter/feed";
 import { NextResponse, type NextRequest } from "next/server";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getServerSupabase } from "@/lib/supabase/server";
@@ -6,7 +7,7 @@ const UUID = /^[0-9a-f-]{36}$/i;
 
 /**
  * A coach permanently deletes a team. The database removes the team's rows; its stored files
- * (logo, receipts, walk-up audio) go afterward with the service role, because once the team is
+ * (logo, receipts, walk-up audio, Chatter photos) go afterward with the service role, because once the team is
  * gone nobody's role allows it.
  */
 export async function POST(request: NextRequest) {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
   }
 
   // The files to remove, read while the team still exists.
-  const [team, receipts, walkups, sounds] = await Promise.all([
+  const [team, receipts, walkups, sounds, chatter] = await Promise.all([
     supabase.from("team").select("logo_path").eq("id", teamId).maybeSingle(),
     supabase
       .from("finance_entry")
@@ -42,8 +43,9 @@ export async function POST(request: NextRequest) {
       .select("song_path, announce_path, player!inner(team_id)")
       .eq("player.team_id", teamId),
     supabase.from("pa_sound").select("path").eq("team_id", teamId),
+    supabase.from("chatter_post").select("photos").eq("team_id", teamId).neq("photos", "[]"),
   ]);
-  const readError = team.error ?? receipts.error ?? walkups.error ?? sounds.error;
+  const readError = team.error ?? receipts.error ?? walkups.error ?? sounds.error ?? chatter.error;
   if (readError) {
     console.error("team delete: couldn't list files", readError.message);
     return fail(500, "Couldn't delete the team. Try again.");
@@ -62,6 +64,12 @@ export async function POST(request: NextRequest) {
       ),
       ...(sounds.data ?? []).map((s) => s.path as string),
     ],
+    "chatter-photos": (chatter.data ?? []).flatMap((p) =>
+      postFromRow({ photos: p.photos } as ChatterPostRow).photos.flatMap((ph) => [
+        ph.path,
+        ph.thumb,
+      ]),
+    ),
   };
 
   const { data: deleted, error } = await supabase

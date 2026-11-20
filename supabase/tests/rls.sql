@@ -2093,6 +2093,65 @@ do $$ declare i int; begin
 exception when sqlstate 'P0429' then raise notice 'ok: 30 posts in 10 minutes, then a breather';
 end $$;
 
+-- Chatter photos (parent aaa2 is back to posting; the rate limit counts only 10 minutes, so
+-- these posts come from the coach).
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+insert into storage.objects (bucket_id, name) values
+  ('chatter-photos', '00000000-0000-4000-8000-000000000001/aaaaaaaa-0000-4000-8000-000000000001/a.jpg');
+select pg_temp.expect(true, 'a member uploads a photo to their own folder');
+do $$ begin
+  insert into storage.objects (bucket_id, name) values
+    ('chatter-photos', '00000000-0000-4000-8000-000000000001/aaaaaaaa-0000-4000-8000-000000000002/b.jpg');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: nobody uploads into someone else''s folder';
+end $$;
+insert into public.chatter_post (id, team_id, author_id, body, photos) values
+  ('cccccccc-0000-4000-8000-00000000c010', '00000000-0000-4000-8000-000000000001',
+   'aaaaaaaa-0000-4000-8000-000000000001', '',
+   '[{"path": "00000000-0000-4000-8000-000000000001/aaaaaaaa-0000-4000-8000-000000000001/a.jpg", "thumb": "00000000-0000-4000-8000-000000000001/aaaaaaaa-0000-4000-8000-000000000001/a-t.jpg", "w": 1600, "h": 1200}]');
+select pg_temp.expect(true, 'a photo post needs no words');
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body, photos) values
+    ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', '',
+     '[{"path": "00000000-0000-4000-8000-000000000001/aaaaaaaa-0000-4000-8000-000000000002/b.jpg", "thumb": "00000000-0000-4000-8000-000000000001/aaaaaaaa-0000-4000-8000-000000000002/b.jpg"}]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a post can only show the poster''s own photos';
+end $$;
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body, photos) values
+    ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'five',
+     '[{}, {}, {}, {}, {}]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation or insufficient_privilege then raise notice 'ok: at most 4 photos a post';
+end $$;
+update public.team set chatter_photos = 'staff' where id = '00000000-0000-4000-8000-000000000001';
+
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'chatter-photos') = 1, 'team members see the team''s photos');
+do $$ begin
+  insert into storage.objects (bucket_id, name) values
+    ('chatter-photos', '00000000-0000-4000-8000-000000000001/aaaaaaaa-0000-4000-8000-000000000002/b.jpg');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: staff-only photos keep parents from uploading';
+end $$;
+do $$ begin
+  update public.team set chatter_photos = 'everyone' where id = '00000000-0000-4000-8000-000000000001';
+  if (select chatter_photos from public.team where id = '00000000-0000-4000-8000-000000000001') = 'everyone' then
+    raise exception 'FAIL: a parent changed the photo setting' using errcode = 'T0001';
+  end if;
+  raise notice 'ok: parents can''t change who posts photos';
+end $$;
+delete from storage.objects where bucket_id = 'chatter-photos';
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'chatter-photos') = 1, 'parents can''t delete others'' photos');
+update public.team set chatter_photos = 'everyone' where id = '00000000-0000-4000-8000-000000000001';
+select public.remove_chatter_post('cccccccc-0000-4000-8000-00000000c010');
+select pg_temp.expect((select photos = '[]'::jsonb from public.chatter_post where id = 'cccccccc-0000-4000-8000-00000000c010'), 'removing a post drops its photos from the feed');
+delete from storage.objects where bucket_id = 'chatter-photos';
+select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'chatter-photos') = 0, 'the poster deletes their photo files');
+
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'chatter-photos') = 0, 'outsiders see no photos');
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 select pg_temp.expect((select count(*) from public.chatter_post) = 0, 'outsiders see no posts');
 do $$ begin
@@ -2107,7 +2166,7 @@ do $$ begin
 exception when insufficient_privilege then raise notice 'ok: outsiders can''t post';
 end $$;
 reset role;
-select pg_temp.expect((select count(*) from public.chatter_removed_post) = 1, 'the removed text is kept for review');
+select pg_temp.expect((select count(*) from public.chatter_removed_post) = 2, 'the removed text is kept for review');
 delete from public.chatter_post where team_id = '00000000-0000-4000-8000-000000000001';
 delete from public.chatter_member where team_id = '00000000-0000-4000-8000-000000000001';
 

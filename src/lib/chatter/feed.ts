@@ -8,6 +8,16 @@ import type { Player } from "@/lib/rules/types";
 export const BODY_MAX = 2000;
 /** Authors can fix a post for this long. */
 export const EDIT_MINUTES = 10;
+/** Photos per post. */
+export const PHOTOS_MAX = 4;
+
+/** A photo on a post: the full size (1600 px) and the feed's thumbnail, in chatter-photos. */
+export interface ChatterPhoto {
+  path: string;
+  thumb: string;
+  w: number;
+  h: number;
+}
 
 export interface ChatterPost {
   id: string;
@@ -16,6 +26,7 @@ export interface ChatterPost {
   authorId: string | null;
   body: string;
   quotePostId: string | null;
+  photos: ChatterPhoto[];
   createdAt: string;
   editedAt: string | null;
   pinnedAt: string | null;
@@ -28,6 +39,7 @@ export interface ChatterPostRow {
   author_id: string | null;
   body: string;
   quote_post_id: string | null;
+  photos?: unknown;
   created_at: string;
   edited_at: string | null;
   pinned_at: string | null;
@@ -41,11 +53,36 @@ export function postFromRow(r: ChatterPostRow): ChatterPost {
     authorId: r.author_id,
     body: r.body,
     quotePostId: r.quote_post_id,
+    photos: photosFrom(r.photos),
     createdAt: r.created_at,
     editedAt: r.edited_at,
     pinnedAt: r.pinned_at,
     removedAt: r.removed_at,
   };
+}
+
+function photosFrom(value: unknown): ChatterPhoto[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((p): ChatterPhoto[] => {
+    if (!p || typeof p !== "object") return [];
+    const { path, thumb, w, h } = p as Record<string, unknown>;
+    if (typeof path !== "string" || typeof thumb !== "string") return [];
+    return [{ path, thumb, w: typeof w === "number" ? w : 0, h: typeof h === "number" ? h : 0 }];
+  });
+}
+
+/** What a post says in one line: its words, or its photos. */
+export function previewText(post: Pick<ChatterPost, "body" | "photos">, max = 120): string {
+  const words = snippet(post.body, max);
+  const n = post.photos.length;
+  const photos = n ? (n === 1 ? "📷 Photo" : `📷 ${n} photos`) : "";
+  return words && photos ? `${photos} · ${words}` : words || photos;
+}
+
+/** Where a new photo goes: the poster's own folder on the team. */
+export function photoPaths(teamId: string, userId: string, id: string) {
+  const base = `${teamId}/${userId}/${id}`;
+  return { path: `${base}.jpg`, thumb: `${base}-t.jpg` };
 }
 
 export interface Author {

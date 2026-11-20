@@ -1,6 +1,6 @@
 # Chatter: team chat in Fungo, the plan
 
-Status: phase 1 (the feed with moderation) built November 20, 2026; the rest is planned. Written November 20, 2026, after the club director demo.
+Status: phase 1 (the feed with moderation) and phase 2 (photos) built November 20, 2026; the rest is planned. Written November 20, 2026, after the club director demo.
 The director asked for GroupMe's job to move into Fungo.
 
 ## The short version
@@ -98,7 +98,8 @@ nothing addressed to a kid.
   stay on the phone with Pine Tar Productions.
 - **Moderation:** removing a post removes its photos. A report about a photo of a child goes to
   the Fungo support inbox as well as the coaches.
-- **Keeping them:** photos are deleted 90 days after the season ends. Coaches get "Download
+- **Keeping them (not built yet; needs a scheduled server job):** photos are deleted 90 days
+  after the season ends. Coaches get "Download
   the season's photos" (a zip made on the phone) and a reminder first. Deleting a team deletes
   its photos.
 - **Rough cost:** an active team is about 1,000 photos and 300 MB a season. 100 teams is about
@@ -161,7 +162,7 @@ Once Fungo hosts the chat, we hold what parents post. The first version needs al
   days, or remove them from the team.
 - **Report** (anyone): picks a reason. The team's coaches see it, and so does a Fungo
   support inbox for anything about a child's safety.
-- A removed post's text is kept **30 days**, readable only by the service role, so a report
+- A removed post's text is kept **30 days** (its photos are deleted right away), readable only by the service role, so a report
   can still be reviewed. After that it's gone.
 - No video. Photos follow the safety rules in 3b (location stripped, team-only, coaches can
   limit who posts them). GIFs come from GIPHY's G-rated library only.
