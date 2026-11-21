@@ -17,7 +17,7 @@ import type { ChatterGif } from "@/lib/chatter/gif";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 const COLUMNS =
-  "id, team_id, author_id, body, quote_post_id, kind, photos, gif, reactions, club, created_at, edited_at, pinned_at, removed_at";
+  "id, team_id, author_id, body, quote_post_id, kind, photos, gif, mentions, reactions, club, created_at, edited_at, pinned_at, removed_at";
 export const PAGE = 50;
 
 /** Device copy of the last posts, so the feed opens in the dugout with no signal. */
@@ -142,6 +142,7 @@ export async function sendPost(
   quotePostId: string | null,
   photos: ChatterPhoto[] = [],
   gif: ChatterGif | null = null,
+  mentions: string[] = [],
 ): Promise<ChatterPost> {
   const { data, error } = await getBrowserSupabase()
     .from("chatter_post")
@@ -152,6 +153,7 @@ export async function sendPost(
       quote_post_id: quotePostId,
       photos,
       gif,
+      mentions,
     })
     .select(COLUMNS)
     .single();
@@ -392,6 +394,7 @@ export function readCache(teamId: string): ChatterPost[] {
           reactions: p.reactions ?? [],
           club: p.club ?? null,
           gif: p.gif ?? null,
+          mentions: p.mentions ?? [],
         }))
       : [];
   } catch {

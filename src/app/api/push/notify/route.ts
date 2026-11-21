@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Read as the person: it must be their own post on a team they're on.
     const { data: post } = await supabase
       .from("chatter_post")
-      .select("id, team_id, author_id, body, photos, gif, kind, created_at, removed_at")
+      .select("id, team_id, author_id, body, photos, gif, kind, mentions, created_at, removed_at")
       .eq("id", id)
       .maybeSingle();
     if (!post || post.author_id !== user.id || post.removed_at || !fresh(post.created_at)) {
@@ -71,15 +71,40 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     // The coaches turned Chatter notifications off for the team.
     if (team && team.notify_chatter === false) return ok();
-    const sent = await sendPush(
-      await teamReaders(post.team_id, user.id),
+    const teamName = (team?.name as string) ?? "Chatter";
+    const from = await nameOn(post.team_id, user.id);
+    // Tagged people hear about it even if they muted the team's Chatter; then everyone else.
+    const tags = ((post.mentions ?? []) as string[]).filter(Boolean);
+    let tagged: string[] = [];
+    if (tags.length) {
+      const { data: members } = await admin
+        .from("member")
+        .select("user_id, role")
+        .eq("team_id", post.team_id);
+      const all = (members ?? []) as { user_id: string; role: string }[];
+      tagged = [
+        ...new Set(
+          all
+            .filter(
+              (m) =>
+                tags.includes("everyone") ||
+                tags.includes(m.user_id) ||
+                (tags.includes("coaches") && ["owner", "coach", "manager"].includes(m.role)),
+            )
+            .map((m) => m.user_id)
+            .filter((u) => u && u !== user.id),
+        ),
+      ];
+    }
+    let sent = await sendPush(
+      tagged,
+      { id: post.team_id, category: "mention" },
+      chatterPush({ teamId: post.team_id, teamName, from: `${from} tagged you`, post }),
+    );
+    sent += await sendPush(
+      (await teamReaders(post.team_id, user.id)).filter((u) => !tagged.includes(u)),
       { id: post.team_id, category: "chatter" },
-      chatterPush({
-        teamId: post.team_id,
-        teamName: (team?.name as string) ?? "Chatter",
-        from: await nameOn(post.team_id, user.id),
-        post,
-      }),
+      chatterPush({ teamId: post.team_id, teamName, from, post }),
     );
     return ok(sent);
   }

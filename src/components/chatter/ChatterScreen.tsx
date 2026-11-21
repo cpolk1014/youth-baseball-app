@@ -2,7 +2,15 @@
 
 // Chatter: the team's own chat feed. Adults only (team members; kids have no accounts), no
 // private messages, coaches and managers moderate. The database enforces all of it.
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   BODY_MAX,
   PHOTOS_MAX,
@@ -56,6 +64,14 @@ import type {
   PhotoSetting,
 } from "@/lib/data/chatter-backend";
 import type { ChatterGif } from "@/lib/chatter/gif";
+import {
+  filterMentionables,
+  insertMention,
+  mentionQuery,
+  mentionsIn,
+  splitMentions,
+  type Mentionable,
+} from "@/lib/chatter/mentions";
 import { GifPicker, GifView } from "./Gif";
 import { picturesFrom, preparePhoto } from "./photo";
 import { announce } from "@/lib/push/client";
@@ -317,6 +333,18 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
     }
   };
   const authorFor = (id: string | null) => authorOf(id, team);
+  // Who can be tagged: the team's adults (not me), plus @coaches, and @everyone for staff.
+  const mentionables: Mentionable[] = [
+    { id: "coaches", label: "coaches", hint: "Every coach and manager" },
+    ...(moderator ? [{ id: "everyone", label: "everyone", hint: "The whole team" }] : []),
+    ...data.members
+      .filter((x) => x.userId && x.userId !== me)
+      .map((x) => {
+        const a = authorOf(x.userId, team);
+        return { id: x.userId!, label: a.name, hint: a.role ?? undefined };
+      })
+      .filter((x) => x.label && x.label !== "Former member"),
+  ];
   const nameOf = (id: string) => authorFor(id).name;
 
   // Links to the feed's thumbnails (the bucket is private; links last a few hours).
@@ -497,7 +525,8 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
           onCancelReply={() => setReplyTo(null)}
           canPostPhotos={settings.photos === "everyone" || moderator}
           onNewPoll={settings.polls === "everyone" || moderator ? () => setAskingPoll(true) : null}
-          onSend={async (body, files, gif) => {
+          mentionables={mentionables}
+          onSend={async (body, files, gif, mentions) => {
             const m = await backend();
             const uploaded: ChatterPhoto[] = [];
             try {
@@ -510,7 +539,15 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
             }
             let post: ChatterPost;
             try {
-              post = await m.sendPost(teamId, me, body, replyTo?.id ?? null, uploaded, gif);
+              post = await m.sendPost(
+                teamId,
+                me,
+                body,
+                replyTo?.id ?? null,
+                uploaded,
+                gif,
+                mentions,
+              );
             } catch (e) {
               void m.deletePhotos(uploaded).catch(() => undefined);
               throw e;
@@ -835,7 +872,32 @@ export function PostBubble({
             )}
           </div>
         ) : (
-          <p className="min-w-0 flex-1 text-lg break-words whitespace-pre-wrap">{post.body}</p>
+          <p className="min-w-0 flex-1 text-lg break-words whitespace-pre-wrap">
+            {post.mentions.length
+              ? splitMentions(
+                  post.body,
+                  post.mentions.map((id) => ({
+                    id,
+                    label: id === "coaches" || id === "everyone" ? id : nameOf(id),
+                  })),
+                ).map((part, i) =>
+                  part.tag ? (
+                    <span
+                      key={i}
+                      className={`rounded px-0.5 font-semibold ${
+                        part.tag === me || part.tag === "everyone"
+                          ? "bg-[color-mix(in_srgb,var(--team)_22%,white)] text-[var(--team)]"
+                          : "text-[var(--team)]"
+                      }`}
+                    >
+                      {part.text}
+                    </span>
+                  ) : (
+                    <Fragment key={i}>{part.text}</Fragment>
+                  ),
+                )
+              : post.body}
+          </p>
         )}
         <button
           onClick={onActions}
@@ -954,6 +1016,7 @@ export function Composer({
   onNewPoll,
   onSend,
   placeholder = "Post to the team…",
+  mentionables = [],
 }: {
   placeholder?: string;
   disabledReason: string | null;
@@ -964,7 +1027,14 @@ export function Composer({
   canPostPhotos: boolean;
   /** Null when this person can't start polls on the team. */
   onNewPoll: (() => void) | null;
-  onSend: (body: string, photos: File[], gif: ChatterGif | null) => Promise<void>;
+  onSend: (
+    body: string,
+    photos: File[],
+    gif: ChatterGif | null,
+    mentions: string[],
+  ) => Promise<void>;
+  /** People (and groups) a post can tag; none = no @ suggestions. */
+  mentionables?: Mentionable[];
 }) {
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -980,6 +1050,24 @@ export function Composer({
     el.style.height = `${el.scrollHeight + 4}px`;
   }, [text]);
   const [gif, setGif] = useState<ChatterGif | null>(null);
+  // Tags: the @word being typed, and the people picked so far.
+  const [tagAt, setTagAt] = useState<{ start: number; query: string } | null>(null);
+  const [picked, setPicked] = useState<Mentionable[]>([]);
+  const suggestions =
+    tagAt && mentionables.length ? filterMentionables(mentionables, tagAt.query) : [];
+  const pickTag = (m: Mentionable) => {
+    if (!tagAt) return;
+    const next = insertMention(text, tagAt, m.label);
+    setText(next.text);
+    setPicked((prev) => (prev.some((p) => p.id === m.id) ? prev : [...prev, m]));
+    setTagAt(null);
+    requestAnimationFrame(() => {
+      const el = field.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(next.caret, next.caret);
+    });
+  };
   const [pickingGif, setPickingGif] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1001,10 +1089,11 @@ export function Composer({
     setBusy(true);
     setError(null);
     try {
-      await onSend(body, files, gif);
+      await onSend(body, files, gif, mentionsIn(body, picked));
       setText("");
       setFiles([]);
       setGif(null);
+      setPicked([]);
     } catch (e) {
       setError(message(e));
     } finally {
@@ -1076,11 +1165,35 @@ export function Composer({
           />
         )}
       </Sheet>
+      {suggestions.length > 0 && (
+        <ul
+          className="flex flex-col overflow-hidden rounded-xl border-2 border-slate-200 bg-white"
+          aria-label="Tag someone"
+        >
+          {suggestions.map((m) => (
+            <li key={m.id}>
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pickTag(m)}
+                className="flex min-h-12 w-full items-baseline gap-2 px-3 text-left active:bg-slate-100"
+              >
+                <span className="font-bold">@{m.label}</span>
+                {m.hint && <span className="truncate text-sm text-slate-500">{m.hint}</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="min-w-0">
         <MicField multiline value={text} onChange={setText} maxLength={BODY_MAX}>
           <textarea
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              setTagAt(
+                mentionQuery(e.target.value, e.target.selectionStart ?? e.target.value.length),
+              );
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void send();
             }}

@@ -63,6 +63,7 @@ const post = (over: Partial<ChatterPost>): ChatterPost => ({
   kind: "post",
   photos: [],
   gif: null,
+  mentions: [],
   reactions: [],
   club: null,
   createdAt: "2026-11-20T18:00:00.000Z",

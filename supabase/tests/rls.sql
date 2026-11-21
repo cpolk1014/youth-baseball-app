@@ -2710,4 +2710,27 @@ select pg_temp.expect((select gif is null from public.chatter_post where id = '0
 reset role;
 delete from public.chatter_post where id = '00000000-0000-4000-8000-00000000a901';
 
+-- Tags: only people on the team; @everyone only from coaches and managers.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+insert into public.chatter_post (id, team_id, author_id, body, mentions)
+values ('00000000-0000-4000-8000-00000000aa01', '00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002',
+  'Hey @Coach and @coaches', array['aaaaaaaa-0000-4000-8000-000000000001', 'coaches', 'coaches']);
+select pg_temp.expect((select mentions = array['aaaaaaaa-0000-4000-8000-000000000001', 'coaches'] or mentions = array['coaches', 'aaaaaaaa-0000-4000-8000-000000000001']
+  from public.chatter_post where id = '00000000-0000-4000-8000-00000000aa01'), 'parents tag a coach and @coaches');
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body, mentions)
+  values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 'Hi all', array['everyone']);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: only coaches and managers tag everyone';
+end $$;
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body, mentions)
+  values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 'Hi', array['aaaaaaaa-0000-4000-8000-000000000003']);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: only people on the team can be tagged';
+end $$;
+reset role;
+delete from public.chatter_post where id = '00000000-0000-4000-8000-00000000aa01';
+
 \echo ALL RLS TESTS PASSED

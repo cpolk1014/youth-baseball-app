@@ -31,6 +31,8 @@ export interface ChatterPost {
   photos: ChatterPhoto[];
   /** One GIF from GIPHY, or null. */
   gif: ChatterGif | null;
+  /** Who it tags: user ids, or "coaches" / "everyone". */
+  mentions: string[];
   reactions: Reaction[];
   /** Set on a club's post to the team: who it's from (the club, not a person). */
   club: ClubTag | null;
@@ -49,6 +51,7 @@ export interface ChatterPostRow {
   kind?: string;
   photos?: unknown;
   gif?: unknown;
+  mentions?: unknown;
   reactions?: unknown;
   club?: unknown;
   created_at: string;
@@ -67,6 +70,9 @@ export function postFromRow(r: ChatterPostRow): ChatterPost {
     kind: r.kind === "poll" ? "poll" : "post",
     photos: photosFrom(r.photos),
     gif: gifFrom(r.gif),
+    mentions: Array.isArray(r.mentions)
+      ? r.mentions.filter((m): m is string => typeof m === "string")
+      : [],
     reactions: reactionsFrom(r.reactions),
     club: clubFrom(r.club),
     createdAt: r.created_at,
