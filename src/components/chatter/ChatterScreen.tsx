@@ -2,7 +2,7 @@
 
 // Chatter: the team's own chat feed. Adults only (team members; kids have no accounts), no
 // private messages, coaches and managers moderate. The database enforces all of it.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   BODY_MAX,
   PHOTOS_MAX,
@@ -971,6 +971,14 @@ export function Composer({
   const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
   useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
   const picker = useRef<HTMLInputElement>(null);
+  // The box grows with what's typed (up to about 40% of the screen), then scrolls.
+  const field = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = field.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight + 4}px`;
+  }, [text]);
   const [gif, setGif] = useState<ChatterGif | null>(null);
   const [pickingGif, setPickingGif] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -1068,7 +1076,24 @@ export function Composer({
           />
         )}
       </Sheet>
-      <div className="flex items-end gap-2">
+      <div className="min-w-0">
+        <MicField multiline value={text} onChange={setText} maxLength={BODY_MAX}>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void send();
+            }}
+            maxLength={BODY_MAX}
+            ref={field}
+            rows={1}
+            placeholder={placeholder}
+            aria-label={placeholder.replace(/…$/, "")}
+            className="block max-h-[40vh] min-h-[52px] w-full resize-none overflow-y-auto rounded-xl border-2 border-slate-300 bg-white py-3 pr-12 pl-3 text-lg"
+          />
+        </MicField>
+      </div>
+      <div className="flex items-center gap-2">
         {onNewPoll && (
           <button
             onClick={onNewPoll}
@@ -1121,22 +1146,7 @@ export function Composer({
         >
           GIF
         </button>
-        <div className="min-w-0 flex-1">
-          <MicField multiline value={text} onChange={setText} maxLength={BODY_MAX}>
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void send();
-              }}
-              maxLength={BODY_MAX}
-              rows={Math.min(5, Math.max(1, text.split("\n").length))}
-              placeholder={placeholder}
-              aria-label={placeholder.replace(/…$/, "")}
-              className="block w-full resize-none rounded-xl border-2 border-slate-300 bg-white py-3 pr-12 pl-3 text-lg"
-            />
-          </MicField>
-        </div>
+        <span className="flex-1" />
         <button
           onClick={send}
           disabled={(!body && !files.length && !gif) || busy}
