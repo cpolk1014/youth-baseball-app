@@ -128,11 +128,11 @@ export function aiUsedShare(usedCents: number, budgetCents: number): number {
   return Math.min(100, Math.round((usedCents / budgetCents) * 100));
 }
 
-/** The team's season AI help, for coaches and managers on Plan & club. */
-export function AiBudget({ teamId }: { teamId: string }) {
+/** The team's season AI budget, loaded for coaches (null until it loads or when there's none). */
+function useAiBudget(teamId: string | null) {
   const [budget, setBudget] = useState<{ usedCents: number; budgetCents: number } | null>(null);
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (!teamId || !isSupabaseConfigured) return;
     let current = true;
     void import("@/lib/data/account-backend")
       .then((m) => m.teamAiBudget(teamId))
@@ -142,6 +142,39 @@ export function AiBudget({ teamId }: { teamId: string }) {
       current = false;
     };
   }, [teamId]);
+  return budget;
+}
+
+/** Home: a strip for coaches once the team has used 80% of this season's AI help. */
+export function AiBudgetBanner() {
+  const data = useAppData();
+  const { plan, canPay } = usePlan();
+  const budget = useAiBudget(canPay && plan?.paid ? (data?.team.id ?? null) : null);
+  if (!budget || budget.budgetCents <= 0) return null;
+  const share = aiUsedShare(budget.usedCents, budget.budgetCents);
+  if (share < 80) return null;
+  return (
+    <Link
+      href="/members#plan"
+      className={`mb-4 flex min-h-12 items-center justify-between gap-3 rounded-xl border-2 px-4 py-2 text-base font-semibold ${
+        share >= 100
+          ? "border-red-300 bg-red-50 text-red-900"
+          : "border-amber-500 bg-amber-50 text-amber-950"
+      }`}
+    >
+      <span>
+        {share >= 100
+          ? "Your team has used this season's AI help. AI tools are paused; everything else works."
+          : `You've used most of this season's AI help (${share}%).`}
+      </span>
+      <span className="shrink-0 font-bold underline">See</span>
+    </Link>
+  );
+}
+
+/** The team's season AI help, for coaches and managers on Plan & club. */
+export function AiBudget({ teamId }: { teamId: string }) {
+  const budget = useAiBudget(teamId);
   if (!budget || budget.budgetCents <= 0) return null;
   const share = aiUsedShare(budget.usedCents, budget.budgetCents);
   const tone = share >= 100 ? "bg-red-600" : share >= 80 ? "bg-amber-500" : "bg-[var(--team)]";

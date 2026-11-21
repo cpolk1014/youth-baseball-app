@@ -1,7 +1,7 @@
 "use client";
 
 import { dueText } from "@/lib/club/awards";
-import { PlanBanner } from "./paywall";
+import { AiBudgetBanner, PlanBanner } from "./paywall";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { coachTodos, comingUp, lineupStatus, seasonRecord, type Todo } from "@/lib/dashboard";
@@ -62,6 +62,7 @@ export function HomeScreen() {
       onTitleTap={mode === "supabase" ? () => setSwitching(true) : undefined}
     >
       <PlanBanner />
+      <AiBudgetBanner />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div className="md:col-span-2">
           {next?.kind === "game" ? (
