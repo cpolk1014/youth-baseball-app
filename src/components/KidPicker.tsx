@@ -1,28 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { myUserId, setKidsFor, useAppData } from "@/lib/data/store";
 import type { AppData } from "@/lib/data/types";
 import { activePlayers } from "@/lib/lineup/edit";
 import type { Player } from "@/lib/rules/types";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
-/** Checklist of the team's active players. */
+/** Checklist of the team's active players. `taken` marks kids another family is linked to. */
 export function KidPicker({
   players,
   selected,
   onChange,
+  taken = {},
 }: {
   players: Player[];
   selected: string[];
   onChange: (ids: string[]) => void;
+  taken?: Record<string, string>;
 }) {
   return (
     <ul className="flex flex-col gap-1">
       {players.map((p) => (
         <li key={p.id}>
-          <label className="flex min-h-12 items-center gap-3 rounded-lg px-1 active:bg-slate-100">
+          <label
+            className={`flex min-h-12 items-center gap-3 rounded-lg px-1 ${taken[p.id] ? "text-slate-400" : "active:bg-slate-100"}`}
+          >
             <input
               type="checkbox"
+              disabled={!!taken[p.id] && !selected.includes(p.id)}
               checked={selected.includes(p.id)}
               onChange={() =>
                 onChange(
@@ -38,6 +44,9 @@ export function KidPicker({
                 <span className="mr-1 text-slate-500">#{p.jerseyNumber}</span>
               )}
               {p.name}
+              {taken[p.id] && !selected.includes(p.id) && (
+                <span className="block text-sm font-normal">{taken[p.id]}</span>
+              )}
             </span>
           </label>
         </li>
@@ -60,9 +69,48 @@ export function KidsForm({
   const [selected, setSelected] = useState(() => kidsOf(data, userId).map((p) => p.id));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Picking your own kids: one already linked to another family needs a coach to add you
+  // (so nobody can claim someone else's kid). Coaches linking others aren't limited.
+  const self = userId === myUserId(data);
+  const [taken, setTaken] = useState<Record<string, string>>({});
+  const teamId = data.team.id;
+  useEffect(() => {
+    if (!self || !isSupabaseConfigured) return;
+    let current = true;
+    void import("@/lib/data/account-backend")
+      .then((m) => m.teamFamilies(teamId))
+      .then((families) => {
+        if (!current) return;
+        const out: Record<string, string> = {};
+        for (const [playerId, people] of families) {
+          if (people.some((f) => f.userId === userId)) continue;
+          const names = people.map((f) => f.name?.trim()).filter(Boolean);
+          out[playerId] = names.length
+            ? `Linked to ${names.join(" & ")}`
+            : "Linked to another family";
+        }
+        setTaken(out);
+      })
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [self, teamId, userId]);
+  const anyTaken = Object.keys(taken).length > 0;
   return (
     <div className="flex flex-col gap-3">
-      <KidPicker players={activePlayers(data.players)} selected={selected} onChange={setSelected} />
+      <KidPicker
+        players={activePlayers(data.players)}
+        selected={selected}
+        onChange={setSelected}
+        taken={taken}
+      />
+      {anyTaken && (
+        <p className="text-sm text-slate-600">
+          Is a linked player yours too (say, the other parent)? Ask a coach or manager to add you on
+          Coaches &amp; parents.
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-base font-semibold text-red-700">
           {error}
@@ -85,8 +133,12 @@ export function KidsForm({
             try {
               await setKidsFor(userId, selected);
               onDone();
-            } catch {
-              setError("Couldn't save. Check your connection and try again.");
+            } catch (e) {
+              setError(
+                /row-level security|policy|42501/i.test(e instanceof Error ? e.message : String(e))
+                  ? "Another family is already linked to that player. Ask a coach or manager to add you."
+                  : "Couldn't save. Check your connection and try again.",
+              );
             } finally {
               setSaving(false);
             }

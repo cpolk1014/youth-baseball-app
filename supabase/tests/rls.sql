@@ -1617,7 +1617,7 @@ delete from public.player where id = '00000000-0000-4000-8000-00000000e001';
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
 select pg_temp.expect((select count(*) from public.player_game_stat where game_date = '2027-04-09' and player_id is null) = 1, 'an old team going away keeps the kid''s box scores');
--- A coach removing the parent's link keeps the family's access to the kid's history.
+-- A coach removing the link of a parent who bought a Player pass keeps their access to the kid's history.
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- coach
 delete from public.player_guardian where player_id = '00000000-0000-4000-8000-000000001003' and user_id = 'aaaaaaaa-0000-4000-8000-000000000002';
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
@@ -2433,5 +2433,43 @@ reset role;
 select pg_temp.expect((select count(*) from public.chatter_removed_post) = 2, 'the removed text is kept for review');
 delete from public.chatter_post where team_id = '00000000-0000-4000-8000-000000000001';
 delete from public.chatter_member where team_id = '00000000-0000-4000-8000-000000000001';
+
+-- Parent links (security review H2): only the first parent links themselves; coaches add others.
+reset role;
+insert into public.player (id, team_id, name) values ('00000000-0000-4000-8000-00000000a701', '00000000-0000-4000-8000-000000000001', 'Linky Kid');
+insert into public.member (team_id, user_id, role) values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000003', 'parent');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+insert into public.player_guardian (player_id, user_id) values ('00000000-0000-4000-8000-00000000a701', 'aaaaaaaa-0000-4000-8000-000000000002');
+reset role;
+insert into public.pitch_session (athlete_id, kind, session_date, pitches, label)
+values ((select athlete_id from public.player where id = '00000000-0000-4000-8000-00000000a701'), 'lesson', current_date - 1, 40, 'Private lesson');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+do $$ begin
+  insert into public.player_guardian (player_id, user_id) values ('00000000-0000-4000-8000-00000000a701', 'aaaaaaaa-0000-4000-8000-000000000003');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: another family can''t link themselves to a kid who already has one';
+end $$;
+select pg_temp.expect((select count(*) from public.pitch_session) = 0, 'another family can''t read the kid''s pitch log');
+select pg_temp.expect(public.player_has_guardian('00000000-0000-4000-8000-00000000a701'), 'anyone on the team can tell a kid already has a family');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+do $$ begin
+  insert into public.player_guardian (player_id, user_id) values ('00000000-0000-4000-8000-00000000a701', 'aaaaaaaa-0000-4000-8000-000000000001');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a coach can''t link themselves to another family''s kid';
+end $$;
+insert into public.player_guardian (player_id, user_id) values ('00000000-0000-4000-8000-00000000a701', 'aaaaaaaa-0000-4000-8000-000000000003');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.pitch_session where label = 'Private lesson') = 1, 'a coach adds the second parent, who then sees the kid''s record');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+delete from public.player_guardian where player_id = '00000000-0000-4000-8000-00000000a701' and user_id = 'aaaaaaaa-0000-4000-8000-000000000003';
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.pitch_session) = 0, 'when a coach removes a wrong link, that person loses the kid''s record');
+reset role;
+delete from public.pitch_session where label = 'Private lesson';
+delete from public.player_guardian where player_id = '00000000-0000-4000-8000-00000000a701';
+delete from public.member where team_id = '00000000-0000-4000-8000-000000000001' and user_id = 'aaaaaaaa-0000-4000-8000-000000000003';
+delete from public.player where id = '00000000-0000-4000-8000-00000000a701';
 
 \echo ALL RLS TESTS PASSED
