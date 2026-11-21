@@ -13,7 +13,7 @@ import {
 } from "@/lib/chatter/feed";
 import type { ClubChatterPost, ClubTarget } from "@/lib/data/club-backend";
 import { Loading } from "../AppShell";
-import { preparePhoto } from "../chatter/photo";
+import { picturesFrom, preparePhoto } from "../chatter/photo";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 const field =
@@ -213,17 +213,28 @@ function Compose({
           ))}
           {files.length < PHOTOS_MAX && (
             <label className="flex h-12 cursor-pointer items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 px-4 text-base font-bold text-slate-600">
-              📷 {files.length ? "Add another" : "Add a photo or flyer"}
+              📷 {files.length ? "Add another" : "Add a photo or PDF flyer"}
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf"
                 multiple
                 className="sr-only"
                 onChange={(e) => {
                   const picked = [...(e.target.files ?? [])];
                   e.target.value = "";
-                  setFiles((prev) => [...prev, ...picked].slice(0, PHOTOS_MAX));
                   setSent(null);
+                  setError(null);
+                  const room = PHOTOS_MAX - files.length;
+                  // A PDF's pages become pictures (a flyer, a schedule).
+                  void picturesFrom(picked, room)
+                    .then(({ pictures, leftOut }) => {
+                      setFiles((prev) => [...prev, ...pictures].slice(0, PHOTOS_MAX));
+                      if (leftOut > 0 || picked.length > room)
+                        setError(
+                          `Up to ${PHOTOS_MAX} photos or pages a post. The rest were left out.`,
+                        );
+                    })
+                    .catch((err: unknown) => setError(errorText(err)));
                 }}
               />
             </label>

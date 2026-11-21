@@ -53,7 +53,7 @@ import type {
   ChatterState,
   PhotoSetting,
 } from "@/lib/data/chatter-backend";
-import { preparePhoto } from "./photo";
+import { picturesFrom, preparePhoto } from "./photo";
 
 const backend = () => import("@/lib/data/chatter-backend");
 const primary =
@@ -1028,19 +1028,23 @@ function Composer({
             <input
               ref={picker}
               type="file"
-              accept="image/*"
+              accept="image/*,application/pdf"
               multiple
               hidden
               onChange={(e) => {
-                const picked = Array.from(e.target.files ?? []).filter((f) =>
-                  f.type.startsWith("image/"),
+                const picked = Array.from(e.target.files ?? []).filter(
+                  (f) => f.type.startsWith("image/") || /pdf$/i.test(f.type || f.name),
                 );
                 e.target.value = "";
-                setFiles((prev) => {
-                  const next = [...prev, ...picked];
-                  if (next.length > PHOTOS_MAX) toast(`Up to ${PHOTOS_MAX} photos a post`);
-                  return next.slice(0, PHOTOS_MAX);
-                });
+                const room = PHOTOS_MAX - files.length;
+                // A PDF's pages become pictures (a flyer, a schedule).
+                void picturesFrom(picked, room)
+                  .then(({ pictures, leftOut }) => {
+                    if (leftOut > 0 || picked.length > room)
+                      toast(`Up to ${PHOTOS_MAX} photos or pages a post`);
+                    setFiles((prev) => [...prev, ...pictures].slice(0, PHOTOS_MAX));
+                  })
+                  .catch((err: unknown) => toast(message(err)));
               }}
             />
             <button
