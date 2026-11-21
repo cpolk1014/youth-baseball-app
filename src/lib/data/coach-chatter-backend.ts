@@ -1,4 +1,4 @@
-// Club coaches: one chat feed per club for its admins and the coaches of its teams. Posts use
+// Coach Chatter: one chat feed per club for its admins and the coaches of its teams. Posts use
 // the same shape as team Chatter (teamId holds the club's id) so the feed's pieces are shared.
 // The database decides who's in it (club_coach_member) and enforces every rule.
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -183,7 +183,7 @@ export function subscribe(
 ): () => void {
   const supabase = getBrowserSupabase();
   const channel: RealtimeChannel = supabase
-    .channel(`club-coaches:${clubId}`)
+    .channel(`coach-chatter:${clubId}`)
     .on(
       "postgres_changes",
       {

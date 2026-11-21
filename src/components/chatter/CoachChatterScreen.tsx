@@ -1,6 +1,6 @@
 "use client";
 
-// Club coaches: one chat feed per club for its director, admins and the coaches of every
+// Coach Chatter: one chat feed per club for its director, admins and the coaches of every
 // club team. Everything here is seen by all of them across teams; parents never see it.
 // It reuses team Chatter's pieces (posts, composer, reactions, photos).
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -20,7 +20,7 @@ import {
   type ChatterPost,
   type Reaction,
 } from "@/lib/chatter/feed";
-import type { CoachClub, CoachPerson } from "@/lib/data/club-coaches-backend";
+import type { CoachClub, CoachPerson } from "@/lib/data/coach-chatter-backend";
 import { useAppData } from "@/lib/data/store";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { AppShell, Loading } from "../AppShell";
@@ -29,7 +29,7 @@ import { toast } from "../shell/Toast";
 import { Composer, EditForm, PhotoViewer, PostBubble, ReactionPicker } from "./ChatterScreen";
 import { preparePhoto } from "./photo";
 
-const backend = () => import("@/lib/data/club-coaches-backend");
+const backend = () => import("@/lib/data/coach-chatter-backend");
 const chatter = () => import("@/lib/data/chatter-backend");
 const message = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong.");
 const secondary =
@@ -37,7 +37,7 @@ const secondary =
 const primary =
   "flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)] disabled:opacity-40";
 
-export function ClubCoachesScreen() {
+export function CoachChatterScreen() {
   const data = useAppData();
   const me = data?.me.userId ?? null;
   const asked = useSearchParams().get("club");
@@ -60,7 +60,7 @@ export function ClubCoachesScreen() {
   const club = clubs?.find((c) => c.id === (picked ?? asked)) ?? clubs?.[0] ?? null;
 
   const shell = (children: React.ReactNode) => (
-    <AppShell title="Club coaches" subtitle={club?.name} tab="clubcoaches" bare>
+    <AppShell title="Coach Chatter" subtitle={club?.name} tab="coachchatter" bare>
       {children}
     </AppShell>
   );
@@ -77,7 +77,7 @@ export function ClubCoachesScreen() {
   if (!club) {
     return shell(
       <p className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-4 text-lg">
-        Club coaches is a chat for a club&apos;s director and the coaches of its teams. It shows up
+        Coach Chatter is a chat for a club&apos;s director and the coaches of its teams. It shows up
         once your team enters its club code, for the team&apos;s coaches.
       </p>,
     );

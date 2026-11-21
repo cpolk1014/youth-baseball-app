@@ -22,7 +22,7 @@ const field =
 const GROUPME_MAX = 1000;
 const backend = () => import("@/lib/data/club-backend");
 const chatter = () => import("@/lib/data/chatter-backend");
-const coaches = () => import("@/lib/data/club-coaches-backend");
+const coaches = () => import("@/lib/data/coach-chatter-backend");
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function ClubChatterTab({ clubId }: { clubId: string }) {
@@ -58,10 +58,10 @@ export function ClubChatterTab({ clubId }: { clubId: string }) {
   return (
     <div className="flex flex-col gap-6">
       <Link
-        href={`/club-coaches?club=${clubId}`}
+        href={`/coach-chatter?club=${clubId}`}
         className="flex min-h-14 items-center justify-between gap-3 rounded-xl border-2 border-[var(--team)] bg-white px-4 text-base font-bold text-[var(--team)]"
       >
-        <span>💬 Open Club coaches, the club&apos;s chat with its coaches</span>
+        <span>💬 Open Coach Chatter, the club&apos;s chat with its coaches</span>
         <span aria-hidden="true">→</span>
       </Link>
       {targets.length === 0 ? (
@@ -113,13 +113,13 @@ function Compose({
     : text.trim();
   const groupMeTooLong = alsoGroupMe && groupMeText.length > GROUPME_MAX;
   // GroupMe gets the words only; a photo-only post has none to send.
-  // Club coaches takes posts, not polls (polls go to teams).
+  // Coach Chatter takes posts, not polls (polls go to teams).
   const coachesOn = toCoaches && !isPoll;
   const coachesGroupMe = coachesOn && coachesGroup;
   const groupMeOk = (groupMeTeams.length > 0 || coachesGroupMe) && !!text.trim();
   const groupMeCount = groupMeTeams.length + (coachesGroupMe ? 1 : 0);
   const where = [
-    coachesOn ? "Club coaches" : "",
+    coachesOn ? "Coach Chatter" : "",
     teamIds.length ? `${teamIds.length} team${teamIds.length === 1 ? "" : "s"}` : "",
   ]
     .filter(Boolean)
@@ -331,8 +331,8 @@ function Compose({
         <Check
           label={
             isPoll
-              ? "Club coaches (posts only; polls go to teams)"
-              : "Club coaches (the director and every team's coaches)"
+              ? "Coach Chatter (posts only; polls go to teams)"
+              : "Coach Chatter (the director and every team's coaches)"
           }
           checked={coachesOn}
           disabled={isPoll}

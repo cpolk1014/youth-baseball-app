@@ -13,7 +13,7 @@ export type Tab =
   | "season"
   | "stats"
   | "chatter"
-  | "clubcoaches"
+  | "coachchatter"
   | "roster"
   | "money"
   | "awards"
@@ -51,9 +51,9 @@ export const GAME_DAY: MenuTab[] = [
 export const TEAM: MenuTab[] = [
   { id: "chatter", href: "/chatter", label: "Chatter", icon: "chatter" },
   {
-    id: "clubcoaches",
-    href: "/club-coaches",
-    label: "Club coaches",
+    id: "coachchatter",
+    href: "/coach-chatter",
+    label: "Coach Chatter",
     icon: "chatter",
     needsClubCoach: true,
   },

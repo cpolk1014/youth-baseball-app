@@ -185,10 +185,10 @@ once) or closes its poll. Team coaches can pin it. An "Also post to their GroupM
 checkbox sends the same text through the club's existing GroupMe posting. Club posts can carry up to 4 photos (a flyer, a schedule), stored once under
 chatter-photos/club/<club id>/ and shown in every team's copy.
 
-**8b. Club coaches (BUILT, Nov 21; no polls there yet).** One feed per club for the director, club admins and the
+**8b. Coach Chatter (BUILT, Nov 21; no polls there yet).** One feed per club for the director, club admins and the
 **coaches** (owner and coach roles, not managers) of every team holding the club's active
 code. Everything in it (posts, replies, reactions, polls) is visible to all of them across
-teams; parents never see it. A separate menu item, "Club coaches", under Chatter, so nobody
+teams; parents never see it. A separate menu item, "Coach Chatter", under Chatter, so nobody
 mistakes it for their team's feed. The club tab's audience picker gets a "Coaches" choice.
 
 ## How it fits with GroupMe
