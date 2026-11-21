@@ -2,9 +2,10 @@
 
 // Club posts to teams' Chatter: write once, every picked team gets its own copy. Replies,
 // reactions and votes stay inside each team; the club sees only totals.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BODY_MAX,
+  PHOTOS_MAX,
   POLL_ENDS,
   POLL_OPTIONS_MAX,
   POLL_OPTION_MAX,
@@ -12,12 +13,14 @@ import {
 } from "@/lib/chatter/feed";
 import type { ClubChatterPost, ClubTarget } from "@/lib/data/club-backend";
 import { Loading } from "../AppShell";
+import { preparePhoto } from "../chatter/photo";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 const field =
   "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
 const GROUPME_MAX = 1000;
 const backend = () => import("@/lib/data/club-backend");
+const chatter = () => import("@/lib/data/chatter-backend");
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function ClubChatterTab({ clubId }: { clubId: string }) {
@@ -76,6 +79,9 @@ function Compose({
   const [anonymous, setAnonymous] = useState(false);
   const [ends, setEnds] = useState<number | null>(null);
   const [alsoGroupMe, setAlsoGroupMe] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
+  useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<string | null>(null);
@@ -87,6 +93,8 @@ function Compose({
     ? `📊 ${text.trim()}\n${choices.map((c) => `• ${c}`).join("\n")}\nVote in Fungo's Chatter.`
     : text.trim();
   const groupMeTooLong = alsoGroupMe && groupMeText.length > GROUPME_MAX;
+  // GroupMe gets the words only; a photo-only post has none to send.
+  const groupMeOk = groupMeTeams.length > 0 && !!text.trim();
 
   const send = async () => {
     setError(null);
@@ -99,7 +107,11 @@ function Compose({
       }
     }
     setBusy(true);
+    const c = await chatter();
+    const uploaded: Awaited<ReturnType<typeof c.uploadClubPhoto>>[] = [];
     try {
+      for (const file of files)
+        uploaded.push(await c.uploadClubPhoto(clubId, await preparePhoto(file)));
       const m = await backend();
       await m.sendClubChatterPost(
         clubId,
@@ -113,9 +125,10 @@ function Compose({
               closesAt: ends ? new Date(Date.now() + ends * 3_600_000).toISOString() : null,
             }
           : undefined,
+        uploaded,
       );
       let note = `Posted to ${teamIds.length} team${teamIds.length === 1 ? "" : "s"}' Chatter.`;
-      if (alsoGroupMe && groupMeTeams.length) {
+      if (alsoGroupMe && groupMeOk) {
         try {
           const n = await m.clubPost(
             clubId,
@@ -132,8 +145,10 @@ function Compose({
       setText("");
       setOptions(["", ""]);
       setIsPoll(false);
+      setFiles([]);
       onSent();
     } catch (e) {
+      void c.deletePhotos(uploaded).catch(() => undefined);
       setError(errorText(e));
     } finally {
       setBusy(false);
@@ -181,6 +196,40 @@ function Compose({
         }
         className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 text-base focus:border-[var(--team)] focus:outline-none"
       />
+      {!isPoll && (
+        <div className="flex flex-wrap items-center gap-2">
+          {previews.map((url, i) => (
+            <div key={url} className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a local preview */}
+              <img src={url} alt="" className="size-20 rounded-lg object-cover" />
+              <button
+                onClick={() => setFiles(files.filter((_, j) => j !== i))}
+                aria-label={`Remove photo ${i + 1}`}
+                className="absolute -top-2 -right-2 flex size-8 items-center justify-center rounded-full bg-slate-800 text-base font-bold text-white"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          {files.length < PHOTOS_MAX && (
+            <label className="flex h-12 cursor-pointer items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 px-4 text-base font-bold text-slate-600">
+              📷 {files.length ? "Add another" : "Add a photo or flyer"}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="sr-only"
+                onChange={(e) => {
+                  const picked = [...(e.target.files ?? [])];
+                  e.target.value = "";
+                  setFiles((prev) => [...prev, ...picked].slice(0, PHOTOS_MAX));
+                  setSent(null);
+                }}
+              />
+            </label>
+          )}
+        </div>
+      )}
       {isPoll && (
         <div className="flex flex-col gap-2">
           {options.map((o, i) => (
@@ -251,10 +300,13 @@ function Compose({
         </details>
         <Check
           label={`Also post to their GroupMe groups (${groupMeTeams.length} connected)`}
-          checked={alsoGroupMe && groupMeTeams.length > 0}
-          disabled={groupMeTeams.length === 0}
+          checked={alsoGroupMe && groupMeOk}
+          disabled={!groupMeOk}
           onChange={setAlsoGroupMe}
         />
+        {alsoGroupMe && groupMeOk && files.length > 0 && (
+          <p className="text-sm text-slate-600">GroupMe gets the words; photos go to Chatter.</p>
+        )}
         {groupMeTooLong && (
           <p className="text-sm font-semibold text-amber-800">
             GroupMe takes up to 1,000 characters; this is {groupMeText.length}. Shorten it or skip
@@ -278,7 +330,12 @@ function Compose({
       )}
       <button
         onClick={() => void send()}
-        disabled={!text.trim() || teamIds.length === 0 || busy || groupMeTooLong}
+        disabled={
+          (!text.trim() && (isPoll || files.length === 0)) ||
+          teamIds.length === 0 ||
+          busy ||
+          groupMeTooLong
+        }
         className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)] disabled:opacity-40"
       >
         {busy
@@ -293,6 +350,19 @@ function Compose({
 function Sent({ posts, onChange }: { posts: ClubChatterPost[]; onChange: () => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const thumbs = posts.flatMap((p) => p.photos.map((ph) => ph.thumb)).join("|");
+  useEffect(() => {
+    if (!thumbs) return;
+    let current = true;
+    void chatter()
+      .then((c) => c.photoUrls(thumbs.split("|")))
+      .then((u) => current && setUrls(u))
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [thumbs]);
   if (posts.length === 0) return null;
   const act = async (id: string, fn: () => Promise<void>) => {
     setBusy(id);
@@ -339,10 +409,29 @@ function Sent({ posts, onChange }: { posts: ClubChatterPost[]; onChange: () => v
                 {p.teams} team{p.teams === 1 ? "" : "s"}
                 {p.removedAt ? " · Taken down" : ""}
               </p>
-              <p className="text-base break-words whitespace-pre-wrap">
-                {p.kind === "poll" ? "📊 " : ""}
-                {p.body}
-              </p>
+              {p.photos.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {p.photos.map((ph) =>
+                    urls[ph.thumb] ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- a private, signed link
+                      <img
+                        key={ph.thumb}
+                        src={urls[ph.thumb]}
+                        alt=""
+                        className="size-20 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <span key={ph.thumb} className="size-20 rounded-lg bg-slate-100" />
+                    ),
+                  )}
+                </div>
+              )}
+              {p.body && (
+                <p className="text-base break-words whitespace-pre-wrap">
+                  {p.kind === "poll" ? "📊 " : ""}
+                  {p.body}
+                </p>
+              )}
               {p.kind === "poll" && (
                 <div className="flex flex-col gap-1.5">
                   {p.options.map((o, i) => {
@@ -402,7 +491,10 @@ function Sent({ posts, onChange }: { posts: ClubChatterPost[]; onChange: () => v
                     disabled={busy === p.id}
                     onClick={() => {
                       if (!window.confirm("Take this post down from every team's Chatter?")) return;
-                      void act(p.id, async () => (await backend()).removeClubChatterPost(p.id));
+                      void act(p.id, async () => {
+                        await (await backend()).removeClubChatterPost(p.id);
+                        await (await chatter()).deletePhotos(p.photos).catch(() => undefined);
+                      });
                     }}
                     className="h-11 rounded-lg border-2 border-red-300 bg-white px-3 text-base font-bold text-red-700"
                   >

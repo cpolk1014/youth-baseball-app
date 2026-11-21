@@ -1,3 +1,4 @@
+import { postFromRow, type ChatterPhoto, type ChatterPostRow } from "@/lib/chatter/feed";
 import type { BoardRow, ClubAward, TeamAward } from "@/lib/club/awards";
 import { appDataFromRows, uniformFromRow } from "@/lib/supabase/mappers";
 import { getBrowserSupabase } from "@/lib/supabase/client";
@@ -730,6 +731,7 @@ export interface ClubChatterPost {
   /** Votes per choice, added up across teams (polls only). */
   votes: number[];
   voters: number;
+  photos: ChatterPhoto[];
 }
 
 /** Send one post (or a poll, with options) to the picked club teams' Chatter. */
@@ -738,6 +740,7 @@ export async function sendClubChatterPost(
   teamIds: string[],
   body: string,
   poll?: { options: string[]; multi: boolean; anonymous: boolean; closesAt: string | null },
+  photos: ChatterPhoto[] = [],
 ): Promise<string> {
   return check<string>(
     await getBrowserSupabase().rpc("send_club_chatter_post", {
@@ -748,6 +751,7 @@ export async function sendClubChatterPost(
       p_multi: poll?.multi ?? false,
       p_anonymous: poll?.anonymous ?? false,
       p_closes_at: poll?.closesAt ?? null,
+      p_photos: photos,
     }),
   );
 }
@@ -771,6 +775,7 @@ export async function clubChatterPosts(clubId: string): Promise<ClubChatterPost[
       reactions: { e: string; n: number }[] | null;
       votes: number[] | null;
       voters: number | null;
+      photos: unknown;
     }[]
   >(await getBrowserSupabase().rpc("club_chatter_posts", { p_org: clubId }));
   return rows.map((r) => ({
@@ -789,6 +794,7 @@ export async function clubChatterPosts(clubId: string): Promise<ClubChatterPost[
     reactions: (r.reactions ?? []).map((x) => ({ emoji: x.e, count: x.n })),
     votes: r.votes ?? [],
     voters: r.voters ?? 0,
+    photos: postFromRow({ photos: r.photos } as ChatterPostRow).photos,
   }));
 }
 

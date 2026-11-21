@@ -2311,6 +2311,37 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008
 select pg_temp.expect((select replies = 1 and reactions = '[{"e": "👍", "n": 1}]'::jsonb from public.club_chatter_posts((select org from club_t)) where id = (select id from cpost)), 'the club sees totals across teams');
 select pg_temp.expect((select votes = array[1, 0] and voters = 1 from public.club_chatter_posts((select org from club_t)) where id = (select id from cpoll)), 'the club sees poll votes added up');
 select pg_temp.expect((select count(*) from public.chatter_post where team_id = '00000000-0000-4000-8000-000000000001') = 0, 'the club never reads a team''s Chatter');
+-- Photos on club posts.
+create temp table cphoto_path as select 'club/' || (select org from club_t) || '/flyer.jpg' as path;
+grant select on cphoto_path to authenticated;
+insert into storage.objects (bucket_id, name, owner) values ('chatter-photos', (select path from cphoto_path), 'aaaaaaaa-0000-4000-8000-000000000008');
+create temp table cphoto as select public.send_club_chatter_post((select org from club_t), array['00000000-0000-4000-8000-000000000001'::uuid], '', null, false, false, null,
+  jsonb_build_array(jsonb_build_object('path', (select path from cphoto_path), 'thumb', (select path from cphoto_path), 'w', 1600, 'h', 1200))) as id;
+do $$ begin
+  perform public.send_club_chatter_post((select org from club_t), array['00000000-0000-4000-8000-000000000001'::uuid], 'Look', null, false, false, null,
+    '[{"path": "00000000-0000-4000-8000-000000000001/x/a.jpg", "thumb": "00000000-0000-4000-8000-000000000001/x/a.jpg"}]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: club posts carry only the club''s photos';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from storage.objects where name = (select path from cphoto_path)) = 1, 'the team opens a club post''s photo');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from storage.objects where name = (select path from cphoto_path)) = 0, 'outsiders can''t open club photos');
+do $$ begin
+  insert into storage.objects (bucket_id, name, owner) values ('chatter-photos', 'club/' || (select org from club_t) || '/fake.jpg', 'aaaaaaaa-0000-4000-8000-000000000003');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: only club admins add club photos';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
+select public.remove_club_chatter_post((select id from cphoto));
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from storage.objects where name = (select path from cphoto_path)) = 0, 'a taken-down club post''s photo is closed to teams');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
+delete from storage.objects where name = (select path from cphoto_path);
+reset role;
+select pg_temp.expect((select count(*) from storage.objects where name = (select path from cphoto_path)) = 0, 'club admins delete club photos');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
 select public.close_club_chatter_poll((select id from cpoll));
 select public.remove_club_chatter_post((select id from cpost));
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);

@@ -177,6 +177,27 @@ export async function uploadPhoto(
   return { path, thumb, w: photo.w, h: photo.h };
 }
 
+/** A club admin's photo for a club post: one copy that every team's copy points at. */
+export async function uploadClubPhoto(
+  clubId: string,
+  photo: { full: Blob; thumb: Blob; w: number; h: number },
+): Promise<ChatterPhoto> {
+  const base = `club/${clubId}/${crypto.randomUUID()}`;
+  const path = `${base}.jpg`;
+  const thumb = `${base}-t.jpg`;
+  const bucket = getBrowserSupabase().storage.from(PHOTOS);
+  const opts = { contentType: "image/jpeg", cacheControl: "31536000", upsert: false };
+  const [a, b] = await Promise.all([
+    bucket.upload(path, photo.full, opts),
+    bucket.upload(thumb, photo.thumb, opts),
+  ]);
+  if (a.error ?? b.error) {
+    void bucket.remove([path, thumb]);
+    throw new ChatterError("Couldn't upload that photo. Try again.");
+  }
+  return { path, thumb, w: photo.w, h: photo.h };
+}
+
 /** Delete photo files (a removed post's, or uploads that never got posted). */
 export async function deletePhotos(photos: ChatterPhoto[]): Promise<void> {
   if (!photos.length) return;

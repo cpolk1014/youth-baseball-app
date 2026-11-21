@@ -65,10 +65,10 @@ export async function POST(request: NextRequest) {
       ...(sounds.data ?? []).map((s) => s.path as string),
     ],
     "chatter-photos": (chatter.data ?? []).flatMap((p) =>
-      postFromRow({ photos: p.photos } as ChatterPostRow).photos.flatMap((ph) => [
-        ph.path,
-        ph.thumb,
-      ]),
+      postFromRow({ photos: p.photos } as ChatterPostRow)
+        .photos // Club posts' photos are the club's, shared with its other teams.
+        .filter((ph) => !ph.path.startsWith("club/"))
+        .flatMap((ph) => [ph.path, ph.thumb]),
     ),
   };
 

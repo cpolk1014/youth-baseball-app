@@ -182,8 +182,8 @@ reactions and votes stay inside each team. The club sees only totals: teams, rep
 reactions, poll votes added up, never names or what anyone wrote. Clubs pay, so team coaches
 can't take down, edit or close a club post; only the club takes it down (from every team at
 once) or closes its poll. Team coaches can pin it. An "Also post to their GroupMe groups"
-checkbox sends the same text through the club's existing GroupMe posting. Photos on club posts
-aren't built yet.
+checkbox sends the same text through the club's existing GroupMe posting. Club posts can carry up to 4 photos (a flyer, a schedule), stored once under
+chatter-photos/club/<club id>/ and shown in every team's copy.
 
 **8b. Club coaches (next).** One feed per club for the director, club admins and the
 **coaches** (owner and coach roles, not managers) of every team holding the club's active

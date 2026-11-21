@@ -15,4 +15,4 @@ PSQL=("$BIN/psql" -h 127.0.0.1 -p "$PORT" -U postgres -d postgres -v ON_ERROR_ST
 for f in "$ROOT"/supabase/migrations/*.sql; do echo "migrate: ${f:t}"; "${PSQL[@]}" -f "$f"; done
 echo "seed: seed.sql"
 "${PSQL[@]}" -f "$ROOT/supabase/seed.sql"
-"${PSQL[@]}" -t -f "$ROOT/supabase/tests/rls.sql" 2>&1 | sed -n 's/^psql:.*NOTICE:  //p; /PASSED/p'
+"${PSQL[@]}" -t -f "$ROOT/supabase/tests/rls.sql" 2>&1 | sed -n 's/^psql:.*NOTICE:  //p; /PASSED/p; /ERROR/p'
