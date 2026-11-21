@@ -1,5 +1,5 @@
 import type { FieldPosition, Lineup, Player } from "@/lib/rules/types";
-import { lineupRows, positionAt } from "./edit";
+import { inningParts, lineupRows } from "./edit";
 
 export interface LineupCardRow {
   /** Batting slot, or null for a player sitting out of the batting order. */
@@ -7,7 +7,10 @@ export interface LineupCardRow {
   playerId: string;
   name: string;
   jersey: string;
-  /** One label per inning: a position, "BN" for bench, or "" if not set. */
+  /**
+   * One label per inning: a position, "BN" for bench, "" if not set, or each spot in order
+   * when the inning was changed in the middle ("CF→P").
+   */
   positions: string[];
 }
 
@@ -37,22 +40,29 @@ export function buildLineupCard(
       playerId,
       name: p?.name ?? "Unknown player",
       jersey: jersey(p),
-      positions: innings.map((inning) => {
-        const pos = positionAt(lineup, inning, playerId);
-        return pos === null ? "" : pos === "BENCH" ? "BN" : pos;
-      }),
+      positions: innings.map((inning) =>
+        inningParts(lineup, inning, playerId)
+          .map((s) => (s.position === "BENCH" ? "BN" : s.position))
+          .join("→"),
+      ),
     };
   });
 
   const defense = fieldPositions.map((position) => ({
     position,
-    players: innings.map((inning) => {
-      const slot = lineup.slots.find((s) => s.inning === inning && s.position === position);
-      const p = slot ? byId.get(slot.playerId) : undefined;
-      if (!p) return "";
-      const first = p.name.split(" ")[0] ?? p.name;
-      return jersey(p) ? `#${jersey(p)} ${first}` : first;
-    }),
+    // Everyone who played the spot that inning, in order ("#7 Mason→#12 Jake").
+    players: innings.map((inning) =>
+      lineup.slots
+        .filter((s) => s.inning === inning && s.position === position)
+        .sort((a, b) => (a.fromOut ?? 0) - (b.fromOut ?? 0))
+        .map((s) => byId.get(s.playerId))
+        .filter((p): p is Player => !!p)
+        .map((p) => {
+          const first = p.name.split(" ")[0] ?? p.name;
+          return jersey(p) ? `#${jersey(p)} ${first}` : first;
+        })
+        .join("→"),
+    ),
   }));
 
   return {

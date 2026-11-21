@@ -11,6 +11,7 @@ import { playingTimeBars } from "@/lib/charts";
 import { seasonSummary, type SeasonRow, type SeasonSummary } from "@/lib/season/summary";
 import { PlayingTimeChart } from "./charts/Charts";
 import { AppShell, Loading } from "./AppShell";
+import { formatInnings } from "@/lib/rules/outs";
 
 type View = "summary" | "positions";
 type Sort = "jersey" | "bench" | "infield";
@@ -181,7 +182,7 @@ function Num({ value, flag }: { value: number; flag?: string }) {
           flag ? "bg-red-700 text-white" : ""
         }`}
       >
-        {value}
+        {formatInnings(value)}
         {flag && <span className="sr-only"> ({flag})</span>}
       </span>
     </td>
@@ -317,7 +318,7 @@ function PositionGrid({ summary, rows }: { summary: SeasonSummary; rows: SeasonR
                         flag ? "inline-block min-w-8 rounded-md bg-red-700 py-1 text-white" : ""
                       }
                     >
-                      {n || "·"}
+                      {n ? formatInnings(n) : "·"}
                     </span>
                   </td>
                 );

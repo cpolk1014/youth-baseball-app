@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { GameRuns, MoneyPoint, PlayingTimeBar } from "@/lib/charts";
 import type { PitchingPoint, TrendPoint } from "@/lib/boxscore/trends";
 import { formatCents, shortDate } from "@/lib/finance/money";
+import { formatInnings } from "@/lib/rules/outs";
 
 const BLUE = "#2a78d6";
 const AQUA = "#1baf7a";
@@ -92,7 +93,7 @@ export function PlayingTimeChart({ bars }: { bars: PlayingTimeBar[] }) {
                 const r = box.current!.getBoundingClientRect();
                 setHover({ bar: b, x: e.clientX - r.left, y: e.clientY - r.top });
               }}
-              aria-label={`${b.name}: ${b.infield} infield, ${b.outfield} outfield, ${b.bench} bench innings`}
+              aria-label={`${b.name}: ${formatInnings(b.infield)} infield, ${formatInnings(b.outfield)} outfield, ${formatInnings(b.bench)} bench innings`}
             >
               <span className="w-24 shrink-0 truncate font-semibold text-slate-700">
                 {b.flagged && (
@@ -124,7 +125,8 @@ export function PlayingTimeChart({ bars }: { bars: PlayingTimeBar[] }) {
           <Tooltip x={hover.x} y={hover.y}>
             <p className="font-bold">{hover.bar.name}</p>
             <p>
-              {hover.bar.infield} infield · {hover.bar.outfield} outfield · {hover.bar.bench} bench
+              {formatInnings(hover.bar.infield)} infield · {formatInnings(hover.bar.outfield)}{" "}
+              outfield · {formatInnings(hover.bar.bench)} bench
             </p>
             {hover.bar.total > 0 && (
               <p className="text-white/70">

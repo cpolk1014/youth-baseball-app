@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { holdersByPosition, lineupRows, positionAt } from "@/lib/lineup/edit";
+import { inningParts, isSplitInning, lineupRows, positionAt } from "@/lib/lineup/edit";
+import { inningMoments } from "@/lib/rules/outs";
 import type { FieldPosition, Lineup, Player, Severity, Violation } from "@/lib/rules/types";
 import { positionClass, positionLabel } from "./positionStyle";
 import { useMinWidth } from "./shell/useWide";
@@ -114,6 +115,7 @@ export function LineupGrid({
   violations,
   onCellTap,
   onSwap,
+  onInningTap,
 }: {
   lineup: Lineup;
   players: Map<string, Player>;
@@ -123,6 +125,8 @@ export function LineupGrid({
   onCellTap?: (playerId: string, inning: number) => void;
   /** Wide screens: a cell was dragged onto another player's cell in the same inning. */
   onSwap?: (inning: number, a: string, b: string) => void;
+  /** Tap an inning's number: a change in the middle of that inning. */
+  onInningTap?: (inning: number) => void;
 }) {
   const wide = useMinWidth(1024);
   const { on: dragOn, drag, over, ghost, begin, justDropped } = useCellDrag(wide, onSwap);
@@ -138,9 +142,16 @@ export function LineupGrid({
       playerIssue.set(v.playerId, worst(playerIssue.get(v.playerId), v.severity));
     }
   }
+  // Spots open at the emptiest moment of each inning (a split inning is checked at every part).
+  const split = new Set(innings.filter((n) => isSplitInning(lineup, n)));
   const open = innings.map((inning) => {
-    const held = holdersByPosition(lineup, inning);
-    return positions.filter((p) => !held.has(p)).length;
+    const moments = inningMoments(lineup.slots.filter((s) => s.inning === inning));
+    return Math.max(
+      ...moments.map((m) => {
+        const held = new Set([...m.at.values()].flat());
+        return positions.filter((p) => !held.has(p)).length;
+      }),
+    );
   });
 
   const ghostPos = drag ? positionAt(lineup, drag.inning, drag.playerId) : null;
@@ -163,7 +174,21 @@ export function LineupGrid({
             </th>
             {innings.map((n) => (
               <th key={n} scope="col" className="min-w-[38px] text-center text-base font-bold">
-                {n}
+                {onInningTap ? (
+                  <button
+                    onClick={() => onInningTap(n)}
+                    aria-label={`Inning ${n}: change in the middle of the inning`}
+                    className={`min-h-9 w-full rounded-md ${split.has(n) ? "bg-[var(--team)] text-white" : "active:bg-slate-200"}`}
+                  >
+                    {n}
+                    {split.has(n) && <span aria-hidden="true"> ⇄</span>}
+                  </button>
+                ) : (
+                  <>
+                    {n}
+                    {split.has(n) && <span aria-label="changed mid-inning"> ⇄</span>}
+                  </>
+                )}
               </th>
             ))}
           </tr>
@@ -189,6 +214,13 @@ export function LineupGrid({
                 </th>
                 {innings.map((inning) => {
                   const pos = positionAt(lineup, inning, id);
+                  // A split inning shows every spot the kid had, in order ("CF→P").
+                  const parts = inningParts(lineup, inning, id);
+                  const label =
+                    parts.length > 1
+                      ? parts.map((x) => positionLabel(x.position)).join("→")
+                      : positionLabel(pos);
+                  const splitHere = split.has(inning);
                   const sev = cellIssue.get(`${id}:${inning}`);
                   const dragging = drag?.playerId === id && drag.inning === inning;
                   const target = over?.playerId === id && over.inning === inning;
@@ -199,18 +231,23 @@ export function LineupGrid({
                         data-cell
                         data-player={id}
                         data-inning={inning}
-                        onPointerDown={(e) => begin({ playerId: id, inning }, e)}
+                        onPointerDown={(e) => {
+                          // Split innings are changed in their own sheet, not by dragging.
+                          if (!splitHere) begin({ playerId: id, inning }, e);
+                        }}
                         onContextMenu={dragOn ? (e) => e.preventDefault() : undefined}
                         onClick={
                           onCellTap
                             ? () => {
-                                if (!justDropped.current) onCellTap(id, inning);
+                                if (justDropped.current) return;
+                                if (splitHere && onInningTap) onInningTap(inning);
+                                else onCellTap(id, inning);
                               }
                             : undefined
                         }
                         disabled={!onCellTap}
-                        aria-label={`${p?.name ?? id}, inning ${inning}: ${pos ?? "not set"}`}
-                        className={`flex h-11 w-full min-w-[38px] items-center justify-center rounded-md text-[15px] font-bold transition-transform select-none ${positionClass(pos)} ${
+                        aria-label={`${p?.name ?? id}, inning ${inning}: ${parts.length > 1 ? label.replaceAll("→", " then ") : (pos ?? "not set")}`}
+                        className={`flex h-11 w-full min-w-[38px] items-center justify-center rounded-md font-bold transition-transform select-none ${parts.length > 1 ? "px-0.5 text-[11px] leading-tight" : "text-[15px]"} ${positionClass(parts.length > 1 ? parts[parts.length - 1]!.position : pos)} ${
                           target
                             ? "scale-110 ring-4 ring-sky-500"
                             : dragging
@@ -222,7 +259,7 @@ export function LineupGrid({
                                   : ""
                         } ${dragOn ? "cursor-grab [-webkit-touch-callout:none] lg:h-12" : ""}`}
                       >
-                        {positionLabel(pos)}
+                        {label}
                       </button>
                     </td>
                   );

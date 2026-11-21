@@ -45,3 +45,42 @@ describe("buildLineupCard", () => {
     ]);
   });
 });
+
+describe("innings changed in the middle", () => {
+  it("shows each spot in order on the card", () => {
+    const players = [
+      {
+        id: "jake",
+        name: "Jake Hill",
+        jerseyNumber: 12,
+        preferredPositions: [],
+        canPitch: true,
+        canCatch: false,
+      },
+      {
+        id: "mason",
+        name: "Mason Reyes",
+        jerseyNumber: 7,
+        preferredPositions: [],
+        canPitch: true,
+        canCatch: false,
+      },
+    ];
+    const card = buildLineupCard(
+      players,
+      {
+        innings: 1,
+        battingOrder: ["jake", "mason"],
+        slots: [
+          { inning: 1, playerId: "jake", position: "CF", fromOut: 0, toOut: 1 },
+          { inning: 1, playerId: "jake", position: "P", fromOut: 1, toOut: 3 },
+          { inning: 1, playerId: "mason", position: "P", fromOut: 0, toOut: 1 },
+          { inning: 1, playerId: "mason", position: "CF", fromOut: 1, toOut: 3 },
+        ],
+      },
+      ["P", "CF"],
+    );
+    expect(card.rows[0]!.positions).toEqual(["CF→P"]);
+    expect(card.defense[0]).toEqual({ position: "P", players: ["#7 Mason→#12 Jake"] });
+  });
+});

@@ -48,6 +48,8 @@ import { GamesPane } from "./GamesScreen";
 import { GroupMePost } from "./GroupMePost";
 import { ShareBattingCard } from "./ShareBattingCard";
 import { LineupGrid } from "./LineupGrid";
+import { MidInningSheet } from "./MidInningSheet";
+import { splitInnings } from "@/lib/rules/outs";
 import { PositionPicker } from "./PositionPicker";
 import { Sheet } from "./Sheet";
 import { useTeamStats } from "./stats/statsData";
@@ -65,6 +67,8 @@ export function GameScreen({ gameId }: { gameId: string }) {
   const data = useAppData();
   const [view, setView] = useState<View>("field");
   const [cell, setCell] = useState<{ playerId: string; inning: number } | null>(null);
+  // A change in the middle of an inning (and who it started from, when opened from a square).
+  const [midInning, setMidInning] = useState<{ inning: number; playerId?: string } | null>(null);
   const [undo, setUndo] = useState<Lineup | null>(null);
   const [editing, setEditing] = useState(false);
   const [confirmFinal, setConfirmFinal] = useState(false);
@@ -163,6 +167,13 @@ export function GameScreen({ gameId }: { gameId: string }) {
     setUndo(null);
   };
   const autoFill = () => {
+    // Auto-fill plans whole innings: it would wipe changes made in the middle of innings.
+    if (
+      splitInnings(lineup.slots).size > 0 &&
+      !window.confirm("Auto-fill makes a new lineup and drops the mid-inning changes. Go ahead?")
+    ) {
+      return;
+    }
     const seed = ctx.autoFillSeed + 1;
     if (style === "competitive" && plan) {
       const { lineup: generated } = generateLineup(active, config, history, seed, {
@@ -471,6 +482,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
                 onCellTap={
                   lineupLocked ? undefined : (playerId, inning) => setCell({ playerId, inning })
                 }
+                onInningTap={lineupLocked ? undefined : (inning) => setMidInning({ inning })}
                 onSwap={
                   lineupLocked
                     ? undefined
@@ -613,6 +625,39 @@ export function GameScreen({ gameId }: { gameId: string }) {
             onPick={(pos) => {
               change(assignPosition(lineup, cell.inning, cell.playerId, pos));
               setCell(null);
+            }}
+          />
+        )}
+        {cell && picked && (
+          <button
+            onClick={() => {
+              setMidInning({ inning: cell.inning, playerId: cell.playerId });
+              setCell(null);
+            }}
+            className="mt-3 h-12 w-full rounded-xl border-2 border-slate-300 bg-white text-base font-bold"
+          >
+            ⇄ Change in the middle of the inning…
+          </button>
+        )}
+      </Sheet>
+
+      <Sheet
+        open={midInning !== null}
+        title={midInning ? `Inning ${midInning.inning}: change mid-inning` : ""}
+        onClose={() => setMidInning(null)}
+      >
+        {midInning && (
+          <MidInningSheet
+            key={`${midInning.inning}:${midInning.playerId ?? ""}`}
+            lineup={lineup}
+            inning={midInning.inning}
+            players={players}
+            positions={config.fieldPositions}
+            startPlayerId={midInning.playerId}
+            onSave={(next, note) => {
+              change(next);
+              setMidInning(null);
+              toast(note);
             }}
           />
         )}
