@@ -197,24 +197,35 @@ export async function photoUrls(paths: string[]): Promise<Record<string, string>
   );
 }
 
+/** Who may post photos, or start polls: everyone on the team, or only coaches and managers. */
 export type PhotoSetting = "everyone" | "staff";
+export interface ChatterSettings {
+  photos: PhotoSetting;
+  polls: PhotoSetting;
+}
 
-export async function photoSetting(teamId: string): Promise<PhotoSetting> {
+export async function chatterSettings(teamId: string): Promise<ChatterSettings> {
   const { data, error } = await getBrowserSupabase()
     .from("team")
-    .select("chatter_photos")
+    .select("chatter_photos, chatter_polls")
     .eq("id", teamId)
     .maybeSingle();
   fail(error);
-  return (data as { chatter_photos?: PhotoSetting } | null)?.chatter_photos === "staff"
-    ? "staff"
-    : "everyone";
+  const row = data as { chatter_photos?: string; chatter_polls?: string } | null;
+  return {
+    photos: row?.chatter_photos === "staff" ? "staff" : "everyone",
+    polls: row?.chatter_polls === "everyone" ? "everyone" : "staff",
+  };
 }
 
-export async function setPhotoSetting(teamId: string, value: PhotoSetting): Promise<void> {
+export async function setChatterSetting(
+  teamId: string,
+  key: keyof ChatterSettings,
+  value: PhotoSetting,
+): Promise<void> {
   const { data, error } = await getBrowserSupabase()
     .from("team")
-    .update({ chatter_photos: value })
+    .update(key === "photos" ? { chatter_photos: value } : { chatter_polls: value })
     .eq("id", teamId)
     .select("id");
   fail(error);

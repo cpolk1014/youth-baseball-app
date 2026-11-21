@@ -2191,8 +2191,18 @@ do $$ begin
   raise exception 'should have failed' using errcode = 'T0001';
 exception when insufficient_privilege then raise notice 'ok: parents can''t close the coach''s poll';
 end $$;
+do $$ begin
+  perform public.create_chatter_poll('00000000-0000-4000-8000-000000000001', 'Carpool?', array['Yes', 'No'], false, false, null);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents can''t start polls by default';
+end $$;
+select pg_temp.expect((select count(*) from public.chatter_post where body = 'Carpool?') = 0, 'a refused poll leaves no post behind');
+reset role;
+update public.team set chatter_polls = 'everyone' where id = '00000000-0000-4000-8000-000000000001';
+set role authenticated;
 create temp table anon_poll as select public.create_chatter_poll('00000000-0000-4000-8000-000000000001',
   'Anonymous?', array['Yes', 'No'], true, true, now() + interval '1 day') as id;
+select pg_temp.expect((select id from anon_poll) is not null, 'with polls open to everyone, parents start them');
 select public.vote_chatter_poll((select id from anon_poll), array[0, 1]);
 select pg_temp.expect((select bool_and(voters is null) and sum(votes) = 2 from public.chatter_poll_results(array[(select id from anon_poll)])), 'anonymous polls count votes without names');
 

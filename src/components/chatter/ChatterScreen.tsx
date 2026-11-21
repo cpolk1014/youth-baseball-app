@@ -38,7 +38,12 @@ import { AppShell, Loading } from "../AppShell";
 import { MicField } from "../Dictate";
 import { Sheet } from "../Sheet";
 import { toast } from "../shell/Toast";
-import type { ChatterReport, ChatterState, PhotoSetting } from "@/lib/data/chatter-backend";
+import type {
+  ChatterReport,
+  ChatterSettings,
+  ChatterState,
+  PhotoSetting,
+} from "@/lib/data/chatter-backend";
 import { preparePhoto } from "./photo";
 
 const backend = () => import("@/lib/data/chatter-backend");
@@ -93,7 +98,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
   const [reporting, setReporting] = useState<ChatterPost | null>(null);
   const [showReports, setShowReports] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [photoSetting, setPhotoSetting] = useState<PhotoSetting>("everyone");
+  const [settings, setSettings] = useState<ChatterSettings>({ photos: "everyone", polls: "staff" });
   const [urls, setUrls] = useState<Record<string, string>>({});
   const asked = useRef<Set<string>>(new Set());
   const [viewer, setViewer] = useState<{ photos: ChatterPhoto[]; index: number } | null>(null);
@@ -149,8 +154,8 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
         scrollToEnd();
         void refreshModeration().catch(() => undefined);
         void m
-          .photoSetting(teamId)
-          .then(setPhotoSetting)
+          .chatterSettings(teamId)
+          .then(setSettings)
           .catch(() => undefined);
       } catch (e) {
         if (!cancelled) setLoadError(cached.length ? null : message(e));
@@ -431,8 +436,8 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
           replyTo={replyTo}
           replyAuthor={replyTo ? authorOf(replyTo.authorId, team).name : ""}
           onCancelReply={() => setReplyTo(null)}
-          canPostPhotos={photoSetting === "everyone" || moderator}
-          onNewPoll={() => setAskingPoll(true)}
+          canPostPhotos={settings.photos === "everyone" || moderator}
+          onNewPoll={settings.polls === "everyone" || moderator ? () => setAskingPoll(true) : null}
           onSend={async (body, files) => {
             const m = await backend();
             const uploaded: ChatterPhoto[] = [];
@@ -549,13 +554,12 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
 
       <Sheet open={showSettings} title="Chatter settings" onClose={() => setShowSettings(false)}>
         <Settings
-          value={photoSetting}
-          onChange={async (v) => {
-            await (await backend()).setPhotoSetting(teamId, v);
-            setPhotoSetting(v);
-            toast(
-              v === "staff" ? "Only coaches and managers post photos" : "Everyone posts photos",
-            );
+          value={settings}
+          onChange={async (key, v) => {
+            await (await backend()).setChatterSetting(teamId, key, v);
+            setSettings((prev) => ({ ...prev, [key]: v }));
+            const what = key === "photos" ? "post photos" : "start polls";
+            toast(v === "staff" ? `Only coaches and managers ${what}` : `Everyone can ${what}`);
           }}
         />
       </Sheet>
@@ -742,7 +746,8 @@ function Composer({
   replyAuthor: string;
   onCancelReply: () => void;
   canPostPhotos: boolean;
-  onNewPoll: () => void;
+  /** Null when this person can't start polls on the team. */
+  onNewPoll: (() => void) | null;
   onSend: (body: string, photos: File[]) => Promise<void>;
 }) {
   const [text, setText] = useState("");
@@ -823,14 +828,16 @@ function Composer({
         </ul>
       )}
       <div className="flex items-end gap-2">
-        <button
-          onClick={onNewPoll}
-          disabled={busy}
-          aria-label="Ask the team a poll"
-          className="flex h-[52px] w-11 shrink-0 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-2xl active:bg-slate-100 disabled:opacity-40"
-        >
-          📊
-        </button>
+        {onNewPoll && (
+          <button
+            onClick={onNewPoll}
+            disabled={busy}
+            aria-label="Ask the team a poll"
+            className="flex h-[52px] w-11 shrink-0 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-2xl active:bg-slate-100 disabled:opacity-40"
+          >
+            📊
+          </button>
+        )}
         {canPostPhotos && (
           <>
             <input
@@ -1399,18 +1406,54 @@ function Settings({
   value,
   onChange,
 }: {
+  value: ChatterSettings;
+  onChange: (key: keyof ChatterSettings, v: PhotoSetting) => Promise<void>;
+}) {
+  return (
+    <div className="flex flex-col gap-5">
+      <SettingChoice
+        title="Who can post photos"
+        value={value.photos}
+        onChange={(v) => onChange("photos", v)}
+        hints={{ everyone: "Coaches and parents post photos", staff: "Parents post words only" }}
+        note="Photos are shrunk on the phone and their location is removed before they upload. Only people on this team can open them."
+      />
+      <SettingChoice
+        title="Who can start polls"
+        value={value.polls}
+        onChange={(v) => onChange("polls", v)}
+        hints={{
+          everyone: "Parents can ask too (carpools, team dinners)",
+          staff: "Parents vote but don't start polls",
+        }}
+        note="Everyone on the team can always vote."
+      />
+    </div>
+  );
+}
+
+function SettingChoice({
+  title,
+  value,
+  onChange,
+  hints,
+  note,
+}: {
+  title: string;
   value: PhotoSetting;
   onChange: (v: PhotoSetting) => Promise<void>;
+  hints: Record<PhotoSetting, string>;
+  note: string;
 }) {
   const [busy, setBusy] = useState(false);
-  const options: { id: PhotoSetting; label: string; hint: string }[] = [
-    { id: "everyone", label: "Everyone", hint: "Coaches and parents post photos" },
-    { id: "staff", label: "Coaches and managers", hint: "Parents post words only" },
+  const options: { id: PhotoSetting; label: string }[] = [
+    { id: "everyone", label: "Everyone" },
+    { id: "staff", label: "Coaches and managers" },
   ];
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-lg font-bold">Who can post photos</p>
-      <div className="flex flex-col gap-2" role="radiogroup" aria-label="Who can post photos">
+    <div className="flex flex-col gap-2">
+      <p className="text-lg font-bold">{title}</p>
+      <div className="flex flex-col gap-2" role="radiogroup" aria-label={title}>
         {options.map((o) => (
           <button
             key={o.id}
@@ -1431,14 +1474,11 @@ function Settings({
             className={`rounded-xl border-2 p-3 text-left ${value === o.id ? "border-[var(--team)] bg-[color-mix(in_srgb,var(--team)_10%,white)]" : "border-slate-300 bg-white"}`}
           >
             <span className="block text-lg font-bold">{o.label}</span>
-            <span className="block text-base text-slate-600">{o.hint}</span>
+            <span className="block text-base text-slate-600">{hints[o.id]}</span>
           </button>
         ))}
       </div>
-      <p className="text-base text-slate-600">
-        Photos are shrunk on the phone and their location is removed before they upload. Only people
-        on this team can open them.
-      </p>
+      <p className="text-base text-slate-600">{note}</p>
     </div>
   );
 }
