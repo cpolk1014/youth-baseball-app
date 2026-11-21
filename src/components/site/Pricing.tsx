@@ -19,7 +19,7 @@ const AI = [
   "AI uniform reader",
 ];
 const TEAM = [
-  "Game day posts and messages to GroupMe",
+  "Chatter: team chat, polls, photos and automatic game day posts",
   "Team money: fees, payments, expenses, receipts",
   "Tournament standings and What time do we play tomorrow?",
   "GameChanger stats import and competitive lineups",
@@ -30,7 +30,7 @@ const CLUB = [
   "Club dashboard: every team's record, next game and latest lineup",
   "Your club's look and club uniforms",
   "Shared library of practice plans and homework play sets",
-  "Club GroupMe: post to your coaches and every team at once",
+  "Coach Chatter, and club posts to every team at once",
 ];
 
 /** The three plans side by side (Home shows them short, Pricing in full). */

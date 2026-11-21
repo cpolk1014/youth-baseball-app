@@ -398,7 +398,7 @@ export function ClubDashboardScreen() {
             <p className="mb-2 text-[13px] font-black" style={{ color: TEAM }}>
               Bayou Baseball Club
             </p>
-            {["Teams", "Look", "Library", "GroupMe"].map((t, i) => (
+            {["Teams", "Chatter", "Awards", "Look"].map((t, i) => (
               <span
                 key={t}
                 className={`rounded-md px-2 py-1.5 font-semibold ${i === 0 ? "bg-slate-100" : "text-slate-500"}`}

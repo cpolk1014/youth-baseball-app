@@ -15,7 +15,7 @@ import {
 export const metadata: Metadata = {
   title: { absolute: "Fungo for Coaches: Fair Lineups, AI Practice Plans & Game Day" },
   description:
-    "For youth baseball coaches: fair inning-by-inning lineups in two minutes, AI practice plans for your age group, schedules from a photo, GroupMe game day posts and tournament weekends.",
+    "For youth baseball coaches: fair inning-by-inning lineups in two minutes, AI practice plans for your age group, schedules from a photo, a team chat that posts game day for you, and tournament weekends.",
   alternates: { canonical: "/coaches" },
 };
 
@@ -149,8 +149,8 @@ export default function CoachesPage() {
           >
             <ul className="flex flex-col gap-3">
               <Check>
-                <b className={b}>The game day post goes to your GroupMe on its own:</b> field, time,
-                arrive by and uniform.
+                <b className={b}>The game day post lands in your team&apos;s Chatter on its own:</b>{" "}
+                field, time, arrive by and uniform. No bot. No Droop Me. Just the post.
               </Check>
               <Check>
                 <b className={b}>One-tap directions</b> for every family. Yes, even to Field 7.

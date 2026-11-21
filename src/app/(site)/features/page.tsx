@@ -14,9 +14,9 @@ import {
 import { WalkupScreen } from "@/components/site/mocks";
 
 export const metadata: Metadata = {
-  title: { absolute: "Features: AI Schedules, Fair Lineups, GroupMe & Tournaments | Fungo" },
+  title: { absolute: "Features: AI Schedules, Fair Lineups, Team Chat & Tournaments | Fungo" },
   description:
-    "Youth baseball's AI assistant coach: AI schedule import and practice plans, a smart fair-play lineup engine, GroupMe game day posts, team money, tournaments and walk-up songs.",
+    "Youth baseball's AI assistant coach: AI schedule import and practice plans, a smart fair-play lineup engine, team chat with game day posts, team money, tournaments and walk-up songs.",
   alternates: { canonical: "/features" },
 };
 
@@ -33,11 +33,30 @@ const AI_TOOLS = [
 
 const GROUPS: { icon: string; title: string; items: [string, string][] }[] = [
   {
+    icon: "💬",
+    title: "Team chat",
+    items: [
+      [
+        "Chatter, your team's own chat:",
+        "posts, photos, polls, GIFs, @tags and reactions, with a buzz on every phone.",
+      ],
+      ["Adults only, no private messages.", "Coaches can pin, pause and remove."],
+      [
+        "Club posts and Coach Chatter",
+        "for directors who'd rather post once than twelve times.",
+      ],
+      [
+        "Retire the app that rhymes with Droop Me.",
+        "No bots to set up. No “Unknown number liked a message.”",
+      ],
+    ],
+  },
+  {
     icon: "📣",
     title: "Game day",
     items: [
       [
-        "Game day posts to GroupMe,",
+        "Game day posts in Chatter,",
         "sent automatically with the field, time, arrive by and uniform.",
       ],
       ["One-tap directions", "in Apple Maps, Google Maps or Waze."],

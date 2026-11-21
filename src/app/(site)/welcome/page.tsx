@@ -239,7 +239,11 @@ export default function HomePage() {
                 ],
                 [
                   "📣 Game day on autopilot",
-                  "The game day post hits your GroupMe on its own: field, time, arrive by and uniform. Fewer “what time?” texts. Not zero. Never zero.",
+                  "The game day post drops into your team's Chatter on its own: field, time, arrive by and uniform. Fewer “what time?” texts. Not zero. Never zero.",
+                ],
+                [
+                  "💬 Your team chat, under your own roof",
+                  "Chatter has posts, photos, polls, GIFs and @tags, with a buzz on every phone. Adults only, no private messages. Go ahead and delete the group chat that rhymes with Droop Me. We won't tell.",
                 ],
                 [
                   "🏁 What time do we play tomorrow?",

@@ -6,7 +6,7 @@ import { SUPPORT_EMAIL } from "@/components/site/SiteFooter";
 export const metadata: Metadata = {
   title: { absolute: "Fungo for Clubs: An AI Assistant Coach for Every Team" },
   description:
-    "Give every coach in your club AI schedule import, AI practice plans, fair lineups, GroupMe posts and tournaments, with a club dashboard, club colors and a shared library. $99 per team.",
+    "Give every coach in your club AI schedule import, AI practice plans, fair lineups, team chat and tournaments, with a club dashboard, club colors and a shared library. $99 per team.",
   alternates: { canonical: "/clubs" },
 };
 
@@ -34,7 +34,7 @@ const WHY: [string, string, string][] = [
   [
     "📣",
     "Reach everyone at once",
-    "Post to your coaches' group, or to any or all of your teams' GroupMe groups, in one message. Rainout? Done in ten seconds.",
+    "Post once to Coach Chatter and to any or all of your teams' Chatter. Rainout? Done in ten seconds, and nobody has to copy it into the group chat that rhymes with Droop Me.",
   ],
   [
     "🔒",

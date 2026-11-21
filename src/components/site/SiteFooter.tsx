@@ -72,7 +72,7 @@ export function SiteFooter() {
         </div>
       </div>
       <p className="mx-auto mt-12 max-w-6xl border-t border-white/10 pt-6 text-sm text-white/50">
-        © 2026 Fungo. Not affiliated with GameChanger, GroupMe or any tournament organization.
+        © 2026 Fungo. Not affiliated with GameChanger or any tournament organization.
       </p>
     </footer>
   );

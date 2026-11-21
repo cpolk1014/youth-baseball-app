@@ -2,6 +2,7 @@
 
 > For review. **[Brackets]** are build notes, not copy.
 > **What counts as AI.** "AI" here means the features that really use AI (Claude and ElevenLabs): reading schedules, flyers, box scores and tournament screenshots; turning typed rules into lineup rules; planning practices; and making walk-up songs, lyrics and the announcer. Auto-fill and the tournament standings and scenarios are Fungo's own engine, so they're called **smart**, never AI.
+> **Voice note:** we never name the group chat app Chatter replaced. It's "the one that rhymes with Droop Me."
 > **AI features are part of the Team and Club plans** (and the 14-day trial, one per coach, for their first team). The free plan has the smart lineup engine but no AI tools. The copy says so wherever it matters.
 > **Main button:** **Start your free 14-day trial**. Second: **Start a club**.
 
@@ -37,7 +38,7 @@ The tagline goes under the logo in the top bar, in the hero eyebrow, in Google t
 - **Fungo.** AI-powered youth baseball.
 - Product: Features · AI · Pricing · Clubs · Parents
 - Company: Our story · Contact [support@rallycap.team] · Privacy · Terms
-- Small print: © 2026 [legal entity]. Not affiliated with GameChanger, GroupMe or any tournament organization.
+- Small print: © 2026 [legal entity]. Not affiliated with GameChanger or any tournament organization.
 
 ---
 
@@ -115,7 +116,9 @@ Snap the uniform flyer, and AI lists every combo: shirt, pants, hat, belt and so
 Tap Auto-fill. Fungo's smart lineup engine builds every inning to your fair-play rules: no one sits twice before everyone's sat, everyone plays the infield, and pitchers and catchers stay in your limits. *Why this lineup?* explains every spot.
 
 **📣 Game day on autopilot**
-The game day post goes to your team's GroupMe automatically: opponent, field, time, *arrive by* and uniform.
+The game day post lands in your team's Chatter automatically: opponent, field, time, *arrive by* and uniform.
+
+**💬 Your team chat, under your own roof.** Chatter has posts, photos, polls, GIFs and @tags, with a buzz on every phone. Adults only, no private messages. Go ahead and delete the group chat that rhymes with Droop Me. We won't tell.
 
 **🏁 "What time do we play tomorrow?"**
 Every way your seed can still land, with the game time for each and what has to happen. Worked out from the real scores and the tournament's tie-breakers.
@@ -151,7 +154,7 @@ Fees split across the roster, payments, expenses and receipts. Every family know
 | **Free** | **Team** | **Club** |
 |---|---|---|
 | **$0** forever | **$129** per season | **$99** per team per season |
-| The smart lineup engine, Auto-fill, fair-play rules, lineup cards, playing time, plays and quizzes | **Every AI tool:** schedule import, practice plans, tournament reading, typed rules, walk-up songs and announcer, and the uniform reader. Plus GroupMe game day posts, team money and tournament standings | Everything in Team for every team in your club, plus a club dashboard, your club's look and a shared library |
+| The smart lineup engine, Auto-fill, fair-play rules, lineup cards, playing time, plays and quizzes | **Every AI tool:** schedule import, practice plans, tournament reading, typed rules, walk-up songs and announcer, and the uniform reader. Plus team chat with game day posts, team money and tournament standings | Everything in Team for every team in your club, plus a club dashboard, your club's look and a shared library |
 | [Get started free] | **[Start your free 14-day trial]** | [Start a club] |
 
 **Under the grid:** Your first team gets 14 days of everything, AI included (one free trial per coach). No credit card. If you don't renew, nothing is deleted.
@@ -232,8 +235,8 @@ After the game, the coach uploads GameChanger's box score. AI reads **every kid'
 
 # 3. Features `/features`
 
-**Page title:** Features: AI Schedules, Fair Lineups, GroupMe & Tournaments | Fungo
-**Description:** AI-powered youth baseball: AI schedule import and practice plans, a smart fair-play lineup engine, GroupMe game day posts, team money, tournaments and walk-up songs.
+**Page title:** Features: AI Schedules, Fair Lineups, Team Chat & Tournaments | Fungo
+**Description:** AI-powered youth baseball: AI schedule import and practice plans, a smart fair-play lineup engine, team chat with game day posts, team money, tournaments and walk-up songs.
 
 # Everything your season runs on. AI where it saves you time.
 From the first practice to the last bracket game. Built for the dugout: big buttons, sunlight-bright, one hand.
@@ -260,7 +263,13 @@ From the first practice to the last bracket game. Built for the dugout: big butt
 - **The lineup card** printed for the umpire, and the batting order as a picture in team colors.
 
 ### Game day
-- **Game day posts to GroupMe,** sent automatically with the field, time, *arrive by* and uniform.
+- **Game day posts in Chatter,** sent automatically with the field, time, *arrive by* and uniform.
+
+### 💬 Team chat
+- **Chatter, your team's own chat:** posts, photos, polls, GIFs, @tags and reactions, with a buzz on every phone.
+- **Adults only, no private messages.** Coaches can pin, pause and remove.
+- **Club posts and Coach Chatter** for directors who'd rather post once than twelve times.
+- **Retire the app that rhymes with Droop Me.** No bots to set up. No "Unknown number liked a message."
 - **One-tap directions** in Apple Maps, Google Maps or Waze.
 - **Uniforms for every game** (or read them from the flyer with AI).
 - **Works with no signal** on the back field.
@@ -296,7 +305,7 @@ From the first practice to the last bracket game. Built for the dugout: big butt
 # 4. Pricing `/pricing`
 
 **Page title:** Pricing | Fungo: AI-Powered Youth Baseball from $0
-**Description:** Fungo's smart lineup engine is free forever. Every AI tool, plus GroupMe, team money and tournaments, is $129 a season per team, or $99 per team for clubs. 14-day free trial.
+**Description:** Fungo's smart lineup engine is free forever. Every AI tool, plus team chat, team money and tournaments, is $129 a season per team, or $99 per team for clubs. 14-day free trial.
 
 # Simple pricing. AI included.
 Start free. Try every AI tool for 14 days on your first team. Pay once a season, never automatically.
@@ -326,7 +335,7 @@ Everything in Free, plus **every AI tool**:
 - ✨ AI uniform reader
 
 And the tools that run your season:
-- Game day posts and messages to GroupMe
+- Chatter: team chat, polls, photos and automatic game day posts
 - Team money: fees, payments, expenses, receipts
 - Tournament standings and "What time do we play tomorrow?"
 - GameChanger stats import and competitive lineups
@@ -340,7 +349,7 @@ And the tools that run your season:
 - **Club dashboard:** every team's record, next game and latest lineup
 - **Your club's look** and club uniforms
 - **Shared library** of practice plans and homework play sets
-- **Club GroupMe:** post to your coaches and to every team at once
+- **Coach Chatter,** and club posts to every team at once
 
 **[Start a club]**
 
@@ -389,7 +398,7 @@ AI only sees what a feature needs. Practice plans get no player names, and each 
 # 5. Clubs `/clubs`
 
 **Page title:** Fungo for Clubs: AI-Powered Youth Baseball for Every Team
-**Description:** Give every coach in your club AI schedule import, AI practice plans, fair lineups, GroupMe posts and tournaments, with a club dashboard, club colors and a shared library. $99 per team.
+**Description:** Give every coach in your club AI schedule import, AI practice plans, fair lineups, team chat and tournaments, with a club dashboard, club colors and a shared library. $99 per team.
 
 # Give every coach in your club an AI assistant.
 One code per team. Every coach gets Fungo's full Team plan, AI included, and you get the whole club at a glance.
@@ -412,7 +421,7 @@ Colors from your logo or flyer, and club uniforms every team can wear (AI reads 
 Your best practice plans and homework play sets, in a library every coach can use.
 
 **📣 Reach everyone at once**
-Post to your coaches' group, or to any or all of your teams' GroupMe groups, in one message.
+Post once to Coach Chatter and to any or all of your teams' Chatter. Rainout? Done in ten seconds, and nobody has to copy it into the group chat that rhymes with Droop Me.
 
 **🔒 You see what you need. Families keep what's theirs.**
 Club admins can **view** lineups, playing time, rules and team stats while a team holds your code, and never change them. Team money, parents and families' own stats stay private.
