@@ -68,6 +68,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
   const [view, setView] = useState<View>("field");
   const [cell, setCell] = useState<{ playerId: string; inning: number } | null>(null);
   // A change in the middle of an inning (and who it started from, when opened from a square).
+  // inning 0 = pick the inning first (from the Mid-inning change button).
   const [midInning, setMidInning] = useState<{ inning: number; playerId?: string } | null>(null);
   const [undo, setUndo] = useState<Lineup | null>(null);
   const [editing, setEditing] = useState(false);
@@ -503,10 +504,23 @@ export function GameScreen({ gameId }: { gameId: string }) {
                 }
               />
               {!lineupLocked && (
-                <p className="mt-2 hidden text-sm text-slate-500 lg:block">
-                  Click a square to pick a position, or drag it onto another player in the same
-                  inning to swap them (on a touch screen, press and hold first).
-                </p>
+                <>
+                  <button
+                    onClick={() => setMidInning({ inning: 0 })}
+                    className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-[var(--team)] bg-white text-base font-bold text-[var(--team)] active:bg-slate-50 sm:w-auto sm:px-5"
+                  >
+                    ⇄ Mid-inning change
+                  </button>
+                  <p className="mt-2 text-sm text-slate-500 lg:hidden">
+                    Tap a square to set a position. For a pitching change or sub during an inning,
+                    tap the inning number or Mid-inning change.
+                  </p>
+                  <p className="mt-2 hidden text-sm text-slate-500 lg:block">
+                    Click a square to pick a position, or drag it onto another player in the same
+                    inning to swap them (on a touch screen, press and hold first). For a pitching
+                    change or sub during an inning, click the inning number.
+                  </p>
+                </>
               )}
             </div>
 
@@ -643,10 +657,29 @@ export function GameScreen({ gameId }: { gameId: string }) {
 
       <Sheet
         open={midInning !== null}
-        title={midInning ? `Inning ${midInning.inning}: change mid-inning` : ""}
+        title={
+          midInning
+            ? midInning.inning
+              ? `Inning ${midInning.inning}: change mid-inning`
+              : "Mid-inning change: which inning?"
+            : ""
+        }
         onClose={() => setMidInning(null)}
       >
-        {midInning && (
+        {midInning && midInning.inning === 0 && (
+          <div className="grid grid-cols-3 gap-2">
+            {Array.from({ length: lineup.innings }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                onClick={() => setMidInning({ inning: n })}
+                className="flex h-14 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-lg font-bold active:bg-slate-100"
+              >
+                Inning {n}
+              </button>
+            ))}
+          </div>
+        )}
+        {midInning && midInning.inning > 0 && (
           <MidInningSheet
             key={`${midInning.inning}:${midInning.playerId ?? ""}`}
             lineup={lineup}

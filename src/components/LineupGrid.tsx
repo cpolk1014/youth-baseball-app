@@ -178,7 +178,7 @@ export function LineupGrid({
                   <button
                     onClick={() => onInningTap(n)}
                     aria-label={`Inning ${n}: change in the middle of the inning`}
-                    className={`min-h-9 w-full rounded-md ${split.has(n) ? "bg-[var(--team)] text-white" : "active:bg-slate-200"}`}
+                    className={`min-h-9 w-full rounded-md border-2 ${split.has(n) ? "border-[var(--team)] bg-[var(--team)] text-white" : "border-slate-300 bg-white active:bg-slate-200"}`}
                   >
                     {n}
                     {split.has(n) && <span aria-hidden="true"> ⇄</span>}
