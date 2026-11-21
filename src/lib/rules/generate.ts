@@ -1,3 +1,4 @@
+import { primaryPosition, slotInnings } from "./outs";
 import { solveAssignment } from "./assignment";
 import {
   lineupStrength,
@@ -117,9 +118,9 @@ function buildLimits(
   if (previous && on("pitcher-rest")) {
     const threw = new Map<string, number>();
     for (const s of previous.slots) {
-      if (s.position === "P") threw.set(s.playerId, (threw.get(s.playerId) ?? 0) + 1);
+      if (s.position === "P") threw.set(s.playerId, (threw.get(s.playerId) ?? 0) + slotInnings(s));
     }
-    for (const [id, n] of threw) if (n >= config.pitcherRestInnings) resting.add(id);
+    for (const [id, n] of threw) if (n >= config.pitcherRestInnings - 1e-9) resting.add(id);
   }
   const mustPlay = Math.ceil((innings * config.minInningsPlayedPercent) / 100);
   const ids = new Set(players.map((p) => p.id));
@@ -151,10 +152,13 @@ function buildLimits(
         [rule.playerId, rule.position],
       ]);
     } else if (rule.kind === "no-repeat-bench" && previous) {
+      // Sat that inning last game: the bench for 2 or more of its outs.
+      const lastTime = new Map<string, LineupSlot[]>();
+      for (const s of previous.slots.filter((x) => x.inning === rule.inning)) {
+        lastTime.set(s.playerId, [...(lastTime.get(s.playerId) ?? []), s]);
+      }
       const sat = new Set(
-        previous.slots
-          .filter((s) => s.inning === rule.inning && s.position === "BENCH")
-          .map((s) => s.playerId),
+        [...lastTime].filter(([, list]) => primaryPosition(list) === "BENCH").map(([id]) => id),
       );
       aims.satLastGame.set(rule.inning, sat);
     }

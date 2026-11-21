@@ -1,7 +1,9 @@
+import { formatInnings, primaryPosition, slotInnings } from "./outs";
 import type {
   CustomRule,
   FieldPosition,
   Lineup,
+  LineupSlot,
   Player,
   Position,
   RuleConfig,
@@ -16,7 +18,7 @@ export const OUTFIELD_GROUP: FieldPosition[] = ["LF", "CF", "RF", "LCF", "RCF"];
 
 const ORDINAL = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 export const ordinal = (n: number) => ORDINAL[n - 1] ?? `${n}th`;
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const plural = (n: number, word: string) => `${formatInnings(n)} ${word}${n === 1 ? "" : "s"}`;
 const POSITION_NAME: Record<FieldPosition, string> = {
   P: "pitcher",
   C: "catcher",
@@ -67,13 +69,24 @@ export function describeCustomRule(rule: CustomRule, players: Player[]): string 
 
 const isOn = (rule: CustomRule) => rule.setting !== "off";
 
-/** Positions each present player holds per inning: [inning][playerId] → position. */
+/**
+ * Each present player's spot per inning, [inning][playerId] → position: their main spot when
+ * the inning was split by outs (the bench when they sat 2 or more outs of it).
+ */
 function positionsBy(lineup: Lineup): Map<number, Map<string, Position>> {
-  const grid = new Map<number, Map<string, Position>>();
+  const slots = new Map<number, Map<string, LineupSlot[]>>();
   for (const s of lineup.slots) {
     if (s.inning < 1 || s.inning > lineup.innings) continue;
-    if (!grid.has(s.inning)) grid.set(s.inning, new Map());
-    grid.get(s.inning)!.set(s.playerId, s.position);
+    const row = slots.get(s.inning) ?? new Map<string, LineupSlot[]>();
+    row.set(s.playerId, [...(row.get(s.playerId) ?? []), s]);
+    slots.set(s.inning, row);
+  }
+  const grid = new Map<number, Map<string, Position>>();
+  for (const [inning, row] of slots) {
+    grid.set(
+      inning,
+      new Map([...row].map(([id, list]) => [id, primaryPosition(list)!] as [string, Position])),
+    );
   }
   return grid;
 }
@@ -96,13 +109,14 @@ export function checkCustomRules(
     const severity = rule.setting === "warn" ? "warn" : "block";
     const emit = (v: Omit<Violation, "rule" | "severity" | "customRuleId">) =>
       out.push({ rule: "custom", customRuleId: rule.id, severity, ...v });
+    // Innings at these spots, in thirds when an inning was split by outs.
     const count = (playerId: string, positions: FieldPosition[]) => {
       let n = 0;
-      for (const row of grid.values()) {
-        const pos = row.get(playerId);
-        if (pos && pos !== "BENCH" && positions.includes(pos)) n++;
+      for (const s of lineup.slots) {
+        if (s.playerId !== playerId || s.inning < 1 || s.inning > lineup.innings) continue;
+        if (s.position !== "BENCH" && positions.includes(s.position)) n += slotInnings(s);
       }
-      return n;
+      return Math.round(n * 1e6) / 1e6;
     };
 
     switch (rule.kind) {
@@ -135,13 +149,17 @@ export function checkCustomRules(
       case "never-plays": {
         const p = present.get(rule.playerId);
         if (!p) break;
-        for (const [inning, row] of grid) {
-          const pos = row.get(p.id);
-          if (pos && pos !== "BENCH" && rule.positions.includes(pos)) {
+        // Any part of an inning counts: never means never.
+        const said = new Set<number>();
+        for (const s of lineup.slots) {
+          if (s.playerId !== p.id || s.inning < 1 || s.inning > lineup.innings) continue;
+          const pos = s.position;
+          if (pos !== "BENCH" && rule.positions.includes(pos) && !said.has(s.inning)) {
+            said.add(s.inning);
             emit({
               playerId: p.id,
-              inning,
-              message: `${p.name} shouldn't play ${POSITION_NAME[pos]} (inning ${inning}).`,
+              inning: s.inning,
+              message: `${p.name} shouldn't play ${POSITION_NAME[pos]} (inning ${s.inning}).`,
             });
           }
         }

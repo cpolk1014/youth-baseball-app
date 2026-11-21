@@ -1,3 +1,4 @@
+import { slotInnings } from "./outs";
 import type { FieldPosition, Lineup, Player, RuleConfig } from "./types";
 
 // Competitive lineups: who bats where, who plays where and who sits, from each kid's
@@ -266,8 +267,10 @@ export function lineupStrength(lineup: Lineup, plan: CompetitivePlan): number {
   let total = 0;
   for (const s of lineup.slots) {
     if (s.position === "BENCH") continue;
-    total += POSITION_WEIGHT[s.position] * (plan.fit.get(s.playerId)?.[s.position] ?? 0);
-    total += 0.5 * (plan.overall.get(s.playerId) ?? 0);
+    // Part of an inning counts its share of the outs.
+    const w = slotInnings(s);
+    total += w * POSITION_WEIGHT[s.position] * (plan.fit.get(s.playerId)?.[s.position] ?? 0);
+    total += w * 0.5 * (plan.overall.get(s.playerId) ?? 0);
   }
   return total;
 }

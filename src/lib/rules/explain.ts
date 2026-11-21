@@ -1,3 +1,4 @@
+import { formatInnings, primaryPosition, slotInnings } from "./outs";
 import { RULE_CATALOG } from "./catalog";
 import { isRuleOn } from "./config";
 import { describeCustomRule, ordinal, OUTFIELD_GROUP } from "./custom";
@@ -31,7 +32,7 @@ const innList = (ns: number[]) => {
     ? (words[0] ?? "")
     : `${words.slice(0, -1).join(", ")} and ${words.at(-1)}`;
 };
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const plural = (n: number, word: string) => `${formatInnings(n)} ${word}${n === 1 ? "" : "s"}`;
 
 /**
  * Why a lineup looks the way it does, built only from facts: the rules that are on, each
@@ -89,11 +90,20 @@ export function explainLineup(
     const mine = lineup.slots
       .filter((s) => s.playerId === p.id && s.inning >= 1 && s.inning <= lineup.innings)
       .sort((a, b) => a.inning - b.inning);
-    const sat = mine.filter((s) => s.position === "BENCH").map((s) => s.inning);
-    const inf = mine.filter((s) => infield.has(s.position)).length;
-    const out = mine.filter((s) => outfield.has(s.position)).length;
-    const pitched = mine.filter((s) => s.position === "P").map((s) => s.inning);
-    const caught = mine.filter((s) => s.position === "C").map((s) => s.inning);
+    // Innings split by outs count by their share: sat = the bench for 2 or more outs.
+    const innings = [...new Set(mine.map((s) => s.inning))];
+    const sat = innings.filter(
+      (n) => primaryPosition(mine.filter((s) => s.inning === n)) === "BENCH",
+    );
+    const share = (keep: (s: (typeof mine)[number]) => boolean) =>
+      formatInnings(mine.filter(keep).reduce((t, s) => t + slotInnings(s), 0));
+    const inf = share((s) => infield.has(s.position));
+    const out = share((s) => outfield.has(s.position));
+    const inningsAt = (pos: string) => [
+      ...new Set(mine.filter((s) => s.position === pos).map((s) => s.inning)),
+    ];
+    const pitched = inningsAt("P");
+    const caught = inningsAt("C");
     const reasons: string[] = [];
 
     const rate = rates.find((r) => r.id === p.id)!;

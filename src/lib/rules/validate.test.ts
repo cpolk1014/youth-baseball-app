@@ -450,3 +450,58 @@ describe("absent players", () => {
     expect(only(v, "season-balance").map((x) => x.playerId)).not.toContain("away");
   });
 });
+
+describe("validateLineup — innings split by outs", () => {
+  // Inning 2 of GRID_9x4, after 1 out: CF (p8) comes in to pitch, LF (p7) moves to CF, and the
+  // pitcher (p1) goes to LF.
+  const roster = setFlags(ROSTER_9, "p8", { canPitch: true });
+  const split = (changes: { playerId: string; position: Position; fromOut: number; toOut: number }[]) => {
+    const base = lineupFromGrid(GRID_9x4);
+    const moved = new Set(changes.map((c) => c.playerId));
+    return {
+      ...base,
+      slots: [
+        ...base.slots.filter((s) => !(s.inning === 2 && moved.has(s.playerId))),
+        ...changes.map((c) => ({ inning: 2, ...c })),
+      ],
+    };
+  };
+  const pitchingChange = [
+    { playerId: "p8", position: "CF" as Position, fromOut: 0, toOut: 1 },
+    { playerId: "p8", position: "P" as Position, fromOut: 1, toOut: 3 },
+    { playerId: "p7", position: "LF" as Position, fromOut: 0, toOut: 1 },
+    { playerId: "p7", position: "CF" as Position, fromOut: 1, toOut: 3 },
+    { playerId: "p1", position: "P" as Position, fromOut: 0, toOut: 1 },
+    { playerId: "p1", position: "LF" as Position, fromOut: 1, toOut: 3 },
+  ];
+
+  it("accepts a mid-inning pitching change with every spot covered", () => {
+    expect(validateLineup(roster, split(pitchingChange), config, [])).toEqual([]);
+  });
+
+  it("flags a spot left empty for part of the inning", () => {
+    const v = validateLineup(roster, split(pitchingChange.filter((c) => !(c.playerId === "p1" && c.fromOut === 1))), config, []);
+    expect(only(v, "position-coverage")[0]?.message).toBe("Nobody is playing LF in inning 2 (outs 1–3).");
+    expect(only(v, "player-assignment")[0]?.message).toBe(
+      "P1 has no position or bench spot in inning 2 (outs 1–3).",
+    );
+  });
+
+  it("flags a kid in two spots at the same time", () => {
+    const v = validateLineup(
+      roster,
+      split([...pitchingChange.filter((c) => c.playerId !== "p8"), { playerId: "p8", position: "CF", fromOut: 0, toOut: 3 }, { playerId: "p8", position: "P", fromOut: 1, toOut: 3 }]),
+      config,
+      [],
+    );
+    expect(only(v, "player-assignment")[0]?.message).toBe("P8 is in CF and P at once in inning 2 (outs 1–3).");
+  });
+
+  it("counts innings at a spot in thirds", () => {
+    const tight = { ...config, maxInningsPitched: 2 };
+    // p1 pitched the 1st and a third of the 2nd: 1⅓, under 2.
+    expect(only(validateLineup(roster, split(pitchingChange), tight, []), "max-innings-pitched")).toEqual([]);
+    const v = validateLineup(roster, split(pitchingChange), { ...config, maxInningsPitched: 1 }, []);
+    expect(only(v, "max-innings-pitched").map((x) => x.message)).toContain("P1 pitches 1⅓ innings (max 1).");
+  });
+});

@@ -22,8 +22,12 @@ export function formatLineupGrid(roster: Player[], lineup: Lineup): string {
   const header = "".padEnd(width) + "  " + innings.map((n) => cell(String(n))).join("");
   const rows = ids.map((id, i) => {
     const cells = innings.map((inning) => {
-      const slot = lineup.slots.find((s) => s.playerId === id && s.inning === inning);
-      return cell(!slot ? "?" : slot.position === "BENCH" ? "--" : slot.position);
+      // A split inning shows each part in order: "CF>P".
+      const parts = lineup.slots
+        .filter((s) => s.playerId === id && s.inning === inning)
+        .sort((a, b) => (a.fromOut ?? 0) - (b.fromOut ?? 0))
+        .map((s) => (s.position === "BENCH" ? "--" : s.position));
+      return cell(parts.length ? parts.join(">") : "?");
     });
     return labels[i]!.padEnd(width) + "  " + cells.join("");
   });

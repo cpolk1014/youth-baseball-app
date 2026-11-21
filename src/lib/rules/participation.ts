@@ -1,9 +1,10 @@
+import { slotInnings } from "./outs";
 import type { FieldPosition, Lineup, Position } from "./types";
 
 export interface PlayerParticipation {
   /** Games the player has at least one slot in. */
   games: number;
-  /** Innings in the field (not on the bench). */
+  /** Innings in the field (not on the bench); fractions when an inning was split by outs. */
   field: number;
   bench: number;
   infield: number;
@@ -33,12 +34,14 @@ export function computeParticipation(
         played.add(slot.playerId);
         p.games++;
       }
-      p.byPosition[slot.position] = (p.byPosition[slot.position] ?? 0) + 1;
+      // A whole inning counts 1; part of an inning counts its share of the 3 outs.
+      const w = slotInnings(slot);
+      p.byPosition[slot.position] = (p.byPosition[slot.position] ?? 0) + w;
       if (slot.position === "BENCH") {
-        p.bench++;
+        p.bench += w;
       } else {
-        p.field++;
-        if (infield.has(slot.position)) p.infield++;
+        p.field += w;
+        if (infield.has(slot.position)) p.infield += w;
       }
     }
   }

@@ -41,3 +41,26 @@ describe("balanceOutliers", () => {
     expect([...o.highBench]).toEqual(["c"]);
   });
 });
+
+describe("innings split by outs", () => {
+  it("counts each part of an inning by its outs", () => {
+    const lineup = {
+      innings: 1,
+      battingOrder: ["jake", "mason"],
+      slots: [
+        { inning: 1, playerId: "jake", position: "CF" as const, fromOut: 0, toOut: 1 },
+        { inning: 1, playerId: "jake", position: "P" as const, fromOut: 1, toOut: 3 },
+        { inning: 1, playerId: "mason", position: "BENCH" as const, fromOut: 0, toOut: 2 },
+        { inning: 1, playerId: "mason", position: "RF" as const, fromOut: 2, toOut: 3 },
+      ],
+    };
+    const p = computeParticipation([lineup], ["P", "C", "1B", "2B", "3B", "SS"]);
+    expect(p.jake!.byPosition.P).toBeCloseTo(2 / 3);
+    expect(p.jake!.byPosition.CF).toBeCloseTo(1 / 3);
+    expect(p.jake!.field).toBeCloseTo(1);
+    expect(p.jake!.infield).toBeCloseTo(2 / 3);
+    expect(p.jake!.games).toBe(1);
+    expect(p.mason!.bench).toBeCloseTo(2 / 3);
+    expect(p.mason!.field).toBeCloseTo(1 / 3);
+  });
+});

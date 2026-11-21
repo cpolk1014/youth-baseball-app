@@ -1,4 +1,5 @@
 import { RULE_CATALOG } from "./catalog";
+import { formatInnings, primaryPosition, slotInnings } from "./outs";
 import { MIN_IP, MIN_PA, type CompetitivePlan } from "./competitive";
 import { isRuleOn } from "./config";
 import { describeCustomRule, ordinal, OUTFIELD_GROUP } from "./custom";
@@ -104,9 +105,14 @@ export function explainCompetitive(
     const mine = lineup.slots
       .filter((s) => s.playerId === p.id && s.inning >= 1 && s.inning <= lineup.innings)
       .sort((a, b) => a.inning - b.inning);
-    const sat = mine.filter((s) => s.position === "BENCH").map((s) => s.inning);
-    const inf = mine.filter((s) => infield.has(s.position)).length;
-    const out = mine.filter((s) => outfield.has(s.position)).length;
+    // Innings split by outs count by their share: sat = the bench for 2 or more outs.
+    const sat = [...new Set(mine.map((s) => s.inning))].filter(
+      (n) => primaryPosition(mine.filter((s) => s.inning === n)) === "BENCH",
+    );
+    const share = (keep: (s: (typeof mine)[number]) => boolean) =>
+      formatInnings(mine.filter(keep).reduce((t, s) => t + slotInnings(s), 0));
+    const inf = share((s) => infield.has(s.position));
+    const out = share((s) => outfield.has(s.position));
     const summary = [
       sat.length ? `Sat the ${innList(sat)}` : "Plays every inning",
       `${inf} infield`,
@@ -173,7 +179,8 @@ export function explainCompetitive(
     const byPos = new Map<FieldPosition, number[]>();
     for (const s of mine) {
       if (s.position === "BENCH") continue;
-      byPos.set(s.position, [...(byPos.get(s.position) ?? []), s.inning]);
+      const list = byPos.get(s.position) ?? [];
+      if (!list.includes(s.inning)) byPos.set(s.position, [...list, s.inning]);
     }
     for (const [pos, ins] of byPos) {
       const when = `the ${innList(ins)}`;

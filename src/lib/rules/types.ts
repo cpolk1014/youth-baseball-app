@@ -32,6 +32,14 @@ export interface LineupSlot {
   inning: number;
   playerId: string;
   position: Position;
+  /**
+   * The outs of the inning this slot covers, [fromOut, toOut): absent means the whole inning
+   * (0 to 3). A mid-inning change after 1 out splits a kid's inning into 0–1 and 1–3. When
+   * the coach wasn't sure of the outs, the change counts as halfway (1.5) and `estimated`.
+   */
+  fromOut?: number;
+  toOut?: number;
+  estimated?: boolean;
 }
 
 export interface Lineup {
