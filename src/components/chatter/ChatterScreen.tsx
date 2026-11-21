@@ -10,7 +10,14 @@ import {
   POLL_OPTIONS_MAX,
   POLL_OPTION_MAX,
   checkPoll,
+  myReactions,
   nextVote,
+  oneEmoji,
+  QUICK_REACTIONS,
+  REACTIONS_PER_PERSON,
+  reactorNames,
+  toggleReaction,
+  type Reaction,
   pollOpen,
   pollStatus,
   tally,
@@ -106,6 +113,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
   const [results, setResults] = useState<Record<string, PollChoice[]>>({});
   const pollsAsked = useRef<Set<string>>(new Set());
   const [askingPoll, setAskingPoll] = useState(false);
+  const [reactingTo, setReactingTo] = useState<ChatterPost | null>(null);
 
   const bottom = useRef<HTMLDivElement>(null);
   const nearBottom = useRef(true);
@@ -267,6 +275,28 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
     if (fresh) setResults((prev) => ({ ...prev, ...fresh }));
   };
 
+  const reactTo = async (post: ChatterPost, emoji: string) => {
+    const on = !myReactions(post.reactions, me).includes(emoji);
+    if (on && myReactions(post.reactions, me).length >= REACTIONS_PER_PERSON) {
+      toast(`Up to ${REACTIONS_PER_PERSON} emoji on a post. Tap one of yours to take it back.`);
+      return;
+    }
+    // Show it right away; the post's live update brings the server's version.
+    const show = (reactions: Reaction[]) =>
+      setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, reactions } : p)));
+    show(toggleReaction(post.reactions, emoji, me));
+    const m = await backend();
+    try {
+      await m.react(post.id, emoji, on);
+    } catch (e) {
+      toast(message(e));
+      show(post.reactions);
+      const [fresh] = await m.loadPostsById([post.id]).catch(() => []);
+      if (fresh) setPosts((prev) => mergePosts(prev, [fresh]));
+    }
+  };
+  const nameOf = (id: string) => authorOf(id, team).name;
+
   // Links to the feed's thumbnails (the bucket is private; links last a few hours).
   useEffect(() => {
     const want = [
@@ -322,6 +352,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
 
   const mutedUntil =
     state?.mutedUntil && new Date(state.mutedUntil) > new Date() ? state.mutedUntil : null;
+  const canReact = paid && !mutedUntil && online;
 
   if (loaded && state && !state.agreedAt) {
     return (
@@ -417,6 +448,11 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
                 poll={polls[post.id] ?? null}
                 results={results[post.id]}
                 onVote={(poll, i) => void castVote(poll, i)}
+                me={me}
+                nameOf={nameOf}
+                canReact={canReact}
+                onReact={(emoji) => void reactTo(post, emoji)}
+                onAddReaction={() => setReactingTo(post)}
               />
             </li>
           ))}
@@ -463,6 +499,18 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
         />
       </div>
 
+      <Sheet open={reactingTo !== null} title="React" onClose={() => setReactingTo(null)}>
+        {reactingTo && (
+          <ReactionPicker
+            mine={myReactions(reactingTo.reactions, me)}
+            onPick={(emoji) => {
+              void reactTo(reactingTo, emoji);
+              setReactingTo(null);
+            }}
+          />
+        )}
+      </Sheet>
+
       <Sheet open={actionsFor !== null} title="Post" onClose={() => setActionsFor(null)}>
         {actionsFor && (
           <PostActions
@@ -479,6 +527,15 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
             }
             authorPausedUntil={paused.find((p) => p.userId === actionsFor.authorId)?.until ?? null}
             pinned={pin?.id === actionsFor.id}
+            canReact={canReact}
+            onReact={(emoji) => {
+              void reactTo(actionsFor, emoji);
+              setActionsFor(null);
+            }}
+            reactors={actionsFor.reactions.map((r) => ({
+              emoji: r.emoji,
+              names: reactorNames(r.userIds, me, nameOf),
+            }))}
             onDone={() => setActionsFor(null)}
             onReply={() => {
               setReplyTo(actionsFor);
@@ -646,6 +703,11 @@ function PostBubble({
   poll,
   results,
   onVote,
+  me,
+  nameOf,
+  canReact,
+  onReact,
+  onAddReaction,
 }: {
   post: ChatterPost;
   mine: boolean;
@@ -659,6 +721,11 @@ function PostBubble({
   poll: ChatterPoll | null;
   results: PollChoice[] | undefined;
   onVote: (poll: ChatterPoll, choice: number) => void;
+  me: string;
+  nameOf: (userId: string) => string;
+  canReact: boolean;
+  onReact: (emoji: string) => void;
+  onAddReaction: () => void;
 }) {
   const author = authorOf(post.authorId, team);
   if (post.removedAt) {
@@ -726,6 +793,94 @@ function PostBubble({
         </button>
       </div>
       {post.editedAt && <span className="text-xs text-slate-500">edited</span>}
+      {(post.reactions.length > 0 || canReact) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {post.reactions.map((r) => {
+            const tapped = r.userIds.includes(me);
+            const who = reactorNames(r.userIds, me, nameOf);
+            return (
+              <button
+                key={r.emoji}
+                onClick={() => canReact && onReact(r.emoji)}
+                disabled={!canReact}
+                title={who}
+                aria-label={`${r.emoji} ${r.userIds.length}: ${who}${canReact ? (tapped ? ". Tap to take yours back" : ". Tap to add yours") : ""}`}
+                aria-pressed={tapped}
+                className={`flex h-10 items-center gap-1 rounded-full border-2 px-3 text-lg leading-none disabled:opacity-100 ${tapped ? "border-[var(--team)] bg-[color-mix(in_srgb,var(--team)_12%,white)]" : "border-slate-200 bg-white active:bg-slate-100"}`}
+              >
+                <span>{r.emoji}</span>
+                <span className="text-base font-bold text-slate-700">{r.userIds.length}</span>
+              </button>
+            );
+          })}
+          {canReact && (
+            <button
+              onClick={onAddReaction}
+              aria-label="Add a reaction"
+              className="flex h-10 items-center rounded-full border-2 border-dashed border-slate-300 px-3 text-lg leading-none text-slate-500 active:bg-slate-100"
+            >
+              ☺<span className="ml-0.5 text-base font-bold">+</span>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Tap a common emoji, or pick any emoji from the phone's emoji keyboard. */
+function ReactionPicker({ mine, onPick }: { mine: string[]; onPick: (emoji: string) => void }) {
+  const [any, setAny] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const pick = (text: string) => {
+    const emoji = oneEmoji(text);
+    if (emoji) onPick(emoji);
+    else setError("That isn't one emoji. Tap the 😀 key on your keyboard and pick one.");
+  };
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-6 gap-2">
+        {QUICK_REACTIONS.map((e) => (
+          <button
+            key={e}
+            onClick={() => onPick(e)}
+            aria-pressed={mine.includes(e)}
+            className={`flex h-14 items-center justify-center rounded-xl border-2 text-3xl ${mine.includes(e) ? "border-[var(--team)] bg-[color-mix(in_srgb,var(--team)_12%,white)]" : "border-slate-200 bg-white active:bg-slate-100"}`}
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+      <form
+        className="flex gap-2"
+        onSubmit={(ev) => {
+          ev.preventDefault();
+          pick(any);
+        }}
+      >
+        <input
+          value={any}
+          onChange={(ev) => {
+            setError(null);
+            const v = ev.target.value;
+            setAny(v);
+            // Picking from the emoji keyboard sends it straight away.
+            if (oneEmoji(v)) onPick(oneEmoji(v)!);
+          }}
+          aria-label="Any emoji"
+          placeholder="Any emoji: tap 😀 on your keyboard"
+          enterKeyHint="send"
+          autoComplete="off"
+          className="h-14 min-w-0 flex-1 rounded-xl border-2 border-slate-300 px-3 text-xl"
+        />
+      </form>
+      {error && <p className="rounded-xl bg-red-50 p-3 text-base text-red-900">{error}</p>}
+      {mine.length > 0 && (
+        <p className="text-sm text-slate-500">
+          Yours: {mine.join(" ")}. Tap one again to take it back (up to {REACTIONS_PER_PERSON} on a
+          post).
+        </p>
+      )}
     </div>
   );
 }
@@ -911,6 +1066,9 @@ function PostActions({
   refreshModeration,
   openPoll,
   onClosePoll,
+  canReact,
+  onReact,
+  reactors,
 }: {
   post: ChatterPost;
   me: string;
@@ -926,6 +1084,9 @@ function PostActions({
   refreshModeration: () => Promise<void>;
   openPoll: boolean;
   onClosePoll: () => Promise<void>;
+  canReact: boolean;
+  onReact: (emoji: string) => void;
+  reactors: { emoji: string; names: string }[];
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -948,6 +1109,19 @@ function PostActions({
       <p className="line-clamp-3 rounded-xl bg-slate-50 p-3 text-base text-slate-700">
         <b>{authorName}:</b> {previewText(post, 200)}
       </p>
+      {canReact && (
+        <ReactionPicker mine={myReactions(post.reactions, me)} onPick={onReact} />
+      )}
+      {reactors.length > 0 && (
+        <ul className="flex flex-col gap-1 rounded-xl bg-slate-50 p-3 text-base">
+          {reactors.map((r) => (
+            <li key={r.emoji}>
+              <span className="mr-2 text-lg">{r.emoji}</span>
+              {r.names}
+            </li>
+          ))}
+        </ul>
+      )}
       {error && <p className="rounded-xl bg-red-50 p-3 text-base text-red-900">{error}</p>}
       <button className={primary} onClick={onReply}>
         ↩︎ Reply

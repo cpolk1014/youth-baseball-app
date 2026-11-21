@@ -16,7 +16,7 @@ import {
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 const COLUMNS =
-  "id, team_id, author_id, body, quote_post_id, kind, photos, created_at, edited_at, pinned_at, removed_at";
+  "id, team_id, author_id, body, quote_post_id, kind, photos, reactions, created_at, edited_at, pinned_at, removed_at";
 export const PAGE = 50;
 
 /** Device copy of the last posts, so the feed opens in the dugout with no signal. */
@@ -353,12 +353,13 @@ export function readCache(teamId: string): ChatterPost[] {
   try {
     const raw = window.localStorage.getItem(CACHE_PREFIX + teamId);
     const posts = raw ? (JSON.parse(raw) as unknown) : [];
-    // Copies saved before photos existed have none.
+    // Copies saved before photos or reactions existed have none.
     return Array.isArray(posts)
       ? (posts as ChatterPost[]).map((p) => ({
           ...p,
           kind: p.kind ?? "post",
           photos: p.photos ?? [],
+          reactions: p.reactions ?? [],
         }))
       : [];
   } catch {
@@ -372,6 +373,21 @@ export function writeCache(teamId: string, posts: ChatterPost[]): void {
   } catch {
     // Storage full or blocked: the feed still works online.
   }
+}
+
+// ── Reactions ──
+
+/** Put my emoji on a post (on) or take it back. The post's change comes back live. */
+export async function react(postId: string, emoji: string, on: boolean): Promise<void> {
+  fail(
+    (
+      await getBrowserSupabase().rpc("react_chatter_post", {
+        p_post: postId,
+        p_emoji: emoji,
+        p_on: on,
+      })
+    ).error,
+  );
 }
 
 // ── Polls ──

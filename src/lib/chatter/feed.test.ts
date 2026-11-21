@@ -10,7 +10,12 @@ import {
   feedItems,
   mergePosts,
   checkPoll,
+  myReactions,
   nextVote,
+  oneEmoji,
+  reactionsFrom,
+  reactorNames,
+  toggleReaction,
   photoPaths,
   pollOpen,
   pollStatus,
@@ -55,6 +60,7 @@ const post = (over: Partial<ChatterPost>): ChatterPost => ({
   quotePostId: null,
   kind: "post",
   photos: [],
+  reactions: [],
   createdAt: "2026-11-20T18:00:00.000Z",
   editedAt: null,
   pinnedAt: null,
@@ -253,5 +259,52 @@ describe("polls", () => {
     expect(previewText({ body: "Pizza or tacos?", photos: [], kind: "poll" })).toBe(
       "📊 Poll: Pizza or tacos?",
     );
+  });
+});
+
+describe("reactions", () => {
+  it("reads reactions from a row and skips anything odd", () => {
+    expect(
+      reactionsFrom([{ e: "👍", u: ["a", "b"] }, { e: "🔥", u: [] }, { e: 3, u: ["a"] }, null]),
+    ).toEqual([{ emoji: "👍", userIds: ["a", "b"] }]);
+    expect(reactionsFrom(undefined)).toEqual([]);
+  });
+
+  it("toggles my emoji on and off", () => {
+    const start = [{ emoji: "👍", userIds: ["a"] }];
+    const on = toggleReaction(start, "👍", "me");
+    expect(on).toEqual([{ emoji: "👍", userIds: ["a", "me"] }]);
+    expect(toggleReaction(on, "👍", "me")).toEqual(start);
+    expect(toggleReaction(start, "🔥", "me")).toEqual([...start, { emoji: "🔥", userIds: ["me"] }]);
+    expect(toggleReaction([{ emoji: "🔥", userIds: ["me"] }], "🔥", "me")).toEqual([]);
+  });
+
+  it("stops at 3 emoji per person", () => {
+    let r = toggleReaction([], "👍", "me");
+    r = toggleReaction(r, "🔥", "me");
+    r = toggleReaction(r, "⚾", "me");
+    expect(toggleReaction(r, "🎉", "me")).toBe(r);
+    expect(myReactions(r, "me")).toEqual(["👍", "🔥", "⚾"]);
+  });
+
+  it("takes exactly one emoji", () => {
+    expect(oneEmoji(" 🎉 ")).toBe("🎉");
+    expect(oneEmoji("❤️")).toBe("❤️");
+    expect(oneEmoji("👨‍👩‍👧")).toBe("👨‍👩‍👧");
+    expect(oneEmoji("🇺🇸")).toBe("🇺🇸");
+    expect(oneEmoji("1️⃣")).toBe("1️⃣");
+    expect(oneEmoji("👍🏽")).toBe("👍🏽");
+    expect(oneEmoji("🎉🎉")).toBeNull();
+    expect(oneEmoji("lol")).toBeNull();
+    expect(oneEmoji("7")).toBeNull();
+    expect(oneEmoji("")).toBeNull();
+  });
+
+  it("names who reacted", () => {
+    const name = (id: string) => ({ a: "Dana", b: "Pat", c: "Mike", d: "Sam" })[id] ?? "?";
+    expect(reactorNames(["a"], "me", name)).toBe("Dana");
+    expect(reactorNames(["a", "me"], "me", name)).toBe("You and Dana");
+    expect(reactorNames(["a", "b", "c"], "me", name)).toBe("Dana, Pat and Mike");
+    expect(reactorNames(["a", "b", "c", "d", "me"], "me", name)).toBe("You, Dana and 3 others");
   });
 });

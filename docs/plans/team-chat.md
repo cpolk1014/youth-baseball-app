@@ -244,7 +244,7 @@ phase ships on its own.
    club-wide chat is a separate, later feature.
 4. **Poll voters by name, or anonymous?** Recommended: by name, with an "anonymous poll"
    switch.
-5. **Reactions (👍 ❤️ 😂)?** They weren't asked for, but GroupMe has likes. They're cheap to
+5. **Reactions (👍 ❤️ 😂)?** BUILT (Nov 20): any emoji, up to 3 per person per post. Originally: they weren't asked for, but GroupMe has likes. They're cheap to
    add in phase 1.
 6. **Photos: who can post by default?** Recommended: everyone, with coaches able to switch it
    to staff only. Also: is 90 days after the season the right time to delete them?

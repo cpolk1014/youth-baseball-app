@@ -2222,6 +2222,51 @@ do $$ begin
   raise exception 'should have failed' using errcode = 'T0001';
 exception when insufficient_privilege then raise notice 'ok: outsiders can''t vote';
 end $$;
+
+-- Chatter reactions (on the coach's poll post).
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select public.react_chatter_post((select id from poll_t), '👍', true);
+select public.react_chatter_post((select id from poll_t), '👍', true);
+select public.react_chatter_post((select id from poll_t), '🇺🇸', true);
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.react_chatter_post((select id from poll_t), '👍', true);
+select pg_temp.expect((select reactions -> 0 ->> 'e' = '👍' and jsonb_array_length(reactions -> 0 -> 'u') = 2
+  and reactions -> 1 ->> 'e' = '🇺🇸' and jsonb_array_length(reactions) = 2
+  from public.chatter_post where id = (select id from poll_t)), 'reactions add up on the post, oldest emoji first');
+select pg_temp.expect((select count(*) from public.chatter_reaction) = 3, 'the team sees who reacted');
+do $$ begin
+  perform public.react_chatter_post((select id from poll_t), 'lol', true);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when invalid_parameter_value then raise notice 'ok: reactions are emoji, not words';
+end $$;
+do $$ begin
+  perform public.react_chatter_post((select id from poll_t), '<b>', true);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when invalid_parameter_value then raise notice 'ok: no markup in reactions';
+end $$;
+select public.react_chatter_post((select id from poll_t), '🔥', true);
+select public.react_chatter_post((select id from poll_t), '⚾', true);
+do $$ begin
+  perform public.react_chatter_post((select id from poll_t), '🎉', true);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when invalid_parameter_value then raise notice 'ok: up to 3 emoji per person per post';
+end $$;
+select public.react_chatter_post((select id from poll_t), '👍', false);
+select pg_temp.expect((select jsonb_array_length(reactions -> 0 -> 'u') = 1 from public.chatter_post where id = (select id from poll_t)), 'taking a reaction back');
+do $$ begin
+  update public.chatter_post set reactions = '[{"e":"💩","u":[]}]' where id = (select id from poll_t);
+  if exists (select 1 from public.chatter_post where reactions::text like '%💩%') then
+    raise exception 'FAIL: reactions written directly' using errcode = 'T0001';
+  end if;
+  raise notice 'ok: reactions change only through react_chatter_post';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select count(*) from public.chatter_reaction) = 0, 'outsiders see no reactions');
+do $$ begin
+  perform public.react_chatter_post((select id from poll_t), '👍', true);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: outsiders can''t react';
+end $$;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'chatter-photos') = 0, 'outsiders see no photos');
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);

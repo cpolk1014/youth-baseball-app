@@ -28,6 +28,7 @@ export interface ChatterPost {
   quotePostId: string | null;
   kind: "post" | "poll";
   photos: ChatterPhoto[];
+  reactions: Reaction[];
   createdAt: string;
   editedAt: string | null;
   pinnedAt: string | null;
@@ -42,6 +43,7 @@ export interface ChatterPostRow {
   quote_post_id: string | null;
   kind?: string;
   photos?: unknown;
+  reactions?: unknown;
   created_at: string;
   edited_at: string | null;
   pinned_at: string | null;
@@ -57,6 +59,7 @@ export function postFromRow(r: ChatterPostRow): ChatterPost {
     quotePostId: r.quote_post_id,
     kind: r.kind === "poll" ? "poll" : "post",
     photos: photosFrom(r.photos),
+    reactions: reactionsFrom(r.reactions),
     createdAt: r.created_at,
     editedAt: r.edited_at,
     pinnedAt: r.pinned_at,
@@ -72,6 +75,76 @@ function photosFrom(value: unknown): ChatterPhoto[] {
     if (typeof path !== "string" || typeof thumb !== "string") return [];
     return [{ path, thumb, w: typeof w === "number" ? w : 0, h: typeof h === "number" ? h : 0 }];
   });
+}
+
+// ── Reactions ──
+
+/** One emoji on a post and who tapped it (first to tap first). */
+export interface Reaction {
+  emoji: string;
+  userIds: string[];
+}
+
+/** Different emoji one person can put on a post (the database says the same). */
+export const REACTIONS_PER_PERSON = 3;
+/** The row of one-tap choices; any other emoji comes from the phone's emoji keyboard. */
+export const QUICK_REACTIONS = ["👍", "❤️", "😂", "🔥", "⚾", "👏"] as const;
+
+export function reactionsFrom(value: unknown): Reaction[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((r): Reaction[] => {
+    if (!r || typeof r !== "object") return [];
+    const { e, u } = r as Record<string, unknown>;
+    if (typeof e !== "string" || !Array.isArray(u)) return [];
+    const userIds = u.filter((id): id is string => typeof id === "string");
+    return userIds.length ? [{ emoji: e, userIds }] : [];
+  });
+}
+
+/** The emoji I've put on a post. */
+export const myReactions = (reactions: Reaction[], userId: string): string[] =>
+  reactions.filter((r) => r.userIds.includes(userId)).map((r) => r.emoji);
+
+/** The post's reactions after I tap an emoji (on if I hadn't, off if I had), for showing it
+ *  before the server answers. Unchanged when I'm already at the limit. */
+export function toggleReaction(reactions: Reaction[], emoji: string, userId: string): Reaction[] {
+  const had = reactions.some((r) => r.emoji === emoji && r.userIds.includes(userId));
+  if (had) {
+    return reactions
+      .map((r) => (r.emoji === emoji ? { ...r, userIds: r.userIds.filter((id) => id !== userId) } : r))
+      .filter((r) => r.userIds.length > 0);
+  }
+  if (myReactions(reactions, userId).length >= REACTIONS_PER_PERSON) return reactions;
+  const at = reactions.findIndex((r) => r.emoji === emoji);
+  if (at < 0) return [...reactions, { emoji, userIds: [userId] }];
+  return reactions.map((r, i) => (i === at ? { ...r, userIds: [...r.userIds, userId] } : r));
+}
+
+/** The single emoji someone typed or picked, or null when it isn't exactly one emoji. */
+export function oneEmoji(text: string): string | null {
+  const t = text.trim();
+  if (!t || t.length > 16) return null;
+  const parts =
+    typeof Intl !== "undefined" && "Segmenter" in Intl
+      ? [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(t)].map((p) => p.segment)
+      : [t];
+  if (parts.length !== 1) return null;
+  const g = parts[0]!;
+  const pictographic = /\p{Extended_Pictographic}/u.test(g);
+  const flag = /^\p{Regional_Indicator}{2}$/u.test(g);
+  const keycap = /^[0-9#*]\uFE0F?\u20E3$/u.test(g);
+  if (!pictographic && !flag && !keycap) return null;
+  return /[\p{L}\s<>&"'`\\]/u.test(g) ? null : g;
+}
+
+/** "Dana, Pat and 3 others" for who tapped an emoji; "You" first when I did. */
+export function reactorNames(userIds: string[], me: string, nameOf: (id: string) => string): string {
+  const names = [
+    ...(userIds.includes(me) ? ["You"] : []),
+    ...userIds.filter((id) => id !== me).map(nameOf),
+  ];
+  if (names.length <= 3) return joinNames(names).replace(" & ", " and ");
+  return `${names.slice(0, 2).join(", ")} and ${names.length - 2} others`;
 }
 
 /** What a post says in one line: its words, or its photos. */
