@@ -16,7 +16,7 @@ import {
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 const COLUMNS =
-  "id, team_id, author_id, body, quote_post_id, kind, photos, reactions, created_at, edited_at, pinned_at, removed_at";
+  "id, team_id, author_id, body, quote_post_id, kind, photos, reactions, club, created_at, edited_at, pinned_at, removed_at";
 export const PAGE = 50;
 
 /** Device copy of the last posts, so the feed opens in the dugout with no signal. */
@@ -360,6 +360,7 @@ export function readCache(teamId: string): ChatterPost[] {
           kind: p.kind ?? "post",
           photos: p.photos ?? [],
           reactions: p.reactions ?? [],
+          club: p.club ?? null,
         }))
       : [];
   } catch {

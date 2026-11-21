@@ -2267,6 +2267,68 @@ do $$ begin
   raise exception 'should have failed' using errcode = 'T0001';
 exception when insufficient_privilege then raise notice 'ok: outsiders can''t react';
 end $$;
+
+-- Club posts to teams.
+reset role;
+create temp table code_was as select expires_on from public.club_code where team_id = '00000000-0000-4000-8000-000000000001';
+update public.club_code set expires_on = current_date + 30 where team_id = '00000000-0000-4000-8000-000000000001';
+grant select on code_was to authenticated;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
+create temp table cpost as select public.send_club_chatter_post((select org from club_t),
+  array['00000000-0000-4000-8000-000000000001'::uuid, 'dddddddd-0000-4000-8000-000000000001'::uuid], 'Tryouts are July 12.') as id;
+create temp table cpoll as select public.send_club_chatter_post((select org from club_t),
+  array['00000000-0000-4000-8000-000000000001'::uuid], 'Fundraiser Saturday?', array['Yes', 'No']) as id;
+select pg_temp.expect((select teams = 1 from public.club_chatter_posts((select org from club_t)) where id = (select id from cpost)), 'a club post goes only to the club''s teams');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select club ->> 'name' = 'Traction Canes' and author_id is null from public.chatter_post where club_post_id = (select id from cpost)), 'the team gets its own copy, marked with the club');
+select pg_temp.expect((select count(*) from public.club_chatter_post) = 0, 'families don''t see the club''s own rows');
+select public.react_chatter_post((select id from public.chatter_post where club_post_id = (select id from cpost)), '👍', true);
+select public.vote_chatter_poll((select id from public.chatter_post where club_post_id = (select id from cpoll)), array[0]);
+insert into public.chatter_post (team_id, author_id, body, club_post_id, club)
+values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 'Fake club post', (select id from cpost), '{"name":"Traction Canes"}');
+select pg_temp.expect((select club is null and club_post_id is null from public.chatter_post where body = 'Fake club post'), 'people can''t make a post look like the club''s');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+insert into public.chatter_post (team_id, author_id, body, quote_post_id)
+values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'We''ll be there',
+  (select id from public.chatter_post where club_post_id = (select id from cpost)));
+do $$ begin
+  perform public.remove_chatter_post((select id from public.chatter_post where club_post_id = (select id from cpost)));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: team coaches can''t take down a club post';
+end $$;
+do $$ begin
+  perform public.close_chatter_poll((select id from public.chatter_post where club_post_id = (select id from cpoll)));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: team coaches can''t close a club poll';
+end $$;
+do $$ begin
+  perform public.send_club_chatter_post((select org from club_t), array['00000000-0000-4000-8000-000000000001'::uuid], 'Hi');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: team coaches don''t post for the club';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
+select pg_temp.expect((select replies = 1 and reactions = '[{"e": "👍", "n": 1}]'::jsonb from public.club_chatter_posts((select org from club_t)) where id = (select id from cpost)), 'the club sees totals across teams');
+select pg_temp.expect((select votes = array[1, 0] and voters = 1 from public.club_chatter_posts((select org from club_t)) where id = (select id from cpoll)), 'the club sees poll votes added up');
+select pg_temp.expect((select count(*) from public.chatter_post where team_id = '00000000-0000-4000-8000-000000000001') = 0, 'the club never reads a team''s Chatter');
+select public.close_club_chatter_poll((select id from cpoll));
+select public.remove_club_chatter_post((select id from cpost));
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select removed_at is not null and body = '' from public.chatter_post where club_post_id = (select id from cpost)), 'the club takes its post down from every team');
+do $$ begin
+  perform public.vote_chatter_poll((select id from public.chatter_post where club_post_id = (select id from cpoll)), array[1]);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: the club closes its poll everywhere';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+do $$ begin
+  perform public.send_club_chatter_post((select org from club_t), array['00000000-0000-4000-8000-000000000001'::uuid], 'Hi');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: outsiders don''t post for the club';
+end $$;
+reset role;
+update public.club_code set expires_on = (select expires_on from code_was) where team_id = '00000000-0000-4000-8000-000000000001';
+set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 select pg_temp.expect((select count(*) from storage.objects where bucket_id = 'chatter-photos') = 0, 'outsiders see no photos');
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);

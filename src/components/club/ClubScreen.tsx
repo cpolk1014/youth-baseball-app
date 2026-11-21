@@ -14,6 +14,7 @@ import { AppShell, Loading } from "../AppShell";
 import { Sheet } from "../Sheet";
 import { TeamBadge } from "../TeamBadge";
 import { ClubAwardsTab } from "./ClubAwardsTab";
+import { ClubChatterTab } from "./ClubChatterTab";
 import { ClubGroupMeTab } from "./ClubGroupMeTab";
 import { ClubLibraryTab } from "./ClubLibraryTab";
 import { ClubLookTab } from "./ClubLookTab";
@@ -73,9 +74,10 @@ export function ClubScreen() {
   );
 }
 
-type Tab = "teams" | "awards" | "look" | "library" | "groupme";
+type Tab = "teams" | "chatter" | "awards" | "look" | "library" | "groupme";
 const TABS: [Tab, string][] = [
   ["teams", "Teams"],
+  ["chatter", "Chatter"],
   ["awards", "Awards"],
   ["look", "Look"],
   ["library", "Library"],
@@ -88,7 +90,7 @@ function ClubTabs({ clubId, clubName }: { clubId: string; clubName: string }) {
     <>
       <div
         role="tablist"
-        className="mb-4 grid grid-cols-5 gap-1 rounded-xl border-2 border-[var(--team)] p-1"
+        className="mb-4 grid grid-cols-3 gap-1 rounded-xl border-2 border-[var(--team)] p-1 sm:grid-cols-6"
       >
         {TABS.map(([id, label]) => (
           <button
@@ -105,6 +107,7 @@ function ClubTabs({ clubId, clubName }: { clubId: string; clubName: string }) {
         ))}
       </div>
       {tab === "teams" && <ClubDashboard clubId={clubId} clubName={clubName} />}
+      {tab === "chatter" && <ClubChatterTab clubId={clubId} />}
       {tab === "awards" && <ClubAwardsTab clubId={clubId} clubName={clubName} />}
       {tab === "look" && <ClubLookTab clubId={clubId} />}
       {tab === "library" && <ClubLibraryTab clubId={clubId} />}

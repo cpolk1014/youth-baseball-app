@@ -710,3 +710,92 @@ export async function pickClubAward(
 export async function unpickClubAward(awardId: string, teamId: string): Promise<void> {
   check(await getBrowserSupabase().rpc("unpick_club_award", { p_award: awardId, p_team: teamId }));
 }
+
+// ── Club posts to teams' Chatter ──
+
+export interface ClubChatterPost {
+  id: string;
+  body: string;
+  kind: "post" | "poll";
+  options: string[];
+  multi: boolean;
+  anonymous: boolean;
+  closesAt: string | null;
+  closedAt: string | null;
+  createdAt: string;
+  removedAt: string | null;
+  teams: number;
+  replies: number;
+  reactions: { emoji: string; count: number }[];
+  /** Votes per choice, added up across teams (polls only). */
+  votes: number[];
+  voters: number;
+}
+
+/** Send one post (or a poll, with options) to the picked club teams' Chatter. */
+export async function sendClubChatterPost(
+  clubId: string,
+  teamIds: string[],
+  body: string,
+  poll?: { options: string[]; multi: boolean; anonymous: boolean; closesAt: string | null },
+): Promise<string> {
+  return check<string>(
+    await getBrowserSupabase().rpc("send_club_chatter_post", {
+      p_org: clubId,
+      p_team_ids: teamIds,
+      p_body: body,
+      p_options: poll?.options ?? null,
+      p_multi: poll?.multi ?? false,
+      p_anonymous: poll?.anonymous ?? false,
+      p_closes_at: poll?.closesAt ?? null,
+    }),
+  );
+}
+
+/** The club's latest posts with totals across teams (no names, no team conversations). */
+export async function clubChatterPosts(clubId: string): Promise<ClubChatterPost[]> {
+  const rows = check<
+    {
+      id: string;
+      body: string;
+      kind: string;
+      options: string[] | null;
+      multi: boolean;
+      anonymous: boolean;
+      closes_at: string | null;
+      closed_at: string | null;
+      created_at: string;
+      removed_at: string | null;
+      teams: number;
+      replies: number;
+      reactions: { e: string; n: number }[] | null;
+      votes: number[] | null;
+      voters: number | null;
+    }[]
+  >(await getBrowserSupabase().rpc("club_chatter_posts", { p_org: clubId }));
+  return rows.map((r) => ({
+    id: r.id,
+    body: r.body,
+    kind: r.kind === "poll" ? "poll" : "post",
+    options: r.options ?? [],
+    multi: r.multi,
+    anonymous: r.anonymous,
+    closesAt: r.closes_at,
+    closedAt: r.closed_at,
+    createdAt: r.created_at,
+    removedAt: r.removed_at,
+    teams: r.teams,
+    replies: r.replies,
+    reactions: (r.reactions ?? []).map((x) => ({ emoji: x.e, count: x.n })),
+    votes: r.votes ?? [],
+    voters: r.voters ?? 0,
+  }));
+}
+
+export async function removeClubChatterPost(id: string): Promise<void> {
+  check(await getBrowserSupabase().rpc("remove_club_chatter_post", { p_id: id }));
+}
+
+export async function closeClubChatterPoll(id: string): Promise<void> {
+  check(await getBrowserSupabase().rpc("close_club_chatter_poll", { p_id: id }));
+}

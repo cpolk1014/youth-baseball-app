@@ -6,6 +6,8 @@ import {
   canEdit,
   canModerate,
   canRemove,
+  clubFrom,
+  clubInitials,
   dayLabel,
   feedItems,
   mergePosts,
@@ -61,6 +63,7 @@ const post = (over: Partial<ChatterPost>): ChatterPost => ({
   kind: "post",
   photos: [],
   reactions: [],
+  club: null,
   createdAt: "2026-11-20T18:00:00.000Z",
   editedAt: null,
   pinnedAt: null,
@@ -306,5 +309,33 @@ describe("reactions", () => {
     expect(reactorNames(["a", "me"], "me", name)).toBe("You and Dana");
     expect(reactorNames(["a", "b", "c"], "me", name)).toBe("Dana, Pat and Mike");
     expect(reactorNames(["a", "b", "c", "d", "me"], "me", name)).toBe("You, Dana and 3 others");
+  });
+});
+
+describe("club posts", () => {
+  it("reads the club a post is from", () => {
+    expect(clubFrom({ name: "Traction Canes", logo: "club/x/logo.png", color: "#c8102e" })).toEqual({
+      name: "Traction Canes",
+      logo: "club/x/logo.png",
+      color: "#c8102e",
+    });
+    expect(clubFrom({ name: "Canes", logo: null, color: "red" })).toEqual({
+      name: "Canes",
+      logo: null,
+      color: null,
+    });
+    expect(clubFrom(null)).toBeNull();
+    expect(clubFrom({ name: " " })).toBeNull();
+  });
+
+  it("keeps club posts up: no one on the team removes them", () => {
+    const club = { name: "Canes", logo: null, color: null };
+    expect(canRemove(post({ authorId: null, club }), "u-coach", "owner")).toBe(false);
+    expect(canEdit(post({ authorId: null, club }), "u-coach")).toBe(false);
+  });
+
+  it("makes initials", () => {
+    expect(clubInitials("Traction Canes")).toBe("TC");
+    expect(clubInitials("canes")).toBe("CA");
   });
 });

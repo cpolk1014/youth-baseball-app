@@ -10,6 +10,7 @@ import {
   POLL_OPTIONS_MAX,
   POLL_OPTION_MAX,
   checkPoll,
+  clubInitials,
   myReactions,
   nextVote,
   oneEmoji,
@@ -38,6 +39,7 @@ import {
   type ChatterPost,
   type ReportReason,
 } from "@/lib/chatter/feed";
+import { logoUrl } from "@/lib/branding/logo";
 import { useAppData } from "@/lib/data/store";
 import type { AppData } from "@/lib/data/types";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -517,7 +519,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
             post={actionsFor}
             me={me}
             role={role}
-            authorName={authorOf(actionsFor.authorId, team).name}
+            authorName={actionsFor.club?.name ?? authorOf(actionsFor.authorId, team).name}
             authorPausable={
               moderator &&
               actionsFor.authorId !== null &&
@@ -554,6 +556,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
               actionsFor.kind === "poll" &&
               !!polls[actionsFor.id] &&
               pollOpen(polls[actionsFor.id]!) &&
+              !actionsFor.club &&
               (actionsFor.authorId === me || moderator)
             }
             onClosePoll={async () => {
@@ -727,7 +730,10 @@ function PostBubble({
   onReact: (emoji: string) => void;
   onAddReaction: () => void;
 }) {
-  const author = authorOf(post.authorId, team);
+  const club = post.club;
+  const author = club
+    ? { name: club.name, role: "Club", staff: true }
+    : authorOf(post.authorId, team);
   if (post.removedAt) {
     return (
       <p id={`post-${post.id}`} className="px-3 text-base text-slate-500 italic">
@@ -738,9 +744,33 @@ function PostBubble({
   return (
     <div
       id={`post-${post.id}`}
-      className={`flex flex-col gap-1 rounded-2xl p-3 transition-shadow ${mine ? "bg-[color-mix(in_srgb,var(--team)_10%,white)]" : "bg-white"} border border-slate-200`}
+      style={club ? { ["--club" as string]: club.color ?? "#1B2A4A" } : undefined}
+      className={`flex flex-col gap-1 rounded-2xl p-3 transition-shadow ${club ? "border-2 border-l-8 border-[var(--club)] bg-[color-mix(in_srgb,var(--club)_7%,white)]" : `${mine ? "bg-[color-mix(in_srgb,var(--team)_10%,white)]" : "bg-white"} border border-slate-200`}`}
     >
-      {!grouped && (
+      {club && (
+        <div className="flex items-center gap-2">
+          {club.logo && logoUrl(club.logo) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl(club.logo)!}
+              alt=""
+              className="size-9 shrink-0 rounded-lg bg-white object-contain"
+            />
+          ) : (
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--club)] text-sm font-black text-white">
+              {clubInitials(club.name)}
+            </span>
+          )}
+          <span className="min-w-0 truncate font-bold">{club.name}</span>
+          <span className="shrink-0 rounded-full bg-[var(--club)] px-2 py-0.5 text-xs font-black tracking-wide text-white uppercase">
+            Club
+          </span>
+          <span className="ml-auto shrink-0 text-sm text-slate-500">
+            {timeLabel(post.createdAt)}
+          </span>
+        </div>
+      )}
+      {!grouped && !club && (
         <div className="flex items-baseline gap-2">
           <span className={`font-bold ${author.staff ? "text-[var(--team)]" : ""}`}>
             {author.name}
@@ -1109,9 +1139,7 @@ function PostActions({
       <p className="line-clamp-3 rounded-xl bg-slate-50 p-3 text-base text-slate-700">
         <b>{authorName}:</b> {previewText(post, 200)}
       </p>
-      {canReact && (
-        <ReactionPicker mine={myReactions(post.reactions, me)} onPick={onReact} />
-      )}
+      {canReact && <ReactionPicker mine={myReactions(post.reactions, me)} onPick={onReact} />}
       {reactors.length > 0 && (
         <ul className="flex flex-col gap-1 rounded-xl bg-slate-50 p-3 text-base">
           {reactors.map((r) => (
@@ -1201,7 +1229,7 @@ function PostActions({
             </div>
           </div>
         ))}
-      {post.authorId !== me && (
+      {post.authorId !== me && !post.club && (
         <button className={secondary} onClick={onReport}>
           🚩 Report
         </button>

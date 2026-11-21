@@ -170,6 +170,27 @@ Once Fungo hosts the chat, we hold what parents post. The first version needs al
 - **Terms and Privacy updates** (`docs/legal/`): community rules, what we keep and for how
   long, and that removed members lose access. Craig's lawyer reads these before launch.
 
+### 8. Club Chatter (asked for after the Nov 20 demo)
+
+Clubs post the same thing to a coaches GroupMe and to every team's GroupMe. Fungo does both
+from one place, with two audiences kept apart.
+
+**8a. Club posts to teams (BUILT, Nov 20).** On the club page's Chatter tab, a club admin
+writes one post or poll and picks teams (all, or some). Each team gets its own copy in its
+Chatter, shown with the club's logo, name, color stripe and a "Club" badge. Replies,
+reactions and votes stay inside each team. The club sees only totals: teams, replies,
+reactions, poll votes added up, never names or what anyone wrote. Clubs pay, so team coaches
+can't take down, edit or close a club post; only the club takes it down (from every team at
+once) or closes its poll. Team coaches can pin it. An "Also post to their GroupMe groups"
+checkbox sends the same text through the club's existing GroupMe posting. Photos on club posts
+aren't built yet.
+
+**8b. Club coaches (next).** One feed per club for the director, club admins and the
+**coaches** (owner and coach roles, not managers) of every team holding the club's active
+code. Everything in it (posts, replies, reactions, polls) is visible to all of them across
+teams; parents never see it. A separate menu item, "Club coaches", under Chatter, so nobody
+mistakes it for their team's feed. The club tab's audience picker gets a "Coaches" choice.
+
 ## How it fits with GroupMe
 
 - **Run both for a season.** Each team picks **Fungo chat**, **GroupMe**, or **both** in team

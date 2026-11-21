@@ -29,6 +29,8 @@ export interface ChatterPost {
   kind: "post" | "poll";
   photos: ChatterPhoto[];
   reactions: Reaction[];
+  /** Set on a club's post to the team: who it's from (the club, not a person). */
+  club: ClubTag | null;
   createdAt: string;
   editedAt: string | null;
   pinnedAt: string | null;
@@ -44,6 +46,7 @@ export interface ChatterPostRow {
   kind?: string;
   photos?: unknown;
   reactions?: unknown;
+  club?: unknown;
   created_at: string;
   edited_at: string | null;
   pinned_at: string | null;
@@ -60,6 +63,7 @@ export function postFromRow(r: ChatterPostRow): ChatterPost {
     kind: r.kind === "poll" ? "poll" : "post",
     photos: photosFrom(r.photos),
     reactions: reactionsFrom(r.reactions),
+    club: clubFrom(r.club),
     createdAt: r.created_at,
     editedAt: r.edited_at,
     pinnedAt: r.pinned_at,
@@ -75,6 +79,32 @@ function photosFrom(value: unknown): ChatterPhoto[] {
     if (typeof path !== "string" || typeof thumb !== "string") return [];
     return [{ path, thumb, w: typeof w === "number" ? w : 0, h: typeof h === "number" ? h : 0 }];
   });
+}
+
+/** The club a club post is from: its name, logo (team-logos path) and main color. */
+export interface ClubTag {
+  name: string;
+  logo: string | null;
+  color: string | null;
+}
+
+export function clubFrom(value: unknown): ClubTag | null {
+  if (!value || typeof value !== "object") return null;
+  const { name, logo, color } = value as Record<string, unknown>;
+  if (typeof name !== "string" || !name.trim()) return null;
+  return {
+    name,
+    logo: typeof logo === "string" && logo ? logo : null,
+    color: typeof color === "string" && /^#[0-9a-fA-F]{6}$/.test(color) ? color : null,
+  };
+}
+
+/** A club's initials for its badge when it has no logo: "Traction Canes" → "TC". */
+export function clubInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  return (
+    words.length > 1 ? words[0]![0]! + words[1]![0]! : (words[0] ?? "?").slice(0, 2)
+  ).toUpperCase();
 }
 
 // ── Reactions ──
@@ -111,7 +141,9 @@ export function toggleReaction(reactions: Reaction[], emoji: string, userId: str
   const had = reactions.some((r) => r.emoji === emoji && r.userIds.includes(userId));
   if (had) {
     return reactions
-      .map((r) => (r.emoji === emoji ? { ...r, userIds: r.userIds.filter((id) => id !== userId) } : r))
+      .map((r) =>
+        r.emoji === emoji ? { ...r, userIds: r.userIds.filter((id) => id !== userId) } : r,
+      )
       .filter((r) => r.userIds.length > 0);
   }
   if (myReactions(reactions, userId).length >= REACTIONS_PER_PERSON) return reactions;
@@ -126,7 +158,9 @@ export function oneEmoji(text: string): string | null {
   if (!t || t.length > 16) return null;
   const parts =
     typeof Intl !== "undefined" && "Segmenter" in Intl
-      ? [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(t)].map((p) => p.segment)
+      ? [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(t)].map(
+          (p) => p.segment,
+        )
       : [t];
   if (parts.length !== 1) return null;
   const g = parts[0]!;
@@ -138,7 +172,11 @@ export function oneEmoji(text: string): string | null {
 }
 
 /** "Dana, Pat and 3 others" for who tapped an emoji; "You" first when I did. */
-export function reactorNames(userIds: string[], me: string, nameOf: (id: string) => string): string {
+export function reactorNames(
+  userIds: string[],
+  me: string,
+  nameOf: (id: string) => string,
+): string {
   const names = [
     ...(userIds.includes(me) ? ["You"] : []),
     ...userIds.filter((id) => id !== me).map(nameOf),
@@ -218,7 +256,8 @@ export function canEdit(post: ChatterPost, me: string | null, now = new Date()):
 }
 
 export function canRemove(post: ChatterPost, me: string | null, role: MemberRole): boolean {
-  if (post.removedAt) return false;
+  // Clubs pay: their posts stay up until the club takes them down.
+  if (post.removedAt || post.club) return false;
   return (me !== null && post.authorId === me) || isStaffRole(role);
 }
 
@@ -284,6 +323,9 @@ export function feedItems(posts: ChatterPost[], now = new Date()): FeedItem[] {
       !prev.removedAt &&
       !post.removedAt &&
       !post.quotePostId &&
+      !post.club &&
+      !prev.club &&
+      post.authorId !== null &&
       prev.authorId === post.authorId &&
       new Date(post.createdAt).getTime() - new Date(prev.createdAt).getTime() < 5 * 60_000;
     return { post, day: newDay ? day : null, grouped };

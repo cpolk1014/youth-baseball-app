@@ -1,0 +1,446 @@
+"use client";
+
+// Club posts to teams' Chatter: write once, every picked team gets its own copy. Replies,
+// reactions and votes stay inside each team; the club sees only totals.
+import { useEffect, useState } from "react";
+import {
+  BODY_MAX,
+  POLL_ENDS,
+  POLL_OPTIONS_MAX,
+  POLL_OPTION_MAX,
+  checkPoll,
+} from "@/lib/chatter/feed";
+import type { ClubChatterPost, ClubTarget } from "@/lib/data/club-backend";
+import { Loading } from "../AppShell";
+
+const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
+const field =
+  "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
+const GROUPME_MAX = 1000;
+const backend = () => import("@/lib/data/club-backend");
+const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+export function ClubChatterTab({ clubId }: { clubId: string }) {
+  const [targets, setTargets] = useState<ClubTarget[] | null>(null);
+  const [posts, setPosts] = useState<ClubChatterPost[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const [version, setVersion] = useState(0);
+  const refresh = () => setVersion((v) => v + 1);
+
+  useEffect(() => {
+    let current = true;
+    void (async () => {
+      const m = await backend();
+      const [t, p] = await Promise.all([m.clubTargets(clubId), m.clubChatterPosts(clubId)]);
+      if (!current) return;
+      setTargets(t);
+      setPosts(p);
+    })().catch((e: unknown) => current && setError(errorText(e)));
+    return () => {
+      current = false;
+    };
+  }, [clubId, version]);
+
+  if (!targets) return error ? <p className="text-base text-red-700">{error}</p> : <Loading />;
+
+  return (
+    <div className="flex flex-col gap-6">
+      {targets.length === 0 ? (
+        <p className="rounded-xl bg-slate-50 p-4 text-base">
+          No teams hold this season&apos;s club code yet. Once a team enters its code, you can post
+          to its Chatter here.
+        </p>
+      ) : (
+        <Compose clubId={clubId} targets={targets} onSent={refresh} />
+      )}
+      <Sent posts={posts} onChange={refresh} />
+    </div>
+  );
+}
+
+function Compose({
+  clubId,
+  targets,
+  onSent,
+}: {
+  clubId: string;
+  targets: ClubTarget[];
+  onSent: () => void;
+}) {
+  const [text, setText] = useState("");
+  const [teamIds, setTeamIds] = useState<string[]>(() => targets.map((t) => t.teamId));
+  const [isPoll, setIsPoll] = useState(false);
+  const [options, setOptions] = useState(["", ""]);
+  const [multi, setMulti] = useState(false);
+  const [anonymous, setAnonymous] = useState(false);
+  const [ends, setEnds] = useState<number | null>(null);
+  const [alsoGroupMe, setAlsoGroupMe] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState<string | null>(null);
+
+  const all = teamIds.length === targets.length;
+  const groupMeTeams = targets.filter((t) => t.connected && teamIds.includes(t.teamId));
+  const choices = options.map((o) => o.trim()).filter(Boolean);
+  const groupMeText = isPoll
+    ? `📊 ${text.trim()}\n${choices.map((c) => `• ${c}`).join("\n")}\nVote in Fungo's Chatter.`
+    : text.trim();
+  const groupMeTooLong = alsoGroupMe && groupMeText.length > GROUPME_MAX;
+
+  const send = async () => {
+    setError(null);
+    setSent(null);
+    if (isPoll) {
+      const problem = checkPoll(text, options);
+      if (problem) {
+        setError(problem);
+        return;
+      }
+    }
+    setBusy(true);
+    try {
+      const m = await backend();
+      await m.sendClubChatterPost(
+        clubId,
+        teamIds,
+        text,
+        isPoll
+          ? {
+              options: choices,
+              multi,
+              anonymous,
+              closesAt: ends ? new Date(Date.now() + ends * 3_600_000).toISOString() : null,
+            }
+          : undefined,
+      );
+      let note = `Posted to ${teamIds.length} team${teamIds.length === 1 ? "" : "s"}' Chatter.`;
+      if (alsoGroupMe && groupMeTeams.length) {
+        try {
+          const n = await m.clubPost(
+            clubId,
+            false,
+            groupMeTeams.map((t) => t.teamId),
+            groupMeText,
+          );
+          note += ` Also sent to ${n} GroupMe group${n === 1 ? "" : "s"}.`;
+        } catch (e) {
+          note += ` GroupMe didn't go: ${errorText(e)}`;
+        }
+      }
+      setSent(note);
+      setText("");
+      setOptions(["", ""]);
+      setIsPoll(false);
+      onSent();
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className={heading}>Post to teams&apos; Chatter</h2>
+      <p className="-mt-1 text-base text-slate-600">
+        Write it once. Each team gets its own copy, marked as from the club. Families reply and
+        react inside their own team; you see the totals below, never their conversations. Club posts
+        can&apos;t be taken down by teams.
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {(
+          [
+            [false, "📣 Post"],
+            [true, "📊 Poll"],
+          ] as const
+        ).map(([poll, label]) => (
+          <button
+            key={label}
+            onClick={() => setIsPoll(poll)}
+            aria-pressed={isPoll === poll}
+            className={`h-12 rounded-xl border-2 text-base font-bold ${isPoll === poll ? "border-[var(--team)] bg-[var(--team)] text-white" : "border-slate-300 bg-white"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          setSent(null);
+        }}
+        rows={isPoll ? 2 : 5}
+        maxLength={BODY_MAX}
+        aria-label={isPoll ? "Question" : "Message"}
+        placeholder={
+          isPoll
+            ? "Can your family help at the fundraiser Saturday?"
+            : "Tryouts for next season are July 12 at Chabills Field."
+        }
+        className="w-full rounded-xl border-2 border-slate-300 bg-white p-3 text-base focus:border-[var(--team)] focus:outline-none"
+      />
+      {isPoll && (
+        <div className="flex flex-col gap-2">
+          {options.map((o, i) => (
+            <input
+              key={i}
+              value={o}
+              maxLength={POLL_OPTION_MAX}
+              onChange={(e) => setOptions(options.map((x, j) => (j === i ? e.target.value : x)))}
+              placeholder={`Choice ${i + 1}`}
+              aria-label={`Choice ${i + 1}`}
+              className={field}
+            />
+          ))}
+          {options.length < POLL_OPTIONS_MAX && (
+            <button
+              onClick={() => setOptions([...options, ""])}
+              className="h-12 rounded-xl border-2 border-dashed border-slate-300 text-base font-bold text-slate-600"
+            >
+              + Add a choice
+            </button>
+          )}
+          <Check label="People can pick more than one" checked={multi} onChange={setMulti} />
+          <Check
+            label="Anonymous (no names, even inside each team)"
+            checked={anonymous}
+            onChange={setAnonymous}
+          />
+          <label className="flex flex-col gap-1 text-base font-semibold">
+            Closes
+            <select
+              value={ends ?? ""}
+              onChange={(e) => setEnds(e.target.value ? Number(e.target.value) : null)}
+              className={field}
+            >
+              {POLL_ENDS.map((p) => (
+                <option key={p.label} value={p.hours ?? ""}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-base font-semibold">Send to</legend>
+        <Check
+          label={`All club teams (${targets.length})`}
+          checked={all}
+          onChange={(on) => setTeamIds(on ? targets.map((t) => t.teamId) : [])}
+        />
+        <details className="rounded-xl border-2 border-slate-200 bg-white px-3">
+          <summary className="flex min-h-12 cursor-pointer items-center text-base font-semibold">
+            Pick teams ({teamIds.length} picked)
+          </summary>
+          <div className="flex flex-col gap-1 pb-2">
+            {targets.map((t) => (
+              <Check
+                key={t.teamId}
+                label={`${t.name} (${t.ageGroup})`}
+                checked={teamIds.includes(t.teamId)}
+                onChange={(on) =>
+                  setTeamIds(on ? [...teamIds, t.teamId] : teamIds.filter((x) => x !== t.teamId))
+                }
+              />
+            ))}
+          </div>
+        </details>
+        <Check
+          label={`Also post to their GroupMe groups (${groupMeTeams.length} connected)`}
+          checked={alsoGroupMe && groupMeTeams.length > 0}
+          disabled={groupMeTeams.length === 0}
+          onChange={setAlsoGroupMe}
+        />
+        {groupMeTooLong && (
+          <p className="text-sm font-semibold text-amber-800">
+            GroupMe takes up to 1,000 characters; this is {groupMeText.length}. Shorten it or skip
+            GroupMe.
+          </p>
+        )}
+      </fieldset>
+
+      {error && (
+        <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-800">
+          {error}
+        </p>
+      )}
+      {sent && (
+        <p
+          role="status"
+          className="rounded-xl bg-green-50 p-3 text-base font-semibold text-green-900"
+        >
+          {sent}
+        </p>
+      )}
+      <button
+        onClick={() => void send()}
+        disabled={!text.trim() || teamIds.length === 0 || busy || groupMeTooLong}
+        className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)] disabled:opacity-40"
+      >
+        {busy
+          ? "Posting…"
+          : `Post${isPoll ? " the poll" : ""} to ${teamIds.length} team${teamIds.length === 1 ? "" : "s"}`}
+      </button>
+      <p className="text-sm text-slate-600">Up to 20 club posts an hour.</p>
+    </section>
+  );
+}
+
+function Sent({ posts, onChange }: { posts: ClubChatterPost[]; onChange: () => void }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  if (posts.length === 0) return null;
+  const act = async (id: string, fn: () => Promise<void>) => {
+    setBusy(id);
+    setError(null);
+    try {
+      await fn();
+      onChange();
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className={heading}>Sent</h2>
+      {error && (
+        <p role="alert" className="rounded-xl bg-red-50 p-3 text-base font-semibold text-red-800">
+          {error}
+        </p>
+      )}
+      <ul className="flex flex-col gap-3">
+        {posts.map((p) => {
+          const open =
+            p.kind === "poll" &&
+            !p.removedAt &&
+            !p.closedAt &&
+            (!p.closesAt || new Date(p.closesAt) > new Date());
+          const total = p.votes.reduce((a, b) => a + b, 0);
+          return (
+            <li
+              key={p.id}
+              className={`flex flex-col gap-2 rounded-xl border-2 border-slate-200 bg-white p-4 ${p.removedAt ? "opacity-60" : ""}`}
+            >
+              <p className="text-sm text-slate-500">
+                {new Date(p.createdAt).toLocaleString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+                {" · "}
+                {p.teams} team{p.teams === 1 ? "" : "s"}
+                {p.removedAt ? " · Taken down" : ""}
+              </p>
+              <p className="text-base break-words whitespace-pre-wrap">
+                {p.kind === "poll" ? "📊 " : ""}
+                {p.body}
+              </p>
+              {p.kind === "poll" && (
+                <div className="flex flex-col gap-1.5">
+                  {p.options.map((o, i) => {
+                    const n = p.votes[i] ?? 0;
+                    const share = total ? n / total : 0;
+                    return (
+                      <div
+                        key={i}
+                        className="relative overflow-hidden rounded-lg bg-slate-100 px-3 py-2"
+                      >
+                        <div
+                          className="absolute inset-y-0 left-0 bg-[color-mix(in_srgb,var(--team)_25%,white)]"
+                          style={{ width: `${Math.round(share * 100)}%` }}
+                        />
+                        <div className="relative flex justify-between gap-2 text-base">
+                          <span className="min-w-0 break-words">{o}</span>
+                          <span className="shrink-0 font-bold tabular-nums">
+                            {n} · {Math.round(share * 100)}%
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <p className="text-sm text-slate-600">
+                    {p.voters} {p.voters === 1 ? "person" : "people"} voted
+                    {open ? "" : " · Closed"}
+                  </p>
+                </div>
+              )}
+              <p className="flex flex-wrap items-center gap-2 text-base text-slate-700">
+                {p.reactions.map((r) => (
+                  <span
+                    key={r.emoji}
+                    className="rounded-full border-2 border-slate-200 px-2.5 py-0.5"
+                  >
+                    {r.emoji} <b>{r.count}</b>
+                  </span>
+                ))}
+                <span className="text-sm text-slate-600">
+                  {p.replies} repl{p.replies === 1 ? "y" : "ies"} across teams
+                </span>
+              </p>
+              {!p.removedAt && (
+                <div className="flex flex-wrap gap-2">
+                  {open && (
+                    <button
+                      disabled={busy === p.id}
+                      onClick={() =>
+                        void act(p.id, async () => (await backend()).closeClubChatterPoll(p.id))
+                      }
+                      className="h-11 rounded-lg border-2 border-slate-400 bg-white px-3 text-base font-bold"
+                    >
+                      Close the poll
+                    </button>
+                  )}
+                  <button
+                    disabled={busy === p.id}
+                    onClick={() => {
+                      if (!window.confirm("Take this post down from every team's Chatter?")) return;
+                      void act(p.id, async () => (await backend()).removeClubChatterPost(p.id));
+                    }}
+                    className="h-11 rounded-lg border-2 border-red-300 bg-white px-3 text-base font-bold text-red-700"
+                  >
+                    Take down everywhere
+                  </button>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function Check({
+  label,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (on: boolean) => void;
+}) {
+  return (
+    <label
+      className={`flex min-h-12 items-center gap-3 text-base ${disabled ? "text-slate-400" : ""}`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="size-6 shrink-0"
+      />
+      {label}
+    </label>
+  );
+}
