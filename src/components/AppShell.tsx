@@ -20,6 +20,8 @@ import { initials, useMe, useMyTeamClubs } from "./account/useMe";
 import { useMyClubs } from "./club/useMyClubs";
 import { DataStatus } from "./DataStatus";
 import { OfflineSupport } from "./OfflineSupport";
+import { UnreadWatcher } from "./chatter/UnreadWatcher";
+import { badgeText, useUnread } from "@/lib/chatter/unread";
 import { TeamBadge } from "./TeamBadge";
 import { CommandPalette, useCommandPalette } from "./shell/CommandPalette";
 import { NavIcon, type IconName } from "./shell/NavIcon";
@@ -191,7 +193,7 @@ export function AppShell({
             aria-label="Menu"
             aria-haspopup="dialog"
             aria-expanded={menuOpen}
-            className="flex size-12 shrink-0 items-center justify-center rounded-lg active:bg-white/20 lg:hidden"
+            className="relative flex size-12 shrink-0 items-center justify-center rounded-lg active:bg-white/20 lg:hidden"
           >
             <svg
               viewBox="0 0 24 24"
@@ -204,6 +206,7 @@ export function AppShell({
             >
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
+            <MenuDot />
           </button>
         </header>
 
@@ -217,6 +220,7 @@ export function AppShell({
       <CommandPalette state={palette} />
       <ToastHost />
       <OfflineSupport />
+      <UnreadWatcher />
       <LoadingCurtain brand={brand} />
     </div>
   );
@@ -416,19 +420,39 @@ function MenuLinks({
     ) : (
       <p className={groupTitle}>{title}</p>
     );
-  const link = (x: { href: string; label: string; icon: IconName }, current: boolean) => (
-    <Link
-      key={x.href}
-      href={x.href}
-      onClick={onPick}
-      title={collapsed ? x.label : undefined}
-      aria-current={current ? "page" : undefined}
-      className={itemClass(variant, current, collapsed)}
-    >
-      {rail && <NavIcon name={x.icon} />}
-      {rail && collapsed ? <span className="sr-only">{x.label}</span> : x.label}
-    </Link>
-  );
+  const unread = useUnread();
+  const countFor = (href: string) =>
+    href === "/chatter" ? unread.chatter : href === "/coach-chatter" ? unread.coach : 0;
+  const link = (x: { href: string; label: string; icon: IconName }, current: boolean) => {
+    const n = countFor(x.href);
+    return (
+      <Link
+        key={x.href}
+        href={x.href}
+        onClick={onPick}
+        title={collapsed ? x.label : undefined}
+        aria-current={current ? "page" : undefined}
+        className={`${itemClass(variant, current, collapsed)} relative`}
+      >
+        {rail && <NavIcon name={x.icon} />}
+        {rail && collapsed ? <span className="sr-only">{x.label}</span> : x.label}
+        {n > 0 &&
+          (rail && collapsed ? (
+            <span
+              aria-label={`${n} new`}
+              className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-[#DC143C]"
+            />
+          ) : (
+            <span
+              aria-label={`${n} new`}
+              className="ml-auto rounded-full bg-[#DC143C] px-2 py-0.5 text-xs font-bold text-white tabular-nums"
+            >
+              {badgeText(n)}
+            </span>
+          ))}
+      </Link>
+    );
+  };
   // Parents have no Team settings: Coaches & parents sits under Roster instead.
   const parent = data?.me.role === "parent";
   // Anyone linked to a kid on this team: their player's page, right after the roster.
@@ -656,5 +680,17 @@ export function Loading() {
       </div>
       <span className="sr-only">Loading…</span>
     </div>
+  );
+}
+
+/** A red dot on the menu button when Chatter or Coach Chatter has new posts. */
+function MenuDot() {
+  const unread = useUnread();
+  if (unread.chatter + unread.coach === 0) return null;
+  return (
+    <span
+      aria-label="New posts"
+      className="absolute top-2 right-2 size-3 rounded-full border-2 border-white bg-[#DC143C]"
+    />
   );
 }

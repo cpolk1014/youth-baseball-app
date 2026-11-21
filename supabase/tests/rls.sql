@@ -2396,6 +2396,10 @@ values ((select org from club_t), 'aaaaaaaa-0000-4000-8000-000000000008', 'I do.
 select public.pin_club_coach_post((select id from ccpost), true);
 select pg_temp.expect((select count(*) from public.club_coach_post) = 2 and (select reactions -> 0 ->> 'e' = '👍' from public.club_coach_post where id = (select id from ccpost)), 'the director sees every coach''s posts and reactions');
 select pg_temp.expect((select label = 'Director' from public.club_coach_people((select org from club_t)) where user_id = 'aaaaaaaa-0000-4000-8000-000000000008'), 'the director shows as Director');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect(public.my_coach_chatter_unread() = 1, 'a coach sees the director''s reply as unread');
+select public.mark_coach_chatter_read((select org from club_t));
+select pg_temp.expect(public.my_coach_chatter_unread() = 0, 'opening Coach Chatter clears it');
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
 select pg_temp.expect(not public.club_coach_member((select org from club_t)), 'parents aren''t in the coaches feed');
 select pg_temp.expect((select count(*) from public.club_coach_post) = 0, 'parents never see the coaches feed');
@@ -2574,5 +2578,27 @@ exception when sqlstate 'P0430' then raise notice 'ok: the season AI budget stop
 end $$;
 reset role;
 delete from public.ai_usage;
+
+-- Notifications: subscriptions and settings are each person's own; Coach Chatter unread.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select public.save_push_subscription('https://push.example.test/abc', 'key', 'auth');
+insert into public.notify_pref (user_id, scope_id, category, enabled)
+values ('aaaaaaaa-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001', 'chatter', false);
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select count(*) from public.push_subscription) = 0 and (select count(*) from public.notify_pref) = 0, 'people see only their own subscriptions and settings');
+do $$ begin
+  insert into public.notify_pref (user_id, scope_id, category, enabled)
+  values ('aaaaaaaa-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001', 'chatter', true);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: nobody changes someone else''s notification settings';
+end $$;
+select public.save_push_subscription('https://push.example.test/abc', 'key2', 'auth2');
+select pg_temp.expect((select count(*) from public.push_subscription) = 1, 'a phone signed in as someone else moves to them');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from public.push_subscription) = 0, 'and stops notifying the person before');
+reset role;
+delete from public.push_subscription;
+delete from public.notify_pref;
 
 \echo ALL RLS TESTS PASSED

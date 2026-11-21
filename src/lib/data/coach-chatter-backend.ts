@@ -210,3 +210,14 @@ export async function myUserId(): Promise<string> {
   if (!id) throw new ChatterError("Sign in again to post.");
   return id;
 }
+
+/** New posts by others across every Coach Chatter I'm in (for the menu badge). */
+export async function myUnread(): Promise<number> {
+  const { data, error } = await getBrowserSupabase().rpc("my_coach_chatter_unread");
+  fail(error);
+  return typeof data === "number" ? data : 0;
+}
+
+export async function markRead(clubId: string): Promise<void> {
+  fail((await getBrowserSupabase().rpc("mark_coach_chatter_read", { p_org: clubId })).error);
+}

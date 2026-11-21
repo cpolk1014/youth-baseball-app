@@ -1,0 +1,49 @@
+"use client";
+
+// Keeps the Chatter and Coach Chatter badges current: on load, every minute while the app is
+// on screen, and when someone comes back to it. Signed-in (Supabase) mode only.
+import { useEffect } from "react";
+import { setUnread, setUnreadRefresher } from "@/lib/chatter/unread";
+import { useAppData, useStoreState } from "@/lib/data/store";
+
+const EVERY_MS = 60_000;
+
+export function UnreadWatcher() {
+  const data = useAppData();
+  const { mode } = useStoreState();
+  const teamId = data?.team.id ?? null;
+  const signedIn = mode === "supabase" && !!data?.me.userId;
+
+  useEffect(() => {
+    if (!signedIn) {
+      setUnread({ chatter: 0, coach: 0 });
+      return;
+    }
+    let stopped = false;
+    const load = async () => {
+      if (document.visibilityState !== "visible") return;
+      const [chatter, coaches] = await Promise.all([
+        import("@/lib/data/chatter-backend"),
+        import("@/lib/data/coach-chatter-backend"),
+      ]);
+      const [team, coach] = await Promise.all([
+        teamId ? chatter.unreadCount(teamId).catch(() => 0) : Promise.resolve(0),
+        coaches.myUnread().catch(() => 0),
+      ]);
+      if (!stopped) setUnread({ chatter: team, coach });
+    };
+    const run = () => void load();
+    setUnreadRefresher(run);
+    run();
+    const timer = window.setInterval(run, EVERY_MS);
+    document.addEventListener("visibilitychange", run);
+    return () => {
+      stopped = true;
+      setUnreadRefresher(null);
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", run);
+    };
+  }, [signedIn, teamId]);
+
+  return null;
+}

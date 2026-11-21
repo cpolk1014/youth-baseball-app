@@ -21,6 +21,7 @@ import {
   type Reaction,
 } from "@/lib/chatter/feed";
 import type { CoachClub, CoachPerson } from "@/lib/data/coach-chatter-backend";
+import { refreshUnread } from "@/lib/chatter/unread";
 import { useAppData } from "@/lib/data/store";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { AppShell, Loading } from "../AppShell";
@@ -28,6 +29,8 @@ import { Sheet } from "../Sheet";
 import { toast } from "../shell/Toast";
 import { Composer, EditForm, PhotoViewer, PostBubble, ReactionPicker } from "./ChatterScreen";
 import { preparePhoto } from "./photo";
+import { announce } from "@/lib/push/client";
+import { NotifyBar } from "./NotifyBar";
 
 const backend = () => import("@/lib/data/coach-chatter-backend");
 const chatter = () => import("@/lib/data/chatter-backend");
@@ -146,6 +149,7 @@ function Feed({ club, me }: { club: CoachClub; me: string }) {
         setPeople(who);
         setLoadError(null);
         scrollToEnd();
+        void m.markRead(clubId).then(refreshUnread, () => undefined);
       } catch (e) {
         if (!cancelled) setLoadError(message(e));
       } finally {
@@ -159,6 +163,8 @@ function Feed({ club, me }: { club: CoachClub; me: string }) {
             post.pinnedAt && !post.removedAt ? post : prev?.id === post.id ? null : prev,
           );
           if (nearBottom.current) scrollToEnd(true);
+          if (document.visibilityState === "visible")
+            void m.markRead(clubId).then(refreshUnread, () => undefined);
         },
         setOnline,
       );
@@ -271,6 +277,7 @@ function Feed({ club, me }: { club: CoachClub; me: string }) {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col">
+      <NotifyBar userId={me} scopeId={clubId} scopeName={club.name} category="coach_chatter" />
       <p className="mb-3 rounded-xl bg-slate-50 p-3 text-base text-slate-700">
         🔒 Only {club.name}&apos;s director, club admins and its teams&apos; coaches see this.
         Parents never do.
@@ -355,6 +362,7 @@ function Feed({ club, me }: { club: CoachClub; me: string }) {
               uploaded.push(await m.uploadPhoto(clubId, me, await preparePhoto(file)));
             }
             const post = await m.sendPost(clubId, me, body, replyTo?.id ?? null, uploaded);
+            announce("coach", post.id);
             setPosts((prev) => mergePosts(prev, [post]));
           } catch (e) {
             void c.deletePhotos(uploaded).catch(() => undefined);

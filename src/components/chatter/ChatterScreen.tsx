@@ -41,7 +41,8 @@ import {
   type ReportReason,
 } from "@/lib/chatter/feed";
 import { logoUrl } from "@/lib/branding/logo";
-import { useAppData } from "@/lib/data/store";
+import { refreshUnread } from "@/lib/chatter/unread";
+import { switchTeam, useAppData } from "@/lib/data/store";
 import type { AppData } from "@/lib/data/types";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { AppShell, Loading } from "../AppShell";
@@ -55,6 +56,8 @@ import type {
   PhotoSetting,
 } from "@/lib/data/chatter-backend";
 import { picturesFrom, preparePhoto } from "./photo";
+import { announce } from "@/lib/push/client";
+import { NotifyBar } from "./NotifyBar";
 
 const backend = () => import("@/lib/data/chatter-backend");
 const primary =
@@ -64,6 +67,16 @@ const secondary =
 
 export function ChatterScreen() {
   const data = useAppData();
+  // From a notification: open the team it's about (when it's one of mine).
+  // Once per visit, so switching teams by hand afterwards isn't undone.
+  const jumped = useRef(false);
+  const wantTeam = data?.myTeams.some((t) => t.id === teamFromUrl()) ? teamFromUrl() : null;
+  const currentTeam = data?.team.id;
+  useEffect(() => {
+    if (jumped.current || !wantTeam || !currentTeam) return;
+    jumped.current = true;
+    if (wantTeam !== currentTeam) switchTeam(wantTeam);
+  }, [wantTeam, currentTeam]);
   if (!data) {
     return (
       <AppShell title="Chatter" tab="chatter">
@@ -82,6 +95,9 @@ export function ChatterScreen() {
   }
   return <Chatter key={data.team.id} data={data} me={data.me.userId} />;
 }
+
+const teamFromUrl = () =>
+  typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("team");
 
 const message = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong.");
 
@@ -161,7 +177,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
         setPinned(pin);
         setState(mine);
         setLoadError(null);
-        if (mine.agreedAt) void m.markRead(teamId).catch(() => undefined);
+        if (mine.agreedAt) void m.markRead(teamId).then(refreshUnread, () => undefined);
         scrollToEnd();
         void refreshModeration().catch(() => undefined);
         void m
@@ -183,7 +199,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
           );
           if (nearBottom.current) scrollToEnd(true);
           if (document.visibilityState === "visible")
-            void m.markRead(teamId).catch(() => undefined);
+            void m.markRead(teamId).then(refreshUnread, () => undefined);
           if (moderator) void refreshModeration().catch(() => undefined);
         },
         setOnline,
@@ -393,6 +409,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
       }
     >
       <div className="mx-auto flex max-w-3xl flex-col">
+        <NotifyBar userId={me} scopeId={teamId} scopeName={data.team.name} category="chatter" />
         {moderator && reports.length > 0 && (
           <button
             onClick={() => setShowReports(true)}
@@ -497,6 +514,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
               throw e;
             }
             setPosts((prev) => mergePosts(prev, [post]));
+            announce("chatter", post.id);
             setReplyTo(null);
             scrollToEnd(true);
           }}
@@ -578,6 +596,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
             onSend={async (question, options, multi, anonymous, closesAt) => {
               const m = await backend();
               const id = await m.createPoll(teamId, question, options, multi, anonymous, closesAt);
+              announce("chatter", id);
               const [found] = await m.loadPostsById([id]);
               if (found) setPosts((prev) => mergePosts(prev, [found]));
               setAskingPoll(false);

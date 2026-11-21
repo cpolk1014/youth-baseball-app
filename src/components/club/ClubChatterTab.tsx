@@ -15,6 +15,7 @@ import {
 import type { ClubChatterPost, ClubTarget } from "@/lib/data/club-backend";
 import { Loading } from "../AppShell";
 import { picturesFrom, preparePhoto } from "../chatter/photo";
+import { announce } from "@/lib/push/client";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 const field =
@@ -151,10 +152,11 @@ function Compose({
         const mine = [];
         for (const file of files)
           mine.push(await cc.uploadPhoto(clubId, me, await preparePhoto(file)));
-        await cc.sendPost(clubId, me, text, null, mine);
+        const coachPost = await cc.sendPost(clubId, me, text, null, mine);
+        announce("coach", coachPost.id);
       }
-      if (teamIds.length)
-        await m.sendClubChatterPost(
+      if (teamIds.length) {
+        const clubPostId = await m.sendClubChatterPost(
           clubId,
           teamIds,
           text,
@@ -168,6 +170,8 @@ function Compose({
             : undefined,
           uploaded,
         );
+        announce("club", clubPostId);
+      }
       let note = `Posted to ${where}.`;
       if (alsoGroupMe && groupMeOk) {
         try {
