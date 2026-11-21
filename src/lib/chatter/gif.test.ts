@@ -35,6 +35,17 @@ describe("GIFs", () => {
     });
     expect(gifFromGiphy({ ...item, id: "bad id!" })).toBeNull();
     expect(gifFromGiphy({ id: "x", images: {} })).toBeNull();
+    // No still frame: the animated GIF stands in.
+    const noStill = gifFromGiphy({
+      ...item,
+      images: {
+        fixed_width: {
+          ...item.images.fixed_width,
+          url: "https://media2.giphy.com/media/abc123/200w.gif",
+        },
+      },
+    });
+    expect(noStill?.still).toBe("https://media2.giphy.com/media/abc123/200w.gif");
   });
 
   it("reads a post's GIF back, and only from GIPHY", () => {

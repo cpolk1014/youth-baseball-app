@@ -24,6 +24,18 @@ export function GifView({ gif }: { gif: ChatterGif }) {
   const reduced = useReducedMotion();
   const width = Math.min(260, gif.w * 1.3);
   const style = { width, aspectRatio: `${gif.w} / ${gif.h}` };
+  // Usually a short video; an animated GIF when GIPHY had no video for it.
+  if (!gif.mp4.endsWith(".mp4") && !reduced) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- GIPHY's animated GIF
+      <img
+        src={gif.mp4}
+        alt={gif.title || "GIF"}
+        style={style}
+        className="rounded-xl bg-slate-100"
+      />
+    );
+  }
   return reduced ? (
     // eslint-disable-next-line @next/next/no-img-element -- GIPHY's still frame
     <img

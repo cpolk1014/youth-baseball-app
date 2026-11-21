@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
     limit: String(PAGE),
     offset: String(offset),
     rating: "g",
-    bundle: "messaging_non_clips",
   });
   if (q) {
     params.set("q", q);
@@ -48,6 +47,17 @@ export async function GET(request: NextRequest) {
       pagination?: { total_count?: number; count?: number; offset?: number };
     };
     const gifs = (body.data ?? []).map(gifFromGiphy).filter((g) => g !== null);
+    if ((body.data?.length ?? 0) > 0 && gifs.length === 0) {
+      // Every result was dropped: log what GIPHY sent (field names only) to see why.
+      const first = body.data![0] as { images?: Record<string, Record<string, unknown>> };
+      console.warn(
+        "giphy results dropped",
+        JSON.stringify({
+          renditions: Object.keys(first.images ?? {}),
+          fixedWidth: Object.keys(first.images?.fixed_width ?? {}),
+        }),
+      );
+    }
     const total = body.pagination?.total_count ?? 0;
     return NextResponse.json(
       { gifs, next: offset + PAGE < total && offset + PAGE <= 500 ? offset + PAGE : null },

@@ -27,10 +27,13 @@ export function gifFromGiphy(item: unknown): ChatterGif | null {
     title?: unknown;
     images?: Record<string, Record<string, unknown> | undefined>;
   };
-  const fixed = g.images?.fixed_width;
-  const still = g.images?.fixed_width_still;
-  const mp4 = giphyLink(fixed?.mp4);
-  const stillUrl = giphyLink(still?.url);
+  // The 200-wide rendition; its still frame, or the animated GIF itself when there's none.
+  const fixed = g.images?.fixed_width ?? g.images?.fixed_width_downsampled;
+  // The clip the feed plays: the small video, or the animated GIF when there's no video.
+  const mp4 =
+    giphyLink(fixed?.mp4) ?? giphyLink(g.images?.original_mp4?.mp4) ?? giphyLink(fixed?.url);
+  const stillUrl =
+    giphyLink(g.images?.fixed_width_still?.url) ?? giphyLink(fixed?.webp) ?? giphyLink(fixed?.url);
   const w = Number(fixed?.width);
   const h = Number(fixed?.height);
   if (typeof g.id !== "string" || !/^[A-Za-z0-9]{1,40}$/.test(g.id)) return null;
