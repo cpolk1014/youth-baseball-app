@@ -2472,4 +2472,36 @@ delete from public.player_guardian where player_id = '00000000-0000-4000-8000-00
 delete from public.member where team_id = '00000000-0000-4000-8000-000000000001' and user_id = 'aaaaaaaa-0000-4000-8000-000000000003';
 delete from public.player where id = '00000000-0000-4000-8000-00000000a701';
 
+-- A player's link to a kid's record is the database's to set (security review H3).
+reset role;
+insert into public.player (id, team_id, name) values ('00000000-0000-4000-8000-00000000a702', '00000000-0000-4000-8000-000000000001', 'Record Kid');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+insert into public.player_guardian (player_id, user_id) values ('00000000-0000-4000-8000-00000000a702', 'aaaaaaaa-0000-4000-8000-000000000002');
+create temp table h3 as select athlete_id as a from public.player where id = '00000000-0000-4000-8000-00000000a702';
+grant select on h3 to authenticated;
+select pg_temp.expect((select a from h3) is not null, 'a parent linking still makes the kid''s record');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+insert into public.team (id, name, age_group, created_by) values ('eeeeeeee-0000-4000-8000-0000000000b1', 'Evil 10U', '10U', 'aaaaaaaa-0000-4000-8000-000000000003');
+insert into public.player (id, team_id, name, athlete_id) values ('eeeeeeee-0000-4000-8000-0000000000b4', 'eeeeeeee-0000-4000-8000-0000000000b1', 'Decoy', (select a from h3));
+select pg_temp.expect((select athlete_id is null from public.player where id = 'eeeeeeee-0000-4000-8000-0000000000b4'), 'a new player can''t come with someone else''s record');
+do $$ begin
+  update public.player set athlete_id = (select a from h3) where id = 'eeeeeeee-0000-4000-8000-0000000000b4';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a coach can''t point a player at another team''s kid''s record';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+do $$ begin
+  update public.player set athlete_id = null where id = '00000000-0000-4000-8000-00000000a702';
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a coach can''t unhook a kid from their record';
+end $$;
+update public.player set name = 'Record Kid Jr.' where id = '00000000-0000-4000-8000-00000000a702';
+select pg_temp.expect((select athlete_id = (select a from h3) from public.player where id = '00000000-0000-4000-8000-00000000a702'), 'editing a player leaves their record alone');
+reset role;
+delete from public.player where id = 'eeeeeeee-0000-4000-8000-0000000000b4';
+delete from public.team where id = 'eeeeeeee-0000-4000-8000-0000000000b1';
+delete from public.player_guardian where player_id = '00000000-0000-4000-8000-00000000a702';
+delete from public.player where id = '00000000-0000-4000-8000-00000000a702';
+
 \echo ALL RLS TESTS PASSED
