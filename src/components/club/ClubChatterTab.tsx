@@ -2,6 +2,7 @@
 
 // Club posts to teams' Chatter: write once, every picked team gets its own copy. Replies,
 // reactions and votes stay inside each team; the club sees only totals.
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   BODY_MAX,
@@ -21,11 +22,13 @@ const field =
 const GROUPME_MAX = 1000;
 const backend = () => import("@/lib/data/club-backend");
 const chatter = () => import("@/lib/data/chatter-backend");
+const coaches = () => import("@/lib/data/club-coaches-backend");
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function ClubChatterTab({ clubId }: { clubId: string }) {
   const [targets, setTargets] = useState<ClubTarget[] | null>(null);
   const [posts, setPosts] = useState<ClubChatterPost[]>([]);
+  const [coachesGroup, setCoachesGroup] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [version, setVersion] = useState(0);
@@ -35,10 +38,15 @@ export function ClubChatterTab({ clubId }: { clubId: string }) {
     let current = true;
     void (async () => {
       const m = await backend();
-      const [t, p] = await Promise.all([m.clubTargets(clubId), m.clubChatterPosts(clubId)]);
+      const [t, p, g] = await Promise.all([
+        m.clubTargets(clubId),
+        m.clubChatterPosts(clubId),
+        m.clubGroupMe(clubId).catch(() => null),
+      ]);
       if (!current) return;
       setTargets(t);
       setPosts(p);
+      setCoachesGroup(!!g);
     })().catch((e: unknown) => current && setError(errorText(e)));
     return () => {
       current = false;
@@ -49,13 +57,20 @@ export function ClubChatterTab({ clubId }: { clubId: string }) {
 
   return (
     <div className="flex flex-col gap-6">
+      <Link
+        href={`/club-coaches?club=${clubId}`}
+        className="flex min-h-14 items-center justify-between gap-3 rounded-xl border-2 border-[var(--team)] bg-white px-4 text-base font-bold text-[var(--team)]"
+      >
+        <span>💬 Open Club coaches, the club&apos;s chat with its coaches</span>
+        <span aria-hidden="true">→</span>
+      </Link>
       {targets.length === 0 ? (
         <p className="rounded-xl bg-slate-50 p-4 text-base">
           No teams hold this season&apos;s club code yet. Once a team enters its code, you can post
           to its Chatter here.
         </p>
       ) : (
-        <Compose clubId={clubId} targets={targets} onSent={refresh} />
+        <Compose clubId={clubId} targets={targets} coachesGroup={coachesGroup} onSent={refresh} />
       )}
       <Sent posts={posts} onChange={refresh} />
     </div>
@@ -65,12 +80,16 @@ export function ClubChatterTab({ clubId }: { clubId: string }) {
 function Compose({
   clubId,
   targets,
+  coachesGroup,
   onSent,
 }: {
   clubId: string;
   targets: ClubTarget[];
+  /** The club's coaches GroupMe group is connected. */
+  coachesGroup: boolean;
   onSent: () => void;
 }) {
+  const [toCoaches, setToCoaches] = useState(false);
   const [text, setText] = useState("");
   const [teamIds, setTeamIds] = useState<string[]>(() => targets.map((t) => t.teamId));
   const [isPoll, setIsPoll] = useState(false);
@@ -94,7 +113,17 @@ function Compose({
     : text.trim();
   const groupMeTooLong = alsoGroupMe && groupMeText.length > GROUPME_MAX;
   // GroupMe gets the words only; a photo-only post has none to send.
-  const groupMeOk = groupMeTeams.length > 0 && !!text.trim();
+  // Club coaches takes posts, not polls (polls go to teams).
+  const coachesOn = toCoaches && !isPoll;
+  const coachesGroupMe = coachesOn && coachesGroup;
+  const groupMeOk = (groupMeTeams.length > 0 || coachesGroupMe) && !!text.trim();
+  const groupMeCount = groupMeTeams.length + (coachesGroupMe ? 1 : 0);
+  const where = [
+    coachesOn ? "Club coaches" : "",
+    teamIds.length ? `${teamIds.length} team${teamIds.length === 1 ? "" : "s"}` : "",
+  ]
+    .filter(Boolean)
+    .join(" and ");
 
   const send = async () => {
     setError(null);
@@ -110,29 +139,41 @@ function Compose({
     const c = await chatter();
     const uploaded: Awaited<ReturnType<typeof c.uploadClubPhoto>>[] = [];
     try {
-      for (const file of files)
-        uploaded.push(await c.uploadClubPhoto(clubId, await preparePhoto(file)));
+      // Teams' copies share one set of club photos (only needed when posting to teams).
+      if (teamIds.length)
+        for (const file of files)
+          uploaded.push(await c.uploadClubPhoto(clubId, await preparePhoto(file)));
       const m = await backend();
-      await m.sendClubChatterPost(
-        clubId,
-        teamIds,
-        text,
-        isPoll
-          ? {
-              options: choices,
-              multi,
-              anonymous,
-              closesAt: ends ? new Date(Date.now() + ends * 3_600_000).toISOString() : null,
-            }
-          : undefined,
-        uploaded,
-      );
-      let note = `Posted to ${teamIds.length} team${teamIds.length === 1 ? "" : "s"}' Chatter.`;
+      if (coachesOn) {
+        const cc = await coaches();
+        const me = await cc.myUserId();
+        // The coaches feed keeps its photos in the poster's own folder there.
+        const mine = [];
+        for (const file of files)
+          mine.push(await cc.uploadPhoto(clubId, me, await preparePhoto(file)));
+        await cc.sendPost(clubId, me, text, null, mine);
+      }
+      if (teamIds.length)
+        await m.sendClubChatterPost(
+          clubId,
+          teamIds,
+          text,
+          isPoll
+            ? {
+                options: choices,
+                multi,
+                anonymous,
+                closesAt: ends ? new Date(Date.now() + ends * 3_600_000).toISOString() : null,
+              }
+            : undefined,
+          uploaded,
+        );
+      let note = `Posted to ${where}.`;
       if (alsoGroupMe && groupMeOk) {
         try {
           const n = await m.clubPost(
             clubId,
-            false,
+            coachesGroupMe,
             groupMeTeams.map((t) => t.teamId),
             groupMeText,
           );
@@ -288,6 +329,16 @@ function Compose({
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-base font-semibold">Send to</legend>
         <Check
+          label={
+            isPoll
+              ? "Club coaches (posts only; polls go to teams)"
+              : "Club coaches (the director and every team's coaches)"
+          }
+          checked={coachesOn}
+          disabled={isPoll}
+          onChange={setToCoaches}
+        />
+        <Check
           label={`All club teams (${targets.length})`}
           checked={all}
           onChange={(on) => setTeamIds(on ? targets.map((t) => t.teamId) : [])}
@@ -310,7 +361,7 @@ function Compose({
           </div>
         </details>
         <Check
-          label={`Also post to their GroupMe groups (${groupMeTeams.length} connected)`}
+          label={`Also post to GroupMe (${groupMeCount} group${groupMeCount === 1 ? "" : "s"} connected)`}
           checked={alsoGroupMe && groupMeOk}
           disabled={!groupMeOk}
           onChange={setAlsoGroupMe}
@@ -343,15 +394,13 @@ function Compose({
         onClick={() => void send()}
         disabled={
           (!text.trim() && (isPoll || files.length === 0)) ||
-          teamIds.length === 0 ||
+          (teamIds.length === 0 && !coachesOn) ||
           busy ||
           groupMeTooLong
         }
         className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)] disabled:opacity-40"
       >
-        {busy
-          ? "Posting…"
-          : `Post${isPoll ? " the poll" : ""} to ${teamIds.length} team${teamIds.length === 1 ? "" : "s"}`}
+        {busy ? "Posting…" : `Post${isPoll ? " the poll" : ""} to ${where || "…"}`}
       </button>
       <p className="text-sm text-slate-600">Up to 20 club posts an hour.</p>
     </section>

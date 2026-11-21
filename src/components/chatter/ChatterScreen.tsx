@@ -33,6 +33,7 @@ import {
   pinnedPost,
   previewText,
   timeLabel,
+  type Author,
   type ChatterPhoto,
   type ChatterPoll,
   type PollChoice,
@@ -297,7 +298,8 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
       if (fresh) setPosts((prev) => mergePosts(prev, [fresh]));
     }
   };
-  const nameOf = (id: string) => authorOf(id, team).name;
+  const authorFor = (id: string | null) => authorOf(id, team);
+  const nameOf = (id: string) => authorFor(id).name;
 
   // Links to the feed's thumbnails (the bucket is private; links last a few hours).
   useEffect(() => {
@@ -441,7 +443,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
                 post={post}
                 mine={post.authorId === me}
                 grouped={grouped}
-                team={team}
+                authorFor={authorFor}
                 quote={findPost(post.quotePostId)}
                 onQuoteTap={jumpTo}
                 onActions={() => setActionsFor(post)}
@@ -693,11 +695,11 @@ function Agree({ onAgree }: { onAgree: () => Promise<void> }) {
   );
 }
 
-function PostBubble({
+export function PostBubble({
   post,
   mine,
   grouped,
-  team,
+  authorFor,
   quote,
   onQuoteTap,
   onActions,
@@ -715,7 +717,8 @@ function PostBubble({
   post: ChatterPost;
   mine: boolean;
   grouped: boolean;
-  team: Parameters<typeof authorOf>[1];
+  /** Who wrote a post, as this feed knows them. */
+  authorFor: (authorId: string | null) => Author;
   quote: ChatterPost | null;
   onQuoteTap: (id: string) => void;
   onActions: () => void;
@@ -731,9 +734,7 @@ function PostBubble({
   onAddReaction: () => void;
 }) {
   const club = post.club;
-  const author = club
-    ? { name: club.name, role: "Club", staff: true }
-    : authorOf(post.authorId, team);
+  const author = club ? { name: club.name, role: "Club", staff: true } : authorFor(post.authorId);
   if (post.removedAt) {
     return (
       <p id={`post-${post.id}`} className="px-3 text-base text-slate-500 italic">
@@ -790,7 +791,7 @@ function PostBubble({
         >
           {quote && !quote.removedAt ? (
             <>
-              <span className="block text-sm font-bold">{authorOf(quote.authorId, team).name}</span>
+              <span className="block text-sm font-bold">{authorFor(quote.authorId).name}</span>
               <span className="line-clamp-2 text-sm text-slate-600">{previewText(quote, 160)}</span>
             </>
           ) : (
@@ -806,7 +807,7 @@ function PostBubble({
           <div className="min-w-0 flex-1">
             <p className="text-lg font-bold break-words whitespace-pre-wrap">📊 {post.body}</p>
             {poll ? (
-              <PollCard poll={poll} results={results} team={team} onVote={onVote} />
+              <PollCard poll={poll} results={results} authorFor={authorFor} onVote={onVote} />
             ) : (
               <p className="text-base text-slate-500">Loading the poll…</p>
             )}
@@ -859,7 +860,13 @@ function PostBubble({
 }
 
 /** Tap a common emoji, or pick any emoji from the phone's emoji keyboard. */
-function ReactionPicker({ mine, onPick }: { mine: string[]; onPick: (emoji: string) => void }) {
+export function ReactionPicker({
+  mine,
+  onPick,
+}: {
+  mine: string[];
+  onPick: (emoji: string) => void;
+}) {
   const [any, setAny] = useState("");
   const [error, setError] = useState<string | null>(null);
   const pick = (text: string) => {
@@ -915,7 +922,7 @@ function ReactionPicker({ mine, onPick }: { mine: string[]; onPick: (emoji: stri
   );
 }
 
-function Composer({
+export function Composer({
   disabledReason,
   offline,
   replyTo,
@@ -924,7 +931,9 @@ function Composer({
   canPostPhotos,
   onNewPoll,
   onSend,
+  placeholder = "Post to the team…",
 }: {
+  placeholder?: string;
   disabledReason: string | null;
   offline: boolean;
   replyTo: ChatterPost | null;
@@ -1067,8 +1076,8 @@ function Composer({
               }}
               maxLength={BODY_MAX}
               rows={Math.min(5, Math.max(1, text.split("\n").length))}
-              placeholder="Post to the team…"
-              aria-label="Post to the team"
+              placeholder={placeholder}
+              aria-label={placeholder.replace(/…$/, "")}
               className="block w-full resize-none rounded-xl border-2 border-slate-300 bg-white py-3 pr-12 pl-3 text-lg"
             />
           </MicField>
@@ -1258,7 +1267,7 @@ function PostActions({
   );
 }
 
-function EditForm({
+export function EditForm({
   post,
   onSave,
 }: {
@@ -1480,7 +1489,7 @@ function PhotoGrid({
 }
 
 /** Full-screen photos: swipe or arrows between them, Save to the phone. */
-function PhotoViewer({
+export function PhotoViewer({
   photos,
   start,
   thumbs,
@@ -1692,19 +1701,19 @@ function SettingChoice({
 function PollCard({
   poll,
   results,
-  team,
+  authorFor,
   onVote,
 }: {
   poll: ChatterPoll;
   results: PollChoice[] | undefined;
-  team: Parameters<typeof authorOf>[1];
+  authorFor: (authorId: string | null) => Author;
   onVote: (poll: ChatterPoll, choice: number) => void;
 }) {
   const open = pollOpen(poll);
   const t = tally(poll, results);
   const status = pollStatus(poll);
   const names = (ids: string[]) => {
-    const all = ids.map((id) => authorOf(id, team).name);
+    const all = ids.map((id) => authorFor(id).name);
     return all.length > 3 ? `${all.slice(0, 3).join(", ")} +${all.length - 3}` : all.join(", ");
   };
   return (

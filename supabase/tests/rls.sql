@@ -2357,6 +2357,60 @@ do $$ begin
   raise exception 'should have failed' using errcode = 'T0001';
 exception when insufficient_privilege then raise notice 'ok: outsiders don''t post for the club';
 end $$;
+-- Club coaches feed.
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect(public.club_coach_member((select org from club_t)), 'a club team''s coach is in the coaches feed');
+insert into public.club_coach_post (organization_id, author_id, body)
+values ((select org from club_t), 'aaaaaaaa-0000-4000-8000-000000000001', 'Who has extra catcher gear?');
+create temp table ccpost as select id from public.club_coach_post where body = 'Who has extra catcher gear?';
+grant select on ccpost to authenticated;
+select public.react_club_coach_post((select id from ccpost), '👍', true);
+select pg_temp.expect((select label like 'Coach · %' from public.club_coach_people((select org from club_t)) where user_id = 'aaaaaaaa-0000-4000-8000-000000000001'), 'coaches show with their club teams');
+select pg_temp.expect((select count(*) from public.my_coach_clubs()) = 1, 'coaches find their club''s feed');
+do $$ begin
+  perform public.pin_club_coach_post((select id from ccpost), true);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: only club admins pin in the coaches feed';
+end $$;
+do $$ begin
+  insert into public.club_coach_post (organization_id, author_id, body, photos)
+  values ((select org from club_t), 'aaaaaaaa-0000-4000-8000-000000000001', 'x',
+    jsonb_build_array(jsonb_build_object('path', 'clubcoaches/' || (select org from club_t) || '/aaaaaaaa-0000-4000-8000-000000000008/a.jpg',
+      'thumb', 'clubcoaches/' || (select org from club_t) || '/aaaaaaaa-0000-4000-8000-000000000008/a.jpg')));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: coaches post only their own photos';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
+insert into public.club_coach_post (organization_id, author_id, body, quote_post_id)
+values ((select org from club_t), 'aaaaaaaa-0000-4000-8000-000000000008', 'I do. Grab it Saturday.', (select id from ccpost));
+select public.pin_club_coach_post((select id from ccpost), true);
+select pg_temp.expect((select count(*) from public.club_coach_post) = 2 and (select reactions -> 0 ->> 'e' = '👍' from public.club_coach_post where id = (select id from ccpost)), 'the director sees every coach''s posts and reactions');
+select pg_temp.expect((select label = 'Director' from public.club_coach_people((select org from club_t)) where user_id = 'aaaaaaaa-0000-4000-8000-000000000008'), 'the director shows as Director');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect(not public.club_coach_member((select org from club_t)), 'parents aren''t in the coaches feed');
+select pg_temp.expect((select count(*) from public.club_coach_post) = 0, 'parents never see the coaches feed');
+do $$ begin
+  insert into public.club_coach_post (organization_id, author_id, body)
+  values ((select org from club_t), 'aaaaaaaa-0000-4000-8000-000000000002', 'Hi coaches');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents can''t post in the coaches feed';
+end $$;
+reset role;
+insert into public.member (team_id, user_id, role) values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000003', 'manager');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect(not public.club_coach_member((select org from club_t)) and (select count(*) from public.club_coach_post) = 0, 'managers aren''t in the coaches feed');
+reset role;
+delete from public.member where team_id = '00000000-0000-4000-8000-000000000001' and user_id = 'aaaaaaaa-0000-4000-8000-000000000003';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+do $$ begin
+  perform public.remove_club_coach_post((select id from public.club_coach_post where body like 'I do%'));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: coaches remove only their own posts';
+end $$;
+select public.remove_club_coach_post((select id from ccpost));
+select pg_temp.expect((select removed_at is not null and body = '' and pinned_at is null from public.club_coach_post where id = (select id from ccpost)), 'authors remove their own posts');
 reset role;
 update public.club_code set expires_on = (select expires_on from code_was) where team_id = '00000000-0000-4000-8000-000000000001';
 set role authenticated;

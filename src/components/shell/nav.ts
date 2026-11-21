@@ -13,6 +13,7 @@ export type Tab =
   | "season"
   | "stats"
   | "chatter"
+  | "clubcoaches"
   | "roster"
   | "money"
   | "awards"
@@ -31,6 +32,8 @@ export type MenuTab = {
   needsTournament?: boolean;
   /** Only while the team's club has awards live (coaches and managers). */
   needsAwards?: boolean;
+  /** Coaches of a team holding a club code: the club's coaches chat. */
+  needsClubCoach?: boolean;
 };
 
 /** The menu's sections, grouped by what people are doing. */
@@ -47,6 +50,13 @@ export const GAME_DAY: MenuTab[] = [
 ];
 export const TEAM: MenuTab[] = [
   { id: "chatter", href: "/chatter", label: "Chatter", icon: "chatter" },
+  {
+    id: "clubcoaches",
+    href: "/club-coaches",
+    label: "Club coaches",
+    icon: "chatter",
+    needsClubCoach: true,
+  },
   { id: "roster", href: "/roster", label: "Roster", icon: "roster" },
   { id: "practice", href: "/practices", label: "Practice", icon: "practice" },
   { id: "plays", href: "/plays", label: "Plays", icon: "plays" },
@@ -74,7 +84,8 @@ export function visibleTabs(tabs: MenuTab[], data: AppData | null): MenuTab[] {
       (!t.staffOnly || staff) &&
       (!t.notParents || data?.me.role !== "parent") &&
       (!t.needsTournament || staff || (data?.tournamentCount ?? 0) > 0) &&
-      (!t.needsAwards || (data?.clubAwards?.length ?? 0) > 0),
+      (!t.needsAwards || (data?.clubAwards?.length ?? 0) > 0) &&
+      (!t.needsClubCoach || (!!data && isCoach(data.me.role) && data.plan?.kind === "club")),
   );
 }
 
