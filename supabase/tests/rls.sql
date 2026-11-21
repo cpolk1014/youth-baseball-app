@@ -2664,4 +2664,27 @@ delete from public.player_guardian where player_id = '00000000-0000-4000-8000-00
 delete from public.player where id = '00000000-0000-4000-8000-00000000a801';
 delete from public.notify_event;
 
+-- The home-screen badge: everything unread across a person's Chatter.
+reset role;
+insert into public.chatter_member (team_id, user_id, agreed_at, last_read_at)
+values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', now(), now() - interval '1 hour')
+on conflict (team_id, user_id) do update set agreed_at = now(), last_read_at = now() - interval '1 hour';
+insert into public.chatter_post (team_id, author_id, body) values
+  ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'Badge one'),
+  ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'Badge two'),
+  ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 'My own');
+select pg_temp.expect((select unread from public.unread_badges(array['aaaaaaaa-0000-4000-8000-000000000002'::uuid])) >= 2,
+  'the badge counts others'' new posts');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select public.mark_chatter_read('00000000-0000-4000-8000-000000000001');
+select pg_temp.expect(public.my_unread_total() = 0, 'reading the team''s Chatter clears it');
+do $$ begin
+  perform public.unread_badges(array['aaaaaaaa-0000-4000-8000-000000000001'::uuid]);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: only the server reads other people''s badges';
+end $$;
+reset role;
+delete from public.chatter_post where body in ('Badge one', 'Badge two', 'My own');
+
 \echo ALL RLS TESTS PASSED

@@ -56,11 +56,17 @@ export async function sendPush(
   const skip = new Set((off ?? []).map((r) => r.user_id as string));
   const want = userIds.filter((id) => !skip.has(id));
   if (!want.length) return 0;
-  const { data: subs } = await admin
-    .from("push_subscription")
-    .select("id, endpoint, p256dh, auth")
-    .in("user_id", want);
-  const body = JSON.stringify(payload);
+  const [{ data: subs }, { data: badges }] = await Promise.all([
+    admin
+      .from("push_subscription")
+      .select("id, user_id, endpoint, p256dh, auth")
+      .in("user_id", want),
+    // Each person's own unread count, so the home-screen icon updates while Fungo is closed.
+    admin.rpc("unread_badges", { p_users: want }),
+  ]);
+  const unread = new Map(
+    ((badges ?? []) as { user_id: string; unread: number }[]).map((b) => [b.user_id, b.unread]),
+  );
   const gone: string[] = [];
   let sent = 0;
   await Promise.all(
@@ -71,7 +77,7 @@ export async function sendPush(
             endpoint: s.endpoint as string,
             keys: { p256dh: s.p256dh as string, auth: s.auth as string },
           },
-          body,
+          JSON.stringify({ ...payload, badge: unread.get(s.user_id as string) ?? undefined }),
           { TTL: 60 * 60 * 12, urgency: "normal" },
         );
         sent++;

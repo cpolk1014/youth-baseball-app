@@ -16,8 +16,13 @@ export function setUnread(next: Partial<UnreadCounts>): void {
   if (merged.chatter === counts.chatter && merged.coach === counts.coach) return;
   counts = merged;
   for (const l of listeners) l();
-  // The number on the home-screen icon, where the phone supports it.
-  const total = counts.chatter + counts.coach;
+}
+
+/**
+ * The number on the home-screen icon, where the phone supports it: everything unread across
+ * all the person's teams and clubs (notifications set it too while the app is closed).
+ */
+export function setIconCount(total: number): void {
   const nav = typeof navigator !== "undefined" ? navigator : null;
   try {
     if (nav && "setAppBadge" in nav) {
