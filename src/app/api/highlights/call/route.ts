@@ -1,3 +1,5 @@
+import { elevenCents } from "@/lib/ai/cost";
+import { beginAi } from "@/lib/ai/ledger.server";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import {
@@ -9,7 +11,6 @@ import {
   playOf,
 } from "@/lib/highlights/plays";
 import { AudioMakerError, makeAnnouncement } from "@/lib/pa/elevenlabs";
-import { limitProblem } from "@/lib/pa/limits";
 import { numberWords } from "@/lib/pa/speech";
 import { getServerSupabase } from "@/lib/supabase/server";
 
@@ -99,6 +100,8 @@ export async function POST(request: NextRequest) {
       `Play: ${play.label}.`,
       detail ? `Parent's note about the play: ${detail}` : "No extra note.",
     ].join("\n");
+    const ai = await beginAi(supabase, { teamId: player.team_id }, "highlight_write");
+    if (!ai.ok) return ai.response;
     const client = new Anthropic();
     try {
       const response = await client.beta.messages.create({
@@ -110,6 +113,7 @@ export async function POST(request: NextRequest) {
         output_config: { effort: "low", format: { type: "json_schema", schema: SCHEMA } },
         messages: [{ role: "user", content: context }],
       });
+      await ai.call.claude(response, "claude-opus-5-5");
       if (response.stop_reason === "refusal") {
         return errorResponse(422, "That one couldn't be written. Try a different note.");
       }
@@ -135,6 +139,8 @@ export async function POST(request: NextRequest) {
       if (error instanceof SyntaxError)
         return errorResponse(502, "Something went wrong. Try again.");
       throw error;
+    } finally {
+      await ai.call.finish();
     }
   }
 
@@ -143,18 +149,17 @@ export async function POST(request: NextRequest) {
   const script = str(body?.script, MAX_CALL + 20);
   const problem = callProblem(script);
   if (problem) return errorResponse(400, problem);
-  const { data: usage, error: usageError } = await supabase
-    .rpc("pa_usage", { p_team_id: player.team_id, p_kind: "announce" })
-    .single<{ mine: number; team: number }>();
-  if (usageError || !usage) return errorResponse(500, "Couldn't check today's limit. Try again.");
-  const tooMany = limitProblem("announce", usage, { staff: false });
-  if (tooMany) return errorResponse(429, tooMany);
+  const ai = await beginAi(supabase, { teamId: player.team_id }, "highlight_voice");
+  if (!ai.ok) return ai.response;
   let audio: ArrayBuffer;
   try {
     audio = await makeAnnouncement(script);
+    await ai.call.charge(elevenCents.speech(script.length));
   } catch (e) {
     if (e instanceof AudioMakerError) return errorResponse(e.status, e.message);
     throw e;
+  } finally {
+    await ai.call.finish();
   }
   await supabase
     .from("pa_generation")

@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { beginAi } from "@/lib/ai/ledger.server";
 import { NextResponse, type NextRequest } from "next/server";
 import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import { ROSTER_PROMPT } from "@/lib/roster-import/prompt";
@@ -75,6 +76,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const ai = await beginAi(supabase, { teamId }, "roster");
+  if (!ai.ok) return ai.response;
   const client = new Anthropic();
   try {
     const response = await client.beta.messages.create({
@@ -98,6 +101,7 @@ export async function POST(request: NextRequest) {
         },
       ],
     });
+    await ai.call.claude(response, "claude-opus-5-5");
     if (response.stop_reason === "refusal") {
       return errorResponse(422, "This file couldn't be read as a roster.");
     }
@@ -116,5 +120,7 @@ export async function POST(request: NextRequest) {
       return errorResponse(502, "The roster came back in an unexpected format. Try again.");
     }
     throw error;
+  } finally {
+    await ai.call.finish();
   }
 }

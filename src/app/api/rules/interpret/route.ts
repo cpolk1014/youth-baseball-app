@@ -1,5 +1,6 @@
 import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import Anthropic from "@anthropic-ai/sdk";
+import { beginAi } from "@/lib/ai/ledger.server";
 import { NextResponse, type NextRequest } from "next/server";
 import { interpretationSchema, type Interpretation } from "@/lib/rules/interpret";
 import { getServerSupabase } from "@/lib/supabase/server";
@@ -72,6 +73,8 @@ export async function POST(request: NextRequest) {
     ...answers.map((a, i) => `Coach's answer to your question ${i + 1}: ${a}`),
   ].join("\n");
 
+  const ai = await beginAi(supabase, { teamId }, "rules");
+  if (!ai.ok) return ai.response;
   const client = new Anthropic();
   try {
     const response = await client.beta.messages.create({
@@ -87,6 +90,7 @@ export async function POST(request: NextRequest) {
       },
       messages: [{ role: "user", content: context }],
     });
+    await ai.call.claude(response, "claude-opus-5-5");
     if (response.stop_reason === "refusal") {
       return errorResponse(422, "That couldn't be turned into a rule. Try wording it differently.");
     }
@@ -110,5 +114,7 @@ export async function POST(request: NextRequest) {
       return errorResponse(502, "The answer came back in an unexpected format. Try again.");
     }
     throw error;
+  } finally {
+    await ai.call.finish();
   }
 }

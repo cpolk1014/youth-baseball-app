@@ -179,3 +179,19 @@ export async function teamPhones(teamId: string): Promise<Map<string, string>> {
   );
   return new Map(rows.map((r) => [r.user_id, r.phone]));
 }
+
+/** Whether the signed-in person can still start a team with the free trial (one per person). */
+export async function myTrialLeft(): Promise<boolean> {
+  const { data, error } = await getBrowserSupabase().rpc("my_trial_left");
+  return !error && data === true;
+}
+
+/** What the team has used of its season AI budget (cents). */
+export async function teamAiBudget(
+  teamId: string,
+): Promise<{ usedCents: number; budgetCents: number } | null> {
+  const { data, error } = await getBrowserSupabase().rpc("team_ai_budget", { p_team: teamId });
+  const row = (data as { used_cents: number; budget_cents: number }[] | null)?.[0];
+  if (error || !row) return null;
+  return { usedCents: Number(row.used_cents), budgetCents: Number(row.budget_cents) };
+}

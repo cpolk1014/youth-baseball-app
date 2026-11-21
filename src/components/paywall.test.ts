@@ -38,6 +38,16 @@ describe("renewal reminders", () => {
   it("describes each plan", () => {
     expect(planLine(plan({ kind: "launch" }))).toMatch(/Free through Jul 31, 2027/);
     expect(planLine(plan({ kind: "club" }))).toMatch(/by the team's club/);
-    expect(planLine(plan({ kind: "none", paid: false }))).toMatch(/locked/);
+    expect(planLine(plan({ kind: "none", paid: false }))).toMatch(/Paid features are off/);
+  });
+});
+
+describe("AI budget share", () => {
+  it("rounds to a whole percent and stops at 100", async () => {
+    const { aiUsedShare } = await import("./paywall");
+    expect(aiUsedShare(1234, 6000)).toBe(21);
+    expect(aiUsedShare(9000, 6000)).toBe(100);
+    expect(aiUsedShare(0, 0)).toBe(0);
+    expect(aiUsedShare(5, 0)).toBe(100);
   });
 });

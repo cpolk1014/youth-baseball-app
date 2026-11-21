@@ -1,3 +1,4 @@
+import type { ClaudeUsage } from "@/lib/ai/cost";
 // Tournaments, server side: reading a screenshot of an event with Claude. Coaches add
 // tournaments from screenshots (event sites tend to block servers from reading their pages).
 // Never import from client code.
@@ -33,6 +34,9 @@ const SCORES_PROMPT = `You read screenshots of a youth baseball tournament's res
 
 const VENUES_PROMPT = `You read pictures about a youth baseball tournament (a flyer, an event page, a directions page, a map, a park sign) and list the ballparks or sports complexes where its games are played. For each give its name as shown, its street address if shown, and its city and state if shown. List each park once, not each field inside it. Leave out hotels, restaurants, sponsors, registration or mailing addresses, and team hometowns. Don't guess anything that isn't shown. If no ballpark is shown, return no venues and say why in warnings.`;
 
+/** Called with each Claude response, to record what it cost. */
+export type Meter = (response: { model?: string; usage?: ClaudeUsage | null }) => Promise<void>;
+
 /** One read of screenshots with structured output (streamed: schedules can be long). */
 async function readScreenshots(
   images: ScreenshotImage[],
@@ -40,6 +44,7 @@ async function readScreenshots(
   schema: Record<string, unknown>,
   context: string,
   maxTokens: number,
+  meter?: Meter,
 ): Promise<unknown> {
   const client = new Anthropic();
   const content: Anthropic.Beta.BetaContentBlockParam[] = images.map((image) => ({
@@ -58,6 +63,7 @@ async function readScreenshots(
       messages: [{ role: "user", content: [...content, { type: "text", text: context }] }],
     })
     .finalMessage();
+  await meter?.(response);
   if (response.stop_reason === "refusal") {
     throw new EventReadError("Those screenshots couldn't be read.");
   }
@@ -70,21 +76,35 @@ async function readScreenshots(
 }
 
 /** Read one or more screenshots of an event with Claude (together, as one event). */
-export async function readEvent(images: ScreenshotImage[], context: string): Promise<EventDetails> {
-  return cleanEvent(await readScreenshots(images, EVENT_PROMPT, EVENT_JSON_SCHEMA, context, 16000));
+export async function readEvent(
+  images: ScreenshotImage[],
+  context: string,
+  meter?: Meter,
+): Promise<EventDetails> {
+  return cleanEvent(
+    await readScreenshots(images, EVENT_PROMPT, EVENT_JSON_SCHEMA, context, 16000, meter),
+  );
 }
 
 /** Read screenshots of the pool schedule and bracket (together, as one schedule). */
-export async function readSchedule(images: ScreenshotImage[], context: string): Promise<Schedule> {
+export async function readSchedule(
+  images: ScreenshotImage[],
+  context: string,
+  meter?: Meter,
+): Promise<Schedule> {
   return cleanSchedule(
-    await readScreenshots(images, SCHEDULE_PROMPT, SCHEDULE_JSON_SCHEMA, context, 32000),
+    await readScreenshots(images, SCHEDULE_PROMPT, SCHEDULE_JSON_SCHEMA, context, 32000, meter),
   );
 }
 
 /** Read screenshots of an organization's tie-break rules. */
-export async function readTiebreak(images: ScreenshotImage[], context: string): Promise<ReadRules> {
+export async function readTiebreak(
+  images: ScreenshotImage[],
+  context: string,
+  meter?: Meter,
+): Promise<ReadRules> {
   return cleanRules(
-    await readScreenshots(images, TIEBREAK_PROMPT, TIEBREAK_JSON_SCHEMA, context, 8000),
+    await readScreenshots(images, TIEBREAK_PROMPT, TIEBREAK_JSON_SCHEMA, context, 8000, meter),
   );
 }
 
@@ -92,9 +112,10 @@ export async function readTiebreak(images: ScreenshotImage[], context: string): 
 export async function readScores(
   images: ScreenshotImage[],
   context: string,
+  meter?: Meter,
 ): Promise<{ games: ReadScore[]; warnings: string[] }> {
   return cleanScores(
-    await readScreenshots(images, SCORES_PROMPT, SCORES_JSON_SCHEMA, context, 16000),
+    await readScreenshots(images, SCORES_PROMPT, SCORES_JSON_SCHEMA, context, 16000, meter),
   );
 }
 
@@ -102,9 +123,10 @@ export async function readScores(
 export async function readVenues(
   images: ScreenshotImage[],
   context: string,
+  meter?: Meter,
 ): Promise<{ venues: ReadVenue[]; warnings: string[] }> {
   return cleanVenues(
-    await readScreenshots(images, VENUES_PROMPT, VENUES_JSON_SCHEMA, context, 4000),
+    await readScreenshots(images, VENUES_PROMPT, VENUES_JSON_SCHEMA, context, 4000, meter),
   );
 }
 

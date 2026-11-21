@@ -1,3 +1,4 @@
+import { beginAi } from "@/lib/ai/ledger.server";
 import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
@@ -93,6 +94,14 @@ export async function POST(request: NextRequest) {
       .filter(Boolean)
       .join(" ");
   }
+  const ai = await beginAi(
+    supabase,
+    { teamId },
+    kind === "scores" ? "tournament_scores" : "tournament",
+  );
+  if (!ai.ok) return ai.response;
+  const meter = (response: Parameters<typeof ai.call.claude>[0]) =>
+    ai.call.claude(response, "claude-opus-5-5");
   try {
     if (files.some((f) => !(IMAGE_TYPES as readonly string[]).includes(f.type))) {
       return errorResponse(415, "Use screenshots or photos (PNG or JPEG).");
@@ -111,11 +120,12 @@ export async function POST(request: NextRequest) {
         rules: await readTiebreak(
           images,
           `Today is ${today}. These are a tournament organization's rules; list the tie-breakers in order.`,
+          meter,
         ),
       });
     }
     if (kind === "venue" && scheduleContext) {
-      const read = await readVenues(images, scheduleContext);
+      const read = await readVenues(images, scheduleContext, meter);
       return NextResponse.json({
         venues: {
           places: await findVenuesOnMap(read.venues, tournamentCity),
@@ -124,7 +134,7 @@ export async function POST(request: NextRequest) {
       });
     }
     if (kind === "scores" && scheduleContext) {
-      return NextResponse.json({ scores: await readScores(images, scheduleContext) });
+      return NextResponse.json({ scores: await readScores(images, scheduleContext, meter) });
     }
     if (scheduleContext) {
       // From "Add the bracket": every game shown is a bracket game.
@@ -132,9 +142,11 @@ export async function POST(request: NextRequest) {
         kind === "bracket"
           ? " These screenshots are the bracket: list every game as stage bracket, even when no words say so."
           : "";
-      return NextResponse.json({ schedule: await readSchedule(images, scheduleContext + hint) });
+      return NextResponse.json({
+        schedule: await readSchedule(images, scheduleContext + hint, meter),
+      });
     }
-    const event = await readEvent(images, context);
+    const event = await readEvent(images, context, meter);
     return NextResponse.json({ event });
   } catch (error) {
     if (error instanceof EventReadError) return errorResponse(422, error.message);
@@ -148,5 +160,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError)
       return errorResponse(502, "The tournament came back garbled. Try again.");
     throw error;
+  } finally {
+    await ai.call.finish();
   }
 }

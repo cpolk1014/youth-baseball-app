@@ -1,5 +1,6 @@
 import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import Anthropic from "@anthropic-ai/sdk";
+import { beginAi } from "@/lib/ai/ledger.server";
 import { NextResponse, type NextRequest } from "next/server";
 import { PLAYS } from "@/lib/plays/library";
 import {
@@ -101,6 +102,8 @@ export async function POST(request: NextRequest) {
     plays: PLAYS,
   });
 
+  const ai = await beginAi(supabase, { teamId }, "practice");
+  if (!ai.ok) return ai.response;
   const client = new Anthropic();
   try {
     const stream = client.beta.messages.stream({
@@ -117,6 +120,7 @@ export async function POST(request: NextRequest) {
       messages: [{ role: "user", content: text }],
     });
     const response = await stream.finalMessage();
+    await ai.call.claude(response, "claude-opus-5-5");
     if (response.stop_reason === "refusal") {
       return errorResponse(422, "Those goals couldn't be turned into a practice plan.");
     }
@@ -139,5 +143,7 @@ export async function POST(request: NextRequest) {
       return errorResponse(502, "The plan came back in an unexpected format. Try again.");
     }
     throw error;
+  } finally {
+    await ai.call.finish();
   }
 }

@@ -1,8 +1,10 @@
+import { elevenCents } from "@/lib/ai/cost";
+import { beginAi } from "@/lib/ai/ledger.server";
 import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import { NextResponse, type NextRequest } from "next/server";
 import { paAccess } from "@/lib/pa/access";
 import { AudioMakerError, makeAnnouncement, makeSong, makeSoundEffect } from "@/lib/pa/elevenlabs";
-import { DAILY_LIMITS, limitProblem, type GenerationKind } from "@/lib/pa/limits";
+import type { GenerationKind } from "@/lib/pa/limits";
 import {
   isSongStyle,
   MAX_LYRIC_LINE,
@@ -18,6 +20,8 @@ import { getServerSupabase } from "@/lib/supabase/server";
 export const maxDuration = 120;
 
 const MAX_SOUND_TEXT = 120;
+/** Walk-up songs run about 18 seconds. */
+const SONG_SECONDS = 18;
 
 function errorResponse(status: number, error: string) {
   return NextResponse.json({ error }, { status });
@@ -54,28 +58,6 @@ export async function POST(request: NextRequest) {
   if (!(await teamHasPaid(supabase, teamId))) return errorResponse(402, PAID_FEATURE_MESSAGE);
   const { player } = access;
 
-  const { data: usage, error: usageError } = await supabase
-    .rpc("pa_usage", { p_team_id: teamId, p_kind: kind })
-    .single<{ mine: number; team: number }>();
-  if (usageError || !usage) return errorResponse(500, "Couldn't check today's limit. Try again.");
-  const limit = DAILY_LIMITS[kind];
-  let oldestMine: string | null = null;
-  if (usage.mine >= Math.min(limit.perUser, limit.perStaff)) {
-    // When their oldest clip of the last day drops off, so the message can say when.
-    const { data: oldest } = await supabase
-      .from("pa_generation")
-      .select("created_at")
-      .eq("team_id", teamId)
-      .eq("user_id", user.id)
-      .eq("kind", kind)
-      .gt("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      .order("created_at")
-      .limit(1);
-    oldestMine = (oldest?.[0] as { created_at: string } | undefined)?.created_at ?? null;
-  }
-  const tooMany = limitProblem(kind, usage, { staff: access.staff, oldestMine });
-  if (tooMany) return errorResponse(429, tooMany);
-
   const call = player && {
     rosterName: player.name,
     jerseyNumber: player.jersey_number,
@@ -84,6 +66,9 @@ export async function POST(request: NextRequest) {
     script: str(body?.script, 200),
   };
 
+  // Caps per person and team, and the team's season AI budget (counted under a lock).
+  const ai = await beginAi(supabase, { teamId }, kind);
+  if (!ai.ok) return ai.response;
   let audio: ArrayBuffer;
   try {
     if (kind === "song") {
@@ -98,19 +83,25 @@ export async function POST(request: NextRequest) {
           lyrics: str(body?.lyrics, (MAX_LYRIC_LINE + 1) * MAX_LYRIC_LINES * 2),
         }),
       );
+      await ai.call.charge(elevenCents.song(SONG_SECONDS));
     } else if (kind === "announce") {
       const problem = scriptProblem(call!.script);
       if (problem) return errorResponse(400, problem);
-      audio = await makeAnnouncement(announcement(call!));
+      const words = announcement(call!);
+      audio = await makeAnnouncement(words);
+      await ai.call.charge(elevenCents.speech(words.length));
     } else {
       const text = str(body?.text, MAX_SOUND_TEXT);
       if (!text) return errorResponse(400, "Describe the sound first.");
       const seconds = Math.min(10, Math.max(0.5, Number(body?.seconds) || 3));
       audio = await makeSoundEffect(text, seconds);
+      await ai.call.charge(elevenCents.sound());
     }
   } catch (e) {
     if (e instanceof AudioMakerError) return errorResponse(e.status, e.message);
     throw e;
+  } finally {
+    await ai.call.finish();
   }
 
   await supabase.from("pa_generation").insert({ team_id: teamId, user_id: user.id, kind });

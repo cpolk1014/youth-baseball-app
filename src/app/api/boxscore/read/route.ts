@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { beginAi } from "@/lib/ai/ledger.server";
 import { NextResponse, type NextRequest } from "next/server";
 import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import { cleanBatting, cleanPitching } from "@/lib/boxscore/stats";
@@ -162,6 +163,8 @@ export async function POST(request: NextRequest) {
     .filter(Boolean)
     .join("\n");
 
+  const ai = await beginAi(supabase, { teamId }, "boxscore");
+  if (!ai.ok) return ai.response;
   const client = new Anthropic();
   try {
     const response = await client.beta.messages
@@ -176,6 +179,7 @@ export async function POST(request: NextRequest) {
         messages: [{ role: "user", content: [source, { type: "text", text: ask }] }],
       })
       .finalMessage();
+    await ai.call.claude(response, "claude-opus-5-5");
     if (response.stop_reason === "refusal") {
       return errorResponse(422, "This file couldn't be read as a box score.");
     }
@@ -239,5 +243,7 @@ export async function POST(request: NextRequest) {
       return errorResponse(502, "The box score came back in an unexpected format. Try again.");
     }
     throw error;
+  } finally {
+    await ai.call.finish();
   }
 }

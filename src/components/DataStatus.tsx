@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { seasonFor } from "@/lib/billing/season";
 import { createTeam, dismissSaveError, reloadData, signOut, useStoreState } from "@/lib/data/store";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { useMyClubs } from "./club/useMyClubs";
 import { KidsPrompt } from "./KidPicker";
 
@@ -169,6 +170,19 @@ export function TeamSetup({
   const [coachPitch, setCoachPitch] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // One free trial per person: their first team gets it, later teams start on the free plan.
+  const [trialLeft, setTrialLeft] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (hasTeam || !isSupabaseConfigured) return;
+    let current = true;
+    void import("@/lib/data/account-backend")
+      .then((m) => m.myTrialLeft())
+      .then((left) => current && setTrialLeft(left))
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [hasTeam]);
 
   const valid = hasTeam || teamName.trim() !== "";
   const field =
@@ -249,6 +263,19 @@ export function TeamSetup({
             </span>
           </span>
         </label>
+      )}
+
+      {!hasTeam && trialLeft === true && (
+        <p className="text-base text-slate-700">
+          Your first team gets 14 days of everything, AI included. No credit card.
+        </p>
+      )}
+      {!hasTeam && trialLeft === false && (
+        <p className="rounded-xl border-2 border-amber-400 bg-amber-50 p-3 text-base text-amber-950">
+          Your free trial went to your first team, so this one starts on the free plan: roster,
+          schedule, fair lineups and more. Buy its season on Coaches &amp; parents to turn on the AI
+          tools and the rest.
+        </p>
       )}
 
       <button

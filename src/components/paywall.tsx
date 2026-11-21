@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { isCoach } from "@/lib/data/permissions";
 import { useAppData } from "@/lib/data/store";
 import type { TeamPlan } from "@/lib/data/types";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 const day = (d: string) =>
   new Date(`${d}T12:00`).toLocaleDateString("en-US", {
@@ -71,7 +72,7 @@ export function planLine(plan: TeamPlan): string {
     case "launch":
       return `Free through ${day(plan.until!)}: thanks for being one of Fungo's first teams.`;
     default:
-      return "Paid features are locked. Everything your team made stays; renew to add more.";
+      return "Paid features are off. Free features keep working, and everything your team made stays. Buy the season to turn the rest on.";
   }
 }
 
@@ -118,5 +119,62 @@ export function PlanBanner() {
       <span>{text}</span>
       <span className="shrink-0 font-bold underline">Renew</span>
     </Link>
+  );
+}
+
+/** "62%": how much of the season's AI budget the team has used, as a whole percent. */
+export function aiUsedShare(usedCents: number, budgetCents: number): number {
+  if (budgetCents <= 0) return usedCents > 0 ? 100 : 0;
+  return Math.min(100, Math.round((usedCents / budgetCents) * 100));
+}
+
+/** The team's season AI help, for coaches and managers on Plan & club. */
+export function AiBudget({ teamId }: { teamId: string }) {
+  const [budget, setBudget] = useState<{ usedCents: number; budgetCents: number } | null>(null);
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let current = true;
+    void import("@/lib/data/account-backend")
+      .then((m) => m.teamAiBudget(teamId))
+      .then((b) => current && setBudget(b))
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [teamId]);
+  if (!budget || budget.budgetCents <= 0) return null;
+  const share = aiUsedShare(budget.usedCents, budget.budgetCents);
+  const tone = share >= 100 ? "bg-red-600" : share >= 80 ? "bg-amber-500" : "bg-[var(--team)]";
+  return (
+    <div className="mb-3 flex flex-col gap-1">
+      <div className="flex items-baseline justify-between text-base">
+        <span className="font-semibold">AI help this season</span>
+        <span className="tabular-nums text-slate-700">{share}% used</span>
+      </div>
+      <div
+        className="h-3 overflow-hidden rounded-full bg-slate-200"
+        role="progressbar"
+        aria-label="AI help used this season"
+        aria-valuenow={share}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div className={`h-full ${tone}`} style={{ width: `${share}%` }} />
+      </div>
+      {share >= 100 ? (
+        <p className="text-sm font-semibold text-red-800">
+          Your team has used this season&apos;s AI help. The AI tools pause until the team renews;
+          everything else keeps working. Need more? Email Fungo.
+        </p>
+      ) : share >= 80 ? (
+        <p className="text-sm font-semibold text-amber-900">
+          You&apos;ve used most of this season&apos;s AI help.
+        </p>
+      ) : (
+        <p className="text-sm text-slate-600">
+          Plenty for a busy season: imports, box scores, tournaments, practice plans and walk-ups.
+        </p>
+      )}
+    </div>
   );
 }

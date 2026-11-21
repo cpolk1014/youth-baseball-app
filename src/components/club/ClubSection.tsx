@@ -7,7 +7,7 @@ import { PriceTag, SeasonNote } from "../billing/Prorated";
 import type { TeamClub } from "@/lib/data/club-backend";
 import { clearPaidFlag } from "./paidFlag";
 import { refreshData } from "@/lib/data/store";
-import { planLine, usePlan } from "../paywall";
+import { AiBudget, planLine, usePlan } from "../paywall";
 import { useCheckoutReturn } from "../useCheckoutReturn";
 
 const field =
@@ -143,6 +143,7 @@ export function ClubSection({ teamId, canJoin }: { teamId: string; canJoin: bool
           {planLine(plan)}
         </p>
       )}
+      {plan?.paid && canJoin && <AiBudget teamId={teamId} />}
       {active ? (
         <p className="text-base">
           Part of <b>{club.club}</b> for {club.season}. The club can view this team&apos;s lineups,

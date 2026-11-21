@@ -5,6 +5,7 @@ import {
   teamHasPaid,
 } from "@/lib/billing/paywall";
 import Anthropic from "@anthropic-ai/sdk";
+import { beginAi } from "@/lib/ai/ledger.server";
 import { NextResponse, type NextRequest } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { cleanFlyerCombos } from "@/lib/uniforms";
@@ -120,6 +121,12 @@ export async function POST(request: NextRequest) {
     return errorResponse(415, "Use a photo, screenshot or PDF of the flyer.");
   }
 
+  const ai = await beginAi(
+    supabase,
+    typeof clubId === "string" ? { clubId } : { teamId: teamId as string },
+    "uniform",
+  );
+  if (!ai.ok) return ai.response;
   const client = new Anthropic();
   try {
     const response = await client.beta.messages.create({
@@ -140,6 +147,7 @@ export async function POST(request: NextRequest) {
         },
       ],
     });
+    await ai.call.claude(response, "claude-opus-5-5");
     if (response.stop_reason === "refusal") {
       return errorResponse(422, "This picture couldn't be read as a uniform flyer.");
     }
@@ -162,5 +170,7 @@ export async function POST(request: NextRequest) {
       return errorResponse(502, "The flyer came back in an unexpected format. Try again.");
     }
     throw error;
+  } finally {
+    await ai.call.finish();
   }
 }

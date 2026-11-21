@@ -1,5 +1,6 @@
 import { PAID_FEATURE_MESSAGE, teamHasPaid } from "@/lib/billing/paywall";
 import Anthropic from "@anthropic-ai/sdk";
+import { beginAi } from "@/lib/ai/ledger.server";
 import { NextResponse, type NextRequest } from "next/server";
 import { EXTRACTION_JSON_SCHEMA, type ScheduleExtraction } from "@/lib/schedule-import/schema";
 import { getServerSupabase } from "@/lib/supabase/server";
@@ -94,6 +95,8 @@ export async function POST(request: NextRequest) {
   const weekday = now.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
   const context = `Today is ${weekday}, ${today}. Team: ${team.name} (${team.age_group}). Current season in the app: ${season?.name ?? "unnamed"}. List every practice and game in this schedule.`;
 
+  const ai = await beginAi(supabase, { teamId }, "schedule");
+  if (!ai.ok) return ai.response;
   const client = new Anthropic();
   try {
     const response = await client.beta.messages.create({
@@ -109,6 +112,7 @@ export async function POST(request: NextRequest) {
       },
       messages: [{ role: "user", content: [source, { type: "text", text: context }] }],
     });
+    await ai.call.claude(response, "claude-opus-5-5");
 
     if (response.stop_reason === "refusal") {
       return errorResponse(422, "This file couldn't be read as a schedule.");
@@ -136,5 +140,7 @@ export async function POST(request: NextRequest) {
       return errorResponse(502, "The schedule came back in an unexpected format. Try again.");
     }
     throw error;
+  } finally {
+    await ai.call.finish();
   }
 }

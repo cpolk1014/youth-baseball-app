@@ -1950,13 +1950,23 @@ reset role;
 delete from public.pitch_session;
 delete from public.game where id in ('00000000-0000-4000-8000-00000000c101', '00000000-0000-4000-8000-00000000c102');
 -- A team's free period, creator and club are set only by the database, never from the browser.
+-- (This person's earlier test teams used up their trial; start them fresh.)
+delete from public.team_trial where user_id = 'aaaaaaaa-0000-4000-8000-000000000003';
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+select pg_temp.expect(public.my_trial_left(), 'someone who hasn''t had a trial has one left');
 insert into public.team (id, name, age_group, created_by, free_until, free_kind, organization_id)
   values ('dddddddd-0000-4000-8000-000000000001', 'Forever Free', '9U', auth.uid(), '2099-12-31', 'launch', null);
 select pg_temp.expect((select free_until = current_date + 14 and free_kind = 'trial' from public.team
-  where id = 'dddddddd-0000-4000-8000-000000000001'), 'a new team always starts on the 14-day trial');
+  where id = 'dddddddd-0000-4000-8000-000000000001'), 'your first team starts on the 14-day trial');
+select pg_temp.expect(not public.my_trial_left(), 'the trial is used once the first team starts');
+insert into public.team (id, name, age_group, created_by)
+  values ('dddddddd-0000-4000-8000-0000000000f2', 'Second Team', '10U', auth.uid());
+select pg_temp.expect((select free_until < current_date from public.team where id = 'dddddddd-0000-4000-8000-0000000000f2')
+  and not public.team_paid('dddddddd-0000-4000-8000-0000000000f2'), 'a second team starts on the free plan, not another trial');
 reset role;
+delete from public.team where id = 'dddddddd-0000-4000-8000-0000000000f2';
+select pg_temp.expect((select count(*) from public.team_trial where user_id = 'aaaaaaaa-0000-4000-8000-000000000003') = 1, 'deleting a team doesn''t give the trial back');
 insert into public.team (id, name, age_group, created_by, free_until, free_kind)
   values ('dddddddd-0000-4000-8000-000000000002', 'Expired', '9U', null, current_date - 30, 'trial');
 insert into public.member (team_id, user_id, role) values ('dddddddd-0000-4000-8000-000000000002', 'aaaaaaaa-0000-4000-8000-000000000003', 'coach')
@@ -2503,5 +2513,66 @@ delete from public.player where id = 'eeeeeeee-0000-4000-8000-0000000000b4';
 delete from public.team where id = 'eeeeeeee-0000-4000-8000-0000000000b1';
 delete from public.player_guardian where player_id = '00000000-0000-4000-8000-00000000a702';
 delete from public.player where id = '00000000-0000-4000-8000-00000000a702';
+
+-- AI limits: caps per person and team, the season budget, and who records costs.
+reset role;
+delete from public.ai_usage;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.ai_reserve('00000000-0000-4000-8000-000000000001'::uuid, null, 'practice');
+select public.ai_reserve('00000000-0000-4000-8000-000000000001'::uuid, null, 'practice');
+select public.ai_reserve('00000000-0000-4000-8000-000000000001'::uuid, null, 'practice');
+do $$ begin
+  perform public.ai_reserve('00000000-0000-4000-8000-000000000001', null, 'practice');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when sqlstate 'P0429' then raise notice 'ok: a team''s daily cap stops the 4th practice plan';
+end $$;
+select pg_temp.expect((select used_cents > 0 from public.team_ai_budget('00000000-0000-4000-8000-000000000001'::uuid)), 'coaches see what the team has used');
+do $$ begin
+  perform public.ai_settle((select id from public.ai_usage limit 1), 0);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: nobody rewrites their own usage';
+end $$;
+do $$ begin
+  perform public.ai_release((select id from public.ai_usage limit 1));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: nobody gives back their own usage';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select public.ai_reserve('00000000-0000-4000-8000-000000000001'::uuid, null, 'song') from generate_series(1, 5);
+do $$ begin
+  perform public.ai_reserve('00000000-0000-4000-8000-000000000001', null, 'song');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when sqlstate 'P0429' then raise notice 'ok: a parent''s own daily cap stops the 6th walk-up song';
+end $$;
+select pg_temp.expect((select count(*) from public.ai_usage) = 0, 'nobody reads the ledger directly');
+do $$ begin
+  perform public.ai_reserve(null, (select org from club_t), 'uniform');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: only club admins use the club''s flyer reader';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
+select pg_temp.expect(public.ai_reserve(null, (select org from club_t), 'uniform') is not null, 'club admins read flyers for the club');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
+do $$ begin
+  perform public.ai_reserve('00000000-0000-4000-8000-000000000001', null, 'roster');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: outsiders can''t use a team''s AI';
+end $$;
+select pg_temp.expect((select count(*) from public.team_ai_budget('00000000-0000-4000-8000-000000000001'::uuid)) = 0, 'outsiders don''t see a team''s AI budget');
+reset role;
+-- A released call doesn't count; a settled one counts what it cost.
+select public.ai_release((select id from public.ai_usage where kind = 'practice' limit 1));
+insert into public.ai_usage (team_id, user_id, kind, estimate_cents, cost_cents)
+values ('00000000-0000-4000-8000-000000000001'::uuid, 'aaaaaaaa-0000-4000-8000-000000000001', 'boxscore', 9, 100000);
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+do $$ begin
+  perform public.ai_reserve('00000000-0000-4000-8000-000000000001', null, 'roster');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when sqlstate 'P0430' then raise notice 'ok: the season AI budget stops calls once it''s used';
+end $$;
+reset role;
+delete from public.ai_usage;
 
 \echo ALL RLS TESTS PASSED
