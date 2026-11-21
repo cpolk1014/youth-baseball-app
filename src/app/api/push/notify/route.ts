@@ -66,9 +66,11 @@ export async function POST(request: NextRequest) {
     if (!(await firstTime("chatter", id))) return ok();
     const { data: team } = await admin
       .from("team")
-      .select("name")
+      .select("name, notify_chatter")
       .eq("id", post.team_id)
       .maybeSingle();
+    // The coaches turned Chatter notifications off for the team.
+    if (team && team.notify_chatter === false) return ok();
     const sent = await sendPush(
       await teamReaders(post.team_id, user.id),
       { id: post.team_id, category: "chatter" },
@@ -99,9 +101,12 @@ export async function POST(request: NextRequest) {
     ]);
     const teamIds = [...new Set((copies ?? []).map((c) => c.team_id as string))];
     if (!teamIds.length) return ok();
-    const { data: teams } = await admin.from("team").select("id, name").in("id", teamIds);
+    const { data: teams } = await admin
+      .from("team")
+      .select("id, name, notify_chatter")
+      .in("id", teamIds);
     let sent = 0;
-    for (const t of teams ?? []) {
+    for (const t of (teams ?? []).filter((x) => x.notify_chatter !== false)) {
       sent += await sendPush(
         await teamReaders(t.id as string, null),
         { id: t.id as string, category: "chatter" },

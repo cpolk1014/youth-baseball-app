@@ -90,21 +90,37 @@ export function NotifySettings({
           {state === "on" && (
             <ul className="flex flex-col">
               {teams.map((t) => (
-                <Toggle
-                  key={`t-${t.id}`}
-                  userId={userId}
-                  scopeId={t.id}
-                  category="chatter"
-                  label={`${t.name} · Chatter`}
-                />
+                <li key={`t-${t.id}`} className="mt-2 first:mt-0">
+                  <p className="text-sm font-bold text-slate-600">{t.name}</p>
+                  <ul>
+                    <Toggle
+                      userId={userId}
+                      scopeId={t.id}
+                      category="chatter"
+                      label="Chatter posts"
+                    />
+                    <Toggle userId={userId} scopeId={t.id} category="games" label="Game changes" />
+                    <Toggle
+                      userId={userId}
+                      scopeId={t.id}
+                      category="money"
+                      label="New charges for my family"
+                    />
+                  </ul>
+                </li>
               ))}
+              {clubs.length > 0 && (
+                <li className="mt-2">
+                  <p className="text-sm font-bold text-slate-600">Coach Chatter</p>
+                </li>
+              )}
               {clubs.map((c) => (
                 <Toggle
                   key={`c-${c.id}`}
                   userId={userId}
                   scopeId={c.id}
                   category="coach_chatter"
-                  label={`${c.name} · Coach Chatter`}
+                  label={c.name}
                 />
               ))}
             </ul>

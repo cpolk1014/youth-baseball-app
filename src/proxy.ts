@@ -26,6 +26,8 @@ const PUBLIC_PATHS = [
   "/manifest.webmanifest",
   "/sw.js",
   "/api/stripe/webhook",
+  // Supabase calls this every 5 minutes to send team notices; it needs no sign-in.
+  "/api/push/flush",
   // The public website (anyone can read it, signed in or not).
   ...SITE_PATHS,
 ];

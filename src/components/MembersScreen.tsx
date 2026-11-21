@@ -26,6 +26,7 @@ import { KidsForm, kidsOf } from "./KidPicker";
 import { Sheet } from "./Sheet";
 import { Phone, useCanCall, useTeamPhones } from "./phone";
 import { VenmoMark, useVenmoUsers } from "./venmo";
+import { TeamNotifySettings } from "./TeamNotifySettings";
 
 const INVITE_ROLES: { role: MemberRole; label: string; hint: string }[] = [
   {
@@ -280,6 +281,8 @@ export function MembersScreen() {
       )}
 
       {perms.editTeam && <ClubSection teamId={data.team.id} canJoin={isCoach(data.me.role)} />}
+
+      {perms.editTeam && <TeamNotifySettings teamId={data.team.id} />}
 
       {canDeleteTeam(data.me.role) && (
         <button

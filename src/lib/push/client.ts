@@ -79,7 +79,7 @@ export function announce(kind: "chatter" | "club" | "coach", id: string): void {
   }).catch(() => undefined);
 }
 
-export type NotifyCategory = "chatter" | "coach_chatter";
+export type NotifyCategory = "chatter" | "coach_chatter" | "games" | "money";
 
 /** Whether this person gets this kind for this team or club (on unless they turned it off). */
 export async function notifyEnabled(scopeId: string, category: NotifyCategory): Promise<boolean> {

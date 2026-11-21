@@ -2601,4 +2601,67 @@ reset role;
 delete from public.push_subscription;
 delete from public.notify_pref;
 
+-- Team notifications: changes wait, add up, cancel out, and follow the coach's switches.
+reset role;
+delete from public.notify_event;
+insert into public.player (id, team_id, name) values ('00000000-0000-4000-8000-00000000a801', '00000000-0000-4000-8000-000000000001', 'Charge Kid');
+insert into public.player_guardian (player_id, user_id) values ('00000000-0000-4000-8000-00000000a801', 'aaaaaaaa-0000-4000-8000-000000000002');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+insert into public.game (id, season_id, game_date, start_time, opponent)
+values ('00000000-0000-4000-8000-00000000a811', '00000000-0000-4000-8000-000000000101', current_date + 1, '18:00', 'Cubs');
+update public.game set start_time = '19:00' where id = '00000000-0000-4000-8000-00000000a811';
+insert into public.game (id, season_id, game_date, opponent)
+values ('00000000-0000-4000-8000-00000000a812', '00000000-0000-4000-8000-000000000101', current_date + 2, 'Oops');
+delete from public.game where id = '00000000-0000-4000-8000-00000000a812';
+insert into public.game (id, season_id, game_date, opponent)
+values ('00000000-0000-4000-8000-00000000a813', '00000000-0000-4000-8000-000000000101', current_date + 60, 'Far Away');
+reset role;
+select pg_temp.expect((select count(*) = 1 and bool_and(change = 'added' and detail ->> 'time' = '19:00:00') from public.notify_event where kind = 'games'),
+  'a game added and fixed is one "added" notice; one added and removed is none; far-off games are skipped');
+select pg_temp.expect((select count(*) from public.take_due_notifications()) = 0, 'nothing goes out while the coach is still making changes');
+update public.notify_event set updated_at = now() - interval '11 minutes';
+create temp table due_t as select * from public.take_due_notifications();
+select pg_temp.expect((select count(*) = 1 and bool_and(kind = 'games') from due_t), 'once things settle, one notice goes out');
+select pg_temp.expect((select not ('aaaaaaaa-0000-4000-8000-000000000001' = any (user_ids)) and 'aaaaaaaa-0000-4000-8000-000000000002' = any (user_ids) from due_t),
+  'the team hears about it, not the coach who made the change');
+select pg_temp.expect((select count(*) from public.take_due_notifications()) = 0, 'and only once');
+-- Charges: each family hears about a charge once, even when the coach edits it.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.save_finance_entry(
+  '{"id": "f0000000-0000-4000-8000-00000000a821", "season_id": "00000000-0000-4000-8000-000000000101", "type": "bat_around", "title": "Tournament fee", "amount_cents": 4500, "entry_date": "2027-01-01"}',
+  '[{"player_id": "00000000-0000-4000-8000-00000000a801", "amount_cents": 4500}]');
+select public.save_finance_entry(
+  '{"id": "f0000000-0000-4000-8000-00000000a821", "season_id": "00000000-0000-4000-8000-000000000101", "type": "bat_around", "title": "Tournament fee (fixed)", "amount_cents": 4500, "entry_date": "2027-01-01"}',
+  '[{"player_id": "00000000-0000-4000-8000-00000000a801", "amount_cents": 4500}]');
+reset role;
+select pg_temp.expect((select count(*) = 1 and bool_and(user_id = 'aaaaaaaa-0000-4000-8000-000000000002' and (detail ->> 'cents')::int = 4500)
+  from public.notify_event where kind = 'money'), 'a family hears about a new charge once, even after edits');
+-- A coach turns game notices off for the team: waiting ones are dropped.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+update public.team set notify_games = false where id = '00000000-0000-4000-8000-000000000001';
+update public.game set start_time = '20:00' where id = '00000000-0000-4000-8000-00000000a811';
+reset role;
+update public.notify_event set updated_at = now() - interval '11 minutes';
+select pg_temp.expect((select count(*) from public.take_due_notifications() where kind = 'games') = 0, 'teams that turn game notices off send none');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+do $$ begin
+  update public.team set notify_money = false where id = '00000000-0000-4000-8000-000000000001';
+  if (select not notify_money from public.team where id = '00000000-0000-4000-8000-000000000001') then
+    raise exception 'FAIL: a parent changed the team''s notifications' using errcode = 'T0001';
+  end if;
+  raise notice 'ok: only coaches and managers pick what the team sends';
+end $$;
+select pg_temp.expect((select count(*) from public.notify_event) = 0, 'nobody reads the queue directly');
+reset role;
+update public.team set notify_games = true where id = '00000000-0000-4000-8000-000000000001';
+delete from public.game where id in ('00000000-0000-4000-8000-00000000a811', '00000000-0000-4000-8000-00000000a813');
+delete from public.finance_entry where id = 'f0000000-0000-4000-8000-00000000a821';
+delete from public.player_guardian where player_id = '00000000-0000-4000-8000-00000000a801';
+delete from public.player where id = '00000000-0000-4000-8000-00000000a801';
+delete from public.notify_event;
+
 \echo ALL RLS TESTS PASSED
