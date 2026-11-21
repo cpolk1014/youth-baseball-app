@@ -1,4 +1,5 @@
-import type { Lineup, Player, Position } from "@/lib/rules/types";
+import { outsOf, splitInnings } from "@/lib/rules/outs";
+import type { Lineup, LineupSlot, Player, Position } from "@/lib/rules/types";
 
 /** Active players in jersey-number order (the default batting order). */
 export function activePlayers(players: Player[]): Player[] {
@@ -43,8 +44,158 @@ export function normalizeLineup(lineup: Lineup, players: Player[], innings: numb
   };
 }
 
+/** A player's spot at the start of an inning (the whole inning unless it was split). */
 export function positionAt(lineup: Lineup, inning: number, playerId: string): Position | null {
-  return lineup.slots.find((s) => s.inning === inning && s.playerId === playerId)?.position ?? null;
+  return positionAtOut(lineup, inning, playerId, 0);
+}
+
+/** A player's spot at a moment of an inning, by outs (0 = the start). */
+export function positionAtOut(
+  lineup: Lineup,
+  inning: number,
+  playerId: string,
+  out: number,
+): Position | null {
+  for (const s of lineup.slots) {
+    if (s.inning !== inning || s.playerId !== playerId) continue;
+    const { from, to } = outsOf(s);
+    if (from <= out && out < to) return s.position;
+  }
+  return null;
+}
+
+/** A player's parts of an inning, in order (one for a whole inning). */
+export function inningParts(lineup: Lineup, inning: number, playerId: string): LineupSlot[] {
+  return lineup.slots
+    .filter((s) => s.inning === inning && s.playerId === playerId)
+    .sort((a, b) => outsOf(a).from - outsOf(b).from);
+}
+
+/** Whether an inning has a mid-inning change. */
+export function isSplitInning(lineup: Lineup, inning: number): boolean {
+  return splitInnings(lineup.slots).has(inning);
+}
+
+/** Join a player's touching parts at the same spot; a whole inning carries no outs. */
+function tidy(slots: LineupSlot[]): LineupSlot[] {
+  const groups = new Map<string, LineupSlot[]>();
+  for (const s of slots) {
+    const key = `${s.inning}:${s.playerId}`;
+    groups.set(key, [...(groups.get(key) ?? []), s]);
+  }
+  const out: LineupSlot[] = [];
+  for (const list of groups.values()) {
+    const sorted = [...list].sort((a, b) => outsOf(a).from - outsOf(b).from);
+    const merged: LineupSlot[] = [];
+    for (const s of sorted) {
+      const last = merged[merged.length - 1];
+      if (last && last.position === s.position && outsOf(last).to === outsOf(s).from) {
+        merged[merged.length - 1] = {
+          ...last,
+          toOut: outsOf(s).to,
+          estimated: last.estimated || s.estimated || undefined,
+        };
+      } else merged.push(s);
+    }
+    for (const s of merged) {
+      const { from, to } = outsOf(s);
+      if (from === 0 && to === 3) {
+        out.push({ inning: s.inning, playerId: s.playerId, position: s.position });
+      } else {
+        out.push({
+          inning: s.inning,
+          playerId: s.playerId,
+          position: s.position,
+          fromOut: from,
+          toOut: to,
+          ...(s.estimated ? { estimated: true } : {}),
+        });
+      }
+    }
+  }
+  return out;
+}
+
+export interface Move {
+  playerId: string;
+  to: Position;
+}
+
+/**
+ * A change in the middle of an inning: after `atOut` outs (1.5 when the coach wasn't sure,
+ * marked `estimated`), each moved player is at their new spot for the rest of the inning.
+ * Everyone else stays where they were.
+ */
+export function changeMidInning(
+  lineup: Lineup,
+  inning: number,
+  atOut: number,
+  moves: Move[],
+  estimated = false,
+): Lineup {
+  const moved = new Map(moves.map((m) => [m.playerId, m.to]));
+  const slots: LineupSlot[] = [];
+  for (const s of lineup.slots) {
+    if (s.inning !== inning || !moved.has(s.playerId)) {
+      slots.push(s);
+      continue;
+    }
+    const { from, to } = outsOf(s);
+    if (from >= atOut) continue; // replaced by the new spot
+    slots.push({ ...s, fromOut: from, toOut: Math.min(to, atOut) });
+  }
+  for (const [playerId, to] of moved) {
+    slots.push({
+      inning,
+      playerId,
+      position: to,
+      fromOut: atOut,
+      toOut: 3,
+      ...(estimated ? { estimated: true } : {}),
+    });
+  }
+  return { ...lineup, slots: tidy(slots) };
+}
+
+/**
+ * The moves for a pitching change: the new pitcher goes to P, the old pitcher goes to
+ * `oldPitcherTo` (by default the new pitcher's old spot), and whoever was there takes the
+ * new pitcher's old spot, so every spot stays filled. Spots are read at `atOut`.
+ */
+export function pitchingChangeMoves(
+  lineup: Lineup,
+  inning: number,
+  atOut: number,
+  newPitcherId: string,
+  oldPitcherTo?: Position,
+): Move[] {
+  const at = (id: string) => positionAtOut(lineup, inning, id, atOut);
+  const holderAt = (pos: Position) =>
+    [...new Set(lineup.slots.filter((s) => s.inning === inning).map((s) => s.playerId))].find(
+      (id) => at(id) === pos,
+    );
+  const oldPitcher = holderAt("P");
+  const newPitcherFrom = at(newPitcherId);
+  if (!newPitcherFrom || newPitcherFrom === "P") return [];
+  const moves: Move[] = [{ playerId: newPitcherId, to: "P" }];
+  if (!oldPitcher) return moves;
+  const dest = oldPitcherTo ?? newPitcherFrom;
+  moves.push({ playerId: oldPitcher, to: dest });
+  if (dest !== newPitcherFrom && dest !== "BENCH") {
+    const bumped = holderAt(dest);
+    if (bumped && bumped !== newPitcherId) moves.push({ playerId: bumped, to: newPitcherFrom });
+  }
+  return moves;
+}
+
+/** Take back an inning's mid-inning changes: everyone keeps their spot from the start. */
+export function undoMidInning(lineup: Lineup, inning: number): Lineup {
+  const slots = lineup.slots
+    .filter((s) => s.inning !== inning || outsOf(s).from === 0)
+    .map((s) =>
+      s.inning === inning ? { inning: s.inning, playerId: s.playerId, position: s.position } : s,
+    );
+  return { ...lineup, slots };
 }
 
 /** Who holds each field position in an inning (bench excluded). */

@@ -154,6 +154,10 @@ export interface LineupSlotRow {
   inning: number;
   player_id: string;
   position: Position;
+  /** The outs of the inning this slot covers (0 to 3 = the whole inning). */
+  from_out?: number | string | null;
+  to_out?: number | string | null;
+  estimated?: boolean | null;
 }
 
 export interface PlayerGuardianRow {

@@ -1,7 +1,7 @@
 import type { TeamAward } from "@/lib/club/awards";
 import type { RuleConfigInput } from "@/lib/rules/config";
 import { cleanPieces, type UniformCombo } from "@/lib/uniforms";
-import type { Lineup, Player } from "@/lib/rules/types";
+import type { Lineup, LineupSlot, Player } from "@/lib/rules/types";
 import { isHex } from "@/lib/branding/color";
 import { bestRole } from "@/lib/data/permissions";
 import type { MoneySummary } from "@/lib/finance/ledger";
@@ -358,6 +358,19 @@ export function gameToRow(g: Game): GameRow {
   };
 }
 
+/** A lineup slot; only a part of an inning carries outs (whole innings stay as before). */
+export function slotFromRow(s: LineupSlotRow): LineupSlot {
+  const from = Number(s.from_out ?? 0);
+  const to = Number(s.to_out ?? 3);
+  return {
+    inning: s.inning,
+    playerId: s.player_id,
+    position: s.position,
+    ...(from !== 0 || to !== 3 ? { fromOut: from, toOut: to } : {}),
+    ...(s.estimated ? { estimated: true } : {}),
+  };
+}
+
 /** Arguments for the save_lineup database function. */
 export function lineupToRpcArgs(gameId: string, lineup: Lineup) {
   return {
@@ -369,6 +382,11 @@ export function lineupToRpcArgs(gameId: string, lineup: Lineup) {
       inning: s.inning,
       player_id: s.playerId,
       position: s.position,
+      // Part of an inning (a mid-inning change); left out, the database means the whole inning.
+      ...(s.fromOut !== undefined || s.toOut !== undefined
+        ? { from_out: s.fromOut ?? 0, to_out: s.toOut ?? 3 }
+        : {}),
+      ...(s.estimated ? { estimated: true } : {}),
     })),
   };
 }
@@ -395,7 +413,7 @@ export function appDataFromRows(
       absent: l.absent,
       slots: rows.slots
         .filter((s) => s.lineup_id === l.id)
-        .map((s) => ({ inning: s.inning, playerId: s.player_id, position: s.position })),
+        .map(slotFromRow),
       autoFillSeed: autoFillSeeds[game.id] ?? 0,
     };
   }

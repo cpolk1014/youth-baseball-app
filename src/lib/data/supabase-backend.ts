@@ -139,7 +139,7 @@ export async function loadFromSupabase(
     ? check<LineupSlotRow[]>(
         await sb
           .from("lineup_slot")
-          .select("lineup_id,inning,player_id,position")
+          .select("lineup_id,inning,player_id,position,from_out,to_out,estimated")
           .in(
             "lineup_id",
             lineups.map((l) => l.id),

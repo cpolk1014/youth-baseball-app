@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { lineupFromGrid, makePlayer } from "@/lib/rules/test-utils";
+import type { Lineup } from "@/lib/rules/types";
 import {
   activePlayers,
   assignPosition,
+  changeMidInning,
+  inningParts,
+  isSplitInning,
+  pitchingChangeMoves,
+  positionAtOut,
+  undoMidInning,
   emptyLineup,
   lineupRows,
   moveBatter,
@@ -127,5 +134,80 @@ describe("lineup editing", () => {
     const l = swapInInning(start, 1, "a", "b");
     expect([positionAt(l, 1, "a"), positionAt(l, 1, "b")]).toEqual([null, "2B"]);
     expect(swapInInning(start, 1, "a", "a")).toBe(start);
+  });
+});
+
+describe("mid-inning changes", () => {
+  // Inning 4: Jake CF, Luke LF, Mason P, Ella SS.
+  const base: Lineup = {
+    innings: 6,
+    battingOrder: ["jake", "luke", "mason", "ella"],
+    slots: [
+      { inning: 4, playerId: "jake", position: "CF" },
+      { inning: 4, playerId: "luke", position: "LF" },
+      { inning: 4, playerId: "mason", position: "P" },
+      { inning: 4, playerId: "ella", position: "SS" },
+    ],
+  };
+
+  it("works out a pitching change, keeping every spot filled", () => {
+    expect(pitchingChangeMoves(base, 4, 1, "jake")).toEqual([
+      { playerId: "jake", to: "P" },
+      { playerId: "mason", to: "CF" },
+    ]);
+    // The coach's three-way rotation: the old pitcher goes to LF, LF moves to CF.
+    expect(pitchingChangeMoves(base, 4, 1, "jake", "LF")).toEqual([
+      { playerId: "jake", to: "P" },
+      { playerId: "mason", to: "LF" },
+      { playerId: "luke", to: "CF" },
+    ]);
+  });
+
+  it("splits the inning after the outs given", () => {
+    const after = changeMidInning(base, 4, 1, pitchingChangeMoves(base, 4, 1, "jake", "LF"));
+    expect(inningParts(after, 4, "jake").map((s) => [s.position, s.fromOut, s.toOut])).toEqual([
+      ["CF", 0, 1],
+      ["P", 1, 3],
+    ]);
+    expect(positionAtOut(after, 4, "luke", 2)).toBe("CF");
+    expect(positionAt(after, 4, "mason")).toBe("P");
+    expect(inningParts(after, 4, "ella")).toEqual([
+      { inning: 4, playerId: "ella", position: "SS" },
+    ]);
+    expect(isSplitInning(after, 4)).toBe(true);
+  });
+
+  it("marks a change made without knowing the outs", () => {
+    const after = changeMidInning(
+      base,
+      4,
+      1.5,
+      [
+        { playerId: "jake", to: "P" },
+        { playerId: "mason", to: "CF" },
+      ],
+      true,
+    );
+    expect(inningParts(after, 4, "jake")[1]).toMatchObject({
+      position: "P",
+      fromOut: 1.5,
+      estimated: true,
+    });
+  });
+
+  it("takes a change back", () => {
+    const after = changeMidInning(base, 4, 2, [
+      { playerId: "jake", to: "P" },
+      { playerId: "mason", to: "CF" },
+    ]);
+    expect(undoMidInning(after, 4).slots).toEqual(expect.arrayContaining(base.slots));
+    expect(isSplitInning(undoMidInning(after, 4), 4)).toBe(false);
+  });
+
+  it("joins parts back into a whole inning when a change is undone in place", () => {
+    const after = changeMidInning(base, 4, 1, [{ playerId: "ella", to: "SS" }]);
+    expect(inningParts(after, 4, "ella")).toEqual([
+      { inning: 4, playerId: "ella", position: "SS" },
+    ]);
   });
 });

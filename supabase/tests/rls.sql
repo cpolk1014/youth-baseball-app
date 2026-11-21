@@ -2733,4 +2733,45 @@ end $$;
 reset role;
 delete from public.chatter_post where id = '00000000-0000-4000-8000-00000000aa01';
 
+-- Mid-inning changes: slots cover part of an inning by outs.
+reset role;
+insert into public.game (id, season_id, game_date, opponent) values
+  ('00000000-0000-4000-8000-00000000ab01', '00000000-0000-4000-8000-000000000101', current_date + 40, 'Split Sox');
+create temp table pp_before as
+  select coalesce(sum(innings), 0) as p from public.player_participation
+  where player_id = '00000000-0000-4000-8000-000000001001' and position = 'P';
+grant select on pp_before to authenticated;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.save_lineup('00000000-0000-4000-8000-00000000ab01', '{}', '[
+  {"inning": 1, "player_id": "00000000-0000-4000-8000-000000001001", "position": "CF", "from_out": 0, "to_out": 1},
+  {"inning": 1, "player_id": "00000000-0000-4000-8000-000000001001", "position": "P", "from_out": 1, "to_out": 3},
+  {"inning": 1, "player_id": "00000000-0000-4000-8000-000000001002", "position": "P", "from_out": 0, "to_out": 1},
+  {"inning": 1, "player_id": "00000000-0000-4000-8000-000000001002", "position": "CF", "from_out": 1, "to_out": 3},
+  {"inning": 2, "player_id": "00000000-0000-4000-8000-000000001001", "position": "P"}
+]');
+select pg_temp.expect((select count(*) from public.lineup_slot ls join public.lineup l on l.id = ls.lineup_id
+  where l.game_id = '00000000-0000-4000-8000-00000000ab01') = 5, 'a kid can play two spots in an inning, split by outs');
+do $$ begin
+  perform public.save_lineup('00000000-0000-4000-8000-00000000ab01', '{}', '[
+    {"inning": 1, "player_id": "00000000-0000-4000-8000-000000001001", "position": "CF", "from_out": 0, "to_out": 3},
+    {"inning": 1, "player_id": "00000000-0000-4000-8000-000000001001", "position": "P", "from_out": 1, "to_out": 3}
+  ]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when unique_violation then raise notice 'ok: a kid can''t be in two spots at once';
+end $$;
+do $$ begin
+  perform public.save_lineup('00000000-0000-4000-8000-00000000ab01', '{}', '[
+    {"inning": 1, "player_id": "00000000-0000-4000-8000-000000001001", "position": "CF", "from_out": 2, "to_out": 1}
+  ]');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: outs must run forward';
+end $$;
+reset role;
+update public.game set status = 'final' where id = '00000000-0000-4000-8000-00000000ab01';
+select pg_temp.expect((select round(coalesce(sum(innings), 0) - (select p from pp_before), 2) from public.player_participation
+  where player_id = '00000000-0000-4000-8000-000000001001' and position = 'P') = 1.67,
+  'playing time counts thirds: 2 outs plus a whole inning at P is 1⅔');
+delete from public.game where id = '00000000-0000-4000-8000-00000000ab01';
+
 \echo ALL RLS TESTS PASSED
