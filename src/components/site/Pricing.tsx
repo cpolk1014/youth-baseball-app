@@ -105,7 +105,7 @@ export function PricingGrid({ full = false }: { full?: boolean }) {
 export function LowRisk() {
   return (
     <ul className="mx-auto mt-8 flex max-w-4xl flex-col justify-center gap-x-8 gap-y-2 text-center text-[15px] font-semibold text-slate-700 sm:flex-row">
-      <li>✓ 14 days of everything, AI included</li>
+      <li>✓ 14 days of everything for your first team, AI included</li>
       <li>✓ No credit card</li>
       <li>✓ Nothing renews by itself</li>
       <li>✓ Nothing is ever deleted</li>

@@ -67,7 +67,7 @@ Prices are in U.S. dollars and may not include applicable taxes. [Confirm sales 
 
 ### 4.3 Free trial and existing teams
 
-- **New teams** get a **14-day free trial** of paid team features. No payment card is needed. When the trial ends, paid features turn **read-only** (section 4.5) unless the team buys a season or joins a club.
+- **Your first team** gets a **14-day free trial** of paid team features. No payment card is needed. There's **one free trial per person**: teams you create after that start on the free plan until you buy a season or join a club. AI features during a trial have fair-use limits. When the trial ends, paid features turn **read-only** (section 4.5) unless the team buys a season or joins a club.
 - **Teams created before [paywall launch date]** have paid team features free through **July 31, 2027**.
 
 ### 4.4 Payment, renewal and grace period

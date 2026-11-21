@@ -2,7 +2,7 @@
 
 > For review. **[Brackets]** are build notes, not copy.
 > **What counts as AI.** "AI" here means the features that really use AI (Claude and ElevenLabs): reading schedules, flyers, box scores and tournament screenshots; turning typed rules into lineup rules; planning practices; and making walk-up songs, lyrics and the announcer. Auto-fill and the tournament standings and scenarios are Fungo's own engine, so they're called **smart**, never AI.
-> **AI features are part of the Team and Club plans** (and every 14-day trial). The free plan has the smart lineup engine but no AI tools. The copy says so wherever it matters.
+> **AI features are part of the Team and Club plans** (and the 14-day trial, one per coach, for their first team). The free plan has the smart lineup engine but no AI tools. The copy says so wherever it matters.
 > **Main button:** **Start your free 14-day trial**. Second: **Start a club**.
 
 ---
@@ -55,7 +55,7 @@ The tagline goes under the logo in the top bar, in the hero eyebrow, in Google t
 
 **[Start your free 14-day trial]** &nbsp; *See AI in action ↓*
 
-**Under the button:** 14 days of everything, AI included. No credit card.
+**Under the button:** 14 days of everything for your first team, AI included. No credit card.
 
 [Visual: a phone showing a photo of a tournament schedule turning into a list of games ("AI found 6 games") in front of a laptop with the Home dashboard. Both from the demo team.]
 
@@ -154,7 +154,7 @@ Fees split across the roster, payments, expenses and receipts. Every family know
 | The smart lineup engine, Auto-fill, fair-play rules, lineup cards, playing time, plays and quizzes | **Every AI tool:** schedule import, practice plans, tournament reading, typed rules, walk-up songs and announcer, and the uniform reader. Plus GroupMe game day posts, team money and tournament standings | Everything in Team for every team in your club, plus a club dashboard, your club's look and a shared library |
 | [Get started free] | **[Start your free 14-day trial]** | [Start a club] |
 
-**Under the grid:** Every new team gets 14 days of everything, AI included. No credit card. If you don't renew, nothing is deleted.
+**Under the grid:** Your first team gets 14 days of everything, AI included (one free trial per coach). No credit card. If you don't renew, nothing is deleted.
 **[See full pricing →](/pricing)**
 
 ### Section 9: Final call to action
@@ -162,7 +162,7 @@ Fees split across the roster, payments, expenses and receipts. Every family know
 ## Let AI run the busywork. You coach the kids.
 Snap your schedule tonight. Have a fair lineup before first pitch.
 **[Start your free 14-day trial]**
-*14 days of everything · No credit card · Works on any phone*
+*14 days of everything for your first team · No credit card · Works on any phone*
 
 ---
 
@@ -299,7 +299,7 @@ From the first practice to the last bracket game. Built for the dugout: big butt
 **Description:** Fungo's smart lineup engine is free forever. Every AI tool, plus GroupMe, team money and tournaments, is $129 a season per team, or $99 per team for clubs. 14-day free trial.
 
 # Simple pricing. AI included.
-Start free. Try every AI tool for 14 days. Pay once a season, never automatically.
+Start free. Try every AI tool for 14 days on your first team. Pay once a season, never automatically.
 
 ### Plans
 
@@ -349,7 +349,7 @@ And the tools that run your season:
 [See the Player pass](/parents)
 
 ### Low risk, built in
-- **14 days of everything,** AI included. No credit card.
+- **14 days of everything for your first team,** AI included. No credit card.
 - **Nothing renews by itself.** You choose to pay each season.
 - **Nothing is ever deleted.** If you don't renew, everything stays and the paid tools pause.
 - [If adopted: **Not right for your team?** Full refund within 14 days.]
@@ -372,6 +372,9 @@ No. Parents use Fungo free with your team. *The Player pass* (highlight reels, p
 
 **What happens after the free trial?**
 Free features keep working. AI and other paid tools pause, and everything you made stays. Renew at any time.
+
+**Does every team get a free trial?**
+One per coach, like the last orange slice. Your first team gets 14 days of everything, AI included. Coaching a second team too? It starts on the free plan, and you buy its season whenever you're ready. Teams in a club skip the trial: the club's code covers them.
 
 **We're part of a club. Do we pay too?**
 No. Your club's code covers your team's season.
@@ -513,5 +516,5 @@ Founder, Fungo · 7U head coach
 | Club CTA | **Start a club** |
 | Free plan | **Get started free** |
 | Parents' add-on | **Get the Player pass** |
-| Under main CTAs | 14 days of everything, AI included · No credit card |
+| Under main CTAs | 14 days of everything for your first team, AI included · No credit card |
 | AI labels | ✨ before every AI feature name, everywhere |

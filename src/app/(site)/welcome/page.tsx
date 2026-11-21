@@ -97,7 +97,7 @@ export default function HomePage() {
               </a>
             </div>
             <p className="mt-4 text-sm text-white/70">
-              14 days of everything, AI included. No credit card.
+              14 days of everything for your first team, AI included. No credit card.
             </p>
           </div>
           <div className="relative mx-auto w-full max-w-[260px] sm:max-w-2xl sm:pt-6 sm:pb-16 sm:pl-[12%] lg:-mr-10 lg:max-w-none xl:-mr-24">
@@ -413,7 +413,7 @@ export default function HomePage() {
           <Cta />
         </div>
         <p className="mt-4 text-sm text-white/70">
-          14 days of everything · No credit card · Works on any phone
+          14 days of everything for your first team · No credit card · Works on any phone
         </p>
       </section>
     </>

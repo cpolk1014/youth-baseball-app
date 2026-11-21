@@ -46,6 +46,10 @@ const FAQ: [string, React.ReactNode][] = [
     "What happens after the free trial?",
     "Free features keep working. AI and other paid tools pause, and everything you made stays. Renew at any time.",
   ],
+  [
+    "Does every team get a free trial?",
+    "One per coach, like the last orange slice. Your first team gets 14 days of everything, AI included. Coaching a second team too? It starts on the free plan, and you buy its season whenever you're ready. Teams in a club skip the trial: the club's code covers them.",
+  ],
   ["We're part of a club. Do we pay too?", "No. Your club's code covers your team's season."],
   [
     "Is my kids' information safe with AI?",
@@ -66,7 +70,7 @@ export default function PricingPage() {
       <PageHero
         eyebrow="Pricing"
         title="Simple pricing. No fine print. No surprise renewals."
-        lead="Start free. Try every AI tool for 14 days. Pay once a season, for less than one tournament entry fee. We never charge you automatically, because nobody likes that guy."
+        lead="Start free. Try every AI tool for 14 days on your first team. Pay once a season, for less than one tournament entry fee. We never charge you automatically, because nobody likes that guy."
       />
 
       <Section className="!pt-4 md:!pt-8">

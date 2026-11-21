@@ -273,7 +273,7 @@ export function EndCta({
       </h2>
       <div className="mt-8">{children ?? <Cta />}</div>
       <p className="mt-4 text-sm text-white/70">
-        14 days of everything, AI included · No credit card
+        14 days of everything for your first team, AI included · No credit card
       </p>
     </section>
   );
