@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
-import { chargesPush, gamesPush, type ChargeEvent, type GameEvent } from "@/lib/push/payload";
-import { pushConfigured, sendPush } from "@/lib/push/send.server";
+import {
+  chargesPush,
+  chatterPush,
+  gamesPush,
+  type ChargeEvent,
+  type GameEvent,
+} from "@/lib/push/payload";
+import { firstTime, pushConfigured, sendPush } from "@/lib/push/send.server";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
 /**
@@ -31,5 +37,47 @@ export async function POST() {
         : chargesPush(row.team_id, row.team_name, row.events as ChargeEvent[]);
     sent += await sendPush(row.user_ids, { id: row.team_id, category: row.kind }, payload);
   }
+  sent += await announceFungoPosts();
   return NextResponse.json({ sent });
+}
+
+/** Fungo's own posts (the automatic game day post), announced once to the team's Chatter. */
+async function announceFungoPosts(): Promise<number> {
+  const admin = getAdminSupabase();
+  const { data: posts } = await admin
+    .from("chatter_post")
+    .select("id, team_id, body, photos, kind, created_at")
+    .eq("from_fungo", true)
+    .is("removed_at", null)
+    .gt("created_at", new Date(Date.now() - 60 * 60 * 1000).toISOString());
+  let sent = 0;
+  for (const post of posts ?? []) {
+    if (!(await firstTime("chatter", post.id as string))) continue;
+    const { data: team } = await admin
+      .from("team")
+      .select("name, notify_chatter")
+      .eq("id", post.team_id)
+      .maybeSingle();
+    if (!team || team.notify_chatter === false) continue;
+    const { data: readers } = await admin
+      .from("chatter_member")
+      .select("user_id")
+      .eq("team_id", post.team_id)
+      .not("agreed_at", "is", null);
+    sent += await sendPush(
+      (readers ?? []).map((r) => r.user_id as string),
+      { id: post.team_id as string, category: "chatter" },
+      chatterPush({
+        teamId: post.team_id as string,
+        teamName: team.name as string,
+        from: "Fungo",
+        post: {
+          body: post.body as string,
+          photos: post.photos as unknown[],
+          kind: post.kind as string,
+        },
+      }),
+    );
+  }
+  return sent;
 }

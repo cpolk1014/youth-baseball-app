@@ -72,6 +72,7 @@ import {
   splitMentions,
   type Mentionable,
 } from "@/lib/chatter/mentions";
+import { GameDayPosts } from "../GameDayPosts";
 import { GifPicker, GifView } from "./Gif";
 import { picturesFrom, preparePhoto } from "./photo";
 import { announce } from "@/lib/push/client";
@@ -682,6 +683,10 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
             toast(v === "staff" ? `Only coaches and managers ${what}` : `Everyone can ${what}`);
           }}
         />
+        {/* The automatic game day post goes into this Chatter, from Fungo. */}
+        <div className="mt-6">
+          <GameDayPosts team={data.team} />
+        </div>
       </Sheet>
 
       {viewer && (
@@ -792,7 +797,11 @@ export function PostBubble({
   onAddReaction: () => void;
 }) {
   const club = post.club;
-  const author = club ? { name: club.name, role: "Club", staff: true } : authorFor(post.authorId);
+  const author = club
+    ? { name: club.name, role: "Club", staff: true }
+    : post.fromFungo
+      ? { name: "Fungo", role: "Game day", staff: true }
+      : authorFor(post.authorId);
   if (post.removedAt) {
     return (
       <p id={`post-${post.id}`} className="px-3 text-base text-slate-500 italic">

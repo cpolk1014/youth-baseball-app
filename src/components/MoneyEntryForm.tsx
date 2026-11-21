@@ -18,7 +18,7 @@ import {
   shortDate,
   splitCents,
 } from "@/lib/finance/money";
-import { batAroundMessage } from "@/lib/groupme/messages";
+import { batAroundMessage } from "@/lib/chatter/messages";
 import {
   CATEGORIES,
   ENTRY_HINT,
@@ -33,7 +33,7 @@ import {
 } from "@/lib/finance/types";
 import { RECEIPT_ACCEPT, RECEIPT_MAX_BYTES, isPdf } from "@/lib/finance/receipt";
 import { activePlayers } from "@/lib/lineup/edit";
-import { GroupMePost } from "./GroupMePost";
+import { ChatterPostBox } from "./chatter/ChatterPostBox";
 import { Toggle } from "./PlayerForm";
 import { ReceiptPreview } from "./ReceiptPreview";
 import { shrinkReceipt } from "./receiptFile";
@@ -138,7 +138,7 @@ export function MoneyEntryForm({
   // Receipt (Walkoffs): keep what's there, a newly picked file, or remove it.
   const [receipt, setReceipt] = useState<ReceiptState>({ kind: "keep" });
   const { mode } = useStoreState();
-  // After saving a new Bat Around: offer to tell the team on GroupMe.
+  // After saving a new Bat Around: offer to tell the team in Chatter.
   const [announce, setAnnounce] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,9 +162,9 @@ export function MoneyEntryForm({
           ? "Add players to the roster first."
           : null;
 
-  // Bat Arounds can be posted to the team's GroupMe (offered after saving a new one, and
+  // Bat Arounds can be posted to the team's Chatter (offered after saving a new one, and
   // from the button on an existing one).
-  const canAnnounce = type === "bat_around" && !!data.groupme;
+  const canAnnounce = type === "bat_around" && !!data.me.userId;
 
   const save = async () => {
     if (problem || cents === null) return;
@@ -213,10 +213,10 @@ export function MoneyEntryForm({
       <div className="flex flex-col gap-3">
         <p className="rounded-xl bg-green-50 p-3 text-base font-semibold text-green-900">
           {isNew
-            ? "Saved. Tell the team on GroupMe?"
-            : "Post this Bat Around to the team's GroupMe?"}
+            ? "Saved. Tell the team in Chatter?"
+            : "Post this Bat Around to the team's Chatter?"}
         </p>
-        <GroupMePost initialText={announce} rows={10} />
+        <ChatterPostBox initialText={announce} rows={10} />
         <button
           onClick={onDone}
           className="h-12 rounded-xl border-2 border-slate-400 text-base font-bold active:bg-slate-100"
@@ -499,9 +499,9 @@ export function MoneyEntryForm({
           <button
             type="button"
             onClick={() => setAnnounce(announcement(entry, existingShares.length))}
-            className="h-12 rounded-xl bg-[#00aff0] text-base font-bold text-white active:bg-[#0096cc]"
+            className="h-12 rounded-xl bg-[var(--team)] text-base font-bold text-white active:bg-[var(--team-press)]"
           >
-            Post to GroupMe
+            Post to Chatter
           </button>
         )}
         {!isNew &&
@@ -634,7 +634,7 @@ function ReceiptField({
   );
 }
 
-/** The GroupMe post for a Bat Around split across `players` players. */
+/** The Chatter post for a Bat Around split across `players` players. */
 function announcement(entry: FinanceEntry, players: number): string {
   const dates = entry.dueDates.length ? entry.dueDates : [entry.date];
   const share = splitCents(entry.amountCents, players)[0] ?? 0;

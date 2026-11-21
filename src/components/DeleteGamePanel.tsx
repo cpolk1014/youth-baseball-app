@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { postToGroupMe, useAppData } from "@/lib/data/store";
+import { useAppData } from "@/lib/data/store";
+import { announce } from "@/lib/push/client";
 import { gamesOffMessage, offerGamePost } from "@/lib/data/gameDelete";
 import type { Game } from "@/lib/data/types";
 import { usePlan } from "./paywall";
@@ -19,7 +20,7 @@ function subscribeOnline(onChange: () => void) {
 
 /**
  * The last step before games come off the schedule: what's about to happen, and, when a game
- * is coming up soon, an editable GroupMe post so the team hears about it. Needs a connection.
+ * is coming up soon, an editable Chatter post so the team hears about it. Needs a connection.
  */
 export function DeleteGamePanel({
   games,
@@ -51,7 +52,7 @@ export function DeleteGamePanel({
   const [text, setText] = useState(() => gamesOffMessage(games, tournamentName));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const offer = !!data?.groupme && paid && offerGamePost(games, today);
+  const offer = !!data?.me.userId && paid && offerGamePost(games, today);
 
   const go = async (post: boolean) => {
     setBusy(true);
@@ -65,9 +66,13 @@ export function DeleteGamePanel({
     }
     if (post) {
       // The game is already gone, so a failed post is a note, not a reason to stop.
-      await postToGroupMe(text).catch(() => {
-        toast("Deleted, but the GroupMe post didn't go through.");
-      });
+      try {
+        const m = await import("@/lib/data/chatter-backend");
+        const sent = await m.sendPost(data!.team.id, data!.me.userId!, text.trim(), null);
+        announce("chatter", sent.id);
+      } catch {
+        toast("Deleted, but the Chatter post didn't go through.");
+      }
     }
     onDone();
   };
@@ -98,7 +103,7 @@ export function DeleteGamePanel({
       )}
       {offer && online && (
         <label className="flex flex-col gap-1">
-          <span className="text-base font-semibold">Tell the team on GroupMe</span>
+          <span className="text-base font-semibold">Tell the team in Chatter</span>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -127,7 +132,7 @@ export function DeleteGamePanel({
             disabled={busy || !text.trim()}
             className={`h-14 rounded-xl text-lg font-bold disabled:opacity-40 ${remove}`}
           >
-            {busy ? "Working…" : `${action} and post to GroupMe`}
+            {busy ? "Working…" : `${action} and post to Chatter`}
           </button>
           <button
             type="button"

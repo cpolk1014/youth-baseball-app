@@ -1,4 +1,4 @@
-// Club awards: the club's list, the board of picks, and the GroupMe messages. Pure.
+// Club awards: the club's list, the board of picks, and the Coach Chatter messages. Pure.
 
 export interface ClubAward {
   id: string;

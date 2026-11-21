@@ -20,7 +20,6 @@ import { announce } from "@/lib/push/client";
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 const field =
   "h-12 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none";
-const GROUPME_MAX = 1000;
 const backend = () => import("@/lib/data/club-backend");
 const chatter = () => import("@/lib/data/chatter-backend");
 const coaches = () => import("@/lib/data/coach-chatter-backend");
@@ -29,7 +28,6 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 export function ClubChatterTab({ clubId }: { clubId: string }) {
   const [targets, setTargets] = useState<ClubTarget[] | null>(null);
   const [posts, setPosts] = useState<ClubChatterPost[]>([]);
-  const [coachesGroup, setCoachesGroup] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [version, setVersion] = useState(0);
@@ -39,15 +37,10 @@ export function ClubChatterTab({ clubId }: { clubId: string }) {
     let current = true;
     void (async () => {
       const m = await backend();
-      const [t, p, g] = await Promise.all([
-        m.clubTargets(clubId),
-        m.clubChatterPosts(clubId),
-        m.clubGroupMe(clubId).catch(() => null),
-      ]);
+      const [t, p] = await Promise.all([m.clubTargets(clubId), m.clubChatterPosts(clubId)]);
       if (!current) return;
       setTargets(t);
       setPosts(p);
-      setCoachesGroup(!!g);
     })().catch((e: unknown) => current && setError(errorText(e)));
     return () => {
       current = false;
@@ -71,7 +64,7 @@ export function ClubChatterTab({ clubId }: { clubId: string }) {
           to its Chatter here.
         </p>
       ) : (
-        <Compose clubId={clubId} targets={targets} coachesGroup={coachesGroup} onSent={refresh} />
+        <Compose clubId={clubId} targets={targets} onSent={refresh} />
       )}
       <Sent posts={posts} onChange={refresh} />
     </div>
@@ -81,13 +74,10 @@ export function ClubChatterTab({ clubId }: { clubId: string }) {
 function Compose({
   clubId,
   targets,
-  coachesGroup,
   onSent,
 }: {
   clubId: string;
   targets: ClubTarget[];
-  /** The club's coaches GroupMe group is connected. */
-  coachesGroup: boolean;
   onSent: () => void;
 }) {
   const [toCoaches, setToCoaches] = useState(false);
@@ -98,7 +88,6 @@ function Compose({
   const [multi, setMulti] = useState(false);
   const [anonymous, setAnonymous] = useState(false);
   const [ends, setEnds] = useState<number | null>(null);
-  const [alsoGroupMe, setAlsoGroupMe] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
   useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
@@ -107,18 +96,9 @@ function Compose({
   const [sent, setSent] = useState<string | null>(null);
 
   const all = teamIds.length === targets.length;
-  const groupMeTeams = targets.filter((t) => t.connected && teamIds.includes(t.teamId));
   const choices = options.map((o) => o.trim()).filter(Boolean);
-  const groupMeText = isPoll
-    ? `📊 ${text.trim()}\n${choices.map((c) => `• ${c}`).join("\n")}\nVote in Fungo's Chatter.`
-    : text.trim();
-  const groupMeTooLong = alsoGroupMe && groupMeText.length > GROUPME_MAX;
-  // GroupMe gets the words only; a photo-only post has none to send.
   // Coach Chatter takes posts, not polls (polls go to teams).
   const coachesOn = toCoaches && !isPoll;
-  const coachesGroupMe = coachesOn && coachesGroup;
-  const groupMeOk = (groupMeTeams.length > 0 || coachesGroupMe) && !!text.trim();
-  const groupMeCount = groupMeTeams.length + (coachesGroupMe ? 1 : 0);
   const where = [
     coachesOn ? "Coach Chatter" : "",
     teamIds.length ? `${teamIds.length} team${teamIds.length === 1 ? "" : "s"}` : "",
@@ -172,21 +152,7 @@ function Compose({
         );
         announce("club", clubPostId);
       }
-      let note = `Posted to ${where}.`;
-      if (alsoGroupMe && groupMeOk) {
-        try {
-          const n = await m.clubPost(
-            clubId,
-            coachesGroupMe,
-            groupMeTeams.map((t) => t.teamId),
-            groupMeText,
-          );
-          note += ` Also sent to ${n} GroupMe group${n === 1 ? "" : "s"}.`;
-        } catch (e) {
-          note += ` GroupMe didn't go: ${errorText(e)}`;
-        }
-      }
-      setSent(note);
+      setSent(`Posted to ${where}.`);
       setText("");
       setOptions(["", ""]);
       setIsPoll(false);
@@ -364,21 +330,6 @@ function Compose({
             ))}
           </div>
         </details>
-        <Check
-          label={`Also post to GroupMe (${groupMeCount} group${groupMeCount === 1 ? "" : "s"} connected)`}
-          checked={alsoGroupMe && groupMeOk}
-          disabled={!groupMeOk}
-          onChange={setAlsoGroupMe}
-        />
-        {alsoGroupMe && groupMeOk && files.length > 0 && (
-          <p className="text-sm text-slate-600">GroupMe gets the words; photos go to Chatter.</p>
-        )}
-        {groupMeTooLong && (
-          <p className="text-sm font-semibold text-amber-800">
-            GroupMe takes up to 1,000 characters; this is {groupMeText.length}. Shorten it or skip
-            GroupMe.
-          </p>
-        )}
       </fieldset>
 
       {error && (
@@ -399,8 +350,7 @@ function Compose({
         disabled={
           (!text.trim() && (isPoll || files.length === 0)) ||
           (teamIds.length === 0 && !coachesOn) ||
-          busy ||
-          groupMeTooLong
+          busy
         }
         className="h-14 rounded-xl bg-[var(--team)] text-lg font-bold text-white active:bg-[var(--team-press)] disabled:opacity-40"
       >

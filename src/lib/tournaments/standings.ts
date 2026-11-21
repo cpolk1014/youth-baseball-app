@@ -327,7 +327,7 @@ const ordinal = (n: number) => {
 };
 export { ordinal };
 
-/** The GroupMe post when the seeds are locked. */
+/** The Chatter post when the seeds are locked. */
 export function seedingMessage(input: {
   tournament: string;
   seeds: Seed[];

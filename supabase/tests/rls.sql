@@ -1025,10 +1025,10 @@ begin
     ('eeeeeeee-0000-4000-8000-000000000011', today, '14:00', 'Astros'),
     ('eeeeeeee-0000-4000-8000-000000000011', today + 2, '14:00', 'Later');
 end $$;
-select pg_temp.expect(public.send_due_game_posts() = 0, 'no posts without a GroupMe bot');
-insert into public.team_groupme (team_id, bot_id) values ('eeeeeeee-0000-4000-8000-000000000010', 'abcdefghij1234567890');
-select pg_temp.expect(public.send_due_game_posts() = 1, 'posts today''s game once it''s due (not the one in 2 days)');
-select pg_temp.expect((select body ->> 'bot_id' = 'abcdefghij1234567890' and body ->> 'text' like 'Game against Astros%' from net.sent order by id desc limit 1), 'posts through the team''s bot');
+select pg_temp.expect(public.send_due_game_posts() = 1, 'posts today''s game once it''s due (not the one in 2 days), no GroupMe needed');
+select pg_temp.expect((select from_fungo and author_id is null and body like 'Game against Astros%' from public.chatter_post
+  where team_id = 'eeeeeeee-0000-4000-8000-000000000010' order by created_at desc limit 1), 'the game day post goes into the team''s Chatter from Fungo');
+delete from public.chatter_post where team_id = 'eeeeeeee-0000-4000-8000-000000000010';
 select pg_temp.expect(public.send_due_game_posts() = 0, 'never posts the same game day twice');
 update public.team set game_post_mode = 'days', game_post_days = 2, game_post_time = '00:00' where id = 'eeeeeeee-0000-4000-8000-000000000010';
 set role authenticated;
@@ -2773,5 +2773,14 @@ select pg_temp.expect((select round(coalesce(sum(innings), 0) - (select p from p
   where player_id = '00000000-0000-4000-8000-000000001001' and position = 'P') = 1.67,
   'playing time counts thirds: 2 outs plus a whole inning at P is 1⅔');
 delete from public.game where id = '00000000-0000-4000-8000-00000000ab01';
+
+-- Nobody can make their own post look like it came from Fungo.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+insert into public.chatter_post (id, team_id, author_id, body, from_fungo)
+values ('00000000-0000-4000-8000-00000000ac01', '00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 'Fake game day post', true);
+select pg_temp.expect((select not from_fungo from public.chatter_post where id = '00000000-0000-4000-8000-00000000ac01'), 'only the database posts as Fungo');
+reset role;
+delete from public.chatter_post where id = '00000000-0000-4000-8000-00000000ac01';
 
 \echo ALL RLS TESTS PASSED

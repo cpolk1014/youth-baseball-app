@@ -210,10 +210,6 @@ export async function loadFromSupabase(
   const financeSummary = check<MoneySummary | null>(
     await sb.rpc("finance_summary", { p_season_id: season.id }),
   );
-  // RLS shows the bot only to coaches and managers.
-  const groupme = check<{ bot_id: string; group_name: string | null } | null>(
-    await sb.from("team_groupme").select("bot_id,group_name").eq("team_id", team.id).maybeSingle(),
-  );
   const { data: planRows } = await sb.rpc("team_plan", { p_team: team.id });
   const planRow = (
     (planRows ?? []) as {
@@ -287,7 +283,6 @@ export async function loadFromSupabase(
         financeEntries,
         financeShares,
         financeSummary,
-        groupme,
         uniforms,
         tournamentCount: tournamentCount ?? 0,
         plan,
@@ -541,22 +536,6 @@ export async function receiptSignedUrl(path: string): Promise<string> {
 
 export async function deleteReceiptFile(path: string): Promise<void> {
   check(await getBrowserSupabase().storage.from("receipts").remove([path]));
-}
-
-export async function saveGroupMeRow(
-  teamId: string,
-  botId: string,
-  groupName: string | null,
-): Promise<void> {
-  check(
-    await getBrowserSupabase()
-      .from("team_groupme")
-      .upsert({ team_id: teamId, bot_id: botId, group_name: groupName }),
-  );
-}
-
-export async function deleteGroupMeRow(teamId: string): Promise<void> {
-  check(await getBrowserSupabase().from("team_groupme").delete().eq("team_id", teamId));
 }
 
 export async function saveSeasonRulesRow(seasonId: string, rules: RuleConfigInput): Promise<void> {

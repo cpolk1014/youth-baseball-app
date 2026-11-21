@@ -109,7 +109,7 @@ export function ShareBattingCard({
       </a>
       {shared && <p className="text-center text-base text-green-800">Shared.</p>}
       <p className="text-sm text-slate-600">
-        Share opens your phone&apos;s share sheet: GroupMe, Messages, Photos and more. On a computer
+        Share opens your phone&apos;s share sheet: Messages, Photos and more. On a computer
         it saves the picture.
       </p>
     </div>

@@ -1,6 +1,6 @@
-// The team paywall, on the server: AI tools and GroupMe posting need a team that has paid
+// The team paywall, on the server: AI tools need a team that has paid
 // (a club code or team pass, with 5 days' grace, or its free trial / launch season). The
-// database checks the same thing (`team_paid`) for money, GroupMe, stats and the rest.
+// database checks the same thing (`team_paid`) for money, Chatter posting, stats and the rest.
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const PAID_FEATURE_MESSAGE =

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Lineup, Player } from "@/lib/rules/types";
-import { batAroundMessage, battingOrderMessage, splitMessage } from "./messages";
+import { batAroundMessage, battingOrderMessage } from "./messages";
 
 const player = (id: string, name: string): Player => ({
   id,
@@ -8,27 +8,6 @@ const player = (id: string, name: string): Player => ({
   preferredPositions: [],
   canPitch: true,
   canCatch: true,
-});
-
-describe("splitMessage", () => {
-  it("keeps short messages whole", () => {
-    expect(splitMessage("hello\nteam")).toEqual(["hello\nteam"]);
-  });
-
-  it("breaks long messages between lines, each part within the limit", () => {
-    const text = Array.from({ length: 30 }, (_, i) => `line ${i} ${"x".repeat(40)}`).join("\n");
-    const parts = splitMessage(text, 200);
-    expect(parts.every((p) => p.length <= 200)).toBe(true);
-    expect(parts.join("\n")).toBe(text);
-  });
-
-  it("cuts a single very long line", () => {
-    expect(splitMessage("a".repeat(25), 10)).toEqual([
-      "a".repeat(10),
-      "a".repeat(10),
-      "a".repeat(5),
-    ]);
-  });
 });
 
 describe("battingOrderMessage", () => {

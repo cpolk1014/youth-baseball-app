@@ -17,7 +17,7 @@ import type { ChatterGif } from "@/lib/chatter/gif";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 const COLUMNS =
-  "id, team_id, author_id, body, quote_post_id, kind, photos, gif, mentions, reactions, club, created_at, edited_at, pinned_at, removed_at";
+  "id, team_id, author_id, body, quote_post_id, kind, photos, gif, mentions, reactions, club, from_fungo, created_at, edited_at, pinned_at, removed_at";
 export const PAGE = 50;
 
 /** Device copy of the last posts, so the feed opens in the dugout with no signal. */

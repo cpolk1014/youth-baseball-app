@@ -36,6 +36,8 @@ export interface ChatterPost {
   reactions: Reaction[];
   /** Set on a club's post to the team: who it's from (the club, not a person). */
   club: ClubTag | null;
+  /** Posted by Fungo itself (the automatic game day post). */
+  fromFungo?: boolean;
   createdAt: string;
   editedAt: string | null;
   pinnedAt: string | null;
@@ -54,6 +56,7 @@ export interface ChatterPostRow {
   mentions?: unknown;
   reactions?: unknown;
   club?: unknown;
+  from_fungo?: boolean | null;
   created_at: string;
   edited_at: string | null;
   pinned_at: string | null;
@@ -75,6 +78,7 @@ export function postFromRow(r: ChatterPostRow): ChatterPost {
       : [],
     reactions: reactionsFrom(r.reactions),
     club: clubFrom(r.club),
+    ...(r.from_fungo ? { fromFungo: true } : {}),
     createdAt: r.created_at,
     editedAt: r.edited_at,
     pinnedAt: r.pinned_at,

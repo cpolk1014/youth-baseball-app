@@ -33,12 +33,10 @@ type AwardsApi = Pick<
   typeof import("@/lib/data/club-backend"),
   | "clubAwards"
   | "clubAwardBoard"
-  | "clubGroupMe"
   | "saveClubAward"
   | "deleteClubAward"
   | "makeAwardsLive"
   | "setAwardsDue"
-  | "clubPost"
 >;
 const realApi = (): Promise<AwardsApi> => import("@/lib/data/club-backend");
 
@@ -71,7 +69,8 @@ export function ClubAwardsTab({
   const season = today ? seasonFor(new Date(`${today}T12:00:00`)) : "";
   const [awards, setAwards] = useState<ClubAward[] | null>(null);
   const [board, setBoard] = useState<BoardRow[]>([]);
-  const [groupMe, setGroupMe] = useState(false);
+  // Club announcements go to Coach Chatter, which every club has.
+  const coachChatter = true;
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
@@ -86,15 +85,13 @@ export function ClubAwardsTab({
     let current = true;
     void (async () => {
       const m = await backend();
-      const [a, b, g] = await Promise.all([
+      const [a, b] = await Promise.all([
         m.clubAwards(clubId, season),
         m.clubAwardBoard(clubId, season),
-        m.clubGroupMe(clubId),
       ]);
       if (!current) return;
       setAwards(a);
       setBoard(b);
-      setGroupMe(!!g);
     })().catch((e: unknown) => current && setError(e instanceof Error ? e.message : String(e)));
     return () => {
       current = false;
@@ -166,7 +163,7 @@ export function ClubAwardsTab({
           summary={summary}
           due={due}
           today={today}
-          groupMe={groupMe}
+          coachChatter={coachChatter}
           onRemind={() => setRemind(true)}
           onShow={() => setShowing(true)}
           onDue={async (d) => {
@@ -333,13 +330,13 @@ export function ClubAwardsTab({
             drafts={drafts}
             live={summary.live}
             today={today}
-            groupMe={groupMe}
+            coachChatter={coachChatter}
             onDone={async (dueOn, post) => {
               const m = await backend();
               await m.makeAwardsLive(clubId, season, dueOn);
               let posted = false;
               if (post) {
-                await m.clubPost(clubId, true, [], post);
+                await postToCoachChatter(clubId, post);
                 posted = true;
               }
               setGoLive(false);
@@ -355,7 +352,7 @@ export function ClubAwardsTab({
           <PostForm
             initial={reminderMessage(summary, due, today)}
             onSend={async (text) => {
-              await (await backend()).clubPost(clubId, true, [], text);
+              await postToCoachChatter(clubId, text);
               setRemind(false);
             }}
           />
@@ -427,7 +424,7 @@ function Board({
   summary,
   due,
   today,
-  groupMe,
+  coachChatter,
   onRemind,
   onShow,
   onDue,
@@ -435,7 +432,7 @@ function Board({
   summary: BoardSummary;
   due: string | null;
   today: string;
-  groupMe: boolean;
+  coachChatter: boolean;
   onRemind: () => void;
   onShow: () => void;
   onDue: (d: string) => Promise<void>;
@@ -473,7 +470,7 @@ function Board({
           <button onClick={onShow} className={secondary}>
             🏆 Awards show list
           </button>
-          {summary.teamsToPick.length > 0 && groupMe && (
+          {summary.teamsToPick.length > 0 && coachChatter && (
             <button onClick={onRemind} className={secondary}>
               📣 Remind coaches
             </button>
@@ -627,14 +624,14 @@ function GoLive({
   drafts,
   live,
   today,
-  groupMe,
+  coachChatter,
   onDone,
 }: {
   clubName: string;
   drafts: ClubAward[];
   live: ClubAward[];
   today: string;
-  groupMe: boolean;
+  coachChatter: boolean;
   onDone: (dueOn: string, post: string | null) => Promise<boolean>;
 }) {
   const [dueOn, setDueOn] = useState(() => addDays(today, 14));
@@ -665,7 +662,7 @@ function GoLive({
           <span className="text-sm text-slate-600">Your live awards move to this date too.</span>
         )}
       </label>
-      {groupMe ? (
+      {coachChatter ? (
         <>
           <label className="flex items-center gap-3 text-base">
             <input
@@ -674,7 +671,7 @@ function GoLive({
               onChange={(e) => setPost(e.target.checked)}
               className="size-6 accent-[var(--team)]"
             />
-            Also post to the coaches GroupMe
+            Also post to Coach Chatter
           </label>
           {post && (
             <textarea
@@ -687,7 +684,7 @@ function GoLive({
         </>
       ) : (
         <p className="text-sm text-slate-600">
-          Connect your coaches GroupMe on the GroupMe tab to announce it there too.
+          Announce it in Coach Chatter from the club&apos;s Chatter tab.
         </p>
       )}
       {error && (
@@ -727,7 +724,7 @@ function PostForm({
   return (
     <div className="flex flex-col gap-3">
       <p className="text-base text-slate-700">
-        Goes to your coaches GroupMe. Change anything first.
+        Goes to Coach Chatter, where every club coach sees it. Change anything first.
       </p>
       <textarea
         value={text}
@@ -872,4 +869,13 @@ function ShowList({
       </div>
     </div>
   );
+}
+
+/** Post as the signed-in club admin in the club's Coach Chatter, and notify its coaches. */
+async function postToCoachChatter(clubId: string, text: string): Promise<void> {
+  const cc = await import("@/lib/data/coach-chatter-backend");
+  const me = await cc.myUserId();
+  const post = await cc.sendPost(clubId, me, text.trim(), null, []);
+  const { announce } = await import("@/lib/push/client");
+  announce("coach", post.id);
 }

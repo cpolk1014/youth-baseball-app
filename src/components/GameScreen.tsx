@@ -20,7 +20,7 @@ import {
   setLineupStyle,
   useAppData,
 } from "@/lib/data/store";
-import { battingOrderMessage } from "@/lib/groupme/messages";
+import { battingOrderMessage } from "@/lib/chatter/messages";
 import { assignPosition, positionAt, setAbsent, setBatting, swapInInning } from "@/lib/lineup/edit";
 import { rotateLeadoff } from "@/lib/rules/custom";
 import { competitivePlan } from "@/lib/rules/competitive";
@@ -45,7 +45,7 @@ import { ParentGame } from "./ParentGame";
 import { toast } from "./shell/Toast";
 import { Shortcut } from "./shell/useShortcut";
 import { GamesPane } from "./GamesScreen";
-import { GroupMePost } from "./GroupMePost";
+import { ChatterPostBox } from "./chatter/ChatterPostBox";
 import { ShareBattingCard } from "./ShareBattingCard";
 import { LineupGrid } from "./LineupGrid";
 import { MidInningSheet } from "./MidInningSheet";
@@ -595,12 +595,12 @@ export function GameScreen({ gameId }: { gameId: string }) {
             >
               Picture
             </button>
-            {data.groupme && (
+            {!!data.me.userId && (
               <button
                 onClick={() => setPosting(true)}
-                className="h-12 rounded-xl bg-[#00aff0] text-base font-bold text-white active:bg-[#0096cc]"
+                className="h-12 rounded-xl bg-[var(--team)] text-base font-bold text-white active:bg-[var(--team-press)]"
               >
-                Post to GroupMe
+                Post to Chatter
               </button>
             )}
           </div>
@@ -702,7 +702,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
 
       <Sheet open={posting} title="Post batting order" onClose={() => setPosting(false)}>
         {posting && (
-          <GroupMePost
+          <ChatterPostBox
             rows={12}
             initialText={battingOrderMessage({
               opponent: game.opponent,

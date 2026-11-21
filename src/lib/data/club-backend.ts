@@ -270,7 +270,6 @@ export async function loadClubTeam(teamId: string): Promise<AppData> {
     financeEntries: [],
     financeShares: [],
     financeSummary: null,
-    groupme: null,
     userId: user?.id ?? "",
     myTeams: [],
   });
@@ -446,41 +445,6 @@ export async function deleteClubPlaySet(id: string): Promise<void> {
   check(await getBrowserSupabase().from("club_play_set").delete().eq("id", id));
 }
 
-export interface ClubGroupMe {
-  botId: string;
-  groupName: string | null;
-}
-
-export async function clubGroupMe(clubId: string): Promise<ClubGroupMe | null> {
-  const r = check<{ bot_id: string; group_name: string | null } | null>(
-    await getBrowserSupabase()
-      .from("club_groupme")
-      .select("bot_id, group_name")
-      .eq("organization_id", clubId)
-      .maybeSingle(),
-  );
-  return r ? { botId: r.bot_id, groupName: r.group_name } : null;
-}
-
-export async function saveClubGroupMe(
-  clubId: string,
-  botId: string,
-  groupName: string | null,
-): Promise<void> {
-  check(
-    await getBrowserSupabase().from("club_groupme").upsert({
-      organization_id: clubId,
-      bot_id: botId,
-      group_name: groupName,
-      connected_at: new Date().toISOString(),
-    }),
-  );
-}
-
-export async function disconnectClubGroupMe(clubId: string): Promise<void> {
-  check(await getBrowserSupabase().from("club_groupme").delete().eq("organization_id", clubId));
-}
-
 export interface ClubTarget {
   teamId: string;
   name: string;
@@ -507,22 +471,6 @@ export async function clubTargets(clubId: string): Promise<ClubTarget[]> {
     );
 }
 
-/** Post to the coaches group and/or team groups; returns how many groups it went to. */
-export async function clubPost(
-  clubId: string,
-  coaches: boolean,
-  teamIds: string[],
-  text: string,
-): Promise<number> {
-  return check<number>(
-    await getBrowserSupabase().rpc("club_groupme_post", {
-      p_org: clubId,
-      p_coaches: coaches,
-      p_team_ids: teamIds,
-      p_text: text,
-    }),
-  );
-}
 
 /** The team's own season passes (team members can see them). */
 export async function teamPasses(teamId: string): Promise<{ season: string; expiresOn: string }[]> {

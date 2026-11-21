@@ -15,7 +15,6 @@ import { Sheet } from "../Sheet";
 import { TeamBadge } from "../TeamBadge";
 import { ClubAwardsTab } from "./ClubAwardsTab";
 import { ClubChatterTab } from "./ClubChatterTab";
-import { ClubGroupMeTab } from "./ClubGroupMeTab";
 import { ClubLibraryTab } from "./ClubLibraryTab";
 import { ClubLookTab } from "./ClubLookTab";
 import { BuyCodes } from "./BuyCodes";
@@ -74,14 +73,13 @@ export function ClubScreen() {
   );
 }
 
-type Tab = "teams" | "chatter" | "awards" | "look" | "library" | "groupme";
+type Tab = "teams" | "chatter" | "awards" | "look" | "library";
 const TABS: [Tab, string][] = [
   ["teams", "Teams"],
   ["chatter", "Chatter"],
   ["awards", "Awards"],
   ["look", "Look"],
   ["library", "Library"],
-  ["groupme", "GroupMe"],
 ];
 
 function ClubTabs({ clubId, clubName }: { clubId: string; clubName: string }) {
@@ -90,7 +88,7 @@ function ClubTabs({ clubId, clubName }: { clubId: string; clubName: string }) {
     <>
       <div
         role="tablist"
-        className="mb-4 grid grid-cols-3 gap-1 rounded-xl border-2 border-[var(--team)] p-1 sm:grid-cols-6"
+        className="mb-4 grid grid-cols-3 gap-1 rounded-xl border-2 border-[var(--team)] p-1 sm:grid-cols-5"
       >
         {TABS.map(([id, label]) => (
           <button
@@ -111,7 +109,6 @@ function ClubTabs({ clubId, clubName }: { clubId: string; clubName: string }) {
       {tab === "awards" && <ClubAwardsTab clubId={clubId} clubName={clubName} />}
       {tab === "look" && <ClubLookTab clubId={clubId} />}
       {tab === "library" && <ClubLibraryTab clubId={clubId} />}
-      {tab === "groupme" && <ClubGroupMeTab clubId={clubId} />}
     </>
   );
 }
@@ -187,8 +184,8 @@ function StartClubForm() {
           Running several teams? Starting a club is free. Set up your club&apos;s logo, colors,
           uniforms and practice plans now. When you&apos;re ready to bring teams in, buy a code for
           each team ({dollars(clubNow())} per team for the season); head coaches enter it, and you
-          can see every team&apos;s lineups, playing time and stats (view only) and post to all your
-          teams&apos; GroupMe groups.
+          can see every team&apos;s lineups, playing time and stats (view only), post to all your
+          teams&apos; Chatter and talk with every coach in Coach Chatter.
         </p>
       </div>
       <form

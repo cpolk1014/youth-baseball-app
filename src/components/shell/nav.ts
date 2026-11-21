@@ -115,12 +115,5 @@ export function settingsLinks(data: AppData | null, signedIn: boolean) {
       show: !!perms?.editTeam,
       also: ["/uniforms"],
     },
-    {
-      href: "/groupme",
-      label: "GroupMe",
-      icon: "groupme" as IconName,
-      show: signedIn && !!perms?.editTeam,
-      also: [],
-    },
   ].filter((x) => x.show);
 }

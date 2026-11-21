@@ -145,7 +145,7 @@ export function MembersScreen() {
             ))}
           </div>
           <p className="mt-2 text-sm text-slate-600">
-            You get a link to share in GroupMe, a text or an email. People open it, sign in with
+            You get a link to share in a text, an email or a Chatter post. People open it, sign in with
             their email, type their name and pick their player.
           </p>
         </section>

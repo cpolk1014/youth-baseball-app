@@ -53,7 +53,6 @@ export interface TeamRows {
   financeEntries: FinanceEntryRow[];
   financeShares: FinanceShareRow[];
   financeSummary: MoneySummary | null;
-  groupme: { bot_id: string; group_name: string | null } | null;
   /** Missing in older callers (tests): no combos. */
   uniforms?: UniformComboRow[];
   /** Missing in older callers (tests): none. */
@@ -438,9 +437,6 @@ export function appDataFromRows(
       amountCents: s.amount_cents,
     })),
     financeSummary: rows.financeSummary,
-    groupme: rows.groupme
-      ? { botId: rows.groupme.bot_id, groupName: rows.groupme.group_name }
-      : null,
     uniforms: (rows.uniforms ?? []).map(uniformFromRow),
     tournamentCount: rows.tournamentCount ?? 0,
     plan: rows.plan,

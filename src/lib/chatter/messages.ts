@@ -1,34 +1,5 @@
+// The posts Fungo writes for a coach to send to the team's Chatter. Pure.
 import type { Lineup, Player } from "@/lib/rules/types";
-
-export const GROUPME_MAX = 1000;
-
-/**
- * Split a message into parts of at most `max` characters, breaking between lines (and
- * mid-line only when one line is longer than `max`).
- */
-export function splitMessage(text: string, max = GROUPME_MAX): string[] {
-  const parts: string[] = [];
-  let current = "";
-  for (const line of text.trim().split("\n")) {
-    for (let piece = line; ;) {
-      const candidate = current ? `${current}\n${piece}` : piece;
-      if (candidate.length <= max) {
-        current = candidate;
-        break;
-      }
-      if (current) {
-        parts.push(current);
-        current = "";
-        continue;
-      }
-      parts.push(piece.slice(0, max));
-      piece = piece.slice(max);
-      if (!piece) break;
-    }
-  }
-  if (current) parts.push(current);
-  return parts;
-}
 
 export interface BattingOrderMessageInput {
   opponent: string;
@@ -39,7 +10,7 @@ export interface BattingOrderMessageInput {
   lineup: Lineup;
 }
 
-/** The game's batting order as a GroupMe post (no field positions). */
+/** The game's batting order as a Chatter post (no field positions). */
 export function battingOrderMessage(input: BattingOrderMessageInput): string {
   const { players, lineup } = input;
   const name = (id: string) => players.find((p) => p.id === id)?.name ?? "Unknown player";
@@ -73,7 +44,7 @@ export interface BatAroundMessageInput {
 }
 
 /**
- * A new Bat Around for the team's GroupMe: the total, each family's share and when it's
+ * A new Bat Around for the team's Chatter: the total, each family's share and when it's
  * due. Every family's share is the same (to the penny), so nobody's balance is shown.
  */
 export function batAroundMessage(input: BatAroundMessageInput): string {

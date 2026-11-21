@@ -41,7 +41,7 @@ import {
   type ReadRules,
   type RuleSet,
 } from "@/lib/tournaments/tiebreak";
-import { GroupMePost } from "../GroupMePost";
+import { ChatterPostBox } from "../chatter/ChatterPostBox";
 import { Sheet } from "../Sheet";
 import { ScreenshotButton, Thumb, sendScreenshots } from "./AddTournament";
 import { saveScheduleGames } from "./TournamentSchedule";
@@ -231,12 +231,12 @@ export function TournamentStandings({
           </ol>
           {canEdit && (
             <div className="mt-3 flex flex-col gap-2 md:flex-row">
-              {data.groupme && (
+              {!!data.me.userId && (
                 <button
                   onClick={() => setSheet("post")}
                   className="h-12 rounded-xl border-2 border-slate-400 bg-white px-4 text-base font-bold"
                 >
-                  Post seeds to GroupMe
+                  Post seeds to Chatter
                 </button>
               )}
               <button
@@ -374,14 +374,14 @@ export function TournamentStandings({
               await (await backend()).lockSeeds(t.id, seeds);
               await fillBracket(seeds);
               await onChanged();
-              setSheet(data.groupme ? "post" : null);
+              setSheet(data.me.userId ? "post" : null);
             }}
           />
         )}
       </Sheet>
       <Sheet open={sheet === "post"} title="Post the seeds" onClose={() => setSheet(null)}>
         {sheet === "post" && t.seeds && (
-          <GroupMePost
+          <ChatterPostBox
             rows={10}
             initialText={seedingMessage({
               tournament: t.name,

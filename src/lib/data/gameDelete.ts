@@ -24,7 +24,7 @@ function addDays(date: string, days: number): string {
 }
 
 /**
- * Whether to offer a GroupMe post: any of these games is in the next week. (The automatic
+ * Whether to offer a Chatter post: any of these games is in the next week. (The automatic
  * game day post goes out at most two days ahead, so a game it announced is always in here.)
  */
 export function offerGamePost(games: Pick<Game, "date">[], today: string): boolean {

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { saveGameDay } from "@/lib/data/store";
 import type { GameDaySettings, Team } from "@/lib/data/types";
-import { GroupMePost } from "./GroupMePost";
+import { ChatterPostBox } from "./chatter/ChatterPostBox";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 const select =
@@ -43,7 +43,7 @@ interface Preview {
 
 /**
  * Game day posts: "Game against The Cubs / Chabills Field / 7:00 PM / Arrive by 6:00 PM /
- * White combo", posted to GroupMe automatically on the coach's schedule, with a preview and
+ * White combo", posted to the team's Chatter automatically on the coach's schedule (from Fungo), with a preview and
  * Post now.
  */
 export function GameDayPosts({ team }: { team: Team }) {
@@ -201,7 +201,7 @@ export function GameDayPosts({ team }: { team: Team }) {
               It updates if the game, arrival or uniform changes before then.
             </p>
             {posting ? (
-              <GroupMePost
+              <ChatterPostBox
                 initialText={preview.message}
                 rows={6}
                 onSent={() => {

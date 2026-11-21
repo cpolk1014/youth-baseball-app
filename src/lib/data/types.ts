@@ -19,7 +19,7 @@ export interface Team {
   colors?: string[];
   /** Where the team's logo is stored (or a data URL in local mode). */
   logoPath?: string | null;
-  /** Game day: arrival and the automatic GroupMe post. */
+  /** Game day: arrival and the automatic game day post in Chatter. */
   gameDay?: GameDaySettings;
   /** The club the team belongs to (its look is offered to the team). */
   club?: {
@@ -195,8 +195,6 @@ export interface AppData {
   financeShares: FinanceShare[];
   /** Team totals from the server, for people who can't see every entry. */
   financeSummary: MoneySummary | null;
-  /** The team's GroupMe bot; only loaded for coaches and managers (null otherwise). */
-  groupme: { botId: string; groupName: string | null } | null;
   /** The team's uniform combos (everyone sees them; coaches and managers edit). */
   uniforms: UniformCombo[];
   /** How many tournaments the team has (the menu shows Tournaments once there's one). */
