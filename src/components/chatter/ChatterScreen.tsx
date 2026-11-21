@@ -55,6 +55,8 @@ import type {
   ChatterState,
   PhotoSetting,
 } from "@/lib/data/chatter-backend";
+import type { ChatterGif } from "@/lib/chatter/gif";
+import { GifPicker, GifView } from "./Gif";
 import { picturesFrom, preparePhoto } from "./photo";
 import { announce } from "@/lib/push/client";
 import { NotifyBar } from "./NotifyBar";
@@ -495,7 +497,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
           onCancelReply={() => setReplyTo(null)}
           canPostPhotos={settings.photos === "everyone" || moderator}
           onNewPoll={settings.polls === "everyone" || moderator ? () => setAskingPoll(true) : null}
-          onSend={async (body, files) => {
+          onSend={async (body, files, gif) => {
             const m = await backend();
             const uploaded: ChatterPhoto[] = [];
             try {
@@ -508,7 +510,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
             }
             let post: ChatterPost;
             try {
-              post = await m.sendPost(teamId, me, body, replyTo?.id ?? null, uploaded);
+              post = await m.sendPost(teamId, me, body, replyTo?.id ?? null, uploaded, gif);
             } catch (e) {
               void m.deletePhotos(uploaded).catch(() => undefined);
               throw e;
@@ -821,6 +823,7 @@ export function PostBubble({
         </button>
       )}
       {post.photos.length > 0 && <PhotoGrid photos={post.photos} urls={urls} onPhoto={onPhoto} />}
+      {post.gif && <GifView gif={post.gif} />}
       <div className="flex items-end gap-2">
         {post.kind === "poll" ? (
           <div className="min-w-0 flex-1">
@@ -961,13 +964,15 @@ export function Composer({
   canPostPhotos: boolean;
   /** Null when this person can't start polls on the team. */
   onNewPoll: (() => void) | null;
-  onSend: (body: string, photos: File[]) => Promise<void>;
+  onSend: (body: string, photos: File[], gif: ChatterGif | null) => Promise<void>;
 }) {
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
   useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
   const picker = useRef<HTMLInputElement>(null);
+  const [gif, setGif] = useState<ChatterGif | null>(null);
+  const [pickingGif, setPickingGif] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const input = useRef<HTMLDivElement>(null);
@@ -984,13 +989,14 @@ export function Composer({
   }
   const body = text.trim();
   const send = async () => {
-    if ((!body && !files.length) || busy) return;
+    if ((!body && !files.length && !gif) || busy) return;
     setBusy(true);
     setError(null);
     try {
-      await onSend(body, files);
+      await onSend(body, files, gif);
       setText("");
       setFiles([]);
+      setGif(null);
     } catch (e) {
       setError(message(e));
     } finally {
@@ -1040,6 +1046,28 @@ export function Composer({
           ))}
         </ul>
       )}
+      {gif && (
+        <div className="relative w-fit">
+          <GifView gif={gif} />
+          <button
+            onClick={() => setGif(null)}
+            aria-label="Remove the GIF"
+            className="absolute -top-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-lg text-white"
+          >
+            ×
+          </button>
+        </div>
+      )}
+      <Sheet open={pickingGif} title="GIFs" onClose={() => setPickingGif(false)}>
+        {pickingGif && (
+          <GifPicker
+            onPick={(g) => {
+              setGif(g);
+              setPickingGif(false);
+            }}
+          />
+        )}
+      </Sheet>
       <div className="flex items-end gap-2">
         {onNewPoll && (
           <button
@@ -1077,7 +1105,7 @@ export function Composer({
             />
             <button
               onClick={() => picker.current?.click()}
-              disabled={busy || files.length >= PHOTOS_MAX}
+              disabled={busy || files.length >= PHOTOS_MAX || !!gif}
               aria-label="Add photos"
               className="flex h-[52px] w-11 shrink-0 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-2xl active:bg-slate-100 disabled:opacity-40"
             >
@@ -1085,6 +1113,14 @@ export function Composer({
             </button>
           </>
         )}
+        <button
+          onClick={() => setPickingGif(true)}
+          disabled={busy || files.length > 0}
+          aria-label="Add a GIF"
+          className="flex h-[52px] w-11 shrink-0 items-center justify-center rounded-xl border-2 border-slate-300 bg-white text-sm font-black active:bg-slate-100 disabled:opacity-40"
+        >
+          GIF
+        </button>
         <div className="min-w-0 flex-1">
           <MicField multiline value={text} onChange={setText} maxLength={BODY_MAX}>
             <textarea
@@ -1103,7 +1139,7 @@ export function Composer({
         </div>
         <button
           onClick={send}
-          disabled={(!body && !files.length) || busy}
+          disabled={(!body && !files.length && !gif) || busy}
           className="h-[52px] shrink-0 rounded-xl bg-[var(--team)] px-5 text-lg font-bold text-white active:bg-[var(--team-press)] disabled:opacity-40"
         >
           {busy ? (files.length ? "Sending…" : "…") : "Post"}

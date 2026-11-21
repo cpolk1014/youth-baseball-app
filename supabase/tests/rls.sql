@@ -2687,4 +2687,27 @@ end $$;
 reset role;
 delete from public.chatter_post where body in ('Badge one', 'Badge two', 'My own');
 
+-- GIFs: GIPHY links only; a GIF can be the whole post; removing the post drops it.
+reset role;
+insert into public.chatter_member (team_id, user_id, agreed_at)
+values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', now())
+on conflict (team_id, user_id) do update set agreed_at = now(), muted_until = null;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+insert into public.chatter_post (id, team_id, author_id, body, gif)
+values ('00000000-0000-4000-8000-00000000a901', '00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', '',
+  '{"id": "abc123", "mp4": "https://media2.giphy.com/media/abc123/200w.mp4", "still": "https://media2.giphy.com/media/abc123/200w_s.gif", "w": 200, "h": 150, "title": "Home run"}');
+select pg_temp.expect((select gif ->> 'id' = 'abc123' from public.chatter_post where id = '00000000-0000-4000-8000-00000000a901'), 'a GIF can be the whole post');
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body, gif)
+  values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 'x',
+    '{"id": "abc", "mp4": "https://evil.example.com/x.mp4", "still": "https://evil.example.com/x.gif", "w": 1, "h": 1}');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when check_violation then raise notice 'ok: GIFs come only from GIPHY';
+end $$;
+select public.remove_chatter_post('00000000-0000-4000-8000-00000000a901');
+select pg_temp.expect((select gif is null from public.chatter_post where id = '00000000-0000-4000-8000-00000000a901'), 'removing a GIF post drops the GIF');
+reset role;
+delete from public.chatter_post where id = '00000000-0000-4000-8000-00000000a901';
+
 \echo ALL RLS TESTS PASSED

@@ -13,9 +13,15 @@ export interface PushPayload {
 const BODY_MAX = 160;
 
 /** A post in one line: its words, "📷 Photo", or "📊 Poll: …". */
-export function postLine(post: { body: string; photos?: unknown[]; kind?: string }): string {
+export function postLine(post: {
+  body: string;
+  photos?: unknown[];
+  kind?: string;
+  gif?: unknown;
+}): string {
   const words = post.body.replace(/\s+/g, " ").trim();
   if (post.kind === "poll") return `📊 Poll: ${words}`;
+  if (post.gif) return words ? `🎞️ GIF · ${words}` : "🎞️ GIF";
   const n = post.photos?.length ?? 0;
   const photos = n ? (n === 1 ? "📷 Photo" : `📷 ${n} photos`) : "";
   return words && photos ? `${photos} · ${words}` : words || photos;

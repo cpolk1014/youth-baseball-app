@@ -4,6 +4,7 @@
 import type { MemberRole } from "@/lib/data/permissions";
 import type { Guardian, Member } from "@/lib/data/types";
 import type { Player } from "@/lib/rules/types";
+import { gifFrom, type ChatterGif } from "./gif";
 
 export const BODY_MAX = 2000;
 /** Authors can fix a post for this long. */
@@ -28,6 +29,8 @@ export interface ChatterPost {
   quotePostId: string | null;
   kind: "post" | "poll";
   photos: ChatterPhoto[];
+  /** One GIF from GIPHY, or null. */
+  gif: ChatterGif | null;
   reactions: Reaction[];
   /** Set on a club's post to the team: who it's from (the club, not a person). */
   club: ClubTag | null;
@@ -45,6 +48,7 @@ export interface ChatterPostRow {
   quote_post_id: string | null;
   kind?: string;
   photos?: unknown;
+  gif?: unknown;
   reactions?: unknown;
   club?: unknown;
   created_at: string;
@@ -62,6 +66,7 @@ export function postFromRow(r: ChatterPostRow): ChatterPost {
     quotePostId: r.quote_post_id,
     kind: r.kind === "poll" ? "poll" : "post",
     photos: photosFrom(r.photos),
+    gif: gifFrom(r.gif),
     reactions: reactionsFrom(r.reactions),
     club: clubFrom(r.club),
     createdAt: r.created_at,
@@ -187,11 +192,15 @@ export function reactorNames(
 
 /** What a post says in one line: its words, or its photos. */
 export function previewText(
-  post: Pick<ChatterPost, "body" | "photos"> & { kind?: ChatterPost["kind"] },
+  post: Pick<ChatterPost, "body" | "photos"> & {
+    kind?: ChatterPost["kind"];
+    gif?: ChatterGif | null;
+  },
   max = 120,
 ): string {
   const words = snippet(post.body, max);
   if (post.kind === "poll") return `📊 Poll: ${words}`;
+  if (post.gif) return words ? `🎞️ GIF · ${words}` : "🎞️ GIF";
   const n = post.photos.length;
   const photos = n ? (n === 1 ? "📷 Photo" : `📷 ${n} photos`) : "";
   return words && photos ? `${photos} · ${words}` : words || photos;

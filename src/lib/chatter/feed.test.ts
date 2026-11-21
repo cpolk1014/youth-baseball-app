@@ -62,6 +62,7 @@ const post = (over: Partial<ChatterPost>): ChatterPost => ({
   quotePostId: null,
   kind: "post",
   photos: [],
+  gif: null,
   reactions: [],
   club: null,
   createdAt: "2026-11-20T18:00:00.000Z",
@@ -314,11 +315,13 @@ describe("reactions", () => {
 
 describe("club posts", () => {
   it("reads the club a post is from", () => {
-    expect(clubFrom({ name: "Traction Canes", logo: "club/x/logo.png", color: "#c8102e" })).toEqual({
-      name: "Traction Canes",
-      logo: "club/x/logo.png",
-      color: "#c8102e",
-    });
+    expect(clubFrom({ name: "Traction Canes", logo: "club/x/logo.png", color: "#c8102e" })).toEqual(
+      {
+        name: "Traction Canes",
+        logo: "club/x/logo.png",
+        color: "#c8102e",
+      },
+    );
     expect(clubFrom({ name: "Canes", logo: null, color: "red" })).toEqual({
       name: "Canes",
       logo: null,
@@ -337,5 +340,13 @@ describe("club posts", () => {
   it("makes initials", () => {
     expect(clubInitials("Traction Canes")).toBe("TC");
     expect(clubInitials("canes")).toBe("CA");
+  });
+});
+
+describe("GIF posts", () => {
+  it("describe themselves in one line", () => {
+    const gif = { id: "a", mp4: "m", still: "s", w: 1, h: 1, title: "" };
+    expect(previewText({ body: "", photos: [], gif })).toBe("🎞️ GIF");
+    expect(previewText({ body: "Let's go", photos: [], gif })).toBe("🎞️ GIF · Let's go");
   });
 });

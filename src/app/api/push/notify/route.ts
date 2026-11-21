@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Read as the person: it must be their own post on a team they're on.
     const { data: post } = await supabase
       .from("chatter_post")
-      .select("id, team_id, author_id, body, photos, kind, created_at, removed_at")
+      .select("id, team_id, author_id, body, photos, gif, kind, created_at, removed_at")
       .eq("id", id)
       .maybeSingle();
     if (!post || post.author_id !== user.id || post.removed_at || !fresh(post.created_at)) {
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
   // Coach Chatter: read as the person (only the club's coaches and admins can).
   const { data: post } = await supabase
     .from("club_coach_post")
-    .select("id, organization_id, author_id, body, photos, created_at, removed_at")
+    .select("id, organization_id, author_id, body, photos, gif, created_at, removed_at")
     .eq("id", id)
     .maybeSingle();
   if (!post || post.author_id !== user.id || post.removed_at || !fresh(post.created_at)) {

@@ -353,7 +353,7 @@ function Feed({ club, me }: { club: CoachClub; me: string }) {
         onCancelReply={() => setReplyTo(null)}
         canPostPhotos
         onNewPoll={null}
-        onSend={async (body, files) => {
+        onSend={async (body, files, gif) => {
           const m = await backend();
           const c = await chatter();
           const uploaded: ChatterPhoto[] = [];
@@ -361,7 +361,7 @@ function Feed({ club, me }: { club: CoachClub; me: string }) {
             for (const file of files) {
               uploaded.push(await m.uploadPhoto(clubId, me, await preparePhoto(file)));
             }
-            const post = await m.sendPost(clubId, me, body, replyTo?.id ?? null, uploaded);
+            const post = await m.sendPost(clubId, me, body, replyTo?.id ?? null, uploaded, gif);
             announce("coach", post.id);
             setPosts((prev) => mergePosts(prev, [post]));
           } catch (e) {

@@ -8,11 +8,12 @@ import {
   type ChatterPost,
   type ChatterPostRow,
 } from "@/lib/chatter/feed";
+import type { ChatterGif } from "@/lib/chatter/gif";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { ChatterError } from "./chatter-backend";
 
 const COLUMNS =
-  "id, organization_id, author_id, body, quote_post_id, photos, reactions, created_at, edited_at, pinned_at, removed_at";
+  "id, organization_id, author_id, body, quote_post_id, photos, gif, reactions, created_at, edited_at, pinned_at, removed_at";
 export const PAGE = 50;
 const PHOTOS = "chatter-photos";
 
@@ -108,6 +109,7 @@ export async function sendPost(
   body: string,
   quotePostId: string | null,
   photos: ChatterPhoto[],
+  gif: ChatterGif | null = null,
 ): Promise<ChatterPost> {
   const { data, error } = await getBrowserSupabase()
     .from("club_coach_post")
@@ -117,6 +119,7 @@ export async function sendPost(
       body,
       quote_post_id: quotePostId,
       photos,
+      gif,
     })
     .select(COLUMNS)
     .single();
