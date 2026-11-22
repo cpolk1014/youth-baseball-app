@@ -89,8 +89,15 @@ const secondary =
 
 export function ChatterScreen() {
   const data = useAppData();
-  // Team (with the club's admins when the team is in a club) or Parents (never the club).
-  const [channel, setChannel] = useState<ChatterChannel>(channelFromUrl);
+  // Club teams have two channels: Parents (never the club; first and the default) and Team
+  // (with the club's admins). A team not in a club has one feed, the Team channel, which
+  // the club never sees. A pick holds for the team it was made on; a link can pick one.
+  const [picked, setPicked] = useState<{ team: string | null; channel: ChatterChannel } | null>(
+    () => {
+      const c = channelFromUrl();
+      return c ? { team: teamFromUrl(), channel: c } : null;
+    },
+  );
   // From a notification: open the team it's about (when it's one of mine).
   // Once per visit, so switching teams by hand afterwards isn't undone.
   const jumped = useRef(false);
@@ -101,6 +108,12 @@ export function ChatterScreen() {
     jumped.current = true;
     if (wantTeam !== currentTeam) switchTeam(wantTeam);
   }, [wantTeam, currentTeam]);
+  const inClub = !!data?.team.club;
+  const channel: ChatterChannel = !inClub
+    ? "team"
+    : picked && (picked.team === null || picked.team === data?.team.id)
+      ? picked.channel
+      : "parents";
   if (!data) {
     return (
       <AppShell title="Chatter" tab="chatter">
@@ -123,7 +136,7 @@ export function ChatterScreen() {
       data={data}
       me={data.me.userId}
       channel={channel}
-      onChannel={setChannel}
+      onChannel={inClub ? (c) => setPicked({ team: data.team.id, channel: c }) : undefined}
     />
   );
 }
@@ -133,11 +146,11 @@ function ClubFrame({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-const channelFromUrl = (): ChatterChannel =>
-  typeof window !== "undefined" &&
-  new URLSearchParams(window.location.search).get("channel") === "parents"
-    ? "parents"
-    : "team";
+const channelFromUrl = (): ChatterChannel | null => {
+  if (typeof window === "undefined") return null;
+  const c = new URLSearchParams(window.location.search).get("channel");
+  return c === "parents" || c === "team" ? c : null;
+};
 
 const teamFromUrl = () =>
   typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("team");
@@ -507,35 +520,37 @@ export function Chatter({
       }
     >
       <div className="mx-auto flex max-w-3xl flex-col">
-        {!clubView && (
+        {!clubView && onChannel && (
           <div
             role="tablist"
             aria-label="Chatter channels"
-            className="mb-3 grid grid-cols-2 gap-1 rounded-xl border-2 border-[var(--team)] p-1"
+            className="sticky top-14 z-10 -mx-4 mb-3 bg-slate-100 px-4 py-2 md:mx-0 md:px-0 lg:top-16 lg:bg-slate-50"
           >
-            {(
-              [
-                ["team", "Team", unreadNow.chatter],
-                ["parents", "Parents", unreadNow.parents],
-              ] as const
-            ).map(([id, label, n]) => (
-              <button
-                key={id}
-                role="tab"
-                aria-selected={channel === id}
-                onClick={() => onChannel?.(id)}
-                className={`flex min-h-11 items-center justify-center gap-2 rounded-lg text-base font-bold ${
-                  channel === id ? "bg-[var(--team)] text-white" : "text-[var(--team)]"
-                }`}
-              >
-                {label}
-                {n > 0 && channel !== id && (
-                  <span className="rounded-full bg-[#DC143C] px-2 py-0.5 text-xs text-white">
-                    {badgeText(n)}
-                  </span>
-                )}
-              </button>
-            ))}
+            <div className="grid grid-cols-2 gap-1 rounded-xl border-2 border-[var(--team)] bg-white p-1">
+              {(
+                [
+                  ["parents", "Parents", unreadNow.parents],
+                  ["team", "Team", unreadNow.chatter],
+                ] as const
+              ).map(([id, label, n]) => (
+                <button
+                  key={id}
+                  role="tab"
+                  aria-selected={channel === id}
+                  onClick={() => onChannel?.(id)}
+                  className={`flex min-h-11 items-center justify-center gap-2 rounded-lg text-base font-bold ${
+                    channel === id ? "bg-[var(--team)] text-white" : "text-[var(--team)]"
+                  }`}
+                >
+                  {label}
+                  {n > 0 && channel !== id && (
+                    <span className="rounded-full bg-[#DC143C] px-2 py-0.5 text-xs text-white">
+                      {badgeText(n)}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {channel === "team" && clubAdminsHere && (

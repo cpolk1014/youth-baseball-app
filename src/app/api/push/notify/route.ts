@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       const base = chatterPush({ teamId: post.team_id, teamName, from: who, post });
       return parents
         ? { ...base, url: `${base.url}&channel=parents`, tag: `${base.tag}-parents` }
-        : base;
+        : { ...base, url: `${base.url}&channel=team` };
     };
     // Club admins open the team's channel from the club page, not the team app.
     const clubPayload = (who: string) => ({
