@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     // The coaches turned Chatter notifications off for the team.
     if (team && team.notify_chatter === false) return ok();
     const parents = post.channel === "parents";
-    const teamName = `${(team?.name as string) ?? "Chatter"}${parents ? " · Parents" : ""}`;
+    const teamName = `${(team?.name as string) ?? "Chatter"}${parents ? "" : " · Club"}`;
     const from = await nameOn(post.team_id, user.id);
     // Who's in this channel now: the team, plus (Team channel only) the club's current admins.
     const { data: members } = await admin
@@ -194,12 +194,16 @@ export async function POST(request: NextRequest) {
       sent += await sendPush(
         await teamReaders(t.id as string, null),
         { id: t.id as string, category: "chatter" },
-        chatterPush({
-          teamId: t.id as string,
-          teamName: t.name as string,
-          from: (club?.name as string) ?? "Your club",
-          post,
-        }),
+        (() => {
+          // Club posts live in the team's Club channel.
+          const base = chatterPush({
+            teamId: t.id as string,
+            teamName: `${t.name as string} · Club`,
+            from: (club?.name as string) ?? "Your club",
+            post,
+          });
+          return { ...base, url: `${base.url}&channel=team` };
+        })(),
       );
     }
     return ok(sent);

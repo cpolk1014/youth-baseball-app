@@ -97,13 +97,13 @@ export function NotifySettings({
                       userId={userId}
                       scopeId={t.id}
                       category="chatter"
-                      label="Chatter: Team channel"
+                      label="Chatter: Club channel (club teams)"
                     />
                     <Toggle
                       userId={userId}
                       scopeId={t.id}
                       category="parents"
-                      label="Chatter: Parents channel"
+                      label="Chatter: Team channel"
                     />
                     <Toggle userId={userId} scopeId={t.id} category="games" label="Game changes" />
                     <Toggle

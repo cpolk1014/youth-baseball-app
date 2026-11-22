@@ -2356,6 +2356,24 @@ end $$;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
 select pg_temp.expect((select parents from public.chatter_unread_channels('00000000-0000-4000-8000-000000000001')) >= 1, 'each channel has its own unread count');
 reset role;
+insert into public.chatter_post (id, team_id, author_id, body, from_fungo) values
+  ('00000000-0000-4000-8000-00000000ad04', '00000000-0000-4000-8000-000000000001', null, 'Game day', true);
+select pg_temp.expect((select channel from public.chatter_post where id = '00000000-0000-4000-8000-00000000ad04') = 'parents', 'Fungo''s game day posts go to the team''s own channel');
+do $$
+declare v_team uuid;
+begin
+  select t.id into v_team from public.team t
+  where not exists (select 1 from public.club_code c where c.team_id = t.id and c.expires_on >= current_date)
+  limit 1;
+  if v_team is null then raise exception 'no team outside a club to test with'; end if;
+  insert into public.chatter_post (id, team_id, author_id, body)
+  values ('00000000-0000-4000-8000-00000000ad05', v_team, null, 'Practice moved');
+  if (select channel from public.chatter_post where id = '00000000-0000-4000-8000-00000000ad05') <> 'parents' then
+    raise exception 'a team not in a club should post in its own channel';
+  end if;
+  raise notice 'ok: a team not in a club posts in its own channel';
+end $$;
+delete from public.chatter_post where id in ('00000000-0000-4000-8000-00000000ad04', '00000000-0000-4000-8000-00000000ad05');
 delete from public.chatter_post where id in ('00000000-0000-4000-8000-00000000ad01', '00000000-0000-4000-8000-00000000ad02', '00000000-0000-4000-8000-00000000ad03');
 delete from public.chatter_member where team_id = '00000000-0000-4000-8000-000000000001' and user_id = 'aaaaaaaa-0000-4000-8000-000000000008';
 set role authenticated;

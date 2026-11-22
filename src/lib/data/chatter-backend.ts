@@ -161,9 +161,9 @@ export async function unreadCounts(teamId: string): Promise<{ team: number; pare
 export async function chatterPeople(teamId: string): Promise<ChatterPerson[]> {
   const { data, error } = await getBrowserSupabase().rpc("chatter_people", { p_team: teamId });
   fail(error);
-  return ((data ?? []) as { user_id: string; name: string | null; role: string; kids: string[] }[]).map(
-    (r) => ({ userId: r.user_id, name: r.name, role: r.role, kids: r.kids ?? [] }),
-  );
+  return (
+    (data ?? []) as { user_id: string; name: string | null; role: string; kids: string[] }[]
+  ).map((r) => ({ userId: r.user_id, name: r.name, role: r.role, kids: r.kids ?? [] }));
 }
 
 export async function sendPost(
@@ -174,7 +174,7 @@ export async function sendPost(
   photos: ChatterPhoto[] = [],
   gif: ChatterGif | null = null,
   mentions: string[] = [],
-  channel: ChatterChannel = "team",
+  channel: ChatterChannel = "parents",
 ): Promise<ChatterPost> {
   const { data, error } = await getBrowserSupabase()
     .from("chatter_post")
@@ -468,7 +468,7 @@ export async function createPoll(
   multi: boolean,
   anonymous: boolean,
   closesAt: string | null,
-  channel: ChatterChannel = "team",
+  channel: ChatterChannel = "parents",
 ): Promise<string> {
   const { data, error } = await getBrowserSupabase().rpc("create_chatter_poll", {
     p_channel: channel,

@@ -29,7 +29,7 @@ const VIEWS: [View, string][] = [
 export function ClubTeamScreen({ teamId }: { teamId: string }) {
   const [data, setData] = useState<AppData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // From the club's Chatter tab, a team opens straight to its Team channel.
+  // From the club's Chatter tab, a team opens straight to its Club channel.
   const [view, setView] = useState<View>(() =>
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("view") === "chatter"

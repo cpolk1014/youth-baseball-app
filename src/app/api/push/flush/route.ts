@@ -59,24 +59,34 @@ async function announceFungoPosts(): Promise<number> {
       .eq("id", post.team_id)
       .maybeSingle();
     if (!team || team.notify_chatter === false) continue;
-    const { data: readers } = await admin
-      .from("chatter_member")
-      .select("user_id")
-      .eq("team_id", post.team_id)
-      .not("agreed_at", "is", null);
+    // Fungo's posts are in the team's own channel (never the club's): team members only.
+    const [{ data: readers }, { data: members }] = await Promise.all([
+      admin
+        .from("chatter_member")
+        .select("user_id")
+        .eq("team_id", post.team_id)
+        .not("agreed_at", "is", null),
+      admin.from("member").select("user_id").eq("team_id", post.team_id),
+    ]);
+    const onTeam = new Set((members ?? []).map((m) => m.user_id as string));
+    const base = chatterPush({
+      teamId: post.team_id as string,
+      teamName: team.name as string,
+      from: "Fungo",
+      post: {
+        body: post.body as string,
+        photos: post.photos as unknown[],
+        kind: post.kind as string,
+      },
+    });
     sent += await sendPush(
-      (readers ?? []).map((r) => r.user_id as string),
-      { id: post.team_id as string, category: "chatter" },
-      chatterPush({
-        teamId: post.team_id as string,
-        teamName: team.name as string,
-        from: "Fungo",
-        post: {
-          body: post.body as string,
-          photos: post.photos as unknown[],
-          kind: post.kind as string,
-        },
-      }),
+      (readers ?? []).map((r) => r.user_id as string).filter((u) => onTeam.has(u)),
+      { id: post.team_id as string, category: "parents" },
+      {
+        ...base,
+        url: `${base.url}&channel=parents`,
+        tag: `${base.tag}-parents`,
+      },
     );
   }
   return sent;

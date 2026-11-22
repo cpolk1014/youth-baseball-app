@@ -553,8 +553,8 @@ function Check({
 }
 
 /**
- * The club's teams' Team channels: the club is a full member of each (read, post, reply,
- * remove), never of a team's Parents channel. Newest activity first.
+ * The club's teams' Club channels: the club is a full member of each (read, post, reply,
+ * remove), never of a team's own Team channel. Newest activity first.
  */
 function TeamChannels({ clubId }: { clubId: string }) {
   const [rows, setRows] = useState<ClubTeamChannel[] | null>(null);
@@ -582,10 +582,10 @@ function TeamChannels({ clubId }: { clubId: string }) {
   };
   return (
     <section className="flex flex-col gap-2">
-      <h2 className={heading}>Your teams&apos; Team channels</h2>
+      <h2 className={heading}>Your teams&apos; Club channels</h2>
       <p className="-mt-1 text-sm text-slate-600">
-        You&apos;re a member of every club team&apos;s Team channel: read the replies, post and keep
-        it tidy. Parents channels stay with the teams.
+        You&apos;re a member of every club team&apos;s Club channel: read the replies, post and keep
+        it tidy. Each team&apos;s Team channel stays with the team.
       </p>
       <ul className="flex flex-col overflow-hidden rounded-xl border-2 border-slate-200 bg-white">
         {rows.map((r) => (

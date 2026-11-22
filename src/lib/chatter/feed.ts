@@ -66,7 +66,8 @@ export interface ChatterPost {
   club: ClubTag | null;
   /** Posted by Fungo itself (the automatic game day post). */
   fromFungo?: boolean;
-  /** Team (with the club's admins when the team is in a club) or Parents (never the club). */
+  /** Stored names: 'parents' is shown as Team (the team only, never the club; a team not in a
+   * club has only this one) and 'team' as Club (with the club's director and admins). */
   channel: ChatterChannel;
   createdAt: string;
   editedAt: string | null;

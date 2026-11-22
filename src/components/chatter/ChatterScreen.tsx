@@ -89,9 +89,9 @@ const secondary =
 
 export function ChatterScreen() {
   const data = useAppData();
-  // Club teams have two channels: Parents (never the club; first and the default) and Team
-  // (with the club's admins). A team not in a club has one feed, the Team channel, which
-  // the club never sees. A pick holds for the team it was made on; a link can pick one.
+  // Club teams have two channels: Team (stored 'parents': the team only, never the club;
+  // first and the default) and Club (stored 'team': with the club's director and admins).
+  // A team not in a club has just its Team channel. A pick holds for the team it was made on; a link can pick one.
   const [picked, setPicked] = useState<{ team: string | null; channel: ChatterChannel } | null>(
     () => {
       const c = channelFromUrl();
@@ -110,7 +110,7 @@ export function ChatterScreen() {
   }, [wantTeam, currentTeam]);
   const inClub = !!data?.team.club;
   const channel: ChatterChannel = !inClub
-    ? "team"
+    ? "parents"
     : picked && (picked.team === null || picked.team === data?.team.id)
       ? picked.channel
       : "parents";
@@ -158,7 +158,7 @@ const teamFromUrl = () =>
 const message = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong.");
 
 /**
- * One channel of a team's Chatter. `clubView`: a club admin in the team's Team channel, inside
+ * One channel of a team's Chatter. `clubView`: a club admin in the team's Club channel, inside
  * the club's view of the team (no app frame of its own, no team settings or reports).
  */
 export function Chatter({
@@ -176,7 +176,7 @@ export function Chatter({
 }) {
   const teamId = data.team.id;
   const role = data.me.role;
-  // Club admins moderate the Team channel, which the club owns.
+  // Club admins moderate the Club channel, which the club owns.
   const moderator = clubView || canModerate(role);
   const paid = data.plan ? data.plan.paid : true;
   const cacheKey = channel === "parents" ? `${teamId}:parents` : teamId;
@@ -529,8 +529,8 @@ export function Chatter({
             <div className="grid grid-cols-2 gap-1 rounded-xl border-2 border-[var(--team)] bg-white p-1">
               {(
                 [
-                  ["parents", "Parents", unreadNow.parents],
-                  ["team", "Team", unreadNow.chatter],
+                  ["parents", "Team", unreadNow.parents],
+                  ["team", "Club", unreadNow.chatter],
                 ] as const
               ).map(([id, label, n]) => (
                 <button
@@ -555,11 +555,11 @@ export function Chatter({
         )}
         {channel === "team" && clubAdminsHere && (
           <p className="mb-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
-            🔒 The club&apos;s director and admins are in this channel. The Parents channel is just
-            the team.
+            🔒 The club&apos;s director and admins are in this channel. The Team channel is just the
+            team.
           </p>
         )}
-        {channel === "parents" && (
+        {channel === "parents" && onChannel && (
           <p className="mb-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
             🔒 Just the team: coaches, managers, the treasurer and families. The club doesn&apos;t
             see this channel.
@@ -568,7 +568,7 @@ export function Chatter({
         <NotifyBar
           userId={me}
           scopeId={teamId}
-          scopeName={channel === "parents" ? `${data.team.name} (Parents)` : data.team.name}
+          scopeName={channel === "team" ? `${data.team.name} (Club)` : data.team.name}
           category={channel === "parents" ? "parents" : "chatter"}
         />
         {moderator && reports.length > 0 && (
@@ -709,7 +709,7 @@ export function Chatter({
           <PostActions
             post={actionsFor}
             me={me}
-            // Club admins moderate the Team channel like its coaches.
+            // Club admins moderate the Club channel like its coaches.
             role={clubView ? "coach" : role}
             authorName={actionsFor.club?.name ?? authorOf(actionsFor.authorId, team).name}
             authorPausable={
