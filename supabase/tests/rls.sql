@@ -2320,7 +2320,46 @@ end $$;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
 select pg_temp.expect((select replies = 1 and reactions = '[{"e": "👍", "n": 1}]'::jsonb from public.club_chatter_posts((select org from club_t)) where id = (select id from cpost)), 'the club sees totals across teams');
 select pg_temp.expect((select votes = array[1, 0] and voters = 1 from public.club_chatter_posts((select org from club_t)) where id = (select id from cpoll)), 'the club sees poll votes added up');
-select pg_temp.expect((select count(*) from public.chatter_post where team_id = '00000000-0000-4000-8000-000000000001') = 0, 'the club never reads a team''s Chatter');
+-- Two channels: the club is a full member of a team's Team channel and never sees Parents.
+reset role;
+insert into public.chatter_post (id, team_id, author_id, body, channel) values
+  ('00000000-0000-4000-8000-00000000ad01', '00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 'Parents only: carpool?', 'parents');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
+select pg_temp.expect((select count(*) from public.chatter_post where team_id = '00000000-0000-4000-8000-000000000001' and channel = 'team') > 0, 'the club reads the team''s Team channel');
+select pg_temp.expect((select count(*) from public.chatter_post where team_id = '00000000-0000-4000-8000-000000000001' and channel = 'parents') = 0, 'the club never sees the Parents channel');
+select pg_temp.expect(public.chatter_in('00000000-0000-4000-8000-000000000001', 'team') and not public.chatter_in('00000000-0000-4000-8000-000000000001', 'parents'), 'the club is in Team, not Parents');
+select public.agree_chatter('00000000-0000-4000-8000-000000000001');
+insert into public.chatter_post (id, team_id, author_id, body) values
+  ('00000000-0000-4000-8000-00000000ad02', '00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000008', 'Great win today!');
+select pg_temp.expect((select count(*) from public.chatter_post where id = '00000000-0000-4000-8000-00000000ad02') = 1, 'the director posts in the Team channel');
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body, channel)
+  values ('00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000008', 'Hi parents', 'parents');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: the director can''t post in Parents';
+end $$;
+select pg_temp.expect((select count(*) from public.chatter_people('00000000-0000-4000-8000-000000000001') where role = 'director') = 1, 'the team sees the director''s name on posts');
+select pg_temp.expect((select count(*) from public.club_team_chatter((select org from club_t))) >= 1, 'the club page lists its teams'' Team channels');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from public.chatter_post where id = '00000000-0000-4000-8000-00000000ad01') = 1, 'parents see their own channel');
+insert into public.chatter_post (id, team_id, author_id, body) values
+  ('00000000-0000-4000-8000-00000000ad03', '00000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 'Rude post');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
+select public.remove_chatter_post('00000000-0000-4000-8000-00000000ad03');
+select pg_temp.expect((select removed_at is not null from public.chatter_post where id = '00000000-0000-4000-8000-00000000ad03'), 'the director removes posts in the channel the club owns');
+do $$ begin
+  perform public.remove_chatter_post('00000000-0000-4000-8000-00000000ad01');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: the director can''t touch the Parents channel';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select parents from public.chatter_unread_channels('00000000-0000-4000-8000-000000000001')) >= 1, 'each channel has its own unread count');
+reset role;
+delete from public.chatter_post where id in ('00000000-0000-4000-8000-00000000ad01', '00000000-0000-4000-8000-00000000ad02', '00000000-0000-4000-8000-00000000ad03');
+delete from public.chatter_member where team_id = '00000000-0000-4000-8000-000000000001' and user_id = 'aaaaaaaa-0000-4000-8000-000000000008';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
 -- Photos on club posts.
 create temp table cphoto_path as select 'club/' || (select org from club_t) || '/flyer.jpg' as path;
 grant select on cphoto_path to authenticated;
