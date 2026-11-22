@@ -3,17 +3,26 @@
 import { useSyncExternalStore } from "react";
 
 export interface UnreadCounts {
+  /** The open team's Team channel. */
   chatter: number;
+  /** The open team's Parents channel. */
+  parents: number;
   coach: number;
 }
 
-let counts: UnreadCounts = { chatter: 0, coach: 0 };
+let counts: UnreadCounts = { chatter: 0, parents: 0, coach: 0 };
 const listeners = new Set<() => void>();
-const ZERO: UnreadCounts = { chatter: 0, coach: 0 };
+const ZERO: UnreadCounts = { chatter: 0, parents: 0, coach: 0 };
 
 export function setUnread(next: Partial<UnreadCounts>): void {
   const merged = { ...counts, ...next };
-  if (merged.chatter === counts.chatter && merged.coach === counts.coach) return;
+  if (
+    merged.chatter === counts.chatter &&
+    merged.parents === counts.parents &&
+    merged.coach === counts.coach
+  ) {
+    return;
+  }
   counts = merged;
   for (const l of listeners) l();
 }

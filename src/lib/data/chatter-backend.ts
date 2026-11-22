@@ -8,6 +8,8 @@ import {
   type ChatterPollRow,
   type PollChoice,
   postFromRow,
+  type ChatterChannel,
+  type ChatterPerson,
   type ChatterPhoto,
   type ChatterPost,
   type ChatterPostRow,
@@ -17,7 +19,7 @@ import type { ChatterGif } from "@/lib/chatter/gif";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 const COLUMNS =
-  "id, team_id, author_id, body, quote_post_id, kind, photos, gif, mentions, reactions, club, from_fungo, created_at, edited_at, pinned_at, removed_at";
+  "id, team_id, author_id, body, quote_post_id, kind, photos, gif, mentions, reactions, club, from_fungo, channel, created_at, edited_at, pinned_at, removed_at";
 export const PAGE = 50;
 
 /** Device copy of the last posts, so the feed opens in the dugout with no signal. */
@@ -41,11 +43,16 @@ export class ChatterError extends Error {
 }
 
 /** The newest posts (oldest first), or the page before `before`. */
-export async function loadPosts(teamId: string, before?: string): Promise<ChatterPost[]> {
+export async function loadPosts(
+  teamId: string,
+  before?: string,
+  channel: ChatterChannel = "team",
+): Promise<ChatterPost[]> {
   let q = getBrowserSupabase()
     .from("chatter_post")
     .select(COLUMNS)
     .eq("team_id", teamId)
+    .eq("channel", channel)
     .order("created_at", { ascending: false })
     .limit(PAGE);
   if (before) q = q.lt("created_at", before);
@@ -55,11 +62,15 @@ export async function loadPosts(teamId: string, before?: string): Promise<Chatte
 }
 
 /** The pinned post, which may be older than the loaded page. */
-export async function loadPinned(teamId: string): Promise<ChatterPost | null> {
+export async function loadPinned(
+  teamId: string,
+  channel: ChatterChannel = "team",
+): Promise<ChatterPost | null> {
   const { data, error } = await getBrowserSupabase()
     .from("chatter_post")
     .select(COLUMNS)
     .eq("team_id", teamId)
+    .eq("channel", channel)
     .not("pinned_at", "is", null)
     .is("removed_at", null)
     .order("pinned_at", { ascending: false })
@@ -125,14 +136,34 @@ export async function agree(teamId: string): Promise<void> {
   fail((await getBrowserSupabase().rpc("agree_chatter", { p_team: teamId })).error);
 }
 
-export async function markRead(teamId: string): Promise<void> {
-  fail((await getBrowserSupabase().rpc("mark_chatter_read", { p_team: teamId })).error);
+export async function markRead(teamId: string, channel: ChatterChannel = "team"): Promise<void> {
+  fail(
+    (
+      await getBrowserSupabase().rpc("mark_chatter_channel_read", {
+        p_team: teamId,
+        p_channel: channel,
+      })
+    ).error,
+  );
 }
 
-export async function unreadCount(teamId: string): Promise<number> {
-  const { data, error } = await getBrowserSupabase().rpc("chatter_unread", { p_team: teamId });
+/** New posts by others in each channel. */
+export async function unreadCounts(teamId: string): Promise<{ team: number; parents: number }> {
+  const { data, error } = await getBrowserSupabase().rpc("chatter_unread_channels", {
+    p_team: teamId,
+  });
   fail(error);
-  return typeof data === "number" ? data : 0;
+  const row = (data as { team: number; parents: number }[] | null)?.[0];
+  return { team: row?.team ?? 0, parents: row?.parents ?? 0 };
+}
+
+/** Everyone who can post in the team's Team channel (its members and the club's admins). */
+export async function chatterPeople(teamId: string): Promise<ChatterPerson[]> {
+  const { data, error } = await getBrowserSupabase().rpc("chatter_people", { p_team: teamId });
+  fail(error);
+  return ((data ?? []) as { user_id: string; name: string | null; role: string; kids: string[] }[]).map(
+    (r) => ({ userId: r.user_id, name: r.name, role: r.role, kids: r.kids ?? [] }),
+  );
 }
 
 export async function sendPost(
@@ -143,6 +174,7 @@ export async function sendPost(
   photos: ChatterPhoto[] = [],
   gif: ChatterGif | null = null,
   mentions: string[] = [],
+  channel: ChatterChannel = "team",
 ): Promise<ChatterPost> {
   const { data, error } = await getBrowserSupabase()
     .from("chatter_post")
@@ -154,6 +186,7 @@ export async function sendPost(
       photos,
       gif,
       mentions,
+      channel,
     })
     .select(COLUMNS)
     .single();
@@ -395,6 +428,7 @@ export function readCache(teamId: string): ChatterPost[] {
           club: p.club ?? null,
           gif: p.gif ?? null,
           mentions: p.mentions ?? [],
+          channel: p.channel ?? "team",
         }))
       : [];
   } catch {
@@ -434,8 +468,10 @@ export async function createPoll(
   multi: boolean,
   anonymous: boolean,
   closesAt: string | null,
+  channel: ChatterChannel = "team",
 ): Promise<string> {
   const { data, error } = await getBrowserSupabase().rpc("create_chatter_poll", {
+    p_channel: channel,
     p_team: teamId,
     p_question: question,
     p_options: options,

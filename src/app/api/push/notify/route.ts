@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { chatterPush, coachPush } from "@/lib/push/payload";
-import { firstTime, pushConfigured, sendPush } from "@/lib/push/send.server";
+import { firstTime, pushConfigured, sendPush, type PushCategory } from "@/lib/push/send.server";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getServerSupabase } from "@/lib/supabase/server";
 
@@ -38,6 +38,26 @@ export async function POST(request: NextRequest) {
       .eq("user_id", userId)
       .maybeSingle();
     const role = data?.role as string | undefined;
+    if (!data) {
+      // Not on the team: one of the club's admins posting in the Team channel.
+      const { data: codes } = await admin
+        .from("club_code")
+        .select("organization_id")
+        .eq("team_id", teamId);
+      const orgs = (codes ?? []).map((c) => c.organization_id as string);
+      const { data: club } = orgs.length
+        ? await admin
+            .from("club_admin")
+            .select("display_name, role")
+            .eq("user_id", userId)
+            .in("organization_id", orgs)
+            .limit(1)
+            .maybeSingle()
+        : { data: null };
+      const name = (club?.display_name as string | null)?.trim();
+      const title = club?.role === "director" ? "Club director" : "Club admin";
+      return name ? `${name} (${title})` : title;
+    }
     return (
       (data?.display_name as string | null)?.trim() ||
       (role === "owner" || role === "coach" ? "Coach" : role === "manager" ? "Manager" : "A parent")
@@ -57,7 +77,9 @@ export async function POST(request: NextRequest) {
     // Read as the person: it must be their own post on a team they're on.
     const { data: post } = await supabase
       .from("chatter_post")
-      .select("id, team_id, author_id, body, photos, gif, kind, mentions, created_at, removed_at")
+      .select(
+        "id, team_id, channel, author_id, body, photos, gif, kind, mentions, created_at, removed_at",
+      )
       .eq("id", id)
       .maybeSingle();
     if (!post || post.author_id !== user.id || post.removed_at || !fresh(post.created_at)) {
@@ -71,17 +93,58 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     // The coaches turned Chatter notifications off for the team.
     if (team && team.notify_chatter === false) return ok();
-    const teamName = (team?.name as string) ?? "Chatter";
+    const parents = post.channel === "parents";
+    const teamName = `${(team?.name as string) ?? "Chatter"}${parents ? " · Parents" : ""}`;
     const from = await nameOn(post.team_id, user.id);
+    // Who's in this channel now: the team, plus (Team channel only) the club's current admins.
+    const { data: members } = await admin
+      .from("member")
+      .select("user_id, role")
+      .eq("team_id", post.team_id);
+    const all = ((members ?? []) as { user_id: string; role: string }[]).filter((m) => m.user_id);
+    const onTeam = new Set(all.map((m) => m.user_id));
+    let clubAdmins = new Set<string>();
+    if (!parents) {
+      const { data: codes } = await admin
+        .from("club_code")
+        .select("organization_id")
+        .eq("team_id", post.team_id)
+        .gte("expires_on", new Date().toISOString().slice(0, 10));
+      const orgs = [...new Set((codes ?? []).map((c) => c.organization_id as string))];
+      if (orgs.length) {
+        const { data: admins } = await admin
+          .from("club_admin")
+          .select("user_id")
+          .in("organization_id", orgs);
+        clubAdmins = new Set((admins ?? []).map((a) => a.user_id as string));
+      }
+    }
+    const payload = (who: string) => {
+      const base = chatterPush({ teamId: post.team_id, teamName, from: who, post });
+      return parents
+        ? { ...base, url: `${base.url}&channel=parents`, tag: `${base.tag}-parents` }
+        : base;
+    };
+    // Club admins open the team's channel from the club page, not the team app.
+    const clubPayload = (who: string) => ({
+      ...payload(who),
+      url: `/club/teams/${post.team_id}?view=chatter`,
+    });
+    const send = async (users: string[], category: PushCategory, who: string) =>
+      (await sendPush(
+        users.filter((u) => onTeam.has(u)),
+        { id: post.team_id, category },
+        payload(who),
+      )) +
+      (await sendPush(
+        users.filter((u) => !onTeam.has(u) && clubAdmins.has(u)),
+        { id: post.team_id, category },
+        clubPayload(who),
+      ));
     // Tagged people hear about it even if they muted the team's Chatter; then everyone else.
     const tags = ((post.mentions ?? []) as string[]).filter(Boolean);
     let tagged: string[] = [];
     if (tags.length) {
-      const { data: members } = await admin
-        .from("member")
-        .select("user_id, role")
-        .eq("team_id", post.team_id);
-      const all = (members ?? []) as { user_id: string; role: string }[];
       tagged = [
         ...new Set(
           all
@@ -96,15 +159,11 @@ export async function POST(request: NextRequest) {
         ),
       ];
     }
-    let sent = await sendPush(
-      tagged,
-      { id: post.team_id, category: "mention" },
-      chatterPush({ teamId: post.team_id, teamName, from: `${from} tagged you`, post }),
-    );
-    sent += await sendPush(
+    let sent = await send(tagged, "mention", `${from} tagged you`);
+    sent += await send(
       (await teamReaders(post.team_id, user.id)).filter((u) => !tagged.includes(u)),
-      { id: post.team_id, category: "chatter" },
-      chatterPush({ teamId: post.team_id, teamName, from, post }),
+      parents ? "parents" : "chatter",
+      from,
     );
     return ok(sent);
   }

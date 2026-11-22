@@ -9,14 +9,16 @@ import { resolveRuleConfig } from "@/lib/rules/config";
 import { describeCustomRule } from "@/lib/rules/custom";
 import { validateLineup } from "@/lib/rules/validate";
 import { AppShell, Loading } from "../AppShell";
+import { Chatter } from "../chatter/ChatterScreen";
 import { LineupGrid } from "../LineupGrid";
 import { PlayingTime } from "../SeasonScreen";
 import { StatTables } from "../stats/StatsScreen";
 import { useTeamStats } from "../stats/statsData";
 import { ViolationList } from "../ViolationList";
 
-type View = "lineups" | "playing" | "rules" | "stats";
+type View = "chatter" | "lineups" | "playing" | "rules" | "stats";
 const VIEWS: [View, string][] = [
+  ["chatter", "Chatter"],
   ["lineups", "Lineups"],
   ["playing", "Playing time"],
   ["rules", "Rules"],
@@ -27,7 +29,13 @@ const VIEWS: [View, string][] = [
 export function ClubTeamScreen({ teamId }: { teamId: string }) {
   const [data, setData] = useState<AppData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<View>("lineups");
+  // From the club's Chatter tab, a team opens straight to its Team channel.
+  const [view, setView] = useState<View>(() =>
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("view") === "chatter"
+      ? "chatter"
+      : "lineups",
+  );
 
   useEffect(() => {
     let current = true;
@@ -60,7 +68,7 @@ export function ClubTeamScreen({ teamId }: { teamId: string }) {
     <AppShell
       brand
       title={data.team.name}
-      subtitle={`${data.team.ageGroup} · ${data.season.name} · view only`}
+      subtitle={`${data.team.ageGroup} · ${data.season.name}${view === "chatter" ? "" : " · view only"}`}
       backHref="/club"
       tab="club"
       bare
@@ -68,7 +76,7 @@ export function ClubTeamScreen({ teamId }: { teamId: string }) {
       <div style={themeVars(data.team.colors) as CSSProperties}>
         <div
           role="tablist"
-          className="mb-4 grid grid-cols-4 gap-1 rounded-xl border-2 border-[var(--team)] p-1"
+          className="mb-4 grid grid-cols-3 gap-1 rounded-xl border-2 border-[var(--team)] p-1 sm:grid-cols-5"
         >
           {VIEWS.map(([id, label]) => (
             <button
@@ -84,6 +92,9 @@ export function ClubTeamScreen({ teamId }: { teamId: string }) {
             </button>
           ))}
         </div>
+        {view === "chatter" && data.me.userId && (
+          <Chatter data={data} me={data.me.userId} channel="team" clubView />
+        )}
         {view === "lineups" && <Lineups data={data} />}
         {view === "playing" && <PlayingTime data={data} club />}
         {view === "rules" && <Rules data={data} />}

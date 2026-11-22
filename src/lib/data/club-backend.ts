@@ -471,7 +471,6 @@ export async function clubTargets(clubId: string): Promise<ClubTarget[]> {
     );
 }
 
-
 /** The team's own season passes (team members can see them). */
 export async function teamPasses(teamId: string): Promise<{ season: string; expiresOn: string }[]> {
   const rows = check<{ season_label: string; expires_on: string }[]>(
@@ -752,4 +751,38 @@ export async function removeClubChatterPost(id: string): Promise<void> {
 
 export async function closeClubChatterPoll(id: string): Promise<void> {
   check(await getBrowserSupabase().rpc("close_club_chatter_poll", { p_id: id }));
+}
+
+export interface ClubTeamChannel {
+  teamId: string;
+  name: string;
+  ageGroup: string;
+  lastBody: string | null;
+  lastKind: string | null;
+  lastAt: string | null;
+  unread: number;
+}
+
+/** Each club team's Team channel for the club's admins: the latest post and what's new. */
+export async function clubTeamChannels(clubId: string): Promise<ClubTeamChannel[]> {
+  const rows = check<
+    {
+      team_id: string;
+      team_name: string;
+      age_group: string;
+      last_body: string | null;
+      last_kind: string | null;
+      last_at: string | null;
+      unread: number;
+    }[]
+  >(await getBrowserSupabase().rpc("club_team_chatter", { p_org: clubId }));
+  return rows.map((r) => ({
+    teamId: r.team_id,
+    name: r.team_name,
+    ageGroup: r.age_group,
+    lastBody: r.last_body,
+    lastKind: r.last_kind,
+    lastAt: r.last_at,
+    unread: r.unread,
+  }));
 }

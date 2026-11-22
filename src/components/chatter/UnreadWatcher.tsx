@@ -17,7 +17,7 @@ export function UnreadWatcher() {
 
   useEffect(() => {
     if (!signedIn) {
-      setUnread({ chatter: 0, coach: 0 });
+      setUnread({ chatter: 0, parents: 0, coach: 0 });
       setIconCount(0);
       return;
     }
@@ -29,14 +29,16 @@ export function UnreadWatcher() {
         import("@/lib/data/coach-chatter-backend"),
       ]);
       const [team, coach, total] = await Promise.all([
-        teamId ? chatter.unreadCount(teamId).catch(() => 0) : Promise.resolve(0),
+        teamId
+          ? chatter.unreadCounts(teamId).catch(() => ({ team: 0, parents: 0 }))
+          : Promise.resolve({ team: 0, parents: 0 }),
         coaches.myUnread().catch(() => 0),
         getBrowserSupabase()
           .rpc("my_unread_total")
           .then(({ data }) => (typeof data === "number" ? data : null)),
       ]);
       if (stopped) return;
-      setUnread({ chatter: team, coach });
+      setUnread({ chatter: team.team, parents: team.parents, coach });
       if (total !== null) setIconCount(total);
     };
     const run = () => void load();

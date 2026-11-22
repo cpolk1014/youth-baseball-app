@@ -42,6 +42,9 @@ import {
   previewText,
   timeLabel,
   type Author,
+  authorFromPerson,
+  type ChatterChannel,
+  type ChatterPerson,
   type ChatterPhoto,
   type ChatterPoll,
   type PollChoice,
@@ -49,7 +52,7 @@ import {
   type ReportReason,
 } from "@/lib/chatter/feed";
 import { logoUrl } from "@/lib/branding/logo";
-import { refreshUnread } from "@/lib/chatter/unread";
+import { badgeText, refreshUnread, useUnread } from "@/lib/chatter/unread";
 import { switchTeam, useAppData } from "@/lib/data/store";
 import type { AppData } from "@/lib/data/types";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -86,6 +89,8 @@ const secondary =
 
 export function ChatterScreen() {
   const data = useAppData();
+  // Team (with the club's admins when the team is in a club) or Parents (never the club).
+  const [channel, setChannel] = useState<ChatterChannel>(channelFromUrl);
   // From a notification: open the team it's about (when it's one of mine).
   // Once per visit, so switching teams by hand afterwards isn't undone.
   const jumped = useRef(false);
@@ -112,19 +117,60 @@ export function ChatterScreen() {
       </AppShell>
     );
   }
-  return <Chatter key={data.team.id} data={data} me={data.me.userId} />;
+  return (
+    <Chatter
+      key={`${data.team.id}:${channel}`}
+      data={data}
+      me={data.me.userId}
+      channel={channel}
+      onChannel={setChannel}
+    />
+  );
 }
+
+/** No frame of its own (the club's team view already has one). */
+function ClubFrame({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
+}
+
+const channelFromUrl = (): ChatterChannel =>
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).get("channel") === "parents"
+    ? "parents"
+    : "team";
 
 const teamFromUrl = () =>
   typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("team");
 
 const message = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong.");
 
-function Chatter({ data, me }: { data: AppData; me: string }) {
+/**
+ * One channel of a team's Chatter. `clubView`: a club admin in the team's Team channel, inside
+ * the club's view of the team (no app frame of its own, no team settings or reports).
+ */
+export function Chatter({
+  data,
+  me,
+  channel = "team",
+  onChannel,
+  clubView = false,
+}: {
+  data: AppData;
+  me: string;
+  channel?: ChatterChannel;
+  onChannel?: (c: ChatterChannel) => void;
+  clubView?: boolean;
+}) {
   const teamId = data.team.id;
   const role = data.me.role;
-  const moderator = canModerate(role);
+  // Club admins moderate the Team channel, which the club owns.
+  const moderator = clubView || canModerate(role);
   const paid = data.plan ? data.plan.paid : true;
+  const cacheKey = channel === "parents" ? `${teamId}:parents` : teamId;
+  const [people, setPeople] = useState<Map<string, ChatterPerson>>(new Map());
+  const unreadNow = useUnread();
+  // In the club's view the page already has its frame; the feed just fills it.
+  const Shell = clubView ? ClubFrame : AppShell;
 
   const [posts, setPosts] = useState<ChatterPost[]>([]);
   const [quoted, setQuoted] = useState<Record<string, ChatterPost>>({});
@@ -166,7 +212,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
     );
 
   const refreshModeration = useCallback(async () => {
-    if (!moderator) return;
+    if (!moderator || clubView) return;
     const m = await backend();
     const [r, p] = await Promise.all([m.openReports(teamId), m.pausedMembers(teamId)]);
     setReports(r);
@@ -179,15 +225,15 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
     let cancelled = false;
     (async () => {
       const m = await backend();
-      const cached = m.readCache(teamId);
+      const cached = m.readCache(cacheKey);
       if (cached.length) {
         setPosts(cached);
         scrollToEnd();
       }
       try {
         const [page, pin, mine] = await Promise.all([
-          m.loadPosts(teamId),
-          m.loadPinned(teamId),
+          m.loadPosts(teamId, undefined, channel),
+          m.loadPinned(teamId, channel),
           m.myState(teamId, me),
         ]);
         if (cancelled) return;
@@ -196,7 +242,11 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
         setPinned(pin);
         setState(mine);
         setLoadError(null);
-        if (mine.agreedAt) void m.markRead(teamId).then(refreshUnread, () => undefined);
+        if (mine.agreedAt) void m.markRead(teamId, channel).then(refreshUnread, () => undefined);
+        void m
+          .chatterPeople(teamId)
+          .then((list) => setPeople(new Map(list.map((x) => [x.userId, x]))))
+          .catch(() => undefined);
         scrollToEnd();
         void refreshModeration().catch(() => undefined);
         void m
@@ -212,13 +262,15 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
       stop = m.subscribe(
         teamId,
         (post) => {
+          // Both channels come over one connection; this feed shows its own.
+          if (post.channel !== channel) return;
           setPosts((prev) => mergePosts(prev, [post]));
           setPinned((prev) =>
             post.pinnedAt && !post.removedAt ? post : prev?.id === post.id ? null : prev,
           );
           if (nearBottom.current) scrollToEnd(true);
           if (document.visibilityState === "visible")
-            void m.markRead(teamId).then(refreshUnread, () => undefined);
+            void m.markRead(teamId, channel).then(refreshUnread, () => undefined);
           if (moderator) void refreshModeration().catch(() => undefined);
         },
         setOnline,
@@ -235,12 +287,12 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
       cancelled = true;
       stop?.();
     };
-  }, [teamId, me, moderator, refreshModeration]);
+  }, [teamId, me, moderator, refreshModeration, channel, cacheKey]);
 
   // Keep the last posts on the device for the dugout.
   useEffect(() => {
     if (!loaded || !posts.length) return;
-    void backend().then((m) => m.writeCache(teamId, posts));
+    void backend().then((m) => m.writeCache(cacheKey, posts));
   }, [loaded, posts, teamId]);
 
   // Quotes of posts older than the loaded page.
@@ -333,18 +385,33 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
       if (fresh) setPosts((prev) => mergePosts(prev, [fresh]));
     }
   };
-  const authorFor = (id: string | null) => authorOf(id, team);
+  // Names from everyone who can post here (club admins too), else from the team's own data.
+  const authorFor = (id: string | null) => {
+    const person = id ? people.get(id) : undefined;
+    return person ? authorFromPerson(person) : authorOf(id, team);
+  };
+  const clubAdminsHere = [...people.values()].some(
+    (p) => p.role === "director" || p.role === "club_admin",
+  );
   // Who can be tagged: the team's adults (not me), plus @coaches, and @everyone for staff.
   const mentionables: Mentionable[] = [
     { id: "coaches", label: "coaches", hint: "Every coach and manager" },
     ...(moderator ? [{ id: "everyone", label: "everyone", hint: "The whole team" }] : []),
-    ...data.members
-      .filter((x) => x.userId && x.userId !== me)
-      .map((x) => {
-        const a = authorOf(x.userId, team);
-        return { id: x.userId!, label: a.name, hint: a.role ?? undefined };
-      })
-      .filter((x) => x.label && x.label !== "Former member"),
+    // Tags are for people on the team (not the club's admins).
+    ...(people.size
+      ? [...people.values()]
+          .filter((x) => x.userId !== me && x.role !== "director" && x.role !== "club_admin")
+          .map((x) => {
+            const a = authorFromPerson(x);
+            return { id: x.userId, label: a.name, hint: a.role ?? undefined };
+          })
+      : data.members
+          .filter((x) => x.userId && x.userId !== me)
+          .map((x) => {
+            const a = authorOf(x.userId, team);
+            return { id: x.userId!, label: a.name, hint: a.role ?? undefined };
+          })
+    ).filter((x) => x.label && x.label !== "Former member"),
   ];
   const nameOf = (id: string) => authorFor(id).name;
 
@@ -382,7 +449,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
     const first = posts[0];
     if (!first) return;
     try {
-      const older = await m.loadPosts(teamId, first.createdAt);
+      const older = await m.loadPosts(teamId, first.createdAt, channel);
       setHasOlder(older.length >= m.PAGE);
       setPosts((prev) => mergePosts(prev, older));
     } catch (e) {
@@ -407,7 +474,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
 
   if (loaded && state && !state.agreedAt) {
     return (
-      <AppShell title="Chatter" subtitle={data.team.name} tab="chatter">
+      <Shell title="Chatter" subtitle={data.team.name} tab="chatter">
         <Agree
           onAgree={async () => {
             const m = await backend();
@@ -416,7 +483,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
             scrollToEnd();
           }}
         />
-      </AppShell>
+      </Shell>
     );
   }
 
@@ -424,12 +491,12 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
   const pin = pinned ?? pinnedPost(posts);
 
   return (
-    <AppShell
+    <Shell
       title="Chatter"
       subtitle={data.team.name}
       tab="chatter"
       action={
-        moderator ? (
+        moderator && !clubView ? (
           <button
             onClick={() => setShowSettings(true)}
             className="h-11 rounded-lg px-3 text-base font-bold active:bg-black/10"
@@ -440,7 +507,55 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
       }
     >
       <div className="mx-auto flex max-w-3xl flex-col">
-        <NotifyBar userId={me} scopeId={teamId} scopeName={data.team.name} category="chatter" />
+        {!clubView && (
+          <div
+            role="tablist"
+            aria-label="Chatter channels"
+            className="mb-3 grid grid-cols-2 gap-1 rounded-xl border-2 border-[var(--team)] p-1"
+          >
+            {(
+              [
+                ["team", "Team", unreadNow.chatter],
+                ["parents", "Parents", unreadNow.parents],
+              ] as const
+            ).map(([id, label, n]) => (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={channel === id}
+                onClick={() => onChannel?.(id)}
+                className={`flex min-h-11 items-center justify-center gap-2 rounded-lg text-base font-bold ${
+                  channel === id ? "bg-[var(--team)] text-white" : "text-[var(--team)]"
+                }`}
+              >
+                {label}
+                {n > 0 && channel !== id && (
+                  <span className="rounded-full bg-[#DC143C] px-2 py-0.5 text-xs text-white">
+                    {badgeText(n)}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+        {channel === "team" && clubAdminsHere && (
+          <p className="mb-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+            🔒 The club&apos;s director and admins are in this channel. The Parents channel is just
+            the team.
+          </p>
+        )}
+        {channel === "parents" && (
+          <p className="mb-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+            🔒 Just the team: coaches, managers, the treasurer and families. The club doesn&apos;t
+            see this channel.
+          </p>
+        )}
+        <NotifyBar
+          userId={me}
+          scopeId={teamId}
+          scopeName={channel === "parents" ? `${data.team.name} (Parents)` : data.team.name}
+          category={channel === "parents" ? "parents" : "chatter"}
+        />
         {moderator && reports.length > 0 && (
           <button
             onClick={() => setShowReports(true)}
@@ -548,6 +663,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
                 uploaded,
                 gif,
                 mentions,
+                channel,
               );
             } catch (e) {
               void m.deletePhotos(uploaded).catch(() => undefined);
@@ -578,10 +694,12 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
           <PostActions
             post={actionsFor}
             me={me}
-            role={role}
+            // Club admins moderate the Team channel like its coaches.
+            role={clubView ? "coach" : role}
             authorName={actionsFor.club?.name ?? authorOf(actionsFor.authorId, team).name}
             authorPausable={
               moderator &&
+              !clubView &&
               actionsFor.authorId !== null &&
               actionsFor.authorId !== me &&
               !authorOf(actionsFor.authorId, team).staff &&
@@ -589,6 +707,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
             }
             authorPausedUntil={paused.find((p) => p.userId === actionsFor.authorId)?.until ?? null}
             pinned={pin?.id === actionsFor.id}
+            canReport={!clubView}
             canReact={canReact}
             onReact={(emoji) => {
               void reactTo(actionsFor, emoji);
@@ -635,7 +754,15 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
           <PollForm
             onSend={async (question, options, multi, anonymous, closesAt) => {
               const m = await backend();
-              const id = await m.createPoll(teamId, question, options, multi, anonymous, closesAt);
+              const id = await m.createPoll(
+                teamId,
+                question,
+                options,
+                multi,
+                anonymous,
+                closesAt,
+                channel,
+              );
               announce("chatter", id);
               const [found] = await m.loadPostsById([id]);
               if (found) setPosts((prev) => mergePosts(prev, [found]));
@@ -717,7 +844,7 @@ function Chatter({ data, me }: { data: AppData; me: string }) {
           }
         />
       </Sheet>
-    </AppShell>
+    </Shell>
   );
 }
 
@@ -1299,7 +1426,9 @@ function PostActions({
   canReact,
   onReact,
   reactors,
+  canReport = true,
 }: {
+  canReport?: boolean;
   post: ChatterPost;
   me: string;
   role: AppData["me"]["role"];
@@ -1429,7 +1558,7 @@ function PostActions({
             </div>
           </div>
         ))}
-      {post.authorId !== me && !post.club && (
+      {canReport && post.authorId !== me && !post.club && (
         <button className={secondary} onClick={onReport}>
           🚩 Report
         </button>

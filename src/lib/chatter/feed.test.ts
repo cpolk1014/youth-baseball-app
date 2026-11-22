@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Guardian, Member } from "@/lib/data/types";
 import type { Player } from "@/lib/rules/types";
 import {
+  authorFromPerson,
   authorOf,
   canEdit,
   canModerate,
@@ -64,6 +65,7 @@ const post = (over: Partial<ChatterPost>): ChatterPost => ({
   photos: [],
   gif: null,
   mentions: [],
+  channel: "team",
   reactions: [],
   club: null,
   createdAt: "2026-11-20T18:00:00.000Z",
@@ -349,5 +351,23 @@ describe("GIF posts", () => {
     const gif = { id: "a", mp4: "m", still: "s", w: 1, h: 1, title: "" };
     expect(previewText({ body: "", photos: [], gif })).toBe("🎞️ GIF");
     expect(previewText({ body: "Let's go", photos: [], gif })).toBe("🎞️ GIF · Let's go");
+  });
+});
+
+describe("people in a channel", () => {
+  it("names club admins and families", () => {
+    expect(authorFromPerson({ userId: "d", name: "Pat Lee", role: "director", kids: [] })).toEqual({
+      name: "Pat Lee",
+      role: "Club director",
+      staff: true,
+    });
+    expect(
+      authorFromPerson({ userId: "m", name: "Dana", role: "parent", kids: ["Mason", "Ella"] }).role,
+    ).toBe("Mason & Ella's family");
+    expect(authorFromPerson({ userId: "t", name: null, role: "treasurer", kids: [] })).toEqual({
+      name: "Treasurer",
+      role: "Treasurer",
+      staff: false,
+    });
   });
 });

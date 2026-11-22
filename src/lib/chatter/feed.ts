@@ -20,6 +20,34 @@ export interface ChatterPhoto {
   h: number;
 }
 
+export type ChatterChannel = "team" | "parents";
+
+/** Someone who can post in a team's Chatter, as `chatter_people` returns them. */
+export interface ChatterPerson {
+  userId: string;
+  name: string | null;
+  /** A team role, or "director" / "club_admin" for the club's admins. */
+  role: string;
+  /** Their kids' first names on the team (parents). */
+  kids: string[];
+}
+
+/** How a person shows on a post: their name, and their role or family. */
+export function authorFromPerson(p: ChatterPerson): Author {
+  const label: Record<string, string> = {
+    owner: "Coach",
+    coach: "Coach",
+    manager: "Manager",
+    treasurer: "Treasurer",
+    director: "Club director",
+    club_admin: "Club admin",
+  };
+  const family = p.kids.length ? `${joinNames(p.kids)}'s family` : null;
+  const role = p.role === "parent" ? (family ?? "Parent") : (label[p.role] ?? "Parent");
+  const staff = !["parent", "treasurer"].includes(p.role);
+  return { name: p.name?.trim() || (p.role === "parent" ? "Parent" : role), role, staff };
+}
+
 export interface ChatterPost {
   id: string;
   teamId: string;
@@ -38,6 +66,8 @@ export interface ChatterPost {
   club: ClubTag | null;
   /** Posted by Fungo itself (the automatic game day post). */
   fromFungo?: boolean;
+  /** Team (with the club's admins when the team is in a club) or Parents (never the club). */
+  channel: ChatterChannel;
   createdAt: string;
   editedAt: string | null;
   pinnedAt: string | null;
@@ -57,6 +87,7 @@ export interface ChatterPostRow {
   reactions?: unknown;
   club?: unknown;
   from_fungo?: boolean | null;
+  channel?: string | null;
   created_at: string;
   edited_at: string | null;
   pinned_at: string | null;
@@ -79,6 +110,7 @@ export function postFromRow(r: ChatterPostRow): ChatterPost {
     reactions: reactionsFrom(r.reactions),
     club: clubFrom(r.club),
     ...(r.from_fungo ? { fromFungo: true } : {}),
+    channel: r.channel === "parents" ? "parents" : "team",
     createdAt: r.created_at,
     editedAt: r.edited_at,
     pinnedAt: r.pinned_at,

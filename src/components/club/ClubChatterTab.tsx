@@ -12,7 +12,7 @@ import {
   POLL_OPTION_MAX,
   checkPoll,
 } from "@/lib/chatter/feed";
-import type { ClubChatterPost, ClubTarget } from "@/lib/data/club-backend";
+import type { ClubChatterPost, ClubTarget, ClubTeamChannel } from "@/lib/data/club-backend";
 import { Loading } from "../AppShell";
 import { picturesFrom, preparePhoto } from "../chatter/photo";
 import { announce } from "@/lib/push/client";
@@ -66,6 +66,7 @@ export function ClubChatterTab({ clubId }: { clubId: string }) {
       ) : (
         <Compose clubId={clubId} targets={targets} onSent={refresh} />
       )}
+      <TeamChannels clubId={clubId} />
       <Sent posts={posts} onChange={refresh} />
     </div>
   );
@@ -548,5 +549,76 @@ function Check({
       />
       {label}
     </label>
+  );
+}
+
+/**
+ * The club's teams' Team channels: the club is a full member of each (read, post, reply,
+ * remove), never of a team's Parents channel. Newest activity first.
+ */
+function TeamChannels({ clubId }: { clubId: string }) {
+  const [rows, setRows] = useState<ClubTeamChannel[] | null>(null);
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    let current = true;
+    void backend()
+      .then((m) => m.clubTeamChannels(clubId))
+      .then((r) => {
+        if (!current) return;
+        setNow(Date.now());
+        setRows(r);
+      })
+      .catch(() => current && setRows([]));
+    return () => {
+      current = false;
+    };
+  }, [clubId]);
+  if (!rows || rows.length === 0) return null;
+  const ago = (iso: string) => {
+    const mins = Math.round((now - new Date(iso).getTime()) / 60000);
+    if (mins < 60) return `${Math.max(1, mins)}m`;
+    if (mins < 24 * 60) return `${Math.round(mins / 60)}h`;
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className={heading}>Your teams&apos; Team channels</h2>
+      <p className="-mt-1 text-sm text-slate-600">
+        You&apos;re a member of every club team&apos;s Team channel: read the replies, post and keep
+        it tidy. Parents channels stay with the teams.
+      </p>
+      <ul className="flex flex-col overflow-hidden rounded-xl border-2 border-slate-200 bg-white">
+        {rows.map((r) => (
+          <li key={r.teamId} className="border-b border-slate-100 last:border-b-0">
+            <Link
+              href={`/club/teams/${r.teamId}?view=chatter`}
+              className="flex min-h-16 items-center gap-3 px-3 py-2 active:bg-slate-50"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block font-bold">
+                  {r.name} <span className="font-normal text-slate-500">{r.ageGroup}</span>
+                </span>
+                <span className="block truncate text-sm text-slate-600">
+                  {r.lastAt
+                    ? r.lastKind === "poll"
+                      ? `📊 ${r.lastBody ?? "Poll"}`
+                      : r.lastBody || "📷 Photo"
+                    : "No posts yet"}
+                </span>
+              </span>
+              {r.lastAt && <span className="shrink-0 text-xs text-slate-500">{ago(r.lastAt)}</span>}
+              {r.unread > 0 && (
+                <span className="shrink-0 rounded-full bg-[#DC143C] px-2 py-0.5 text-xs font-bold text-white">
+                  {r.unread > 9 ? "9+" : r.unread}
+                </span>
+              )}
+              <span aria-hidden="true" className="text-xl text-slate-400">
+                ›
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
