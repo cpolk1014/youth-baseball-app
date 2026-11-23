@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "./EmptyState";
 import { PaidGate } from "./paywall";
 import Link from "next/link";
 import { useState } from "react";
@@ -141,7 +142,21 @@ export function PracticesScreen() {
         </div>
       )}
 
-      {upcoming.length === 0 ? (
+      {sorted.length === 0 ? (
+        canEdit ? (
+          <EmptyState icon="🏟️" title="Set up your practices">
+            Tap <b>Build season schedule</b> above: pick your practice days and dates, and Fungo
+            adds every one. Then plan drills by hand
+            {mode === "supabase" ? " or let AI plan the whole season from your goals" : ""}.
+            Families see when and where, with directions and weather.
+          </EmptyState>
+        ) : (
+          <EmptyState icon="🏟️" title="No practices yet">
+            When the coaches add practices, you&apos;ll see each one here with the time, place,
+            directions and weather, and you can add them all to your calendar.
+          </EmptyState>
+        )
+      ) : upcoming.length === 0 ? (
         <p className="rounded-xl border-2 border-slate-200 bg-white p-4 text-base text-slate-700">
           {canEdit
             ? "No upcoming practices. Build the season schedule or add one."

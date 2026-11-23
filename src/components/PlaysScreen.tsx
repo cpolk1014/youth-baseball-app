@@ -56,7 +56,8 @@ export function PlaysScreen() {
           </h2>
           {data.assignments.length === 0 && (
             <p className="mb-2 rounded-xl border-2 border-slate-200 bg-white p-4 text-base text-slate-700">
-              Assign a few plays for families to watch at home, then quiz on.
+              Assign a few plays for families to learn at home: they watch each play animate, take a
+              quick quiz, and you see which players finished. Kids show up knowing where to go.
             </p>
           )}
           <ul className="grid gap-2 md:grid-cols-2">

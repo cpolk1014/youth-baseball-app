@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "./EmptyState";
 import { PaidGate } from "./paywall";
 import { useState } from "react";
 import Link from "next/link";
@@ -178,7 +179,24 @@ export function MoneyScreen() {
             ))}
           </div>
         )}
-        {(perms.seeAllMoney ? shown : walkoffs).length === 0 ? (
+        {data.financeEntries.length === 0 ? (
+          perms.editMoney ? (
+            <EmptyState
+              icon="💵"
+              title="Track the team's money"
+              actions={[{ label: "+ Add the first one", onClick: () => setPicking(true) }]}
+            >
+              Charge a team fee split across every family (a Bat Around), record who&apos;s paid,
+              and log what you spend with the receipt. Families see exactly what they owe, so
+              nobody&apos;s chasing Venmo screenshots.
+            </EmptyState>
+          ) : (
+            <EmptyState icon="💵" title="Nothing yet">
+              When the coaches or treasurer add team fees, you&apos;ll see what your family owes,
+              what you&apos;ve paid and what the team spends.
+            </EmptyState>
+          )
+        ) : (perms.seeAllMoney ? shown : walkoffs).length === 0 ? (
           <p className="rounded-xl border-2 border-slate-200 bg-white p-4 text-base text-slate-700">
             {perms.editMoney ? "Nothing yet. Tap + Add to record the first one." : "None yet."}
           </p>

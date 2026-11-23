@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "./EmptyState";
 import { PlanBanner, usePlan } from "./paywall";
 import { AwardsBanner } from "./awards/AwardsBanner";
 import Link from "next/link";
@@ -108,10 +109,38 @@ export function GamesScreen() {
           🏆 Playing in a tournament? Add it
         </Link>
       )}
-      <Section title="Upcoming" games={upcoming} data={data} empty="No upcoming games." />
-      {final.length > 0 && <Section title="Final" games={final} data={data} />}
+      {data.games.length === 0 ? (
+        canEdit ? (
+          <EmptyState
+            icon="📅"
+            title="Add your season's games"
+            actions={[
+              ...(canImport
+                ? [{ label: "📷 Add from a schedule picture", onClick: () => setImporting(true) }]
+                : []),
+              { label: canImport ? "Add one by hand" : "+ Add a game", onClick: addManually },
+            ]}
+          >
+            {canImport
+              ? "Snap a picture of the schedule (a screenshot, PDF or spreadsheet works too) and Fungo adds every game: date, time, opponent and place. "
+              : "Date, time, opponent and place. "}
+            Then each game gets a fair lineup in seconds, and families see when, where and what to
+            wear.
+          </EmptyState>
+        ) : (
+          <EmptyState icon="📅" title="No games yet">
+            When the coaches add the schedule, every game shows here with the time, place,
+            directions, weather and what to wear.
+          </EmptyState>
+        )
+      ) : (
+        <>
+          <Section title="Upcoming" games={upcoming} data={data} empty="No upcoming games." />
+          {final.length > 0 && <Section title="Final" games={final} data={data} />}
+        </>
+      )}
 
-      {canEdit && (
+      {canEdit && data.games.length > 0 && (
         <button
           onClick={startAdd}
           className="mt-4 h-14 w-full rounded-xl border-2 border-dashed border-slate-400 text-lg font-bold text-slate-700 active:bg-slate-100"

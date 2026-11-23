@@ -29,6 +29,7 @@ import { kidsOf } from "./KidPicker";
 import { Phone, useCanCall } from "./phone";
 import { PlayerForm, Toggle } from "./PlayerForm";
 import { Sheet } from "./Sheet";
+import { EmptyState } from "./EmptyState";
 import { ImportRoster } from "./ImportRoster";
 import { PaidGate } from "./paywall";
 
@@ -148,7 +149,6 @@ export function RosterScreen() {
         </Link>
       )}
 
-
       <Link
         href="/money"
         className="mb-3 flex min-h-14 items-center justify-between rounded-xl border-2 border-slate-300 bg-white px-4 active:bg-slate-50 lg:hidden"
@@ -191,8 +191,32 @@ export function RosterScreen() {
         </p>
       )}
 
+      {data.players.length === 0 &&
+        (canEdit ? (
+          <EmptyState
+            icon="📋"
+            title="Add your players"
+            className="mb-4"
+            actions={[
+              ...(mode === "supabase"
+                ? [{ label: "✨ Import from a screenshot", onClick: () => setImporting(true) }]
+                : []),
+              { label: "Type them in", onClick: startAdd },
+            ]}
+          >
+            Lineups, playing time and lineup cards all start here.
+            {mode === "supabase" &&
+              " Snap a screenshot of your roster (GameChanger, a spreadsheet, a photo of a sheet) and Fungo reads the names, numbers and positions."}
+          </EmptyState>
+        ) : (
+          <EmptyState icon="📋" title="No players yet" className="mb-4">
+            The coaches add the roster here. Once your player is on it, tap them for their stats,
+            pitch count and highlight reels.
+          </EmptyState>
+        ))}
+
       {/* Wide screens: one sortable table, pitch/catch toggled in place. */}
-      <div className="hidden lg:block">
+      <div className={data.players.length ? "hidden lg:block" : "hidden"}>
         <RosterTable
           data={data}
           players={[...active, ...inactive]}
@@ -235,7 +259,7 @@ export function RosterScreen() {
         </div>
       )}
 
-      {canEdit && (
+      {canEdit && data.players.length > 0 && (
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <button
             onClick={startAdd}

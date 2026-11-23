@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "../EmptyState";
 import { PaidGate } from "../paywall";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -84,11 +85,19 @@ export function TournamentsScreen() {
       {list === null ? (
         <Loading />
       ) : list.length === 0 ? (
-        <p className="rounded-xl border-2 border-slate-200 bg-white p-4 text-base text-slate-700">
-          {canEdit
-            ? "No tournaments yet. Add one as soon as you register, even months ahead."
-            : "No tournaments yet."}
-        </p>
+        canEdit ? (
+          <EmptyState icon="🏆" title="Add a tournament as soon as you register">
+            Screenshot the event page and Fungo adds the teams. When the pool schedule and bracket
+            come out, screenshot those too: you get standings with the tournament&apos;s
+            tie-breakers, the bracket drawn for you, and “What time do we play tomorrow?”. Share a
+            link with the other teams, too.
+          </EmptyState>
+        ) : (
+          <EmptyState icon="🏆" title="No tournaments yet">
+            When the coaches add one, you&apos;ll see the schedule, scores, standings and the
+            bracket here, and anyone on the team can help keep scores up to date.
+          </EmptyState>
+        )
       ) : (
         <>
           <ul className="grid gap-3 md:grid-cols-2">

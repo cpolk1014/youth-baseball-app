@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "../EmptyState";
 import { PaidGate } from "../paywall";
 import { useState } from "react";
 import { isCoach } from "@/lib/data/permissions";
@@ -104,10 +105,10 @@ function Uniforms({ data }: { data: AppData }) {
         </h2>
       )}
       {own.length === 0 && fromClub.length === 0 ? (
-        <p className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-4 text-base">
-          No combos yet. Add one, or take a picture of the uniform flyer and Fungo builds them for
-          you.
-        </p>
+        <EmptyState icon="👕" title="No combos yet">
+          Tap <b>Build combos from a flyer</b> above and Fungo reads them from a picture, or add one
+          by hand. Then pick one for each game so families know what to wear.
+        </EmptyState>
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">
           {own.map((u) => (

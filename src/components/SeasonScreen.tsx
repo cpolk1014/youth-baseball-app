@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "./EmptyState";
 import Link from "next/link";
 import { useState } from "react";
 import { finalLineups } from "@/lib/data/game";
@@ -59,18 +60,20 @@ export function PlayingTime({ data, club = false }: { data: AppData; club?: bool
 
   if (summary.finalGames === 0) {
     return (
-      <div className="rounded-xl border-2 border-slate-300 bg-white p-4 text-lg leading-snug">
-        <p className="font-bold">No final games yet.</p>
+      <EmptyState
+        icon="📊"
+        title="No final games yet"
+        actions={club ? [] : [{ label: "Go to Games", href: "/games" }]}
+      >
+        Playing time adds up from final games: who sat and how often, infield and outfield, pitcher
+        and catcher, fair to kids who missed games.
         {!club && (
-          <p className="mt-1">
-            Open a game on the{" "}
-            <Link href="/games" className="font-semibold underline">
-              Games
-            </Link>{" "}
-            tab and tap <b>Mark final</b> after it&apos;s played. Its lineup then counts here.
-          </p>
+          <>
+            {" "}
+            After a game, open it and tap <b>Mark final</b>; its lineup counts here.
+          </>
         )}
-      </div>
+      </EmptyState>
     );
   }
 
