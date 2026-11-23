@@ -32,6 +32,8 @@ const PUBLIC_PATHS = [
   "/api/ask",
   // Supabase calls this every 5 minutes to send team notices; it needs no sign-in.
   "/api/push/flush",
+  // A tournament a team shared: read-only, for the other teams (fungo.team/t/<token>).
+  "/t",
   // The public website (anyone can read it, signed in or not).
   ...SITE_PATHS,
 ];

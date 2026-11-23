@@ -1575,6 +1575,44 @@ select pg_temp.expect((select seeds_locked_at is not null from public.tournament
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- not on the team
 select pg_temp.expect((select count(*) from public.tiebreak_rule_set where team_id = '00000000-0000-4000-8000-000000000001') = 0, 'people not on the team don''t see its tie-break rules');
 reset role;
+-- ── shared tournaments: a public, read-only link for the other teams ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000002', false); -- parent
+do $$ begin
+  perform public.share_tournament((select id from trn));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: parents can''t share a tournament';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- manager
+create temp table trn_share as select public.share_tournament((select id from trn)) as token;
+grant select on trn_share to anon, authenticated;
+select pg_temp.expect(public.share_tournament((select id from trn)) = (select token from trn_share), 'sharing again keeps the same link');
+reset role;
+set role anon;
+select pg_temp.expect((select public.shared_tournament(token)->'tournament'->>'name' from trn_share) = 'Caleb Easterling Memorial', 'anyone with the link sees the tournament');
+select pg_temp.expect((select jsonb_array_length(public.shared_tournament(token)->'games') > 0 from trn_share), 'and its games');
+select pg_temp.expect((select public.shared_tournament(token)->'rules'->>'name' from trn_share) = '2D Tiebreak', 'and its tie-breakers');
+select pg_temp.expect((select not (public.shared_tournament(token)->'games'->0 ? 'reported_by') and not (public.shared_tournament(token)->'games'->0 ? 'game_id') from trn_share), 'but not who reported scores or the team''s own games');
+select pg_temp.expect(public.shared_tournament('nottherighttoken123') is null, 'a wrong link shows nothing');
+do $$ begin
+  perform public.report_tournament_score((select id from public.tournament_game limit 1), 1, 0);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: visitors can''t report scores';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- not on the team
+select pg_temp.expect((select public.shared_tournament(token) is not null from trn_share), 'signed-in people on other teams see it too');
+do $$ begin
+  perform public.stop_sharing_tournament((select id from public.tournament where share_token = (select token from trn_share)));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: people on other teams can''t stop sharing';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000007', false); -- manager
+select public.stop_sharing_tournament((select id from trn));
+select pg_temp.expect((select public.shared_tournament(token) is null from trn_share), 'stop sharing ends the link');
+select pg_temp.expect(public.share_tournament((select id from trn)) <> (select token from trn_share), 'sharing again makes a new link');
+reset role;
 -- ── athletes: a kid's box scores follow them from team to team ──
 -- Parent 0002 has kid 1003 on team 1 (an athlete from the fixtures' link) and is a parent
 -- on the Canes too, where the same kid plays this year.

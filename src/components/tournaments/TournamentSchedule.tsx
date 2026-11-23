@@ -219,7 +219,18 @@ export function TournamentSchedule({
   );
 }
 
-function GameRow({ g, ours, onOpen }: { g: TournamentGame; ours: boolean; onOpen?: () => void }) {
+/** One game: when, both sides with scores, and where. Tappable when `onOpen` is given. */
+export function GameRow({
+  g,
+  ours,
+  onOpen,
+  oursLabel = "Our game",
+}: {
+  g: TournamentGame;
+  ours: boolean;
+  onOpen?: () => void;
+  oursLabel?: string;
+}) {
   const won = winner(g);
   const side = (name: string, score: number | null, isWinner: boolean) => (
     <span className="flex items-baseline justify-between gap-2">
@@ -246,7 +257,7 @@ function GameRow({ g, ours, onOpen }: { g: TournamentGame; ours: boolean; onOpen
         {won ? (
           <span className="text-slate-500">Final{g.locked ? " · 🔒" : ""}</span>
         ) : (
-          ours && <span className="text-[var(--team)]">Our game</span>
+          ours && <span className="text-[var(--team)]">{oursLabel}</span>
         )}
       </span>
       {side(g.home, g.scoreHome, won === "home")}

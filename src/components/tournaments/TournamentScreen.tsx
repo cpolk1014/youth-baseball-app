@@ -20,6 +20,7 @@ import { AppShell, Loading } from "../AppShell";
 import { DeleteGamePanel } from "../DeleteGamePanel";
 import { Sheet } from "../Sheet";
 import { LinkFields, checkLinks, readTournament, type LinkInputs } from "./AddTournament";
+import { ShareTournament } from "./ShareTournament";
 import { TournamentSchedule, type ImportMode } from "./TournamentSchedule";
 import { TournamentStandings } from "./TournamentStandings";
 import { TournamentVenues } from "./TournamentVenues";
@@ -355,6 +356,10 @@ export function TournamentScreen({ id }: { id: string }) {
         canEdit={canEdit}
         onChanged={load}
       />
+
+      {games && games.length > 0 && (
+        <ShareTournament tournament={t} canEdit={canEdit} onChanged={load} />
+      )}
 
       <TournamentSchedule
         data={data}

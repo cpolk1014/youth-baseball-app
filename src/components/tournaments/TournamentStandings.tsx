@@ -418,7 +418,7 @@ function nextGameFor(games: TournamentGame[], ourName: string | null) {
   };
 }
 
-function StandingsTable({
+export function StandingsTable({
   pool,
   rows,
   usId,
@@ -1028,7 +1028,7 @@ const when = (g: { date: string | null; startTime: string | null }) =>
 const MAX_CONDITIONS = 3;
 
 /** Every bracket game we could play first, when, as which seed, and what has to happen. */
-function PlayTimes({
+export function PlayTimes({
   input,
   games,
   tournament: t,

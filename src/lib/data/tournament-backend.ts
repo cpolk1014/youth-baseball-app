@@ -30,6 +30,8 @@ export interface Tournament {
   /** Locked seeds, in order (null until the coach locks them). */
   seeds: Seed[] | null;
   seedsLockedAt: string | null;
+  /** The public, read-only link's token while the tournament is shared (fungo.team/t/…). */
+  shareToken?: string | null;
 }
 
 export interface TournamentTeam {
@@ -60,10 +62,11 @@ interface Row {
   seeding: "overall" | "pool";
   seeds: Seed[] | null;
   seeds_locked_at: string | null;
+  share_token: string | null;
 }
 
 const COLS =
-  "id,team_id,name,organization,info_url,schedule_url,bracket_url,start_date,end_date,city,venues,places,division,tiebreak_set_id,seeding,seeds,seeds_locked_at,tournament_team(count)";
+  "id,team_id,name,organization,info_url,schedule_url,bracket_url,start_date,end_date,city,venues,places,division,tiebreak_set_id,seeding,seeds,seeds_locked_at,share_token,tournament_team(count)";
 
 const fromRow = (r: Row): Tournament => ({
   id: r.id,
@@ -84,6 +87,7 @@ const fromRow = (r: Row): Tournament => ({
   seeding: r.seeding,
   seeds: r.seeds,
   seedsLockedAt: r.seeds_locked_at,
+  shareToken: r.share_token,
 });
 
 function check<T>(r: { data: unknown; error: { message: string } | null }): T {
@@ -469,4 +473,16 @@ export async function lockSeeds(id: string, seeds: Seed[] | null): Promise<void>
       .update({ seeds, seeds_locked_at: seeds ? new Date().toISOString() : null })
       .eq("id", id),
   );
+}
+
+// ── Sharing: a public, read-only link for the other teams at the tournament ──
+
+/** Make (or keep) the tournament's share link; returns its token. Coaches and managers. */
+export async function shareTournament(id: string): Promise<string> {
+  return check<string>(await getBrowserSupabase().rpc("share_tournament", { p_tournament: id }));
+}
+
+/** Stop sharing: the link stops working. */
+export async function stopSharingTournament(id: string): Promise<void> {
+  check(await getBrowserSupabase().rpc("stop_sharing_tournament", { p_tournament: id }));
 }
