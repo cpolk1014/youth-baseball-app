@@ -99,122 +99,163 @@ export async function loadFromSupabase(
     teams[0];
   if (!team) return { kind: "setup", team: null, email, guest };
 
-  const seasons = check<SeasonRow[]>(
-    await sb
+  // Everything below is loaded in a few rounds of requests run side by side, not one after
+  // another: each request is a round trip to the database (about a quarter second on a phone),
+  // and one at a time they added up to several seconds before the screen filled in.
+  // Round 1: the season, and everything that needs only the team.
+  const [
+    seasons,
+    players,
+    assignments,
+    planRes,
+    awardRes,
+    tournamentRes,
+    uniforms,
+    members,
+    invites,
+  ] = await Promise.all([
+    sb
       .from("season")
       .select("id,team_id,name,fair_play_rules")
       .eq("team_id", team.id)
       .order("start_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(1),
-  );
-  const season = seasons[0];
-  if (!season) return { kind: "setup", team, email, guest };
-
-  const [players, games] = await Promise.all([
+      .limit(1)
+      .then((r) => check<SeasonRow[]>(r)),
     sb
       .from("player")
       .select("id,team_id,name,jersey_number,preferred_positions,can_pitch,can_catch,active")
       .eq("team_id", team.id)
       .then((r) => check<PlayerRow[]>(r)),
     sb
-      .from("game")
-      .select(
-        "id,season_id,game_date,start_time,opponent,location,innings,field_players,status,score_us,score_them,lineup_style,uniform_combo_id,uniform_custom,arrive_time,field,location_address,location_lat,location_lng,location_place_id",
-      )
-      .eq("season_id", season.id)
-      .then((r) => check<GameRow[]>(r)),
-  ]);
-
-  const lineups = games.length
-    ? check<LineupRow[]>(
-        await sb
-          .from("lineup")
-          .select("id,game_id,batting_order,not_batting,absent,version")
-          .in(
-            "game_id",
-            games.map((g) => g.id),
-          ),
-      )
-    : [];
-  const slots = lineups.length
-    ? check<LineupSlotRow[]>(
-        await sb
-          .from("lineup_slot")
-          .select("lineup_id,inning,player_id,position,from_out,to_out,estimated")
-          .in(
-            "lineup_id",
-            lineups.map((l) => l.id),
-          ),
-      )
-    : [];
-
-  const practices = check<PracticeRow[]>(
-    await sb
-      .from("practice")
-      .select(
-        "id,season_id,practice_date,start_time,end_time,location,focus,notes,plan,canceled,plays,field,location_address,location_lat,location_lng,location_place_id",
-      )
-      .eq("season_id", season.id),
-  );
-  const assignments = check<PlayAssignmentRow[]>(
-    await sb
       .from("play_assignment")
       .select("id,team_id,title,play_ids,due_date,created_at")
       .eq("team_id", team.id)
-      .order("created_at", { ascending: false }),
-  );
-  // RLS returns everyone's results to coaches and managers, only their own to families.
-  const quizResults = assignments.length
-    ? check<QuizResultRow[]>(
-        await sb
-          .from("quiz_result")
-          .select("id,assignment_id,user_id,player_id,correct,total,completed_at")
+      .order("created_at", { ascending: false })
+      .then((r) => check<PlayAssignmentRow[]>(r)),
+    sb.rpc("team_plan", { p_team: team.id }),
+    // The club's live awards for this team (the function returns none unless coach/manager).
+    sb.rpc("team_club_awards", { p_team: team.id }),
+    sb.from("tournament").select("id", { count: "exact", head: true }).eq("team_id", team.id),
+    sb
+      .from("uniform_combo")
+      .select("id,team_id,organization_id,name,shirt,pants,hat,belt,socks")
+      // The team's own combos, and its club's (the database shows those only while the
+      // team holds an active club code).
+      .or(
+        team.organization_id
+          ? `team_id.eq.${team.id},organization_id.eq.${team.organization_id}`
+          : `team_id.eq.${team.id}`,
+      )
+      .order("created_at")
+      .then((r) => check<UniformComboRow[]>(r)),
+    sb
+      .from("member")
+      .select("id,team_id,user_id,role,display_name")
+      .eq("team_id", team.id)
+      .then((r) => check<MemberRow[]>(r)),
+    // Only coaches can read invites; for everyone else RLS returns none.
+    sb
+      .from("invite")
+      .select("id,team_id,role,token,created_at,expires_at,max_uses,uses,revoked_at")
+      .eq("team_id", team.id)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false })
+      .then((r) => check<InviteRow[]>(r)),
+  ]);
+  const season = seasons[0];
+  if (!season) return { kind: "setup", team, email, guest };
+
+  // Round 2: what needs the season, the players or the homework.
+  const [games, practices, financeEntries, financeSummary, guardians, quizResults] =
+    await Promise.all([
+      sb
+        .from("game")
+        .select(
+          "id,season_id,game_date,start_time,opponent,location,innings,field_players,status,score_us,score_them,lineup_style,uniform_combo_id,uniform_custom,arrive_time,field,location_address,location_lat,location_lng,location_place_id",
+        )
+        .eq("season_id", season.id)
+        .then((r) => check<GameRow[]>(r)),
+      sb
+        .from("practice")
+        .select(
+          "id,season_id,practice_date,start_time,end_time,location,focus,notes,plan,canceled,plays,field,location_address,location_lat,location_lng,location_place_id",
+        )
+        .eq("season_id", season.id)
+        .then((r) => check<PracticeRow[]>(r)),
+      // RLS trims what non-treasurers see; the summary gives everyone the team totals.
+      sb
+        .from("finance_entry")
+        .select(
+          "id,season_id,type,title,amount_cents,entry_date,category,payee,method,refund,estimate,due_dates,note,receipt_path",
+        )
+        .eq("season_id", season.id)
+        .order("entry_date", { ascending: false })
+        .then((r) => check<FinanceEntryRow[]>(r)),
+      sb
+        .rpc("finance_summary", { p_season_id: season.id })
+        .then((r) => check<MoneySummary | null>(r)),
+      // RLS returns every link to coaches and managers, only their own to families.
+      players.length
+        ? sb
+            .from("player_guardian")
+            .select("id,player_id,user_id")
+            .in(
+              "player_id",
+              players.map((p) => p.id),
+            )
+            .then((r) => check<PlayerGuardianRow[]>(r))
+        : Promise.resolve([] as PlayerGuardianRow[]),
+      // RLS returns everyone's results to coaches and managers, only their own to families.
+      assignments.length
+        ? sb
+            .from("quiz_result")
+            .select("id,assignment_id,user_id,player_id,correct,total,completed_at")
+            .in(
+              "assignment_id",
+              assignments.map((a) => a.id),
+            )
+            .then((r) => check<QuizResultRow[]>(r))
+        : Promise.resolve([] as QuizResultRow[]),
+    ]);
+
+  // Round 3: the games' lineups with their innings (one request), and the money's shares.
+  const [lineupRows, financeShares] = await Promise.all([
+    games.length
+      ? sb
+          .from("lineup")
+          .select(
+            "id,game_id,batting_order,not_batting,absent,version,lineup_slot(lineup_id,inning,player_id,position,from_out,to_out,estimated)",
+          )
           .in(
-            "assignment_id",
-            assignments.map((a) => a.id),
-          ),
-      )
-    : [];
-  // RLS returns every link to coaches and managers, only their own to families.
-  const guardians = players.length
-    ? check<PlayerGuardianRow[]>(
-        await sb
-          .from("player_guardian")
-          .select("id,player_id,user_id")
-          .in(
-            "player_id",
-            players.map((p) => p.id),
-          ),
-      )
-    : [];
-  // RLS trims what non-treasurers see; the summary gives everyone the team totals.
-  const financeEntries = check<FinanceEntryRow[]>(
-    await sb
-      .from("finance_entry")
-      .select(
-        "id,season_id,type,title,amount_cents,entry_date,category,payee,method,refund,estimate,due_dates,note,receipt_path",
-      )
-      .eq("season_id", season.id)
-      .order("entry_date", { ascending: false }),
-  );
-  const financeShares = financeEntries.length
-    ? check<FinanceShareRow[]>(
-        await sb
+            "game_id",
+            games.map((g) => g.id),
+          )
+          .then((r) => check<(LineupRow & { lineup_slot: LineupSlotRow[] | null })[]>(r))
+      : Promise.resolve([]),
+    financeEntries.length
+      ? sb
           .from("finance_share")
           .select("id,entry_id,player_id,amount_cents")
           .in(
             "entry_id",
             financeEntries.map((e) => e.id),
-          ),
-      )
-    : [];
-  const financeSummary = check<MoneySummary | null>(
-    await sb.rpc("finance_summary", { p_season_id: season.id }),
-  );
-  const { data: planRows } = await sb.rpc("team_plan", { p_team: team.id });
+          )
+          .then((r) => check<FinanceShareRow[]>(r))
+      : Promise.resolve([] as FinanceShareRow[]),
+  ]);
+  const lineups: LineupRow[] = lineupRows.map((l) => ({
+    id: l.id,
+    game_id: l.game_id,
+    batting_order: l.batting_order,
+    not_batting: l.not_batting,
+    absent: l.absent,
+    version: l.version,
+  }));
+  const slots: LineupSlotRow[] = lineupRows.flatMap((l) => l.lineup_slot ?? []);
+
   const planRow = (
-    (planRows ?? []) as {
+    (planRes.data ?? []) as {
       paid: boolean;
       kind: TeamPlan["kind"];
       until: string | null;
@@ -231,38 +272,8 @@ export async function loadFromSupabase(
         nextSeason: planRow.next_season,
       }
     : undefined;
-  // The club's live awards for this team (the function returns none unless coach/manager).
-  const { data: awardRows } = await sb.rpc("team_club_awards", { p_team: team.id });
-  const clubAwards = teamAwardsFromRows(awardRows);
-  const { count: tournamentCount } = await sb
-    .from("tournament")
-    .select("id", { count: "exact", head: true })
-    .eq("team_id", team.id);
-  const uniforms = check<UniformComboRow[]>(
-    await sb
-      .from("uniform_combo")
-      .select("id,team_id,organization_id,name,shirt,pants,hat,belt,socks")
-      // The team's own combos, and its club's (the database shows those only while the
-      // team holds an active club code).
-      .or(
-        team.organization_id
-          ? `team_id.eq.${team.id},organization_id.eq.${team.organization_id}`
-          : `team_id.eq.${team.id}`,
-      )
-      .order("created_at"),
-  );
-  const members = check<MemberRow[]>(
-    await sb.from("member").select("id,team_id,user_id,role,display_name").eq("team_id", team.id),
-  );
-  // Only coaches can read invites; for everyone else RLS returns none.
-  const invites = check<InviteRow[]>(
-    await sb
-      .from("invite")
-      .select("id,team_id,role,token,created_at,expires_at,max_uses,uses,revoked_at")
-      .eq("team_id", team.id)
-      .is("revoked_at", null)
-      .order("created_at", { ascending: false }),
-  );
+  const clubAwards = teamAwardsFromRows(awardRes.data);
+  const tournamentCount = tournamentRes.count;
 
   return {
     kind: "ready",
