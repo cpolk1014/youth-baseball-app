@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ClubPlan, ClubPlaySet } from "@/lib/data/club-backend";
 import { newId } from "@/lib/data/store";
 import { PLAYS } from "@/lib/plays/library";
-import { PRACTICE_FOCUSES } from "@/lib/practice/drills";
 import { Loading } from "../AppShell";
+import { PlayDetail } from "../PlayDetail";
 import { PlayPicker } from "../PlayPicker";
-import { DrillPicker } from "../PracticeScreen";
 import { Sheet } from "../Sheet";
+import { ClubPlanEditor } from "./ClubPlanEditor";
+import { ClubPlanReader } from "./ClubPlanReader";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 const field =
@@ -21,6 +22,7 @@ export function ClubLibraryTab({ clubId }: { clubId: string }) {
   const [sets, setSets] = useState<ClubPlaySet[]>([]);
   const [plan, setPlan] = useState<ClubPlan | null>(null);
   const [set, setSet] = useState<ClubPlaySet | null>(null);
+  const [reading, setReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -83,6 +85,12 @@ export function ClubLibraryTab({ clubId }: { clubId: string }) {
         >
           + Add practice plan
         </button>
+        <button
+          onClick={() => setReading(true)}
+          className="mt-2 h-14 w-full rounded-xl border-2 border-[var(--team)] bg-white text-lg font-bold text-[var(--team)] active:bg-slate-50"
+        >
+          ✨ Read plans from a PDF or picture
+        </button>
       </section>
 
       <section>
@@ -125,10 +133,9 @@ export function ClubLibraryTab({ clubId }: { clubId: string }) {
         onClose={() => setPlan(null)}
       >
         {plan && (
-          <PlanEditor
+          <ClubPlanEditor
             key={plan.id}
             plan={plan}
-            isNew={!plans.some((p) => p.id === plan.id)}
             onCancel={() => setPlan(null)}
             onSave={(p) =>
               void run(async () => {
@@ -141,13 +148,32 @@ export function ClubLibraryTab({ clubId }: { clubId: string }) {
                 setPlan(null);
               })
             }
-            onDelete={() =>
-              void run(async () => {
-                await (await backend()).deleteClubPlan(plan.id);
-                setPlans((cur) => (cur ?? []).filter((x) => x.id !== plan.id));
-                setPlan(null);
-              })
+            onDelete={
+              plans.some((p) => p.id === plan.id)
+                ? () =>
+                    void run(async () => {
+                      await (await backend()).deleteClubPlan(plan.id);
+                      setPlans((cur) => (cur ?? []).filter((x) => x.id !== plan.id));
+                      setPlan(null);
+                    })
+                : undefined
             }
+          />
+        )}
+      </Sheet>
+
+      <Sheet open={reading} title="Read practice plans" onClose={() => setReading(false)}>
+        {reading && (
+          <ClubPlanReader
+            clubId={clubId}
+            onDone={() => setReading(false)}
+            onSave={async (read) => {
+              const m = await backend();
+              for (const p of read) await m.saveClubPlan(clubId, p);
+              setPlans((cur) =>
+                [...(cur ?? []), ...read].sort((a, b) => a.title.localeCompare(b.title)),
+              );
+            }}
           />
         )}
       </Sheet>
@@ -184,159 +210,6 @@ export function ClubLibraryTab({ clubId }: { clubId: string }) {
   );
 }
 
-function PlanEditor({
-  plan,
-  isNew,
-  onSave,
-  onCancel,
-  onDelete,
-}: {
-  plan: ClubPlan;
-  isNew: boolean;
-  onSave: (p: ClubPlan) => void;
-  onCancel: () => void;
-  onDelete: () => void;
-}) {
-  const [title, setTitle] = useState(plan.title);
-  const [focus, setFocus] = useState(plan.focus ?? "");
-  const [items, setItems] = useState(plan.items);
-  const [adding, setAdding] = useState(false);
-  const total = items.reduce((s, i) => s + i.minutes, 0);
-  const valid = title.trim().length > 0 && items.length > 0;
-  const move = (i: number, d: -1 | 1) => {
-    const next = [...items];
-    [next[i], next[i + d]] = [next[i + d]!, next[i]!];
-    setItems(next);
-  };
-
-  if (adding) {
-    return (
-      <div className="flex flex-col gap-3">
-        <DrillPicker
-          onAdd={(item) => {
-            setItems([
-              ...items,
-              {
-                title: item.title,
-                minutes: item.minutes,
-                ...(item.notes ? { notes: item.notes } : {}),
-              },
-            ]);
-            setAdding(false);
-          }}
-        />
-        <button onClick={() => setAdding(false)} className="h-12 text-base font-semibold underline">
-          Back to the plan
-        </button>
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1">
-        <span className="text-base font-semibold">Name</span>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          maxLength={80}
-          placeholder="Infield day"
-          className={field}
-        />
-      </label>
-      <label className="flex flex-col gap-1">
-        <span className="text-base font-semibold">Focus (optional)</span>
-        <select value={focus} onChange={(e) => setFocus(e.target.value)} className={field}>
-          <option value="">None</option>
-          {PRACTICE_FOCUSES.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div>
-        <p className="mb-2 text-base font-semibold">Drills · {total} min</p>
-        <ol className="flex flex-col gap-2">
-          {items.map((it, i) => (
-            <li
-              key={i}
-              className="flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white p-2"
-            >
-              <span className="min-w-0 flex-1 text-base font-semibold">{it.title}</span>
-              <input
-                type="number"
-                min={1}
-                max={120}
-                value={it.minutes}
-                aria-label={`Minutes for ${it.title}`}
-                onChange={(e) =>
-                  setItems(
-                    items.map((x, j) =>
-                      j === i
-                        ? { ...x, minutes: Math.max(1, Math.min(120, Number(e.target.value) || 1)) }
-                        : x,
-                    ),
-                  )
-                }
-                className="h-11 w-16 rounded-lg border-2 border-slate-300 px-2 text-center text-base"
-              />
-              <button
-                onClick={() => move(i, -1)}
-                disabled={i === 0}
-                aria-label="Move up"
-                className="size-11 rounded-lg border-2 border-slate-300 disabled:opacity-30"
-              >
-                ↑
-              </button>
-              <button
-                onClick={() => move(i, 1)}
-                disabled={i === items.length - 1}
-                aria-label="Move down"
-                className="size-11 rounded-lg border-2 border-slate-300 disabled:opacity-30"
-              >
-                ↓
-              </button>
-              <button
-                onClick={() => setItems(items.filter((_, j) => j !== i))}
-                aria-label={`Remove ${it.title}`}
-                className="size-11 rounded-lg border-2 border-red-300 text-red-700"
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ol>
-        <button
-          onClick={() => setAdding(true)}
-          className="mt-2 h-12 w-full rounded-xl border-2 border-dashed border-slate-400 text-base font-bold active:bg-slate-100"
-        >
-          + Add a drill
-        </button>
-      </div>
-      <div className="flex gap-3">
-        <button
-          onClick={onCancel}
-          className="h-14 flex-1 rounded-xl border-2 border-slate-400 text-lg font-bold active:bg-slate-100"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={() => onSave({ ...plan, title: title.trim(), focus: focus || null, items })}
-          disabled={!valid}
-          className="h-14 flex-[2] rounded-xl bg-[var(--team)] text-lg font-bold text-white disabled:opacity-40"
-        >
-          Save plan
-        </button>
-      </div>
-      {!isNew && (
-        <button onClick={onDelete} className="h-12 text-base font-semibold text-red-700 underline">
-          Delete plan
-        </button>
-      )}
-    </div>
-  );
-}
-
 function PlaySetEditor({
   set,
   isNew,
@@ -352,7 +225,44 @@ function PlaySetEditor({
 }) {
   const [title, setTitle] = useState(set.title);
   const [playIds, setPlayIds] = useState(set.playIds);
+  const [watching, setWatching] = useState<string | null>(null);
   const valid = title.trim().length > 0 && playIds.length > 0;
+  const play = watching ? PLAYS.find((p) => p.id === watching) : undefined;
+  const top = useRef<HTMLDivElement>(null);
+  // Open the play from its top, not wherever the list was scrolled to.
+  useEffect(() => {
+    if (watching) top.current?.scrollIntoView({ block: "start" });
+  }, [watching]);
+
+  if (play) {
+    const picked = playIds.includes(play.id);
+    return (
+      <div ref={top} className="flex scroll-mt-4 flex-col gap-4">
+        <PlayDetail play={play} />
+        <div className="sticky bottom-0 -mx-4 grid grid-cols-2 gap-2 bg-white px-4 pt-2 pb-1">
+          <button
+            onClick={() => setWatching(null)}
+            className="h-14 rounded-xl border-2 border-slate-400 text-lg font-bold active:bg-slate-100"
+          >
+            Back to the set
+          </button>
+          <button
+            onClick={() => {
+              setPlayIds(
+                picked
+                  ? playIds.filter((x) => x !== play.id)
+                  : PLAYS.map((p) => p.id).filter((x) => x === play.id || playIds.includes(x)),
+              );
+              setWatching(null);
+            }}
+            className={`h-14 rounded-xl text-lg font-bold ${picked ? "border-2 border-red-300 text-red-700" : "bg-[var(--team)] text-white"}`}
+          >
+            {picked ? "Take it out" : "Add to the set"}
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-4">
       <label className="flex flex-col gap-1">
@@ -369,7 +279,8 @@ function PlaySetEditor({
         <p className="mb-2 text-base font-semibold">
           Plays <span className="text-slate-600">({playIds.length} picked)</span>
         </p>
-        <PlayPicker selected={playIds} onChange={setPlayIds} />
+        <p className="mb-2 text-sm text-slate-600">Tap ▶ to watch a play before you add it.</p>
+        <PlayPicker selected={playIds} onChange={setPlayIds} onWatch={setWatching} />
       </div>
       <div className="sticky bottom-0 -mx-4 grid grid-cols-2 gap-2 bg-white px-4 pt-2 pb-1">
         <button

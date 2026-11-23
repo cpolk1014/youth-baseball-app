@@ -20,6 +20,8 @@ import { CalendarButton } from "./CalendarButton";
 import { placeLabel, recentPlaces } from "@/lib/data/game";
 import { QuizButton, quizNames } from "./QuizButton";
 import { Sheet } from "./Sheet";
+import { DrillEdit, DrillHowTo } from "./DrillEdit";
+import { DRILL_TITLE_MAX } from "@/lib/practice/planRead";
 
 type Panel = "edit" | "drills" | "copy" | "plays" | "delete" | null;
 
@@ -29,6 +31,7 @@ const small =
 export function PracticeScreen({ practiceId }: { practiceId: string }) {
   const data = useAppData();
   const [panel, setPanel] = useState<Panel>(null);
+  const [editing, setEditing] = useState<string | null>(null);
   const club = useClubLibrary(data?.team.club?.id);
 
   if (!data) {
@@ -145,17 +148,53 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
                   <span className="w-6 shrink-0 pt-0.5 text-base font-bold text-slate-500">
                     {i + 1}
                   </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-lg leading-snug font-semibold">{item.title}</p>
-                    {item.notes && (
-                      <p className="text-sm whitespace-pre-line text-slate-600">{item.notes}</p>
-                    )}
-                  </div>
+                  {canEdit ? (
+                    <button
+                      onClick={() => setEditing(editing === item.id ? null : item.id)}
+                      aria-expanded={editing === item.id}
+                      className="min-w-0 flex-1 rounded-lg text-left active:bg-slate-50"
+                    >
+                      <span className="block text-lg leading-snug font-semibold">{item.title}</span>
+                      {item.notes ? (
+                        <span className="block text-sm whitespace-pre-line text-slate-600">
+                          {item.notes}
+                        </span>
+                      ) : (
+                        <span className="block text-sm font-semibold text-[var(--team)]">
+                          + How to run it
+                        </span>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="min-w-0 flex-1">
+                      <p className="text-lg leading-snug font-semibold">{item.title}</p>
+                      {item.notes && (
+                        <p className="text-sm whitespace-pre-line text-slate-600">{item.notes}</p>
+                      )}
+                    </div>
+                  )}
                   {!canEdit && (
                     <span className="shrink-0 text-base font-bold">{item.minutes} min</span>
                   )}
                 </div>
-                {canEdit && (
+                {canEdit && editing === item.id && (
+                  <div className="pl-8">
+                    <DrillEdit
+                      title={item.title}
+                      notes={item.notes}
+                      onCancel={() => setEditing(null)}
+                      onSave={(d) => {
+                        setPlan(
+                          practice.plan.map((x) =>
+                            x.id === item.id ? { id: x.id, minutes: x.minutes, ...d } : x,
+                          ),
+                        );
+                        setEditing(null);
+                      }}
+                    />
+                  </div>
+                )}
+                {canEdit && editing !== item.id && (
                   <div className="mt-2 flex items-center gap-2 pl-8">
                     <button
                       aria-label={`Less time for ${item.title}`}
@@ -460,12 +499,18 @@ export function PracticeScreen({ practiceId }: { practiceId: string }) {
 export function DrillPicker({ onAdd }: { onAdd: (item: Omit<PlanItem, "id">) => void }) {
   const [title, setTitle] = useState("");
   const [minutes, setMinutes] = useState(10);
+  const [notes, setNotes] = useState("");
   return (
     <div className="flex flex-col gap-5">
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (title.trim()) onAdd({ title: title.trim(), minutes });
+          if (title.trim())
+            onAdd({
+              title: title.trim(),
+              minutes,
+              ...(notes.trim() ? { notes: notes.trim() } : {}),
+            });
         }}
         className="flex flex-col gap-2 rounded-xl bg-slate-100 p-3"
       >
@@ -474,7 +519,7 @@ export function DrillPicker({ onAdd }: { onAdd: (item: Omit<PlanItem, "id">) => 
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            maxLength={60}
+            maxLength={DRILL_TITLE_MAX}
             placeholder="e.g. Hit the cone"
             className="h-12 min-w-0 flex-1 rounded-lg border-2 border-slate-400 bg-white px-3 text-lg focus:border-[var(--team)] focus:outline-none"
           />
@@ -491,6 +536,7 @@ export function DrillPicker({ onAdd }: { onAdd: (item: Omit<PlanItem, "id">) => 
             ))}
           </select>
         </div>
+        <DrillHowTo value={notes} onChange={setNotes} />
         <button
           type="submit"
           disabled={!title.trim()}

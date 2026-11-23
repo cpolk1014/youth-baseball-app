@@ -7,9 +7,12 @@ import { PLAY_CATEGORIES } from "@/lib/plays/types";
 export function PlayPicker({
   selected,
   onChange,
+  onWatch,
 }: {
   selected: string[];
   onChange: (ids: string[]) => void;
+  /** Shows a ▶ button on each play that opens it (the animated field and every job). */
+  onWatch?: (id: string) => void;
 }) {
   const toggle = (id: string) =>
     onChange(
@@ -27,8 +30,8 @@ export function PlayPicker({
           </legend>
           <ul className="flex flex-col gap-1">
             {playsIn(c).map((p) => (
-              <li key={p.id}>
-                <label className="flex min-h-12 items-center gap-3 rounded-lg px-1 active:bg-slate-100">
+              <li key={p.id} className="flex items-center gap-1">
+                <label className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-lg px-1 active:bg-slate-100">
                   <input
                     type="checkbox"
                     checked={selected.includes(p.id)}
@@ -40,6 +43,16 @@ export function PlayPicker({
                     <span className="block text-sm text-slate-600">{p.situation}</span>
                   </span>
                 </label>
+                {onWatch && (
+                  <button
+                    type="button"
+                    onClick={() => onWatch(p.id)}
+                    aria-label={`Watch ${p.name}`}
+                    className="flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 bg-white text-base text-[var(--team)] active:bg-slate-100"
+                  >
+                    ▶
+                  </button>
+                )}
               </li>
             ))}
           </ul>

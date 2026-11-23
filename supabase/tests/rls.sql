@@ -2614,6 +2614,7 @@ exception when insufficient_privilege then raise notice 'ok: only club admins us
 end $$;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000008', false);
 select pg_temp.expect(public.ai_reserve(null, (select org from club_t), 'uniform') is not null, 'club admins read flyers for the club');
+select pg_temp.expect(public.ai_reserve(null, (select org from club_t), 'club_plan') is not null, 'club admins read practice plans for the club');
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false);
 do $$ begin
   perform public.ai_reserve('00000000-0000-4000-8000-000000000001', null, 'roster');

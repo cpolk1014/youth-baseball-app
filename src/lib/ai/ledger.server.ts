@@ -12,6 +12,7 @@ export type AiKind =
   | "schedule"
   | "boxscore"
   | "uniform"
+  | "club_plan"
   | "tournament"
   | "tournament_scores"
   | "rules"
