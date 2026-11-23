@@ -20,7 +20,7 @@ export function Cta({
   size?: "md" | "lg";
 }) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-xl font-bold transition focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#DC143C]";
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl font-bold transition focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#DC143C]";
   const sizes = size === "lg" ? "h-14 px-7 text-lg" : "h-11 px-5 text-base";
   const variants = {
     primary: "bg-[#DC143C] text-white shadow-lg shadow-[#DC143C]/25 hover:bg-[#B5102F]",

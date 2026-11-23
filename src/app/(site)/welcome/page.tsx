@@ -14,6 +14,7 @@ import {
   Check,
   CLUB_HREF,
   Cta,
+  DEMO_HREF,
   Eyebrow,
   H2,
   Laptop,
@@ -90,14 +91,21 @@ export default function HomePage() {
               bracket. <b className="text-white">You just coach.</b> (And find your kid&apos;s other
               batting glove.)
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <Cta />
-              <a href="#ai" className="px-2 font-semibold text-white/85 hover:text-white">
+              <Cta href={DEMO_HREF} variant="light">
+                Try the demo
+              </Cta>
+              <a
+                href="#ai"
+                className="px-2 font-semibold whitespace-nowrap text-white/85 hover:text-white"
+              >
                 See AI in action ↓
               </a>
             </div>
             <p className="mt-4 text-sm text-white/70">
-              14 days of everything for your first team, AI included. No credit card.
+              14 days of everything for your first team, AI included. No credit card. The demo needs
+              no sign-up.
             </p>
           </div>
           <div className="relative mx-auto w-full max-w-[260px] sm:max-w-2xl sm:pt-6 sm:pb-16 sm:pl-[12%] lg:-mr-10 lg:max-w-none xl:-mr-24">
@@ -418,6 +426,13 @@ export default function HomePage() {
         </div>
         <p className="mt-4 text-sm text-white/70">
           14 days of everything for your first team · No credit card · Works on any phone
+        </p>
+        <p className="mt-2 text-sm text-white/70">
+          Just looking?{" "}
+          <Link href={DEMO_HREF} className="font-semibold text-white underline underline-offset-2">
+            Try the demo club
+          </Link>{" "}
+          (no sign-up, all made up)
         </p>
       </section>
     </>
