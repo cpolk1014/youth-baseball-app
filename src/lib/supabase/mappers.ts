@@ -410,9 +410,7 @@ export function appDataFromRows(
       battingOrder: l.batting_order,
       notBatting: l.not_batting,
       absent: l.absent,
-      slots: rows.slots
-        .filter((s) => s.lineup_id === l.id)
-        .map(slotFromRow),
+      slots: rows.slots.filter((s) => s.lineup_id === l.id).map(slotFromRow),
       autoFillSeed: autoFillSeeds[game.id] ?? 0,
     };
   }

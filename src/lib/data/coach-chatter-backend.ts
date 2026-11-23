@@ -9,6 +9,7 @@ import {
   type ChatterPostRow,
 } from "@/lib/chatter/feed";
 import type { ChatterGif } from "@/lib/chatter/gif";
+import { databaseErrorMessage } from "@/lib/supabase/auth-errors";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { ChatterError } from "./chatter-backend";
 
@@ -21,7 +22,7 @@ type Row = Omit<ChatterPostRow, "team_id"> & { organization_id: string };
 const fromRow = (r: Row): ChatterPost => postFromRow({ ...r, team_id: r.organization_id });
 
 function fail(error: { message: string; code?: string } | null): void {
-  if (error) throw new ChatterError(error.message, error.code);
+  if (error) throw new ChatterError(databaseErrorMessage(error.message), error.code);
 }
 
 export interface CoachClub {

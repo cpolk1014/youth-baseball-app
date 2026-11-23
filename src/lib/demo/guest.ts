@@ -17,3 +17,12 @@ export const REAL_CLUB_HREF = "/login?next=/club";
 export function isGuest(user: { is_anonymous?: boolean } | null | undefined): boolean {
   return user?.is_anonymous === true;
 }
+
+/** Demo Chatter pictures live in the app's public files, not the private photo bucket. */
+const DEMO_PHOTO = /^demo\/([a-z0-9-]+\.jpg)$/;
+
+/** The public link to a demo club's Chatter picture ("demo/scoreboard.jpg"), else null. */
+export function demoPhotoUrl(path: string): string | null {
+  const m = DEMO_PHOTO.exec(path);
+  return m ? `/demo-chatter/${m[1]}` : null;
+}

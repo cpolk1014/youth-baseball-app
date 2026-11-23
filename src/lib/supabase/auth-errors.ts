@@ -35,3 +35,17 @@ export function retryAfterSeconds(error: { message: string }): number | null {
   const m = /after (\d+) seconds?/i.exec(error.message);
   return m ? Number(m[1]) : null;
 }
+
+/** What a page shows when the database turns it away because its login ended. */
+export const SIGNED_OUT_MESSAGE =
+  "You've been signed out (your login ended). Reload the page to sign in again.";
+
+/**
+ * A database error in words: "permission denied for function …" means the request came with
+ * no login (it ended, or another tab signed out), so say that instead.
+ */
+export function databaseErrorMessage(message: string): string {
+  return /^permission denied for (function|table|relation|sequence|schema) /i.test(message)
+    ? SIGNED_OUT_MESSAGE
+    : message;
+}

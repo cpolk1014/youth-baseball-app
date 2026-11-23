@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { retryAfterSeconds, signInErrorMessage } from "./auth-errors";
+import {
+  SIGNED_OUT_MESSAGE,
+  databaseErrorMessage,
+  retryAfterSeconds,
+  signInErrorMessage,
+} from "./auth-errors";
 
 describe("sign-in error messages", () => {
   it("explains an expired or used code", () => {
@@ -48,5 +53,21 @@ describe("sign-in error messages", () => {
     ).toBe(42);
     expect(retryAfterSeconds({ message: "...after 1 second." })).toBe(1);
     expect(retryAfterSeconds({ message: "Token has expired or is invalid" })).toBeNull();
+  });
+});
+
+describe("databaseErrorMessage", () => {
+  it("says the login ended when the database turns a request away", () => {
+    expect(databaseErrorMessage("permission denied for function my_coach_clubs")).toBe(
+      SIGNED_OUT_MESSAGE,
+    );
+    expect(databaseErrorMessage("permission denied for table chatter_post")).toBe(
+      SIGNED_OUT_MESSAGE,
+    );
+  });
+  it("leaves the app's own messages alone", () => {
+    expect(databaseErrorMessage("Only coaches and managers can tag everyone.")).toBe(
+      "Only coaches and managers can tag everyone.",
+    );
   });
 });

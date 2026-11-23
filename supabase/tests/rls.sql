@@ -2861,6 +2861,31 @@ select pg_temp.expect((select count(*) from public.game g join public.season s o
   join demo_built d on s.team_id = d.team where g.status = 'final') = 8, 'the demo 10U has a season of games');
 select pg_temp.expect((select (public.start_demo_club()->>'club')::uuid = club from demo_built),
   'starting the demo again opens the same club');
+reset role;
+select pg_temp.expect((select count(*) from public.chatter_post p join demo_built d on p.team_id = d.team) >= 15,
+  'the demo 10U''s Chatter has posts');
+select pg_temp.expect((select count(*) from public.chatter_post p join demo_built d on p.team_id = d.team
+  where p.photos::text like '%demo/%') = 4 and (select count(*) from public.chatter_post p join demo_built d on p.team_id = d.team
+  where p.gif is not null) = 5, 'with drawn pictures and GIFs');
+select pg_temp.expect((select count(*) from public.chatter_poll_vote v join public.chatter_post p on p.id = v.post_id
+  join demo_built d on p.team_id = d.team) = 4, 'and a poll families voted in');
+select pg_temp.expect((select jsonb_array_length(p.reactions) from public.chatter_post p join demo_built d on p.team_id = d.team
+  where p.photos::text like '%scoreboard%') = 3, 'and reactions on the score');
+select pg_temp.expect((select count(*) from public.club_coach_post p join demo_built d on p.organization_id = d.club) = 4,
+  'Coach Chatter has posts too');
+select pg_temp.expect(not exists (select 1 from public.chatter_post p join public.team t on t.id = p.team_id
+  join demo_built d on t.organization_id = d.club where p.created_at > now())
+  and not exists (select 1 from public.club_coach_post p join demo_built d on p.organization_id = d.club
+  where p.created_at > now()), 'no demo post is dated in the future');
+select pg_temp.expect((select count(*) from public.player_guardian g join public.player p on p.id = g.player_id
+  join demo_built d on p.team_id = d.team) = 5, 'made-up parents are linked to their kids');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-0000000000d1', false);
+select pg_temp.expect((select count(*) from demo_built d, public.my_coach_clubs()) = 1,
+  'the guest is in their club''s Coach Chatter');
+select pg_temp.expect((select (public.start_demo_club()->>'club')::uuid = club from demo_built)
+  and (select count(*) from public.club_coach_post p join demo_built d on p.organization_id = d.club) = 4,
+  'opening the demo again doesn''t post twice');
 select pg_temp.expect((select count(*) from public.team where organization_id is null) = 0,
   'a guest sees no real teams');
 do $$ begin
@@ -2909,5 +2934,9 @@ select pg_temp.expect(not exists (select 1 from auth.users where id = 'aaaaaaaa-
   'the guest account is gone too');
 select pg_temp.expect(exists (select 1 from public.team where id = '00000000-0000-4000-8000-000000000001'),
   'real teams are untouched');
+select pg_temp.expect((select count(*) from public.demo_persona d join auth.users u on u.id = d.user_id) = 8,
+  'the made-up people stay for the next demo');
+select pg_temp.expect(not exists (select 1 from public.athlete_guardian g join public.demo_persona d on d.user_id = g.user_id),
+  'and the kid records they were linked to are gone');
 
 \echo ALL RLS TESTS PASSED

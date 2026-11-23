@@ -1,6 +1,8 @@
 // Chatter, the team's chat feed: reads, writes and live updates through Supabase. The
 // database decides who reads and posts (team members only) and enforces every rule.
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { demoPhotoUrl } from "@/lib/demo/guest";
+import { databaseErrorMessage } from "@/lib/supabase/auth-errors";
 import {
   photoPaths,
   pollFromRow,
@@ -26,7 +28,7 @@ export const PAGE = 50;
 export const CACHE_PREFIX = "rallycap:chatter:";
 
 function fail(error: { message: string; code?: string } | null): void {
-  if (error) throw new ChatterError(error.message, error.code);
+  if (error) throw new ChatterError(databaseErrorMessage(error.message), error.code);
 }
 
 export class ChatterError extends Error {
@@ -244,22 +246,33 @@ export async function uploadClubPhoto(
 
 /** Delete photo files (a removed post's, or uploads that never got posted). */
 export async function deletePhotos(photos: ChatterPhoto[]): Promise<void> {
-  if (!photos.length) return;
-  await getBrowserSupabase()
-    .storage.from(PHOTOS)
-    .remove(photos.flatMap((p) => [p.path, p.thumb]));
+  // A demo club's pictures are the app's own files: nothing to delete.
+  const files = photos.flatMap((p) => [p.path, p.thumb]).filter((f) => !demoPhotoUrl(f));
+  if (!files.length) return;
+  await getBrowserSupabase().storage.from(PHOTOS).remove(files);
 }
 
 /** Links to photos, good for 6 hours (the bucket is private). */
 export async function photoUrls(paths: string[]): Promise<Record<string, string>> {
-  if (!paths.length) return {};
+  // A demo club's pictures are public files in the app.
+  const demo: Record<string, string> = {};
+  const signed: string[] = [];
+  for (const p of paths) {
+    const url = demoPhotoUrl(p);
+    if (url) demo[p] = url;
+    else signed.push(p);
+  }
+  if (!signed.length) return demo;
   const { data, error } = await getBrowserSupabase()
     .storage.from(PHOTOS)
-    .createSignedUrls(paths, 6 * 3600);
-  if (error) return {};
-  return Object.fromEntries(
-    (data ?? []).flatMap((d) => (d.path && d.signedUrl ? [[d.path, d.signedUrl]] : [])),
-  );
+    .createSignedUrls(signed, 6 * 3600);
+  if (error) return demo;
+  return {
+    ...demo,
+    ...Object.fromEntries(
+      (data ?? []).flatMap((d) => (d.path && d.signedUrl ? [[d.path, d.signedUrl]] : [])),
+    ),
+  };
 }
 
 /** Who may post photos, or start polls: everyone on the team, or only coaches and managers. */
