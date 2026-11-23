@@ -57,7 +57,7 @@ describe("batAroundMessage", () => {
     totalCents: 120000,
     players: 12,
     each: "$100.00",
-    link: "https://fungo.team/money",
+    link: "https://www.fungo.team/money",
     format: (c: number) => `$${(c / 100).toFixed(2)}`,
     formatDate: (d: string) => d,
   };
@@ -84,7 +84,7 @@ describe("batAroundMessage", () => {
         "• $25.00 due Mar 15",
         "• $25.00 due Apr 15",
         "",
-        "See your balance in Fungo: https://fungo.team/money",
+        "See your balance in Fungo: https://www.fungo.team/money",
       ].join("\n"),
     );
   });

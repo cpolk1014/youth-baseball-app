@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE = "https://fungo.team";
+const BASE = "https://www.fungo.team";
 const PAGES: [string, number][] = [
   ["/", 1],
   ["/ai", 0.9],

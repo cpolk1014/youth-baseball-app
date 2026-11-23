@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Runs public/sw.js against a simulated network and cache: online, offline, weak signal,
 // and saving pages ahead of time.
 
-const ORIGIN = "https://fungo.team";
+const ORIGIN = "https://www.fungo.team";
 const source = readFileSync(new URL("../../../public/sw.js", import.meta.url), "utf8");
 
 type Handler = (event: Record<string, unknown>) => void;

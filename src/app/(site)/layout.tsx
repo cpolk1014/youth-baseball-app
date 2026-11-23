@@ -3,7 +3,7 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://fungo.team"),
+  metadataBase: new URL("https://www.fungo.team"),
   openGraph: {
     siteName: "Fungo",
     type: "website",
