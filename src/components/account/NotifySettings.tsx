@@ -112,6 +112,12 @@ export function NotifySettings({
                       category="money"
                       label="New charges for my family"
                     />
+                    <Toggle
+                      userId={userId}
+                      scopeId={t.id}
+                      category="stats"
+                      label="Box scores: how my kids did"
+                    />
                   </ul>
                 </li>
               ))}

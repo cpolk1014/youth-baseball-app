@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import {
+  boxScorePush,
   chargesPush,
   chatterPush,
   gamesPush,
+  type BoxScoreEvent,
   type ChargeEvent,
   type GameEvent,
 } from "@/lib/push/payload";
@@ -10,7 +12,7 @@ import { firstTime, pushConfigured, sendPush } from "@/lib/push/send.server";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
 /**
- * Sends the team notices that are due (game changes, new charges). Supabase calls this every
+ * Sends the team notices that are due (game changes, new charges, box scores). Supabase calls this every
  * 5 minutes (start_team_notifications). It needs no sign-in and is safe to call any time:
  * the database decides what's due (settled for 10 minutes, daytime, the team still sends that
  * kind) and hands each notice out only once.
@@ -25,7 +27,7 @@ export async function POST() {
   const rows = (data ?? []) as {
     team_id: string;
     team_name: string;
-    kind: "games" | "money";
+    kind: "games" | "money" | "stats";
     user_ids: string[];
     events: unknown[];
   }[];
@@ -34,7 +36,9 @@ export async function POST() {
     const payload =
       row.kind === "games"
         ? gamesPush(row.team_id, row.team_name, row.events as GameEvent[])
-        : chargesPush(row.team_id, row.team_name, row.events as ChargeEvent[]);
+        : row.kind === "stats"
+          ? boxScorePush(row.team_id, row.team_name, row.events as BoxScoreEvent[])
+          : chargesPush(row.team_id, row.team_name, row.events as ChargeEvent[]);
     sent += await sendPush(row.user_ids, { id: row.team_id, category: row.kind }, payload);
   }
   sent += await announceFungoPosts();

@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  boxScoreLine,
+  boxScorePush,
   chargesPush,
   chatterPush,
   coachPush,
   dayText,
   gamesPush,
+  inningsText,
   keyBytes,
   postLine,
   timeText,
@@ -116,5 +119,77 @@ describe("push payloads", () => {
   it("decodes the public key", () => {
     expect(Array.from(keyBytes("AQID"))).toEqual([1, 2, 3]);
     expect(Array.from(keyBytes("_-8"))).toEqual([255, 239]);
+  });
+});
+
+describe("box score notices", () => {
+  const line = (
+    batting: Record<string, number>,
+    pitching: Record<string, number> | null = null,
+  ) => ({
+    change: "boxscore" as const,
+    ref: "g1",
+    player_id: "p1",
+    player: "Mason",
+    date: "2026-11-21",
+    opponent: "Cubs",
+    batting,
+    pitching,
+    unlocked: true,
+  });
+
+  it("says how the kid did at the plate", () => {
+    expect(boxScoreLine(line({ ab: 3, h: 2, doubles: 1, rbi: 2 }))).toBe(
+      "Mason went 2 for 3 with a double and 2 RBI vs Cubs.",
+    );
+    expect(boxScoreLine(line({ ab: 4, h: 0 }))).toBe("Mason went 0 for 4 vs Cubs.");
+    expect(boxScoreLine(line({ ab: 3, h: 3, hr: 1, triples: 1, doubles: 1, rbi: 4 }))).toBe(
+      "Mason went 3 for 3 with a homer, a triple and a double vs Cubs.",
+    );
+    expect(boxScoreLine(line({ ab: 0, bb: 2 }))).toBe("Mason drew 2 walks vs Cubs.");
+  });
+
+  it("says how the kid pitched", () => {
+    expect(boxScoreLine(line({ ab: 2, h: 1 }, { outs: 6, pitches: 34, so: 5 }))).toBe(
+      "Mason went 1 for 2 and pitched 2 innings (34 pitches, 5 strikeouts) vs Cubs.",
+    );
+    expect(boxScoreLine(line({}, { outs: 4, pitches: 22, so: 1 }))).toBe(
+      "Mason pitched 1⅓ innings (22 pitches, 1 strikeout) vs Cubs.",
+    );
+    expect(boxScoreLine(line({}, { pitches: 41 }))).toBe("Mason threw 41 pitches vs Cubs.");
+    expect(inningsText(2)).toBe("⅔ of an inning");
+    expect(inningsText(3)).toBe("1 inning");
+  });
+
+  it("still says something with an empty line, and skips a missing opponent", () => {
+    expect(boxScoreLine({ ...line({}), opponent: "x" })).toBe("Mason's line is in.");
+  });
+
+  it("shows the line to parents with a pass and opens the kid's page", () => {
+    const p = boxScorePush("t1", "Bayou Bombers 10U", [line({ ab: 3, h: 2, doubles: 1 })]);
+    expect(p).toEqual({
+      title: "Bayou Bombers 10U",
+      body: "Mason went 2 for 3 with a double vs Cubs.",
+      url: "/my-player?player=p1",
+      tag: "stats-t1",
+    });
+  });
+
+  it("only teases without a pass: no numbers", () => {
+    const p = boxScorePush("t1", "Bombers", [{ ...line({ ab: 3, h: 2 }), unlocked: false }]);
+    expect(p.body).toBe("The box score from Sat vs Cubs is in. See how Mason did.");
+    expect(p.body).not.toMatch(/\d for \d/);
+  });
+
+  it("puts brothers and sisters in one notice", () => {
+    const ella = { ...line({ ab: 2, h: 1 }), player_id: "p2", player: "Ella" };
+    const p = boxScorePush("t1", "Bombers", [line({ ab: 3, h: 2 }), ella]);
+    expect(p.body).toBe("Mason went 2 for 3 vs Cubs. Ella went 1 for 2 vs Cubs.");
+    expect(p.url).toBe("/my-player");
+    const both = boxScorePush("t1", "Bombers", [
+      { ...line({}), unlocked: false },
+      { ...ella, unlocked: false },
+    ]);
+    expect(both.body).toBe("The box score from Sat vs Cubs is in. See how Mason and Ella did.");
   });
 });

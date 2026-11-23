@@ -2841,6 +2841,70 @@ select pg_temp.expect((select not from_fungo from public.chatter_post where id =
 reset role;
 delete from public.chatter_post where id = '00000000-0000-4000-8000-00000000ac01';
 
+-- ── Box score notices: a coach's box score tells each kid's parents ──
+insert into public.player_guardian (player_id, user_id)
+select '00000000-0000-4000-8000-000000001001', 'aaaaaaaa-0000-4000-8000-000000000002'
+where not exists (select 1 from public.player_guardian
+  where player_id = '00000000-0000-4000-8000-000000001001' and user_id = 'aaaaaaaa-0000-4000-8000-000000000002');
+insert into public.game (id, season_id, game_date, start_time, opponent, innings, status, score_us, score_them)
+values ('00000000-0000-4000-8000-00000000bd01', '00000000-0000-4000-8000-000000000101', current_date - 1, '09:00', 'Cubs', 6, 'final', 7, 4),
+       ('00000000-0000-4000-8000-00000000bd02', '00000000-0000-4000-8000-000000000101', current_date - 2, '09:00', 'Gators', 6, 'final', 3, 5);
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.save_game_box_score('00000000-0000-4000-8000-00000000bd01',
+  '[{"player_id": "00000000-0000-4000-8000-000000001001", "batting": {"ab": 3, "h": 1}}]');
+reset role;
+select pg_temp.expect((select count(*) from public.notify_event where kind = 'stats'
+  and ref_id = '00000000-0000-4000-8000-00000000bd01' and user_id = 'aaaaaaaa-0000-4000-8000-000000000002'
+  and detail ->> 'player' = 'Mason' and detail ->> 'opponent' = 'Cubs') = 1,
+  'a box score queues a notice for the kid''s parent');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.save_game_box_score('00000000-0000-4000-8000-00000000bd01',
+  '[{"player_id": "00000000-0000-4000-8000-000000001001", "batting": {"ab": 3, "h": 2, "doubles": 1}}]');
+reset role;
+select pg_temp.expect((select count(*) from public.notify_event where kind = 'stats'
+  and ref_id = '00000000-0000-4000-8000-00000000bd01') = 1
+  and (select detail -> 'batting' ->> 'h' from public.notify_event where kind = 'stats'
+  and ref_id = '00000000-0000-4000-8000-00000000bd01') = '2',
+  'fixing the box score before it goes out updates the notice, not a second one');
+-- Due: settled, and daytime for the team. The parent has a Player pass for Mason.
+create temp table team_tz as select timezone from public.team where id = '00000000-0000-4000-8000-000000000001';
+update public.team set timezone = (select name from pg_timezone_names
+  where extract(hour from now() at time zone name) between 9 and 19 and name like '%/%' limit 1)
+  where id = '00000000-0000-4000-8000-000000000001';
+update public.notify_event set updated_at = now() - interval '11 minutes' where kind = 'stats';
+select public.grant_family_pass('aaaaaaaa-0000-4000-8000-000000000002', 1,
+  array[(select athlete_id from public.player where id = '00000000-0000-4000-8000-000000001001')]);
+create temp table due_stats as select * from public.take_due_notifications() where kind = 'stats';
+select pg_temp.expect((select count(*) from due_stats) = 1
+  and (select user_ids = array['aaaaaaaa-0000-4000-8000-000000000002']::uuid[] from due_stats)
+  and (select events -> 0 ->> 'unlocked' from due_stats) = 'true',
+  'it goes to that parent alone, marked unlocked by their Player pass');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.save_game_box_score('00000000-0000-4000-8000-00000000bd01',
+  '[{"player_id": "00000000-0000-4000-8000-000000001001", "batting": {"ab": 4, "h": 2}}]');
+reset role;
+select pg_temp.expect((select count(*) from public.notify_event where kind = 'stats'
+  and ref_id = '00000000-0000-4000-8000-00000000bd01' and sent_at is null) = 0,
+  'a box score fixed after the notice went out doesn''t send again');
+update public.team set notify_stats = false where id = '00000000-0000-4000-8000-000000000001';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+select public.save_game_box_score('00000000-0000-4000-8000-00000000bd02',
+  '[{"player_id": "00000000-0000-4000-8000-000000001001", "batting": {"ab": 2, "h": 0}}]');
+reset role;
+update public.notify_event set updated_at = now() - interval '11 minutes' where kind = 'stats' and sent_at is null;
+select pg_temp.expect(not exists (select 1 from public.take_due_notifications() where kind = 'stats'),
+  'a team that turned box score notices off sends none');
+select pg_temp.expect(not exists (select 1 from public.notify_event where kind = 'stats' and sent_at is null),
+  'and drops the waiting notice');
+update public.team set notify_stats = true, timezone = (select timezone from team_tz)
+  where id = '00000000-0000-4000-8000-000000000001';
+delete from public.player_game_stat where game_id in ('00000000-0000-4000-8000-00000000bd01', '00000000-0000-4000-8000-00000000bd02');
+delete from public.game where id in ('00000000-0000-4000-8000-00000000bd01', '00000000-0000-4000-8000-00000000bd02');
+
 -- ── The demo club: a guest gets their own copy, kept apart from real teams ──
 insert into auth.users (id, email, is_anonymous) values
   ('aaaaaaaa-0000-4000-8000-0000000000d1', null, true);

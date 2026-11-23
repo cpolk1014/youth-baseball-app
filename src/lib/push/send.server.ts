@@ -4,7 +4,8 @@ import webpush from "web-push";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { PushPayload } from "./payload";
 
-export type PushCategory = "chatter" | "parents" | "coach_chatter" | "games" | "money" | "mention";
+export type PushCategory =
+  "chatter" | "parents" | "coach_chatter" | "games" | "money" | "mention" | "stats";
 
 export function pushConfigured(): boolean {
   return !!(

@@ -168,3 +168,104 @@ export function chargesPush(teamId: string, teamName: string, events: ChargeEven
     tag: `money-${teamId}`,
   };
 }
+
+/** A kid's line from a coach's box score, for one of their parents. */
+export interface BoxScoreEvent {
+  change: "boxscore";
+  ref: string;
+  player_id?: string | null;
+  /** The kid's first name. */
+  player?: string | null;
+  date?: string | null;
+  opponent?: string | null;
+  batting?: Record<string, number | null | undefined> | null;
+  pitching?: Record<string, number | null | undefined> | null;
+  /** This parent has a Player pass covering the kid (else the notice only teases). */
+  unlocked?: boolean | null;
+}
+
+const count = (n: number, one: string, many: string) => (n === 1 ? one : `${n} ${many}`);
+
+/** "2 for 3 with a double and 2 RBI", "drew 2 walks", or "" with no at-bats or walks. */
+function battingPhrase(b: BoxScoreEvent["batting"]): string {
+  const n = (k: string) => Math.max(0, Math.round(Number(b?.[k] ?? 0)) || 0);
+  const ab = n("ab");
+  const bb = n("bb");
+  if (ab === 0) return bb > 0 ? `drew ${count(bb, "a walk", "walks")}` : "";
+  const extras = [
+    n("hr") ? count(n("hr"), "a homer", "homers") : "",
+    n("triples") ? count(n("triples"), "a triple", "triples") : "",
+    n("doubles") ? count(n("doubles"), "a double", "doubles") : "",
+    n("rbi") ? (n("rbi") === 1 ? "an RBI" : `${n("rbi")} RBI`) : "",
+    n("bb") ? count(bb, "a walk", "walks") : "",
+    n("sb") ? count(n("sb"), "a stolen base", "stolen bases") : "",
+  ]
+    .filter(Boolean)
+    .slice(0, 3);
+  const with_ =
+    extras.length === 0
+      ? ""
+      : ` with ${extras.length === 1 ? extras[0] : `${extras.slice(0, -1).join(", ")} and ${extras.at(-1)}`}`;
+  return `went ${n("h")} for ${ab}${with_}`;
+}
+
+/** Innings from outs: 6 → "2 innings", 4 → "1⅓ innings", 2 → "⅔ of an inning". */
+export function inningsText(outs: number): string {
+  const whole = Math.floor(outs / 3);
+  const third = ["", "⅓", "⅔"][outs % 3];
+  if (whole === 0) return `${third} of an inning`;
+  return `${whole}${third} ${whole === 1 && !third ? "inning" : "innings"}`;
+}
+
+/** "pitched 2 innings (34 pitches, 5 strikeouts)", or "threw 34 pitches" with only a count. */
+function pitchingPhrase(p: BoxScoreEvent["pitching"]): string {
+  if (!p) return "";
+  const n = (k: string) => Math.max(0, Math.round(Number(p[k] ?? 0)) || 0);
+  const pitches = n("pitches");
+  if (n("outs") === 0) return pitches > 0 ? `threw ${pitches} pitches` : "";
+  const extras = [
+    pitches ? `${pitches} pitches` : "",
+    n("so") ? count(n("so"), "1 strikeout", "strikeouts") : "",
+  ].filter(Boolean);
+  return `pitched ${inningsText(n("outs"))}${extras.length ? ` (${extras.join(", ")})` : ""}`;
+}
+
+/** One kid's line in a sentence: "Mason went 2 for 3 with a double vs Cubs." */
+export function boxScoreLine(e: BoxScoreEvent): string {
+  const name = e.player?.trim() || "Your player";
+  const vs = e.opponent && e.opponent !== "x" ? ` vs ${e.opponent}` : "";
+  const parts = [battingPhrase(e.batting), pitchingPhrase(e.pitching)].filter(Boolean);
+  if (!parts.length) return `${name}'s line${vs} is in.`;
+  return `${name} ${parts.join(" and ")}${vs}.`;
+}
+
+/**
+ * A parent's notice when the coach adds a box score: each of their kids' lines, or, without
+ * a Player pass, that the box score is in (no numbers: the stats are what the pass buys).
+ */
+export function boxScorePush(
+  teamId: string,
+  teamName: string,
+  events: BoxScoreEvent[],
+): PushPayload {
+  const players = [...new Set(events.map((e) => e.player_id).filter(Boolean))];
+  const open = events.filter((e) => e.unlocked);
+  const locked = events.filter((e) => !e.unlocked);
+  const lockedNames = [...new Set(locked.map((e) => e.player?.trim() || "your player"))];
+  const first = locked[0];
+  const vs = first?.opponent && first.opponent !== "x" ? ` vs ${first.opponent}` : "";
+  const day = dayText(first?.date).split(",")[0];
+  const tease = locked.length
+    ? `The box score${day ? ` from ${day}` : ""}${vs} is in. See how ${
+        lockedNames.length === 1
+          ? lockedNames[0]
+          : `${lockedNames.slice(0, -1).join(", ")} and ${lockedNames.at(-1)}`
+      } did.`
+    : "";
+  return {
+    title: teamName,
+    body: clip([...open.map(boxScoreLine), tease].filter(Boolean).join(" ")),
+    url: players.length === 1 ? `/my-player?player=${players[0]}` : "/my-player",
+    tag: `stats-${teamId}`,
+  };
+}

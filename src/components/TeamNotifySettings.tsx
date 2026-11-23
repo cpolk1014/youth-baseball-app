@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
-type Key = "notify_chatter" | "notify_games" | "notify_money";
+type Key = "notify_chatter" | "notify_games" | "notify_money" | "notify_stats";
 
 const CHOICES: { key: Key; label: string; note: string }[] = [
   { key: "notify_chatter", label: "Chatter posts", note: "New posts, polls and club posts." },
@@ -20,6 +20,11 @@ const CHOICES: { key: Key; label: string; note: string }[] = [
     label: "New charges",
     note: "Only to the families a charge is for, during the day.",
   },
+  {
+    key: "notify_stats",
+    label: "Box scores",
+    note: "When you add a box score, each family hears how their kid did, during the day. Families with a Player pass see the line; others see that it's in.",
+  },
 ];
 
 export function TeamNotifySettings({ teamId }: { teamId: string }) {
@@ -31,7 +36,7 @@ export function TeamNotifySettings({ teamId }: { teamId: string }) {
     let current = true;
     void getBrowserSupabase()
       .from("team")
-      .select("notify_chatter, notify_games, notify_money")
+      .select("notify_chatter, notify_games, notify_money, notify_stats")
       .eq("id", teamId)
       .maybeSingle()
       .then(({ data }) => {
