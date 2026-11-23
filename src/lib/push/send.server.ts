@@ -19,7 +19,7 @@ let ready = false;
 function setUp() {
   if (ready) return;
   webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || "mailto:support@rallycap.team",
+    process.env.VAPID_SUBJECT || "mailto:support@fungo.team",
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
     process.env.VAPID_PRIVATE_KEY!,
   );

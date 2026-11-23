@@ -105,9 +105,9 @@ Start the app (`npm run dev`), sign in with your email, and then either:
 - **Notification job:** `select public.start_team_notifications('https://www.fungo.team/api/push/flush');`
   (the job posts to the site; it doesn't follow redirects).
 - **Stripe webhook:** `https://www.fungo.team/api/stripe/webhook` (Stripe doesn't follow redirects).
-- **Email:** Resend, domain `rallycap.team` verified (DNS records in Vercel). Supabase custom
+- **Email:** Resend, domain `fungo.team` verified (DNS records in Vercel; `rallycap.team` before Nov 2026). Supabase custom
   SMTP: host `smtp.resend.com`, port `465`, username `resend`, password = a Resend API key
-  with sending access, sender `Fungo <signin@rallycap.team>`.
+  with sending access, sender `Fungo <signin@fungo.team>`.
 - **Email templates** (Magic Link and Confirm signup): code only (`{{ .Token }}`, also in the
   subject), no link; the text follows the sign-in screen's (see step 5).
 

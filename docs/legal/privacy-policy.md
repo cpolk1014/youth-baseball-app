@@ -9,7 +9,7 @@ Fungo ("Fungo," "we," "us") is a web app that helps youth travel and select base
 
 Youth baseball means kids, so we built Fungo to collect as little as we can about them, to keep it inside their team and family, and never to sell it. This policy explains what we collect, why, who can see it, who helps us run Fungo, and the choices you have.
 
-If you have questions, email **[privacy@rallycap.team]**.
+If you have questions, email **[privacy@fungo.team]**.
 
 ---
 
@@ -161,7 +161,7 @@ Fungo is meant for adults who run and support youth teams, and children do not c
 - **See and correct:** most of your information is visible and editable in the app (My profile, the roster, your child's page).
 - **Remove optional details:** clear your phone number or Venmo handle at any time.
 - **Leave a team or unlink a player:** both are in the app. Unlinking your child ends your access to their stats.
-- **Export or delete:** email **[privacy@rallycap.team]** to get a copy of your information, or to delete your account or your child's information. We'll confirm your identity and respond within [30] days.
+- **Export or delete:** email **[privacy@fungo.team]** to get a copy of your information, or to delete your account or your child's information. We'll confirm your identity and respond within [30] days.
 - **Parents and guardians** may make these requests for their children.
 - **Marketing email:** unsubscribe at any time.
 
@@ -185,4 +185,4 @@ If we make a material change, we'll tell you in the app or by email before it ta
 
 **[Legal entity name]**
 [Mailing address]
-Email: **[privacy@rallycap.team]**
+Email: **[privacy@fungo.team]**

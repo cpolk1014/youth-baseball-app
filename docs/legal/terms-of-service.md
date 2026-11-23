@@ -13,7 +13,7 @@ These Terms are an agreement between you and [legal entity name] ("Fungo," "we,"
 
 - **Age:** you must be **18 or older** to create an account. Players don't have accounts. Coaches and parents add players' information as described in our Privacy Policy.
 - **Organizations:** if you use Fungo for a team, league or club, you confirm you're allowed to act for it.
-- **Your account:** you're responsible for it and everything done with it. Sign-in happens through links and codes sent to your email, so keep your email account secure. Tell us right away at [support@rallycap.team] if you think someone else is using your account.
+- **Your account:** you're responsible for it and everything done with it. Sign-in happens through links and codes sent to your email, so keep your email account secure. Tell us right away at [support@fungo.team] if you think someone else is using your account.
 
 ## 2. Teams, roles and responsibilities
 
@@ -137,7 +137,7 @@ You agree to defend and hold Fungo harmless from claims arising from your conten
 
 ## 14. Disputes
 
-[Have a lawyer choose: governing law (for example, the State of Louisiana), venue, and whether to include an informal-resolution period, arbitration and a class-action waiver.] Before filing any claim, you agree to contact us at [support@rallycap.team] and try to resolve it informally for 30 days.
+[Have a lawyer choose: governing law (for example, the State of Louisiana), venue, and whether to include an informal-resolution period, arbitration and a class-action waiver.] Before filing any claim, you agree to contact us at [support@fungo.team] and try to resolve it informally for 30 days.
 
 ## 15. Changes to these Terms
 
@@ -154,4 +154,4 @@ We may update these Terms. If a change is material, we'll tell you in the app or
 
 **[Legal entity name]**
 [Mailing address]
-Email: **[support@rallycap.team]**
+Email: **[support@fungo.team]**

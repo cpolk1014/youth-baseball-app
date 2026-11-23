@@ -37,7 +37,7 @@ The tagline goes under the logo in the top bar, in the hero eyebrow, in Google t
 **Footer:**
 - **Fungo.** AI-powered youth baseball.
 - Product: Features · AI · Pricing · Clubs · Parents
-- Company: Our story · Contact [support@rallycap.team] · Privacy · Terms
+- Company: Our story · Contact [support@fungo.team] · Privacy · Terms
 - Small print: © 2026 [legal entity]. Not affiliated with GameChanger or any tournament organization.
 
 ---
@@ -432,7 +432,7 @@ Club admins can **view** lineups, playing time, rules and team stats while a tea
 3. **Send each coach their code.** Their team joins your club, AI and all, and keeps its own data.
 
 **[Start a club]**
-*Have 10 or more teams? [Contact us](mailto:[support@rallycap.team]).*
+*Have 10 or more teams? [Contact us](mailto:[support@fungo.team]).*
 
 ---
 
@@ -511,7 +511,7 @@ Youth baseball should be about the kids. AI gives me my time back to coach them.
 Founder, Fungo · 7U head coach
 
 **[Start your free 14-day trial]**
-*Questions or ideas? I read every email: [support@rallycap.team]*
+*Questions or ideas? I read every email: [support@fungo.team]*
 
 ---
 

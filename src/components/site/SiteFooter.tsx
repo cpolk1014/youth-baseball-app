@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CLUB_HREF, TRIAL_HREF } from "./parts";
 
-export const SUPPORT_EMAIL = "support@rallycap.team";
+export const SUPPORT_EMAIL = "support@fungo.team";
 
 /** The public website's footer. */
 export function SiteFooter() {
