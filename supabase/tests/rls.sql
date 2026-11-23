@@ -2886,6 +2886,22 @@ select pg_temp.expect((select count(*) from demo_built d, public.my_coach_clubs(
 select pg_temp.expect((select (public.start_demo_club()->>'club')::uuid = club from demo_built)
   and (select count(*) from public.club_coach_post p join demo_built d on p.organization_id = d.club) = 4,
   'opening the demo again doesn''t post twice');
+reset role;
+select pg_temp.expect((select count(*) from public.tournament x join public.team t on t.id = x.team_id
+  join demo_built d on t.organization_id = d.club) = 8, 'every demo team is in a tournament, once');
+select pg_temp.expect((select count(*) from public.tournament_game g join public.tournament x on x.id = g.tournament_id
+  join demo_built d on x.team_id = d.team) = 19
+  and (select count(*) from public.tournament_game g join public.tournament x on x.id = g.tournament_id
+  join demo_built d on x.team_id = d.team where g.score_home is not null) = 8,
+  'the 10U''s has pool play half scored and a bracket');
+select pg_temp.expect((select gm.opponent from public.tournament_game g join public.tournament x on x.id = g.tournament_id
+  join demo_built d on x.team_id = d.team join public.game gm on gm.id = g.game_id) = 'Houma Hurricanes',
+  'and tonight''s game is on Games');
+select pg_temp.expect((select count(*) from public.tournament_team tt join public.tournament x on x.id = tt.tournament_id
+  join public.team t on t.id = x.team_id join demo_built d on t.organization_id = d.club
+  where tt.is_us and tt.name = t.name) = 8, 'each team is "us" in its own division');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-0000000000d1', false);
 select pg_temp.expect((select count(*) from public.team where organization_id is null) = 0,
   'a guest sees no real teams');
 do $$ begin
