@@ -81,12 +81,11 @@ The MVP gate is lifted: keep shipping features. Update this list as things ship.
 **Next up** (roughly in order; the user picks)
 
 - Admin panel for Craig (running the business): signups, trials, paid teams and clubs, revenue, AI spend vs. budgets, Ask Fungo questions, demo club use, and shared tournament links (how many are made, opened, and lead to "Start your free 14-day trial"; needs counting opens and trial taps from `/t/`). Only Craig gets in, enforced on the server and in the database
-- Ask Fungo in the app (the website version shipped): the same guide answering signed-in users' "how do I…" questions, linking to the right screen (free, outside the AI budget)
 - Team money phase 2: re-split a Bat Around when the roster changes, budget vs. actual, umpire-fee estimates from the schedule, pass fundraiser money on to families
 
 - Tournament finder (shelved for now)
 
-**Later:** more notification kinds (tournaments, homework, walk-ups approved).
+**Later:** more notification kinds (tournaments, homework, walk-ups approved). Far off, maybe: Ask Fungo in the app (the website's help chat answering signed-in users' "how do I…" questions); Craig set it aside Nov 23 2026.
 
 **Free vs. paid** (BUILT and enforced, Nov 2026; "paid" = an active club code or a $129 team pass for the season, or the team's free time). Rule: **every AI feature is paid**; the manual way to do the same thing stays free.
 
