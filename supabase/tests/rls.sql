@@ -1659,6 +1659,31 @@ select pg_temp.expect((public.admin_overview()->'teams'->>'total')::int > 0, 'an
 select pg_temp.expect(jsonb_array_length(public.admin_overview()->'daily') = 30, 'with 30 days of daily totals');
 select pg_temp.expect(jsonb_array_length(public.admin_overview()->'recent_teams') > 0, 'and the newest teams');
 reset role;
+-- the Plan tab: the to-do list and the scoreboard, admins only
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- admin
+select pg_temp.expect((select count(*) from public.admin_task) > 40, 'an admin sees the plan''s to-dos');
+update public.admin_task set status = 'done' where title = 'Grab the social handles';
+select pg_temp.expect((select done_at is not null from public.admin_task where title = 'Grab the social handles'), 'checking one off keeps the date');
+update public.admin_task set status = 'todo' where title = 'Grab the social handles';
+select pg_temp.expect((select done_at is null from public.admin_task where title = 'Grab the social handles'), 'unchecking clears it');
+insert into public.admin_task (section, title) values ('mine', 'Call the Canes director');
+select pg_temp.expect((public.admin_scoreboard()->>'paying_teams') is not null, 'an admin sees the scoreboard');
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- a coach
+select pg_temp.expect((select count(*) from public.admin_task) = 0, 'nobody else sees the plan');
+update public.admin_task set status = 'done';
+do $$ begin
+  insert into public.admin_task (section, title) values ('mine', 'Sneaky');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: nobody else adds to the plan';
+end $$;
+do $$ begin
+  perform public.admin_scoreboard();
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: nobody else sees the scoreboard';
+end $$;
+reset role;
+select pg_temp.expect((select count(*) from public.admin_task where status = 'done' and done_at >= now() - interval '1 minute') = 0, 'nobody else checks things off');
 -- ── athletes: a kid's box scores follow them from team to team ──
 -- Parent 0002 has kid 1003 on team 1 (an athlete from the fixtures' link) and is a parent
 -- on the Canes too, where the same kid plays this year.

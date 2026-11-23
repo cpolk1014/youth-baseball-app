@@ -16,6 +16,7 @@ import {
 import { formatCents } from "@/lib/finance/money";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { DailyBars } from "../charts/Charts";
+import { PlanTab } from "./PlanTab";
 
 const card = "rounded-xl border border-slate-200 bg-white p-4 shadow-sm";
 const h2 = "mb-3 text-sm font-bold tracking-wide text-slate-600 uppercase";
@@ -36,9 +37,13 @@ export function AdminScreen() {
   const [o, setO] = useState<AdminOverview | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "denied" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"numbers" | "plan">("numbers");
+  // Bumped by Refresh so the Plan tab loads again too.
+  const [round, setRound] = useState(0);
 
   const load = useCallback(async () => {
     setState("loading");
+    setRound((r) => r + 1);
     const { data, error: err } = await getBrowserSupabase().rpc("admin_overview");
     if (err) {
       if (err.code === "42501") setState("denied");
@@ -89,7 +94,29 @@ export function AdminScreen() {
             {error}
           </p>
         )}
-        {o && state !== "denied" && <Panel o={o} />}
+        {o && state !== "denied" && (
+          <>
+            <div role="tablist" className="flex gap-1 self-start rounded-xl bg-slate-200 p-1">
+              {(
+                [
+                  ["numbers", "Numbers"],
+                  ["plan", "Plan"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  role="tab"
+                  aria-selected={tab === key}
+                  onClick={() => setTab(key)}
+                  className={`h-10 rounded-lg px-5 text-base font-bold ${tab === key ? "bg-white text-slate-900 shadow" : "text-slate-600"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {tab === "numbers" ? <Panel o={o} /> : <PlanTab key={round} />}
+          </>
+        )}
       </main>
     </div>
   );
