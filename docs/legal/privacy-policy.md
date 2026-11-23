@@ -75,6 +75,7 @@ Payments are handled by **Stripe**. **We never see or store your card number.** 
 - **Sign-in cookies.** We use cookies only to keep you signed in. We do not use advertising or cross-site tracking cookies in the app.
 - **On your device:** to work at the field with no signal, Fungo saves a copy of your team's information and pages on your phone or computer (browser storage and a service worker), plus small preferences such as your last open team. Signing out clears it.
 - **Dictation:** if you tap the microphone on an AI prompt box, your browser turns your speech into text using its own speech service (for example Google in Chrome or Apple in Safari), under that company's terms. Fungo never receives or stores the audio, only the words that land in the box.
+- **Ask Fungo (the help chat on our website):** questions you type are sent to our AI provider (Anthropic) to answer them. We keep each question and the page it was asked on for up to 180 days to see what people ask and improve Fungo, without your name, email or IP address. To limit how many questions one visitor can ask each day, we count questions under a one-way code made from your IP address and the date; it changes every day and the address itself isn't stored. Please don't type personal details into the chat.
 - **Server logs:** our hosting providers keep standard logs (such as IP address, browser type, and the pages and errors requested) for security, troubleshooting and abuse prevention.
 - **Website analytics:** [We don't currently use analytics. If we add privacy-friendly analytics to our public website, we'll update this section first. We will not add session recording or advertising pixels inside the app.]
 
@@ -124,7 +125,7 @@ We use these companies to run Fungo. They act on our behalf and may use your inf
 |---|---|---|
 | **Supabase** | Database, sign-in, and file storage | All app data, including your email |
 | **Vercel** | Hosting the website and app | Requests and server logs |
-| **Anthropic** (Claude) | AI that reads uploads and drafts plans, rules and lyrics | The content you upload or type for that feature |
+| **Anthropic** (Claude) | AI that reads uploads and drafts plans, rules and lyrics, and answers Ask Fungo on our website | The content you upload or type for that feature, and questions typed into Ask Fungo |
 | **ElevenLabs** | AI walk-up songs, announcer voice and sounds | Song settings and lyrics, and how to say a player's name and number |
 | **Google Maps Platform** | Place search, addresses and maps | Place searches and the places you pick |
 | **Stripe** | Payments | Your email and payment details (entered with Stripe, not Fungo) |
@@ -154,6 +155,7 @@ Fungo is meant for adults who run and support youth teams, and children do not c
 - **Your account** stays until you ask us to delete it.
 - **Purchase records** are kept as long as needed for accounting and legal requirements, typically [7] years.
 - **Uploaded files we only read** (schedules, box scores, screenshots) aren't kept after reading.
+- **Ask Fungo questions** are kept for up to 180 days, without who asked. The daily question counts are cleared after a day.
 - **Backups and logs** are deleted on their regular cycle, typically within [30–90] days.
 
 ## 9. Your choices and rights

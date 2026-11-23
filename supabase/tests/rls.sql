@@ -2905,6 +2905,28 @@ update public.team set notify_stats = true, timezone = (select timezone from tea
 delete from public.player_game_stat where game_id in ('00000000-0000-4000-8000-00000000bd01', '00000000-0000-4000-8000-00000000bd02');
 delete from public.game where id in ('00000000-0000-4000-8000-00000000bd01', '00000000-0000-4000-8000-00000000bd02');
 
+-- ── Ask Fungo: the website's help chat limits ──
+select pg_temp.expect(public.ask_reserve('visitor-aaaaaaaaaaaa', 2, 500) = 'ok'
+  and public.ask_reserve('visitor-aaaaaaaaaaaa', 2, 500) = 'ok', 'a visitor asks questions');
+select pg_temp.expect(public.ask_reserve('visitor-aaaaaaaaaaaa', 2, 500) = 'visitor',
+  'until their daily questions are used');
+select pg_temp.expect(public.ask_reserve('visitor-bbbbbbbbbbbb', 2, 500) = 'ok', 'another visitor still can');
+select public.ask_settle(499.5, '/pricing', 'What does a club pay?', 'answered');
+select public.ask_settle(1, '/pricing', 'And a team?', 'answered');
+select pg_temp.expect(public.ask_reserve('visitor-cccccccccccc', 2, 500) = 'site',
+  'the whole site stops at its daily spend');
+select pg_temp.expect((select count(*) from public.ask_question where question = 'What does a club pay?' and page = '/pricing') = 1,
+  'questions are kept, with the page but no visitor');
+set role anon;
+do $$ begin
+  perform public.ask_reserve('visitor-dddddddddddd', 99, 99999);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: the browser can''t touch Ask Fungo''s limits';
+end $$;
+select pg_temp.expect((select count(*) from public.ask_question) = 0, 'nor read the questions');
+reset role;
+delete from public.ask_day; delete from public.ask_visitor; delete from public.ask_question;
+
 -- ── The demo club: a guest gets their own copy, kept apart from real teams ──
 insert into auth.users (id, email, is_anonymous) values
   ('aaaaaaaa-0000-4000-8000-0000000000d1', null, true);

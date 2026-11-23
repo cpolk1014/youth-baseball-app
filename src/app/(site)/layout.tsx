@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AskFungo } from "@/components/site/AskFungo";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 
@@ -34,6 +35,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         {children}
       </main>
       <SiteFooter />
+      <AskFungo />
     </div>
   );
 }

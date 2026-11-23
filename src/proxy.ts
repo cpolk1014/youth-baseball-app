@@ -28,6 +28,8 @@ const PUBLIC_PATHS = [
   "/demo",
   "/sw.js",
   "/api/stripe/webhook",
+  // Ask Fungo, the website's help chat (anyone may ask; limits are in the database).
+  "/api/ask",
   // Supabase calls this every 5 minutes to send team notices; it needs no sign-in.
   "/api/push/flush",
   // The public website (anyone can read it, signed in or not).
