@@ -81,12 +81,12 @@ export default function PricingPage() {
               Add-on for parents
             </p>
             <h2 className="mt-2 text-2xl font-black text-[#1B2A4A]">
-              The Player pass: $10 a season <Ai />
+              The Player pass: $19 a season <Ai />
             </h2>
             <p className="mt-2 max-w-2xl text-slate-600">
               Pine Tar Productions: highlight reels with a stadium announcer and slow-mo. A pitch
               count that follows your player to every team, lesson and bullpen, with Pitch Smart
-              rest days. And their stats from the coaches&apos; box scores, season after season. $5
+              rest days. And their stats from the coaches&apos; box scores, season after season. $9
               for each additional child.
             </p>
           </div>

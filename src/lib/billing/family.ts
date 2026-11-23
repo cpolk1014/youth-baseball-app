@@ -2,11 +2,11 @@
 // scores): a parent's own purchase on My profile, for a number of their kids, for the
 // season. Not part of a team pass or club code; another parent who wants it buys their own.
 
-export const FIRST_KID_CENTS = 1000;
-export const MORE_KID_CENTS = 500;
+export const FIRST_KID_CENTS = 1900;
+export const MORE_KID_CENTS = 900;
 export const MAX_KIDS = 10;
 
-/** $10 for the first kid, $5 for each one after. */
+/** $19 for the first kid, $9 for each one after. */
 export function statsPriceCents(kids: number): number {
   if (!Number.isInteger(kids) || kids < 1) return 0;
   return FIRST_KID_CENTS + MORE_KID_CENTS * (kids - 1);

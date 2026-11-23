@@ -353,8 +353,8 @@ And the tools that run your season:
 
 **[Start a club]**
 
-**Add-on for parents: the Player pass, $10 a season**
-✨ Pine Tar Productions highlight reels with a stadium announcer and slow-mo. A pitch count that follows your player to every team, lesson and bullpen, with Pitch Smart rest days. And their stats from the coaches' box scores, season after season. $5 for each additional child.
+**Add-on for parents: the Player pass, $19 a season**
+✨ Pine Tar Productions highlight reels with a stadium announcer and slow-mo. A pitch count that follows your player to every team, lesson and bullpen, with Pitch Smart rest days. And their stats from the coaches' box scores, season after season. $9 for each additional child.
 [See the Player pass](/parents)
 
 ### Low risk, built in
@@ -439,16 +439,16 @@ Club admins can **view** lineups, playing time, rules and team stats while a tea
 # 6. Parents `/parents`
 
 **Page title:** Fungo for Parents: Highlight Reels & Pitch Counts
-**Description:** Turn your clips into highlight reels with a stadium announcer, and keep a pitch count that follows your kid to every team, lesson and bullpen, with Pitch Smart rest days. Free with your team; the Player pass is $10 a season.
+**Description:** Turn your clips into highlight reels with a stadium announcer, and keep a pitch count that follows your kid to every team, lesson and bullpen, with Pitch Smart rest days. Free with your team; the Player pass is $19 a season.
 
 # Highlight reels that look like TV. A pitch count that follows their arm.
-Turn the clip you filmed from the fence into a highlight with your kid's name on screen and a stadium announcer. Count every pitch, at every game, lesson and bullpen, for every team, and know when they can pitch again. The Player pass is $10 a season; everything else for parents is free with your team.
+Turn the clip you filmed from the fence into a highlight with your kid's name on screen and a stadium announcer. Count every pitch, at every game, lesson and bullpen, for every team, and know when they can pitch again. The Player pass is $19 a season; everything else for parents is free with your team.
 **[Get the Player pass]** · [How the pitch count works]
 [Visual: the Pine Tar phone behind the live pitch counter phone]
 
 ### ✨ Pine Tar Productions
 ## Your kid's highlight reel. Network quality. Bleacher budget.
-(As before: AI writes the call, name and number on screen, slow-mo replay, made and saved on your phone.) Part of the Player pass, $10 a season.
+(As before: AI writes the call, name and number on screen, slow-mo replay, made and saved on your phone.) Part of the Player pass, $19 a season.
 
 ### Pitch count · Player pass
 ## Their arm doesn't care which team they pitched for.
@@ -476,7 +476,7 @@ Without asking the group chat. Your coach sends the link.
 - **Trends** that show how they're improving.
 - **Year after year, team after team.** The stats follow your player.
 
-The Player pass: Pine Tar Productions, pitch count and stats. $10 for one player, $5 for each additional child, for the season.
+The Player pass: Pine Tar Productions, pitch count and stats. $19 for one player, $9 for each additional child, for the season.
 **[Get the Player pass]** → [sign in → My profile]
 
 ---

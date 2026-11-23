@@ -11,7 +11,7 @@ import { Ai, Check, Cta, Eyebrow, PageHero, Section, TRIAL_HREF } from "@/compon
 export const metadata: Metadata = {
   title: { absolute: "Fungo for Parents: Highlight Reels & Pitch Counts" },
   description:
-    "Turn your clips into highlight reels with a stadium announcer, and keep a pitch count that follows your kid to every team, lesson and bullpen, with Pitch Smart rest days. Free with your team; the Player pass is $10 a season.",
+    "Turn your clips into highlight reels with a stadium announcer, and keep a pitch count that follows your kid to every team, lesson and bullpen, with Pitch Smart rest days. Free with your team; the Player pass is $19 a season.",
   alternates: { canonical: "/parents" },
 };
 
@@ -47,7 +47,7 @@ export default function ParentsPage() {
         light
         eyebrow="For parents"
         title="Highlight reels that look like TV. A pitch count that follows their arm."
-        lead="Turn the clip you filmed from the fence into a highlight with your kid's name on screen and a stadium announcer. Count every pitch, at every game, lesson and bullpen, for every team, and know when they can pitch again. The Player pass is $10 a season; everything else for parents is free with your team."
+        lead="Turn the clip you filmed from the fence into a highlight with your kid's name on screen and a stadium announcer. Count every pitch, at every game, lesson and bullpen, for every team, and know when they can pitch again. The Player pass is $19 a season; everything else for parents is free with your team."
         art={
           <div className="relative mx-auto w-full max-w-[420px]">
             <div className="w-[72%] -rotate-3">
@@ -107,7 +107,7 @@ export default function ParentsPage() {
                 store your video.
               </Check>
             </ul>
-            <p className="mt-6 text-lg font-bold">Part of the Player pass, $10 a season.</p>
+            <p className="mt-6 text-lg font-bold">Part of the Player pass, $19 a season.</p>
             <div className="mt-6">
               <Cta href={`${TRIAL_HREF}?next=/profile`} variant="light">
                 Get the Player pass
@@ -237,7 +237,7 @@ export default function ParentsPage() {
               </Check>
             </ul>
             <p className="mt-6 text-slate-600">
-              The Player pass: Pine Tar Productions, pitch count and stats. $10 for one player, $5
+              The Player pass: Pine Tar Productions, pitch count and stats. $19 for one player, $9
               for each additional child, for the season.
             </p>
             <div className="mt-6">

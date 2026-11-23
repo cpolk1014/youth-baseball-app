@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { MAX_KIDS, statsPriceCents } from "@/lib/billing/family";
+import { FIRST_KID_CENTS, MAX_KIDS, MORE_KID_CENTS, statsPriceCents } from "@/lib/billing/family";
 import { quote, seasonsOnSale } from "@/lib/billing/season";
 import { PriceTag, SeasonNote } from "../billing/Prorated";
 import { dollars } from "@/lib/billing/season";
@@ -114,7 +114,7 @@ export function useMyKids(): MyKid[] | null {
 
 /**
  * My profile: buy the Player pass (Pine Tar, pitch count, stats) for a number of
- * kids, $10 for the first and $5 each after, for the season (through July 31; one price
+ * kids, $19 for the first and $9 each after, for the season (through July 31; one price
  * all season).
  */
 export function BuyPlayerStats({
@@ -260,8 +260,8 @@ export function BuyPlayerStats({
       <div className="rounded-xl bg-slate-50 p-3">
         <p className="flex items-baseline justify-between gap-2 text-base">
           <span>
-            {dollars(1000)} for the first player
-            {count > 1 ? ` + ${count - 1} × ${dollars(500)}` : ""}
+            {dollars(FIRST_KID_CENTS)} for the first player
+            {count > 1 ? ` + ${count - 1} × ${dollars(MORE_KID_CENTS)}` : ""}
           </span>
           <span className="text-2xl font-black">
             <PriceTag cents={q.cents} fullCents={q.fullCents} />

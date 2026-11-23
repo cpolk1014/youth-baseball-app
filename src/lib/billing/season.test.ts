@@ -77,9 +77,9 @@ describe("seasons", () => {
 });
 
 describe("player stats prices", () => {
-  it("is $10 for the first kid and $5 for each one after", async () => {
+  it("is $19 for the first kid and $9 for each one after", async () => {
     const { statsPriceCents, validKids } = await import("./family");
-    expect([1, 2, 3, 4].map(statsPriceCents)).toEqual([1000, 1500, 2000, 2500]);
+    expect([1, 2, 3, 4].map(statsPriceCents)).toEqual([1900, 2800, 3700, 4600]);
     expect(statsPriceCents(0)).toBe(0);
     expect(validKids(3)).toBe(true);
     expect(validKids(0)).toBe(false);
