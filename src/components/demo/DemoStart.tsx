@@ -8,31 +8,51 @@ import { getBrowserSupabase } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 type Step =
+  | { kind: "checking" }
+  | { kind: "ready" }
   | { kind: "building" }
   | { kind: "signed-in"; email: string | null }
   | { kind: "error"; message: string };
 
 /**
- * "Try the demo club": signs the visitor in as a guest (no email), builds their own copy of
- * the made-up Bayou Baseball Club, and opens its club page with the 10U as their team.
+ * "Try the demo club": on a tap, signs the visitor in as a guest (no email), builds their own
+ * copy of the made-up Bayou Baseball Club, and opens its club page with the 10U as their team.
+ * Nothing is built until someone taps: search engines load this page and run its code, and
+ * each build is a whole club. A guest coming back goes straight to their club.
  */
 export function DemoStart() {
   const [step, setStep] = useState<Step>(() =>
     isSupabaseConfigured
-      ? { kind: "building" }
+      ? { kind: "checking" }
       : { kind: "error", message: "The demo needs Supabase (it isn't set up here)." },
   );
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     let live = true;
-    void startDemo().then((next) => {
-      if (live && next) setStep(next);
-    });
+    void getBrowserSupabase()
+      .auth.getUser()
+      .then(({ data }) => {
+        if (!live) return;
+        if (data.user && !isGuest(data.user)) {
+          setStep({ kind: "signed-in", email: data.user.email ?? null });
+        } else if (data.user) {
+          // A guest with a demo already: open it.
+          setStep({ kind: "building" });
+          void startDemo().then((next) => live && next && setStep(next));
+        } else {
+          setStep({ kind: "ready" });
+        }
+      });
     return () => {
       live = false;
     };
   }, []);
+
+  const build = () => {
+    setStep({ kind: "building" });
+    void startDemo().then((next) => next && setStep(next));
+  };
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-8">
@@ -46,6 +66,28 @@ export function DemoStart() {
           className="-ml-3 h-20 w-auto"
         />
       </h1>
+      {step.kind === "ready" && (
+        <div className="mt-4">
+          <p className="text-2xl font-black text-slate-900">Try a whole club, no sign-up</p>
+          <p className="mt-2 text-lg text-slate-700">
+            The Bayou Baseball Club: eight teams from 7U to 14U, a season of games and lineups, a
+            tournament, team Chatter, club awards and a practice library. You&apos;re the director
+            and every team&apos;s coach. It&apos;s all made up, and it&apos;s yours for two days.
+          </p>
+          <button
+            onClick={build}
+            className="mt-6 h-14 w-full rounded-xl bg-[#DC143C] text-lg font-bold text-white active:bg-[#B5102F]"
+          >
+            Build my demo club
+          </button>
+          <Link
+            href={REAL_CLUB_HREF}
+            className="mt-3 flex h-12 items-center justify-center text-base font-semibold text-slate-700 underline"
+          >
+            Ready for the real thing? Start a club
+          </Link>
+        </div>
+      )}
       {step.kind === "building" && (
         <div role="status" className="mt-4">
           <p className="text-2xl font-black text-slate-900">Building your demo club…</p>
