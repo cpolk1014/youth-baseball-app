@@ -77,7 +77,7 @@ Payments are handled by **Stripe**. **We never see or store your card number.** 
 - **Dictation:** if you tap the microphone on an AI prompt box, your browser turns your speech into text using its own speech service (for example Google in Chrome or Apple in Safari), under that company's terms. Fungo never receives or stores the audio, only the words that land in the box.
 - **Ask Fungo (the help chat on our website):** questions you type are sent to our AI provider (Anthropic) to answer them. We keep each question and the page it was asked on for up to 180 days to see what people ask and improve Fungo, without your name, email or IP address. To limit how many questions one visitor can ask each day, we count questions under a one-way code made from your IP address and the date; it changes every day and the address itself isn't stored. Please don't type personal details into the chat.
 - **Server logs:** our hosting providers keep standard logs (such as IP address, browser type, and the pages and errors requested) for security, troubleshooting and abuse prevention.
-- **Website analytics:** [We don't currently use analytics. If we add privacy-friendly analytics to our public website, we'll update this section first. We will not add session recording or advertising pixels inside the app.]
+- **Website and app analytics:** we use Vercel Web Analytics to count page views and visitors: which pages are visited, the site that sent you (if any), and your country, browser, operating system and device type. It uses no cookies and doesn't follow you across sites or days. Before anything is sent, we take out anything private from the page's address: invite and share links, codes, and the ids of your team's games and players. We don't use session recording or advertising pixels.
 
 ### 3.7 Location
 
@@ -124,7 +124,7 @@ We use these companies to run Fungo. They act on our behalf and may use your inf
 | Provider | What they do | Information involved |
 |---|---|---|
 | **Supabase** | Database, sign-in, and file storage | All app data, including your email |
-| **Vercel** | Hosting the website and app | Requests and server logs |
+| **Vercel** | Hosting the website and app, and counting page views (Web Analytics) | Requests and server logs; page views with private parts of the address removed |
 | **Anthropic** (Claude) | AI that reads uploads and drafts plans, rules and lyrics, and answers Ask Fungo on our website | The content you upload or type for that feature, and questions typed into Ask Fungo |
 | **ElevenLabs** | AI walk-up songs, announcer voice and sounds | Song settings and lyrics, and how to say a player's name and number |
 | **Google Maps Platform** | Place search, addresses and maps | Place searches and the places you pick |

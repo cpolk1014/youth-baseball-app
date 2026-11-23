@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import { SiteAnalytics } from "@/components/SiteAnalytics";
 import { LOOK_SCRIPT } from "@/lib/branding/remembered";
 import "./globals.css";
 
@@ -28,7 +29,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* The last team's colors, before the first paint (see rememberLook). */}
         <script dangerouslySetInnerHTML={{ __html: LOOK_SCRIPT }} />
       </head>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        {children}
+        <SiteAnalytics />
+      </body>
     </html>
   );
 }
