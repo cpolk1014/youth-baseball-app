@@ -3,7 +3,7 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.rallycap.team"),
+  metadataBase: new URL("https://fungo.team"),
   openGraph: {
     siteName: "Fungo",
     type: "website",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
 };
 
-/** The public website (rallycap.team for visitors): its own top bar and footer, no app menu. */
+/** The public website (fungo.team for visitors): its own top bar and footer, no app menu. */
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-white text-slate-900">

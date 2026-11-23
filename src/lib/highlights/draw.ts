@@ -172,8 +172,8 @@ export function drawCard(
     fit(ctx, "PRODUCTIONS", 800, unit * 0.06, w * 0.9);
     ctx.fillText("PRODUCTIONS", cx, h * 0.52);
     ctx.fillStyle = "rgba(255,255,255,0.8)";
-    fit(ctx, "Made with Fungo · rallycap.team", 600, unit * 0.035, w * 0.9);
-    ctx.fillText("Made with Fungo · rallycap.team", cx, h * 0.68);
+    fit(ctx, "Made with Fungo · fungo.team", 600, unit * 0.035, w * 0.9);
+    ctx.fillText("Made with Fungo · fungo.team", cx, h * 0.68);
   }
   ctx.globalAlpha = 1;
   ctx.shadowColor = "transparent";

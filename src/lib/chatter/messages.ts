@@ -37,7 +37,7 @@ export interface BatAroundMessageInput {
   each: string;
   /** A family's installments (due date and amount), or one payment. */
   installments: { dueDate: string; amountCents: number }[];
-  /** Where families see their balance, e.g. "https://www.rallycap.team/money". */
+  /** Where families see their balance, e.g. "https://fungo.team/money". */
   link: string;
   format: (cents: number) => string;
   formatDate: (date: string) => string;

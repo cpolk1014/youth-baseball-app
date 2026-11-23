@@ -3,6 +3,6 @@ import type { MetadataRoute } from "next";
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/auth/", "/join/", "/demo"] },
-    sitemap: "https://www.rallycap.team/sitemap.xml",
+    sitemap: "https://fungo.team/sitemap.xml",
   };
 }

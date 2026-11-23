@@ -5,7 +5,7 @@
 **Effective date:** [Month Day, 2026]
 **Last updated:** [Month Day, 2026]
 
-These Terms are an agreement between you and [legal entity name] ("Fungo," "we," "us") for your use of the Fungo website and app at rallycap.team (the "Service"). By creating an account or using the Service, you agree to these Terms and to our [Privacy Policy](/privacy). If you don't agree, please don't use Fungo.
+These Terms are an agreement between you and [legal entity name] ("Fungo," "we," "us") for your use of the Fungo website and app at fungo.team (the "Service"). By creating an account or using the Service, you agree to these Terms and to our [Privacy Policy](/privacy). If you don't agree, please don't use Fungo.
 
 ---
 

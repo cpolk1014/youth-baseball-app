@@ -94,12 +94,17 @@ Start the app (`npm run dev`), sign in with your email, and then either:
 
 ## Production setup (live)
 
-- **App:** https://www.rallycap.team (Vercel project `youth-baseball-app`; `rallycap.team`
-  redirects to `www`). Pushing to `main` deploys.
+- **App:** https://fungo.team (Vercel project `youth-baseball-app`; `www.fungo.team` redirects
+  to it, and so do `rallycap.team` and `www.rallycap.team`, path and all, since Nov 2026).
+  Pushing to `main` deploys.
 - **Vercel env vars:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-- **Supabase URL Configuration:** Site URL `https://www.rallycap.team`; Redirect URLs
-  `https://www.rallycap.team/**`, `https://rallycap.team/**`,
-  `https://youth-baseball-app-lime.vercel.app/**`, `http://localhost:3000/**`.
+- **Supabase URL Configuration:** Site URL `https://fungo.team`; Redirect URLs
+  `https://fungo.team/**`, `https://www.fungo.team/**`, `https://www.rallycap.team/**`,
+  `https://rallycap.team/**`, `https://youth-baseball-app-lime.vercel.app/**`,
+  `http://localhost:3000/**`.
+- **Notification job:** `select public.start_team_notifications('https://fungo.team/api/push/flush');`
+  (the job posts to the site; it doesn't follow redirects).
+- **Stripe webhook:** `https://fungo.team/api/stripe/webhook` (Stripe doesn't follow redirects).
 - **Email:** Resend, domain `rallycap.team` verified (DNS records in Vercel). Supabase custom
   SMTP: host `smtp.resend.com`, port `465`, username `resend`, password = a Resend API key
   with sending access, sender `Fungo <signin@rallycap.team>`.

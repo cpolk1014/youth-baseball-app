@@ -21,7 +21,7 @@ const practice = (over: Partial<Practice> = {}): Practice => ({
 const opts = {
   teamName: "Riverside Rattlers",
   timezone: "America/Chicago",
-  origin: "https://rallycap.team",
+  origin: "https://fungo.team",
   now: "2026-11-17T15:04:05.123Z",
 };
 const unfold = (ics: string) => ics.replace(/\r\n /g, "");
@@ -38,7 +38,7 @@ describe("practicesCalendar", () => {
     expect(ics).toContain("SUMMARY:Riverside Rattlers practice: Hitting");
     expect(ics).toContain("LOCATION:Bayou Park · Field 7\\, 100 Main St\\, Lafayette\\, LA");
     expect(ics).toContain("Drills: Tee work (20 min)");
-    expect(ics).toContain("URL:https://rallycap.team/practices/p1");
+    expect(ics).toContain("URL:https://fungo.team/practices/p1");
     expect(ics.endsWith("END:VCALENDAR\r\n")).toBe(true);
   });
 

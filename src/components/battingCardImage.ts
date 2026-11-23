@@ -156,7 +156,7 @@ export async function renderBattingCard(
   ctx.textAlign = "right";
   ctx.font = `700 24px ${FONT}`;
   ctx.fillText(
-    brand ? "rallycap.team" : "Fungo · rallycap.team",
+    brand ? "fungo.team" : "Fungo · fungo.team",
     CARD_WIDTH - 60 - logoW - (brand ? 12 : 0),
     CARD_HEIGHT - 44,
   );

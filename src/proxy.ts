@@ -54,7 +54,7 @@ export async function proxy(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const path = request.nextUrl.pathname;
-  // rallycap.team for someone signed out: the public website's home page.
+  // fungo.team for someone signed out: the public website's home page.
   if (path === "/" && !data?.claims) {
     const home = request.nextUrl.clone();
     home.pathname = "/welcome";
