@@ -51,8 +51,8 @@ import type {
 } from "./types";
 
 export type LoadResult =
-  | { kind: "ready"; data: AppData; email: string | null; teamId: string }
-  | { kind: "setup"; team: TeamRow | null; email: string | null };
+  | { kind: "ready"; data: AppData; email: string | null; guest: boolean; teamId: string }
+  | { kind: "setup"; team: TeamRow | null; email: string | null; guest: boolean };
 
 function check<T>(result: { data: T | null; error: { message: string } | null }): T {
   if (result.error) throw new Error(result.error.message);
@@ -67,6 +67,8 @@ export async function loadFromSupabase(
   const sb = getBrowserSupabase();
   const user = (await sb.auth.getUser()).data.user;
   const email = user?.email ?? null;
+  // A guest in the demo club (an anonymous sign-in).
+  const guest = user?.is_anonymous === true;
 
   const [allTeams, myMemberships, expiredRows] = await Promise.all([
     sb
@@ -95,7 +97,7 @@ export async function loadFromSupabase(
     teams.find((t) => t.id === preferredTeamId) ??
     teams.find((t) => !expired.has(t.id)) ??
     teams[0];
-  if (!team) return { kind: "setup", team: null, email };
+  if (!team) return { kind: "setup", team: null, email, guest };
 
   const seasons = check<SeasonRow[]>(
     await sb
@@ -107,7 +109,7 @@ export async function loadFromSupabase(
       .limit(1),
   );
   const season = seasons[0];
-  if (!season) return { kind: "setup", team, email };
+  if (!season) return { kind: "setup", team, email, guest };
 
   const [players, games] = await Promise.all([
     sb
@@ -265,6 +267,7 @@ export async function loadFromSupabase(
   return {
     kind: "ready",
     email,
+    guest,
     teamId: team.id,
     data: appDataFromRows(
       {

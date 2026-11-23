@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { claudeCents, type ClaudeUsage } from "./cost";
+import { DEMO_AI_OFF } from "@/lib/demo/guest";
 
 export type AiKind =
   | "roster"
@@ -69,6 +70,11 @@ export async function beginAi(
   scope: { teamId: string } | { clubId: string },
   kind: AiKind,
 ): Promise<{ ok: true; call: AiCall } | { ok: false; response: NextResponse }> {
+  // Guests in the demo club get no AI (it costs money and they haven't signed up).
+  const { data: claims } = await supabase.auth.getClaims();
+  if (claims?.claims?.is_anonymous === true) {
+    return { ok: false, response: NextResponse.json({ error: DEMO_AI_OFF }, { status: 402 }) };
+  }
   const { data, error } = await supabase.rpc("ai_reserve", {
     p_team: "teamId" in scope ? scope.teamId : null,
     p_club: "clubId" in scope ? scope.clubId : null,

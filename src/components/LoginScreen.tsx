@@ -107,6 +107,10 @@ export function LoginScreen() {
           <a href="/login?next=%2Fclub" className="font-semibold text-[var(--team)] underline">
             Start a club
           </a>
+          {" · "}
+          <a href="/demo" className="font-semibold text-[var(--team)] underline">
+            Try the demo club
+          </a>
         </p>
       )}
 

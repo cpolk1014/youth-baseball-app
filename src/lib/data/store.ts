@@ -49,6 +49,8 @@ export interface StoreState {
   saveError: string | null;
   /** Signed-in user's email (Supabase mode only). */
   email: string | null;
+  /** A guest in the demo club (no account; Supabase mode only). */
+  guest: boolean;
   mode: "local" | "supabase";
   /** No connection: showing the device's copy of the team (from `savedAt`). */
   offline: boolean;
@@ -70,6 +72,7 @@ const SERVER_STATE: StoreState = {
   status: { kind: "loading" },
   saveError: null,
   email: null,
+  guest: false,
   mode: "local",
   offline: false,
   savedAt: null,
@@ -163,6 +166,7 @@ async function loadRemote(): Promise<void> {
       setState({
         status: { kind: "ready" },
         email: result.email,
+        guest: result.guest,
         offline: false,
         savedAt,
         switchingTo: null,
@@ -173,6 +177,7 @@ async function loadRemote(): Promise<void> {
       setState({
         status: { kind: "setup", team: result.team },
         email: result.email,
+        guest: result.guest,
         switchingTo: null,
       });
     }
@@ -643,6 +648,7 @@ export function syncNow(): Promise<boolean> {
         setState({
           status: { kind: "ready" },
           email: result.email,
+          guest: result.guest,
           offline: false,
           savedAt,
           switchingTo: null,
@@ -652,6 +658,7 @@ export function syncNow(): Promise<boolean> {
         setState({
           status: { kind: "setup", team: result.team },
           email: result.email,
+          guest: result.guest,
           switchingTo: null,
         });
       }
@@ -948,7 +955,8 @@ export function switchTeam(teamId: string): void {
   reloadData();
 }
 
-export async function signOut(): Promise<void> {
+/** Sign out and leave (to `to`, sign-in by default), dropping this device's copy of the team. */
+export async function signOut(to = "/login"): Promise<void> {
   if (outbox.length) await enqueue(flushOutbox).catch(() => undefined);
   if (
     outbox.length &&
@@ -975,8 +983,7 @@ export async function signOut(): Promise<void> {
   }
   await (await remote()).signOut();
   // A full page load (not router.push) so the signed-in user's data in memory is dropped.
-  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-  window.location.assign("/login");
+  window.location.assign(to);
 }
 
 export function resetLocalData(): void {

@@ -14,7 +14,9 @@ import {
   recentPlaces,
   placeLabel,
 } from "@/lib/data/game";
-import { permissionsFor } from "@/lib/data/permissions";
+import { isCoach, permissionsFor } from "@/lib/data/permissions";
+import { coachSetup } from "@/lib/setup/checklist";
+import { SetupStrip } from "./setup/SetupChecklist";
 import { newId, saveGame, useAppData, useStoreState } from "@/lib/data/store";
 import type { AppData, Game } from "@/lib/data/types";
 import { lineupStatus, type StatusTone } from "@/lib/dashboard";
@@ -88,6 +90,14 @@ export function GamesScreen() {
       <Shortcut keyName="n" run={startAdd} enabled={canEdit} />
       <PlanBanner />
       <AwardsBanner data={data} />
+      {isCoach(data.me.role) && (
+        <SetupStrip
+          steps={coachSetup(data, localDateString(new Date()))}
+          hideKey={data.team.id}
+          href="/home"
+          label="Set up your team"
+        />
+      )}
       <MoneyNudge />
       {upcoming[0] && <NextGame game={upcoming[0]} data={data} />}
       {canEdit && mode === "supabase" && !data.tournamentCount && (

@@ -24,6 +24,8 @@ const PUBLIC_PATHS = [
   "/icon",
   "/apple-icon",
   "/manifest.webmanifest",
+  // The demo club: signs a visitor in as a guest, so it starts signed out.
+  "/demo",
   "/sw.js",
   "/api/stripe/webhook",
   // Supabase calls this every 5 minutes to send team notices; it needs no sign-in.

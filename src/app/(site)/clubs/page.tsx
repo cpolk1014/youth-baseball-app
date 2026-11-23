@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CLUB_HREF, Cta, PageHero, Section } from "@/components/site/parts";
+import { CLUB_HREF, Cta, DEMO_HREF, PageHero, Section } from "@/components/site/parts";
 import { ClubDashboardScreen } from "@/components/site/mocks";
 import { SUPPORT_EMAIL } from "@/components/site/SiteFooter";
 
@@ -53,7 +53,10 @@ export default function ClubsPage() {
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Cta href={CLUB_HREF}>Start a club</Cta>
-          <span className="text-white/75">Free to set up · Pay when your teams are ready</span>
+          <Cta href={DEMO_HREF} variant="light">
+            Try the demo club
+          </Cta>
+          <span className="text-white/75">No sign-up for the demo · Free to set up</span>
         </div>
       </PageHero>
 
@@ -99,7 +102,12 @@ export default function ClubsPage() {
           ))}
         </ol>
         <div className="mt-10 text-center">
-          <Cta href={CLUB_HREF}>Start a club</Cta>
+          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Cta href={CLUB_HREF}>Start a club</Cta>
+            <Cta href={DEMO_HREF} variant="light">
+              Try the demo club
+            </Cta>
+          </div>
           <p className="mt-4 text-white/75">
             Have 10 or more teams?{" "}
             <a

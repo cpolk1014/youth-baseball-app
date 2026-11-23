@@ -9,6 +9,7 @@ import { CLUB_PRICE_CENTS, dollars, quote, seasonsOnSale } from "@/lib/billing/s
 const clubNow = () => quote(CLUB_PRICE_CENTS, seasonsOnSale(new Date())[0]!).cents;
 import { codeMessage } from "@/lib/club";
 import { formatClock } from "@/lib/data/game";
+import { clubSetup, teamSetup, type ClubSetupFacts } from "@/lib/setup/checklist";
 import { useStoreState } from "@/lib/data/store";
 import { AppShell, Loading } from "../AppShell";
 import { Sheet } from "../Sheet";
@@ -18,6 +19,7 @@ import { ClubChatterTab } from "./ClubChatterTab";
 import { ClubLibraryTab } from "./ClubLibraryTab";
 import { ClubLookTab } from "./ClubLookTab";
 import { BuyCodes } from "./BuyCodes";
+import { SetupChecklist } from "../setup/SetupChecklist";
 import { clearPaidFlag } from "./paidFlag";
 import { forgetMyClubs, useMyClubs } from "./useMyClubs";
 
@@ -104,7 +106,7 @@ function ClubTabs({ clubId, clubName }: { clubId: string; clubName: string }) {
           </button>
         ))}
       </div>
-      {tab === "teams" && <ClubDashboard clubId={clubId} clubName={clubName} />}
+      {tab === "teams" && <ClubDashboard clubId={clubId} clubName={clubName} onTab={setTab} />}
       {tab === "chatter" && <ClubChatterTab clubId={clubId} />}
       {tab === "awards" && <ClubAwardsTab clubId={clubId} clubName={clubName} />}
       {tab === "look" && <ClubLookTab clubId={clubId} />}
@@ -226,7 +228,15 @@ function StartClubForm() {
   );
 }
 
-function ClubDashboard({ clubId, clubName }: { clubId: string; clubName: string }) {
+function ClubDashboard({
+  clubId,
+  clubName,
+  onTab,
+}: {
+  clubId: string;
+  clubName: string;
+  onTab: (tab: Tab) => void;
+}) {
   const paid = usePaid();
   const [notice, setNotice] = useState(true);
   const [buying, setBuying] = useState(false);
@@ -237,16 +247,28 @@ function ClubDashboard({ clubId, clubName }: { clubId: string; clubName: string 
   const [codes, setCodes] = useState<ClubCode[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  // For the getting-started checklist: the club's look and library so far.
+  const [setup, setSetup] = useState<Pick<ClubSetupFacts, "hasLook" | "libraryItems"> | null>(null);
 
   useEffect(() => {
     let current = true;
     void (async () => {
       try {
         const m = await import("@/lib/data/club-backend");
-        const [t, c] = await Promise.all([m.clubOverview(clubId), m.clubCodes(clubId)]);
+        const [t, c, look, plans, sets] = await Promise.all([
+          m.clubOverview(clubId),
+          m.clubCodes(clubId),
+          m.clubLook(clubId).catch(() => null),
+          m.clubPlans(clubId).catch(() => []),
+          m.clubPlaySets(clubId).catch(() => []),
+        ]);
         if (!current) return;
         setTeams(t);
         setCodes(c);
+        setSetup({
+          hasLook: Boolean(look && (look.logoPath || look.colors.length > 0)),
+          libraryItems: plans.length + sets.length,
+        });
         setNow(Date.now());
       } catch (e) {
         if (current) setError(e instanceof Error ? e.message : String(e));
@@ -318,6 +340,20 @@ function ClubDashboard({ clubId, clubName }: { clubId: string; clubName: string 
           Payment received. New codes appear below in a few seconds.
         </p>
       )}
+      {setup && (
+        <SetupChecklist
+          title="Get your club ready"
+          intro="Four steps and every team in your club is on Fungo. Each one checks itself off."
+          steps={clubSetup({ ...setup, codes: thisSeason.length, teams: teams.length })}
+          hideKey={`club:${clubId}`}
+          onStep={(s) => {
+            if (s.id === "look") onTab("look");
+            else if (s.id === "library") onTab("library");
+            else if (s.id === "codes") setBuying(true);
+            else document.getElementById("club-codes")?.scrollIntoView({ behavior: "smooth" });
+          }}
+        />
+      )}
       <div className="mb-4 grid grid-cols-3 gap-2">
         <Stat label={`Teams${season ? ` · ${season}` : ""}`} value={teams.length} />
         <Stat label="Codes unused" value={unused.length} />
@@ -351,7 +387,8 @@ function ClubDashboard({ clubId, clubName }: { clubId: string; clubName: string 
       )}
 
       <details
-        className="rounded-xl border-2 border-slate-200 bg-white p-3"
+        id="club-codes"
+        className="scroll-mt-20 rounded-xl border-2 border-slate-200 bg-white p-3"
         open={teams.length === 0 || paid}
       >
         <summary className="flex min-h-11 cursor-pointer items-center text-lg font-bold">
@@ -443,6 +480,11 @@ function ago(iso: string | null, now: number): string {
 
 function TeamCard({ team: t, now }: { team: ClubTeam; now: number }) {
   const quiet = isQuiet(t, now);
+  const setup = teamSetup({
+    players: t.players,
+    games: t.wins + t.losses + t.ties + (t.nextGame ? 1 : 0),
+    lastLineupAt: t.lastLineupAt,
+  });
   const record = `${t.wins}-${t.losses}${t.ties ? `-${t.ties}` : ""}`;
   return (
     <Link
@@ -481,6 +523,11 @@ function TeamCard({ team: t, now }: { team: ClubTeam; now: number }) {
         {quiet ? "⚠ " : ""}
         {ago(t.lastLineupAt, now)}
       </span>
+      {setup.done < setup.total && (
+        <span className="rounded-lg bg-sky-50 px-2 py-1 text-sm font-semibold text-sky-900">
+          Getting started: {setup.done} of {setup.total} · needs {setup.missing.join(", ")}
+        </span>
+      )}
     </Link>
   );
 }

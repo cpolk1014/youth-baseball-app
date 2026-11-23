@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 /** Where every "Start your free 14-day trial" goes: sign in (new accounts start a team). */
 export const TRIAL_HREF = "/login";
 export const CLUB_HREF = "/login?next=/club";
+/** The demo club: no account, a made-up club of their own for two days. */
+export const DEMO_HREF = "/demo";
 
 export function Cta({
   href = TRIAL_HREF,

@@ -2841,4 +2841,73 @@ select pg_temp.expect((select not from_fungo from public.chatter_post where id =
 reset role;
 delete from public.chatter_post where id = '00000000-0000-4000-8000-00000000ac01';
 
+-- ── The demo club: a guest gets their own copy, kept apart from real teams ──
+insert into auth.users (id, email, is_anonymous) values
+  ('aaaaaaaa-0000-4000-8000-0000000000d1', null, true);
+create temp table demo_built (club uuid, team uuid);
+grant all on demo_built to authenticated;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-0000000000d1', false);
+insert into demo_built select (r->>'club')::uuid, (r->>'team')::uuid from public.start_demo_club() r;
+select pg_temp.expect((select count(*) from public.team t join demo_built d on t.organization_id = d.club) = 8,
+  'a guest''s demo club has eight teams they can open');
+select pg_temp.expect((select public.is_club_admin(club) from demo_built), 'the guest directs the demo club');
+select pg_temp.expect((select t.age_group from public.team t join demo_built d on t.id = d.team) = '10U',
+  'the demo opens on the 10U');
+select pg_temp.expect((select count(*) from demo_built d, public.club_overview(d.club)) = 8,
+  'the demo club''s dashboard shows all eight teams');
+select pg_temp.expect((select public.team_paid(team) from demo_built), 'demo teams are paid through the club''s code');
+select pg_temp.expect((select count(*) from public.game g join public.season s on s.id = g.season_id
+  join demo_built d on s.team_id = d.team where g.status = 'final') = 8, 'the demo 10U has a season of games');
+select pg_temp.expect((select (public.start_demo_club()->>'club')::uuid = club from demo_built),
+  'starting the demo again opens the same club');
+select pg_temp.expect((select count(*) from public.team where organization_id is null) = 0,
+  'a guest sees no real teams');
+do $$ begin
+  insert into public.team (name, age_group, created_by)
+  values ('Guest team', '10U', 'aaaaaaaa-0000-4000-8000-0000000000d1');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a guest can''t start a real team';
+end $$;
+do $$ begin
+  perform public.start_my_club('Guest club');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a guest can''t start a real club';
+end $$;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+do $$ begin
+  perform public.start_demo_club();
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a signed-in coach can''t start a demo club';
+end $$;
+reset role;
+create temp table demo_spare as
+  select c.code from public.club_code c join demo_built d on c.organization_id = d.club
+  where c.team_id is null limit 1;
+grant select on demo_spare to authenticated;
+-- (The test team holds a code from earlier tests; let it try a new one.)
+update public.club_code set team_id = null where team_id = '00000000-0000-4000-8000-000000000001';
+update public.team set organization_id = null where id = '00000000-0000-4000-8000-000000000001';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false);
+do $$ begin
+  perform public.redeem_club_code('00000000-0000-4000-8000-000000000001', (select code from demo_spare));
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when no_data_found then raise notice 'ok: a real team can''t use a demo club''s code';
+end $$;
+select pg_temp.expect((select organization_id is null from public.team
+  where id = '00000000-0000-4000-8000-000000000001'), 'the real team stayed out of the demo club');
+reset role;
+update public.organization set demo_until = now() - interval '1 minute'
+  where id = (select club from demo_built);
+update auth.users set created_at = now() - interval '3 days' where id = 'aaaaaaaa-0000-4000-8000-0000000000d1';
+select pg_temp.expect(public.cleanup_demo_clubs() = 1, 'an ended demo club is cleaned up');
+select pg_temp.expect((select count(*) from public.team t join demo_built d on t.id = d.team) = 0
+  and (select count(*) from public.organization o join demo_built d on o.id = d.club) = 0,
+  'its teams and club are gone');
+select pg_temp.expect(not exists (select 1 from auth.users where id = 'aaaaaaaa-0000-4000-8000-0000000000d1'),
+  'the guest account is gone too');
+select pg_temp.expect(exists (select 1 from public.team where id = '00000000-0000-4000-8000-000000000001'),
+  'real teams are untouched');
+
 \echo ALL RLS TESTS PASSED

@@ -10,6 +10,7 @@ import {
 import { MAX_KIDS, statsPriceCents, validKids } from "@/lib/billing/family";
 import { getStripe, stripeProblem, type PurchaseMeta } from "@/lib/billing/stripe";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { DEMO_PAY_OFF, isGuest } from "@/lib/demo/guest";
 
 function errorResponse(status: number, error: string) {
   return NextResponse.json({ error }, { status });
@@ -18,7 +19,7 @@ function errorResponse(status: number, error: string) {
 /**
  * Start paying for a season (through July 31): a club's team codes ($99 each; a new club for
  * a first-time buyer), one team's season ($129, or $89 for spring from January 1), or a
- * parent's player stats ($10, then $5 a kid). Priced by `quote` / `teamQuote`. Returns Stripe
+ * parent's player stats ($19, then $9 a kid). Priced by `quote` / `teamQuote`. Returns Stripe
  * Checkout's URL; nothing is recorded until Stripe confirms the payment (see
  * /api/stripe/webhook).
  */
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return errorResponse(401, "Sign in first.");
+  if (isGuest(user)) return errorResponse(403, DEMO_PAY_OFF);
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const kind = body?.kind;
@@ -100,7 +102,7 @@ export async function POST(request: NextRequest) {
     name = team.name;
     back = "/members";
   } else if (kind === "family") {
-    // The Player pass for a number of the parent's own kids ($10, then $5 each), for the season.
+    // The Player pass for a number of the parent's own kids ($19, then $9 each), for the season.
     const kids = body?.kids;
     if (!validKids(kids)) return errorResponse(400, `Pick between 1 and ${MAX_KIDS} players.`);
     const { data: mine } = await supabase.rpc("my_athletes");

@@ -1,4 +1,4 @@
-import { CLUB_HREF, Check, Cta } from "./parts";
+import { CLUB_HREF, Check, Cta, DEMO_HREF } from "./parts";
 
 const FREE = [
   "Roster and invites for coaches and parents",
@@ -92,9 +92,12 @@ export function PricingGrid({ full = false }: { full?: boolean }) {
             <Check key={f}>{f}</Check>
           ))}
         </ul>
-        <div className="mt-8">
+        <div className="mt-8 flex flex-wrap gap-2">
           <Cta href={CLUB_HREF} variant="outline" size="md">
             Start a club
+          </Cta>
+          <Cta href={DEMO_HREF} variant="ghost" size="md">
+            Try the demo club
           </Cta>
         </div>
       </div>

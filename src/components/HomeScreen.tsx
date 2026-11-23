@@ -16,6 +16,8 @@ import {
   whenText,
 } from "@/lib/data/game";
 import { isCoach, permissionsFor } from "@/lib/data/permissions";
+import { coachSetup } from "@/lib/setup/checklist";
+import { SetupChecklist } from "./setup/SetupChecklist";
 import { myUserId, useAppData, useStoreState } from "@/lib/data/store";
 import type { AppData, Game } from "@/lib/data/types";
 import { summaryToShow } from "@/lib/finance/entry";
@@ -63,6 +65,14 @@ export function HomeScreen() {
     >
       <PlanBanner />
       <AiBudgetBanner />
+      {isCoach(data.me.role) && (
+        <SetupChecklist
+          title="Get your team ready"
+          intro="Five steps and your team runs on Fungo. Each one checks itself off."
+          steps={coachSetup(data, today)}
+          hideKey={data.team.id}
+        />
+      )}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div className="md:col-span-2">
           {next?.kind === "game" ? (

@@ -19,6 +19,7 @@ import { myUserId, signOut, syncNow, useAppData, useStoreState } from "@/lib/dat
 import { initials, useMe, useMyTeamClubs } from "./account/useMe";
 import { useMyClubs } from "./club/useMyClubs";
 import { DataStatus } from "./DataStatus";
+import { DemoBanner } from "./demo/DemoBanner";
 import { OfflineSupport } from "./OfflineSupport";
 import { UnreadWatcher } from "./chatter/UnreadWatcher";
 import { badgeText, useUnread } from "@/lib/chatter/unread";
@@ -212,6 +213,7 @@ export function AppShell({
 
         <main className="flex-1 px-4 pt-4 pb-10 md:px-6 lg:px-8 lg:pt-6 print:p-0">
           <div className="lg:mx-auto lg:max-w-6xl print:max-w-none">
+            <DemoBanner />
             {bare ? children : <DataStatus>{children}</DataStatus>}
           </div>
         </main>
