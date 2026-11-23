@@ -8,6 +8,7 @@ create table auth.users (
   id uuid primary key,
   email text,
   is_anonymous boolean not null default false,
+  last_sign_in_at timestamptz,
   created_at timestamptz not null default now()
 );
 create function auth.uid() returns uuid language sql stable as

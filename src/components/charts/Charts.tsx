@@ -547,3 +547,69 @@ export function StrikeChart({ points, year }: { points: PitchingPoint[]; year: n
     </figure>
   );
 }
+
+/** A count per day as bars, with the day and count on hover (the admin panel's growth). */
+export function DailyBars({
+  points,
+  label,
+  color = BLUE,
+  format = (v: number) => String(v),
+}: {
+  points: { day: string; value: number }[];
+  label: string;
+  color?: string;
+  format?: (v: number) => string;
+}) {
+  const { ref, width } = useWidth<HTMLDivElement>();
+  const [at, setAt] = useState<number | null>(null);
+  const H = 72;
+  const max = Math.max(1, ...points.map((p) => p.value));
+  const slot = points.length ? width / points.length : 0;
+  const barW = Math.max(2, Math.min(18, slot - 3));
+  const p = at === null ? null : points[at]!;
+  const day = (d: string) =>
+    new Date(`${d}T12:00`).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  return (
+    <div ref={ref} className="relative" onMouseLeave={() => setAt(null)}>
+      {width > 0 && points.length > 0 && (
+        <svg width={width} height={H} role="img" aria-label={label}>
+          <line x1={0} x2={width} y1={H - 0.5} y2={H - 0.5} stroke={GRID} />
+          {points.map((pt, i) => {
+            const len = pt.value ? Math.max(3, (pt.value / max) * (H - 6)) : 0;
+            const cx = slot * i + slot / 2;
+            return (
+              <g key={pt.day} onMouseEnter={() => setAt(i)}>
+                <rect x={slot * i} y={0} width={slot} height={H} fill="transparent" />
+                {len > 0 && (
+                  <rect
+                    x={cx - barW / 2}
+                    y={H - len}
+                    width={barW}
+                    height={len}
+                    rx={2}
+                    fill={color}
+                    opacity={at === null || at === i ? 1 : 0.45}
+                  />
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      )}
+      {p && (
+        <Tooltip x={slot * at! + slot / 2} y={8}>
+          <p className="font-bold">{format(p.value)}</p>
+          <p>{day(p.day)}</p>
+        </Tooltip>
+      )}
+      <div className="mt-1 flex justify-between text-xs text-slate-500">
+        <span>{points[0] ? day(points[0].day) : ""}</span>
+        <span>Today</span>
+      </div>
+    </div>
+  );
+}

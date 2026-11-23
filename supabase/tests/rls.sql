@@ -1613,6 +1613,52 @@ select public.stop_sharing_tournament((select id from trn));
 select pg_temp.expect((select public.shared_tournament(token) is null from trn_share), 'stop sharing ends the link');
 select pg_temp.expect(public.share_tournament((select id from trn)) <> (select token from trn_share), 'sharing again makes a new link');
 reset role;
+-- ── the admin panel: Fungo's own people only; counters for shares and demos ──
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', false); -- a coach
+do $$ begin
+  perform public.admin_overview();
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: a coach can''t open the admin panel';
+end $$;
+select pg_temp.expect(not public.is_app_admin(), 'a coach isn''t an admin');
+do $$ begin
+  insert into public.app_admin (user_id) values ('aaaaaaaa-0000-4000-8000-000000000001');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: nobody makes themselves an admin';
+end $$;
+do $$ begin
+  perform public.bump_site_count('share_open', 'x');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: counters only move through the checked functions';
+end $$;
+reset role;
+grant select on trn to anon;
+set role anon;
+select public.count_share_event((select id from trn), 'share_open');
+select public.count_share_event((select id from trn), 'share_trial');
+select public.count_share_event((select id from trn), 'something_else');
+do $$ begin
+  perform public.admin_overview();
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: visitors can''t open the admin panel';
+end $$;
+reset role;
+select pg_temp.expect((select coalesce(sum(n), 0) from public.site_count where ref = (select id::text from trn)) = 2,
+  'a shared tournament''s opens and trial taps are counted, nothing else');
+update public.tournament set share_token = null where id = (select id from trn);
+set role anon;
+select public.count_share_event((select id from trn), 'share_open');
+reset role;
+select pg_temp.expect((select coalesce(sum(n), 0) from public.site_count where ref = (select id::text from trn)) = 2,
+  'a tournament that isn''t shared isn''t counted');
+insert into public.app_admin (user_id) values ('aaaaaaaa-0000-4000-8000-000000000003');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000003', false); -- admin
+select pg_temp.expect((public.admin_overview()->'teams'->>'total')::int > 0, 'an admin sees the business numbers');
+select pg_temp.expect(jsonb_array_length(public.admin_overview()->'daily') = 30, 'with 30 days of daily totals');
+select pg_temp.expect(jsonb_array_length(public.admin_overview()->'recent_teams') > 0, 'and the newest teams');
+reset role;
 -- ── athletes: a kid's box scores follow them from team to team ──
 -- Parent 0002 has kid 1003 on team 1 (an athlete from the fixtures' link) and is a parent
 -- on the Canes too, where the same kid plays this year.
@@ -2973,6 +3019,10 @@ grant all on demo_built to authenticated;
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-0000000000d1', false);
 insert into demo_built select (r->>'club')::uuid, (r->>'team')::uuid from public.start_demo_club() r;
+reset role;
+select pg_temp.expect((select coalesce(sum(n), 0) from public.site_count where kind = 'demo_start') = 1, 'each demo club started is counted');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-0000000000d1', false);
 select pg_temp.expect((select count(*) from public.team t join demo_built d on t.organization_id = d.club) = 8,
   'a guest''s demo club has eight teams they can open');
 select pg_temp.expect((select public.is_club_admin(club) from demo_built), 'the guest directs the demo club');

@@ -424,6 +424,8 @@ export function ProfileScreen() {
         </section>
       )}
 
+      <AdminLink />
+
       <button
         onClick={() => void signOut()}
         className="h-12 rounded-xl border-2 border-slate-400 bg-white text-base font-bold active:bg-slate-100 md:col-span-2"
@@ -431,5 +433,29 @@ export function ProfileScreen() {
         Sign out
       </button>
     </div>,
+  );
+}
+
+/** For Fungo's admins only (the database says who): the way into the admin panel. */
+function AdminLink() {
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    let current = true;
+    import("@/lib/supabase/client")
+      .then(({ getBrowserSupabase }) => getBrowserSupabase().rpc("is_app_admin"))
+      .then(({ data }) => current && setAdmin(data === true))
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, []);
+  if (!admin) return null;
+  return (
+    <Link
+      href="/admin"
+      className="flex h-12 items-center justify-center rounded-xl bg-[#1B2A4A] text-base font-bold text-white md:col-span-2"
+    >
+      Admin: run the business
+    </Link>
   );
 }

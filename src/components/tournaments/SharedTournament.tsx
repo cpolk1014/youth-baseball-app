@@ -60,6 +60,23 @@ export function SharedTournamentScreen({
     }
   };
 
+  // Count the visit (once per tournament per browser session) for the admin panel.
+  const tournamentId = initial?.tournament.id ?? null;
+  useEffect(() => {
+    if (!tournamentId) return;
+    const key = `rallycap:shared-open:${tournamentId}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch {
+      /* count it anyway */
+    }
+    void getBrowserSupabase().rpc("count_share_event", {
+      p_tournament: tournamentId,
+      p_kind: "share_open",
+    });
+  }, [tournamentId]);
+
   // New scores as the team enters them: every minute while the page is in front.
   useEffect(() => {
     const refresh = async () => {
@@ -134,7 +151,7 @@ export function SharedTournamentScreen({
   }
 
   return (
-    <Frame colors={team.colors}>
+    <Frame colors={team.colors} tournamentId={t.id}>
       <section className={card}>
         <h1 className="text-2xl leading-tight font-black text-slate-900">{t.name}</h1>
         <p className="mt-1 text-base font-semibold text-slate-700">
@@ -373,7 +390,23 @@ export function SharedTournamentScreen({
 }
 
 /** Fungo's bar on top, the trial pitch at the bottom, the team's colors in between. */
-function Frame({ colors, children }: { colors?: string[]; children: React.ReactNode }) {
+function Frame({
+  colors,
+  tournamentId,
+  children,
+}: {
+  colors?: string[];
+  tournamentId?: string;
+  children: React.ReactNode;
+}) {
+  // A tap on the trial button counts for the admin panel (it doesn't hold up the link).
+  const trialTap = () => {
+    if (!tournamentId) return;
+    void getBrowserSupabase().rpc("count_share_event", {
+      p_tournament: tournamentId,
+      p_kind: "share_trial",
+    });
+  };
   return (
     <div style={themeVars(colors) as React.CSSProperties} className="min-h-dvh bg-slate-50">
       <header className="flex items-center justify-between gap-3 bg-[#1B2A4A] px-4 py-3">
@@ -389,6 +422,7 @@ function Frame({ colors, children }: { colors?: string[]; children: React.ReactN
         </Link>
         <Link
           href="/login"
+          onClick={trialTap}
           className="flex h-11 items-center rounded-lg bg-[#DC143C] px-3 text-sm font-bold text-white"
         >
           Try it free
@@ -405,6 +439,7 @@ function Frame({ colors, children }: { colors?: string[]; children: React.ReactN
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <Link
               href="/login"
+              onClick={trialTap}
               className="flex h-12 items-center justify-center rounded-xl bg-[#DC143C] px-5 text-base font-bold text-white"
             >
               Start your free 14-day trial
