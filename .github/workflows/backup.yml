@@ -28,7 +28,7 @@ jobs:
     # Each GitHub environment (live, dev) holds its own project's SUPABASE_* secrets.
     environment: ${{ github.event.inputs.target || 'live' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install rclone
         run: sudo apt-get update -qq && sudo apt-get install -y -qq rclone
