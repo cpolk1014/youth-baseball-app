@@ -1,0 +1,49 @@
+# Nightly off-site backup of live (database + Storage files) to Cloudflare R2.
+# Run it by hand from the Actions tab (Run workflow) for live or dev.
+# What it does and how to restore: docs/backups.md. A failed run emails the repo owner.
+name: Nightly backup
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # 3 AM Central standard time (4 AM daylight)
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which project
+        type: choice
+        options: [live, dev]
+        default: dev
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-${{ github.event.inputs.target || 'live' }}
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    # Each GitHub environment (live, dev) holds its own project's SUPABASE_* secrets.
+    environment: ${{ github.event.inputs.target || 'live' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq rclone
+
+      - name: Back up
+        env:
+          TARGET: ${{ github.event.inputs.target || 'live' }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_S3_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
+          SUPABASE_S3_REGION: ${{ secrets.SUPABASE_S3_REGION }}
+          SUPABASE_S3_KEY_ID: ${{ secrets.SUPABASE_S3_KEY_ID }}
+          SUPABASE_S3_SECRET: ${{ secrets.SUPABASE_S3_SECRET }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_KEY_ID: ${{ secrets.R2_KEY_ID }}
+          R2_SECRET: ${{ secrets.R2_SECRET }}
+          BACKUP_PUBLIC_KEY: ${{ secrets.BACKUP_PUBLIC_KEY }}
+          BACKUP_FILES_PASSWORD: ${{ secrets.BACKUP_FILES_PASSWORD }}
+        run: scripts/backup/backup.sh
