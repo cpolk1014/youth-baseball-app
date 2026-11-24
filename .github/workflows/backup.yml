@@ -30,8 +30,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Current rclone from rclone.org: Ubuntu's package is from 2022, and Cloudflare R2
+      # answered its uploads with 501 Not Implemented.
       - name: Install rclone
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq rclone
+        run: |
+          curl -fsSL -o /tmp/rclone.deb https://downloads.rclone.org/rclone-current-linux-amd64.deb
+          sudo dpkg -i /tmp/rclone.deb
+          rclone version
 
       - name: Back up
         env:
