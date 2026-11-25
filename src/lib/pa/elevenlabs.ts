@@ -1,10 +1,9 @@
 // ElevenLabs calls (server only): songs, the announcer's voice and sound effects.
 // Each returns MP3 bytes. The key never reaches the browser.
 
+import { ANNOUNCER_MODEL, ANNOUNCER_SETTINGS, announcerVoice } from "./voice";
+
 const API = "https://api.elevenlabs.io/v1";
-/** A deep, clear voice from ElevenLabs' standard set; swap in a stadium-announcer voice
- * from the Voice Library with ELEVENLABS_ANNOUNCER_VOICE_ID. */
-const DEFAULT_VOICE = "JBFqnCBsd6RMkjVDRZzb";
 
 export class AudioMakerError extends Error {
   constructor(
@@ -49,12 +48,19 @@ export function makeSong(body: Record<string, unknown>) {
   return call("/music?output_format=mp3_44100_128", body);
 }
 
+/** The announcer reading `text`: walk-up calls and Pine Tar highlight calls both come here,
+ * in the voice set by ELEVENLABS_ANNOUNCER_VOICE_ID. */
 export function makeAnnouncement(text: string) {
-  const voice = process.env.ELEVENLABS_ANNOUNCER_VOICE_ID || DEFAULT_VOICE;
-  return call(`/text-to-speech/${encodeURIComponent(voice)}?output_format=mp3_44100_128`, {
+  const voice = announcerVoice(process.env.ELEVENLABS_ANNOUNCER_VOICE_ID);
+  if (voice.fallback) {
+    console.error(
+      `ELEVENLABS_ANNOUNCER_VOICE_ID is ${voice.fallback}; the announcer is using ElevenLabs' default voice.`,
+    );
+  }
+  return call(`/text-to-speech/${voice.id}?output_format=mp3_44100_128`, {
     text,
-    model_id: "eleven_multilingual_v2",
-    voice_settings: { stability: 0.35, similarity_boost: 0.8, style: 0.55, speed: 0.9 },
+    model_id: ANNOUNCER_MODEL,
+    voice_settings: ANNOUNCER_SETTINGS,
   });
 }
 
