@@ -35,6 +35,7 @@ export function ChatterPostBox({
       where: "parents",
       name: data.team.name,
       body: text.trim(),
+      staff: data.me.role !== "parent" && data.me.role !== "treasurer",
     });
     if (!ok) return;
     setState("sending");

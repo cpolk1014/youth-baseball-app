@@ -356,7 +356,7 @@ function Feed({ club, me }: { club: CoachClub; me: string }) {
         canPostPhotos
         onNewPoll={null}
         confirmSend={(body, photos, gif) =>
-          postCheck.confirm({ where: "coach", name: club.name, body, photos, gif })
+          postCheck.confirm({ where: "coach", name: club.name, body, photos, gif, staff: true })
         }
         onSend={async (body, files, gif) => {
           const m = await backend();
@@ -430,6 +430,7 @@ function Feed({ club, me }: { club: CoachClub; me: string }) {
                 name: club.name,
                 body,
                 edit: true,
+                staff: true,
               });
               if (!ok) return;
               await (await backend()).editPost(editing.id, body);

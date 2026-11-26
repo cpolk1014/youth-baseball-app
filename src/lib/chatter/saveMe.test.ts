@@ -17,6 +17,20 @@ describe("Save me from myself", () => {
     expect(heads.size).toBeGreaterThan(1);
   });
 
+  it("gives coaches their own lines, never the ones about Coach", () => {
+    const posts = ["a", "bb", "ccc", "Great win today", "Practice moved to 6", "Bring water"];
+    for (const b of posts) {
+      expect(saveMeLines(b, true).nudge).not.toMatch(/Coach standing/);
+    }
+    const nudges = new Set(posts.map((b) => saveMeLines(b, true).nudge));
+    expect(
+      [...nudges].some((n) =>
+        /parent's face at pickup|grandparents|dinner|party|Hot takes/.test(n),
+      ),
+    ).toBe(true);
+    expect(saveMeLines("x", true)).toEqual(saveMeLines("x", true));
+  });
+
   it("says who reads each channel", () => {
     expect(audienceLine("families", "10U Canes").who).toMatch(/No coaches/);
     expect(audienceLine("parents", "10U Canes").who).toBe(

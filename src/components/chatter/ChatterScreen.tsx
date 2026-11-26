@@ -202,7 +202,12 @@ export function Chatter({
   const saveMe = useSaveMe(me);
   const postCheck = usePostCheck(me);
   const checkPost = (c: Omit<PostCheck, "where" | "name">) =>
-    postCheck.confirm({ ...c, where: channel, name: data.team.name });
+    postCheck.confirm({
+      ...c,
+      where: channel,
+      name: data.team.name,
+      staff: clubView || canModerate(role),
+    });
   const [people, setPeople] = useState<Map<string, ChatterPerson>>(new Map());
   const unreadNow = useUnread();
   // In the club's view the page already has its frame; the feed just fills it.

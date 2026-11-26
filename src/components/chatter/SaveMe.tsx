@@ -121,6 +121,8 @@ export interface PostCheck {
   gif?: boolean;
   poll?: boolean;
   edit?: boolean;
+  /** A coach, manager or club admin posting: their own jokes. */
+  staff?: boolean;
 }
 
 /**
@@ -150,7 +152,7 @@ export function usePostCheck(userId: string | null | undefined) {
   const sheet = (
     <Sheet
       open={pending !== null}
-      title={pending ? saveMeLines(pending.body).headline : ""}
+      title={pending ? saveMeLines(pending.body, pending.staff).headline : ""}
       onClose={() => finish(false)}
     >
       {pending && <CheckBody check={pending} onAnswer={finish} />}
@@ -160,7 +162,7 @@ export function usePostCheck(userId: string | null | undefined) {
 }
 
 function CheckBody({ check, onAnswer }: { check: PostCheck; onAnswer: (ok: boolean) => void }) {
-  const { nudge } = saveMeLines(check.body);
+  const { nudge } = saveMeLines(check.body, check.staff);
   const who = audienceLine(check.where, check.name);
   const extras = [
     check.photos ? (check.photos === 1 ? "📷 1 photo" : `📷 ${check.photos} photos`) : "",

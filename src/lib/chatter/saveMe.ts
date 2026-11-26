@@ -24,6 +24,23 @@ const NUDGES = [
   "Hot takes cool off. Posts don't.",
 ];
 
+/** For coaches, managers and club admins: their posts go to every family. */
+const STAFF_HEADLINES = [
+  "Mound visit 🧢",
+  "Take a lap, Coach 🏃",
+  "Step out of the box for a sec",
+  "Deep breath. Adjust your cap.",
+  "Count to ten. Then count the pitches.",
+];
+
+const STAFF_NUDGES = [
+  "Would you say this to a parent's face at pickup?",
+  "Picture it read aloud at the end-of-season party. Still good?",
+  "Every family reads this. So do the grandparents. They have opinions.",
+  "The kids hear about every post at dinner. Make this one worth repeating.",
+  "Hot takes cool off. Posts don't.",
+];
+
 /** A small, steady number from the words, so a post's check doesn't flicker between renders. */
 function seed(text: string): number {
   let h = 0;
@@ -31,11 +48,14 @@ function seed(text: string): number {
   return h;
 }
 
-export function saveMeLines(body: string): { headline: string; nudge: string } {
+/** The check's headline and nudge; `staff` (coaches, managers, club admins) get their own. */
+export function saveMeLines(body: string, staff = false): { headline: string; nudge: string } {
   const n = seed(body);
+  const heads = staff ? STAFF_HEADLINES : HEADLINES;
+  const nudges = staff ? STAFF_NUDGES : NUDGES;
   return {
-    headline: HEADLINES[n % HEADLINES.length]!,
-    nudge: NUDGES[Math.floor(n / HEADLINES.length) % NUDGES.length]!,
+    headline: heads[n % heads.length]!,
+    nudge: nudges[Math.floor(n / heads.length) % nudges.length]!,
   };
 }
 
