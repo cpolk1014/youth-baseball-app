@@ -64,44 +64,54 @@ body {
 .curtain-in {
   animation: curtain-in 0.25s ease-out;
 }
+/* A fungo swing: the bat turns around its knob (the hands), up and ready while the ball is
+   tossed, then a quick swing through it and back. Drawn pointing right, so 0deg is level. */
 @keyframes bat-loading {
-  0% {
-    transform: rotate(-70deg);
+  0%,
+  42% {
+    transform: rotate(-100deg);
   }
-  45% {
-    transform: rotate(-70deg);
-  }
-  60% {
-    transform: rotate(35deg);
+  56% {
+    transform: rotate(18deg);
   }
   100% {
-    transform: rotate(-70deg);
+    transform: rotate(-100deg);
   }
 }
 .bat-loading {
-  transform-origin: 22% 78%;
-  animation: bat-loading 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-origin: 3px 6px;
+  transform: rotate(-100deg);
+  animation: bat-loading 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
+/* The ball is tossed up out of the hitting zone, drops back in, and flies off to the upper right. */
 @keyframes ball-hit {
-  0%,
-  57% {
-    transform: translate(-28px, 34px) scale(0.6);
+  0% {
+    transform: translate(0, 0);
     opacity: 0;
   }
-  60% {
-    transform: translate(-28px, 34px) scale(1);
+  8% {
+    transform: translate(0, -6px);
     opacity: 1;
   }
-  95% {
-    transform: translate(40px, -30px) scale(0.7);
+  28% {
+    transform: translate(0, -44px);
+    animation-timing-function: ease-in;
+  }
+  49% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  88% {
+    transform: translate(24px, -78px) scale(0.6);
     opacity: 0;
   }
   100% {
+    transform: translate(24px, -78px) scale(0.6);
     opacity: 0;
   }
 }
 .ball-hit {
-  animation: ball-hit 1.3s linear infinite;
+  animation: ball-hit 1.6s ease-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .curtain-in,

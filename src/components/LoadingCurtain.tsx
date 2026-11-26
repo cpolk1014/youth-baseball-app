@@ -1,7 +1,7 @@
 "use client";
 
 // While the app loads a team (opening the app, or switching teams): the page blurs and the
-// Fungo mark shows with a bat taking swings, so it's clear something is happening.
+// Fungo mark shows with a fungo bat taking swings beside it, so it's clear something is happening.
 import type { CSSProperties } from "react";
 import { themeVars } from "@/lib/branding/theme";
 import { useStoreState } from "@/lib/data/store";
@@ -31,23 +31,24 @@ export function Curtain({ text, colors }: { text: string; colors?: string[] }) {
         style={look}
         className="flex w-full max-w-xs flex-col items-center gap-4 rounded-3xl border-t-8 border-[var(--team-accent)] bg-white px-6 py-8 text-center shadow-2xl shadow-slate-900/20"
       >
-        <div className="relative flex h-32 w-52 items-center justify-center">
+        {/* The Fungo mark on the left; beside it (never over it) a fungo bat: the ball is tossed
+            up, drops back into the zone, and gets hit off to the upper right. */}
+        <div className="relative h-32 w-64">
           {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}
-          <img src="/brand/fungo-icon-color.svg" alt="" className="size-28" />
+          <img src="/brand/fungo-icon-color.svg" alt="" className="absolute top-2 left-0 size-28" />
+          {/* Drawn lying flat, knob at the left; it turns around the knob (the hands). */}
           <svg
-            viewBox="0 0 24 24"
+            viewBox="0 0 88 12"
             aria-hidden="true"
-            className="bat-loading absolute top-7 right-0 size-16 text-[var(--team)]"
+            className="bat-loading absolute top-[94px] left-[165px] h-3 w-[88px] text-[var(--team)]"
             fill="currentColor"
           >
-            <g transform="rotate(-45 12 12)">
-              <circle cx="2.8" cy="12" r="2" />
-              <path d="M4 10.9 L10.5 10.9 C13.5 9.6 16.5 9.3 19.5 9.3 A2.7 2.7 0 0 1 19.5 14.7 C16.5 14.7 13.5 14.4 10.5 13.1 L4 13.1 Z" />
-            </g>
+            <circle cx="3" cy="6" r="2.6" />
+            <path d="M4.5 4.95 L38 4.95 C54 4.95 61 3.75 70 3.75 L84.2 3.75 A2.25 2.25 0 0 1 84.2 8.25 L70 8.25 C61 8.25 54 7.05 38 7.05 L4.5 7.05 Z" />
           </svg>
           <span
             aria-hidden="true"
-            className="ball-hit absolute top-4 right-1 size-3 rounded-full border border-slate-300 bg-white"
+            className="ball-hit absolute top-[94px] left-[234px] size-3 rounded-full border-2 border-[var(--team-accent)] bg-white shadow-sm"
           />
         </div>
         <p className="text-lg font-bold text-slate-900">{text}</p>
