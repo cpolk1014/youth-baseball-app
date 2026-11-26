@@ -29,18 +29,19 @@ export function Curtain({ text, colors }: { text: string; colors?: string[] }) {
     >
       <div
         style={look}
-        className="flex w-full max-w-xs flex-col items-center gap-4 rounded-3xl border-t-8 border-[var(--team-accent)] bg-white px-6 py-8 text-center shadow-2xl shadow-slate-900/20"
+        className="flex w-full max-w-xs flex-col items-center gap-3 rounded-3xl border-t-8 border-[var(--team-accent)] bg-white px-6 py-8 text-center shadow-2xl shadow-slate-900/20"
       >
-        {/* The Fungo mark on the left; beside it (never over it) a fungo bat: the ball is tossed
-            up, drops back into the zone, and gets hit off to the upper right. */}
-        <div className="relative h-32 w-64">
-          {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}
-          <img src="/brand/fungo-icon-color.svg" alt="" className="absolute top-2 left-0 size-28" />
+        {/* The Fungo mark, centered, and under it a little fungo scene on its own ground line:
+            the ball is tossed up, drops back into the zone, and gets hit to the upper right. */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}
+        <img src="/brand/fungo-icon-color.svg" alt="" className="-mb-2 size-24" />
+        <div className="relative h-24 w-48">
+          <span aria-hidden="true" className="absolute right-6 bottom-1 left-6 h-px bg-slate-200" />
           {/* Drawn lying flat, knob at the left; it turns around the knob (the hands). */}
           <svg
             viewBox="0 0 88 12"
             aria-hidden="true"
-            className="bat-loading absolute top-[94px] left-[165px] h-3 w-[88px] text-[var(--team)]"
+            className="bat-loading absolute top-[74px] left-[62px] h-[9px] w-[66px] text-[var(--team)]"
             fill="currentColor"
           >
             <circle cx="3" cy="6" r="2.6" />
@@ -48,7 +49,7 @@ export function Curtain({ text, colors }: { text: string; colors?: string[] }) {
           </svg>
           <span
             aria-hidden="true"
-            className="ball-hit absolute top-[94px] left-[234px] size-3 rounded-full border-2 border-[var(--team-accent)] bg-white shadow-sm"
+            className="ball-hit absolute top-[73px] left-[113px] size-2.5 rounded-full border-2 border-[var(--team-accent)] bg-white"
           />
         </div>
         <p className="text-lg font-bold text-slate-900">{text}</p>

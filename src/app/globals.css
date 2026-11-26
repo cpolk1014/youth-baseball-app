@@ -69,18 +69,19 @@ body {
 @keyframes bat-loading {
   0%,
   42% {
-    transform: rotate(-100deg);
+    transform: rotate(-135deg);
   }
   56% {
     transform: rotate(18deg);
   }
   100% {
-    transform: rotate(-100deg);
+    transform: rotate(-135deg);
   }
 }
 .bat-loading {
-  transform-origin: 3px 6px;
-  transform: rotate(-100deg);
+  /* The knob, in the drawn size (66 x 9 px for a 88 x 12 drawing). */
+  transform-origin: 2.25px 4.5px;
+  transform: rotate(-135deg);
   animation: bat-loading 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 /* The ball is tossed up out of the hitting zone, drops back in, and flies off to the upper right. */
@@ -90,23 +91,23 @@ body {
     opacity: 0;
   }
   8% {
-    transform: translate(0, -6px);
+    transform: translate(0, -5px);
     opacity: 1;
   }
   28% {
-    transform: translate(0, -44px);
+    transform: translate(0, -34px);
     animation-timing-function: ease-in;
   }
-  49% {
+  50% {
     transform: translate(0, 0);
     opacity: 1;
   }
   88% {
-    transform: translate(24px, -78px) scale(0.6);
+    transform: translate(46px, -64px) scale(0.6);
     opacity: 0;
   }
   100% {
-    transform: translate(24px, -78px) scale(0.6);
+    transform: translate(46px, -64px) scale(0.6);
     opacity: 0;
   }
 }
