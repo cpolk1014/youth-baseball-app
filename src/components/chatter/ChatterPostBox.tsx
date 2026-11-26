@@ -8,6 +8,7 @@ import { useState } from "react";
 import { announce } from "@/lib/push/client";
 import { useAppData } from "@/lib/data/store";
 import { PaidGate, usePlan } from "../paywall";
+import { usePostCheck } from "./SaveMe";
 
 export function ChatterPostBox({
   initialText,
@@ -26,9 +27,16 @@ export function ChatterPostBox({
   const [error, setError] = useState<string | null>(null);
   const [needsAgree, setNeedsAgree] = useState(false);
   const { paid } = usePlan();
+  const postCheck = usePostCheck(data?.me.userId);
 
   const send = async () => {
     if (!data?.me.userId) return;
+    const ok = await postCheck.confirm({
+      where: "parents",
+      name: data.team.name,
+      body: text.trim(),
+    });
+    if (!ok) return;
     setState("sending");
     setError(null);
     setNeedsAgree(false);
@@ -94,6 +102,7 @@ export function ChatterPostBox({
       >
         {state === "sending" ? "Posting…" : "Post to Chatter"}
       </button>
+      {postCheck.sheet}
     </div>
   );
 }

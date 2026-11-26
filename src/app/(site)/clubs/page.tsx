@@ -34,7 +34,7 @@ const WHY: [string, string, string][] = [
   [
     "📣",
     "Reach everyone at once",
-    "Post once to Coach Chatter and to any or all of your teams' Chatter. Rainout? Done in ten seconds, and nobody has to copy it into the group chat that rhymes with Droop Me.",
+    "Post once to Coach Chatter and to any or all of your teams' Chatter. Rainout? Done in ten seconds, and nobody has to copy it into the group chat that rhymes with Droop Me. Each team's Chatter has Team, Club and Parents channels; the club is only in Club.",
   ],
   [
     "🔒",

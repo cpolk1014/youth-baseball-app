@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { chatterPush, coachPush } from "@/lib/push/payload";
+import { channelPush, coachPush } from "@/lib/push/payload";
 import { firstTime, pushConfigured, sendPush, type PushCategory } from "@/lib/push/send.server";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getServerSupabase } from "@/lib/supabase/server";
@@ -93,18 +93,33 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     // The coaches turned Chatter notifications off for the team.
     if (team && team.notify_chatter === false) return ok();
-    const parents = post.channel === "parents";
-    const teamName = `${(team?.name as string) ?? "Chatter"}${parents ? "" : " · Club"}`;
+    // Stored names: 'parents' is the Team channel, 'team' the Club channel, 'families' Parents.
+    const channel = (post.channel as string) || "team";
+    const clubChannel = channel === "team";
+    const teamName = (team?.name as string) ?? "Chatter";
     const from = await nameOn(post.team_id, user.id);
-    // Who's in this channel now: the team, plus (Team channel only) the club's current admins.
+    // Who's in this channel now: the team (Parents: only its families), plus (Club channel
+    // only) the club's current admins.
     const { data: members } = await admin
       .from("member")
       .select("user_id, role")
       .eq("team_id", post.team_id);
-    const all = ((members ?? []) as { user_id: string; role: string }[]).filter((m) => m.user_id);
+    let all = ((members ?? []) as { user_id: string; role: string }[]).filter((m) => m.user_id);
+    if (channel === "families") {
+      // Parents, and treasurers linked to a kid on the team (the database's is_chatter_family).
+      const { data: kids } = await admin.from("player").select("id").eq("team_id", post.team_id);
+      const ids = (kids ?? []).map((k) => k.id as string);
+      const { data: links } = ids.length
+        ? await admin.from("player_guardian").select("user_id").in("player_id", ids)
+        : { data: [] };
+      const linked = new Set((links ?? []).map((l) => l.user_id as string));
+      all = all.filter(
+        (m) => m.role === "parent" || (m.role === "treasurer" && linked.has(m.user_id)),
+      );
+    }
     const onTeam = new Set(all.map((m) => m.user_id));
     let clubAdmins = new Set<string>();
-    if (!parents) {
+    if (clubChannel) {
       const { data: codes } = await admin
         .from("club_code")
         .select("organization_id")
@@ -119,12 +134,9 @@ export async function POST(request: NextRequest) {
         clubAdmins = new Set((admins ?? []).map((a) => a.user_id as string));
       }
     }
-    const payload = (who: string) => {
-      const base = chatterPush({ teamId: post.team_id, teamName, from: who, post });
-      return parents
-        ? { ...base, url: `${base.url}&channel=parents`, tag: `${base.tag}-parents` }
-        : { ...base, url: `${base.url}&channel=team` };
-    };
+    // "10U Canes · Parents": the title says which channel, and tapping opens that tab.
+    const payload = (who: string) =>
+      channelPush({ teamId: post.team_id, teamName, channel, from: who, post });
     // Club admins open the team's channel from the club page, not the team app.
     const clubPayload = (who: string) => ({
       ...payload(who),
@@ -162,7 +174,7 @@ export async function POST(request: NextRequest) {
     let sent = await send(tagged, "mention", `${from} tagged you`);
     sent += await send(
       (await teamReaders(post.team_id, user.id)).filter((u) => !tagged.includes(u)),
-      parents ? "parents" : "chatter",
+      channel === "parents" ? "parents" : channel === "families" ? "families" : "chatter",
       from,
     );
     return ok(sent);
@@ -194,16 +206,14 @@ export async function POST(request: NextRequest) {
       sent += await sendPush(
         await teamReaders(t.id as string, null),
         { id: t.id as string, category: "chatter" },
-        (() => {
-          // Club posts live in the team's Club channel.
-          const base = chatterPush({
-            teamId: t.id as string,
-            teamName: `${t.name as string} · Club`,
-            from: (club?.name as string) ?? "Your club",
-            post,
-          });
-          return { ...base, url: `${base.url}&channel=team` };
-        })(),
+        // Club posts live in the team's Club channel.
+        channelPush({
+          teamId: t.id as string,
+          teamName: t.name as string,
+          channel: "team",
+          from: (club?.name as string) ?? "Your club",
+          post,
+        }),
       );
     }
     return ok(sent);

@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { Guardian, Member } from "@/lib/data/types";
 import type { Player } from "@/lib/rules/types";
 import {
+  channelFrom,
+  chatterChannels,
+  inParentsChannel,
   authorFromPerson,
   authorOf,
   canEdit,
@@ -369,5 +372,51 @@ describe("people in a channel", () => {
       role: "Treasurer",
       staff: false,
     });
+  });
+});
+
+describe("channels", () => {
+  const players = [{ id: "kid1" }];
+  const guardians = [{ userId: "t1", playerId: "kid1" }];
+  it("puts parents, and treasurers with a kid on the team, in the Parents channel", () => {
+    expect(inParentsChannel("parent", "p1", [], players)).toBe(true);
+    expect(inParentsChannel("treasurer", "t1", guardians, players)).toBe(true);
+    expect(inParentsChannel("treasurer", "t2", guardians, players)).toBe(false);
+    expect(inParentsChannel("treasurer", "t1", guardians, [{ id: "other" }])).toBe(false);
+  });
+  it("keeps coaches and managers out, even with a kid on the team", () => {
+    const linked = [{ userId: "c1", playerId: "kid1" }];
+    for (const role of ["owner", "coach", "manager"]) {
+      expect(inParentsChannel(role, "c1", linked, players)).toBe(false);
+    }
+    expect(inParentsChannel(undefined, "c1", linked, players)).toBe(false);
+  });
+  it("orders the tabs Team, Club, Parents", () => {
+    expect(chatterChannels(false, false)).toEqual(["parents"]);
+    expect(chatterChannels(false, true)).toEqual(["parents", "families"]);
+    expect(chatterChannels(true, false)).toEqual(["parents", "team"]);
+    expect(chatterChannels(true, true)).toEqual(["parents", "team", "families"]);
+  });
+  it("reads a channel from a link", () => {
+    expect(channelFrom("families")).toBe("families");
+    expect(channelFrom("team")).toBe("team");
+    expect(channelFrom("parents")).toBe("parents");
+    expect(channelFrom("coaches")).toBeNull();
+    expect(channelFrom(null)).toBeNull();
+  });
+  it("keeps a post's channel", () => {
+    const row = {
+      id: "x",
+      team_id: "t",
+      author_id: null,
+      body: "",
+      quote_post_id: null,
+      created_at: "",
+      edited_at: null,
+      pinned_at: null,
+      removed_at: null,
+    };
+    expect(postFromRow({ ...row, channel: "families" }).channel).toBe("families");
+    expect(postFromRow({ ...row, channel: null }).channel).toBe("team");
   });
 });

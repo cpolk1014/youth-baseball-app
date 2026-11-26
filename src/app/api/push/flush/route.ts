@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   boxScorePush,
   chargesPush,
-  chatterPush,
+  channelPush,
   gamesPush,
   type BoxScoreEvent,
   type ChargeEvent,
@@ -73,24 +73,20 @@ async function announceFungoPosts(): Promise<number> {
       admin.from("member").select("user_id").eq("team_id", post.team_id),
     ]);
     const onTeam = new Set((members ?? []).map((m) => m.user_id as string));
-    const base = chatterPush({
-      teamId: post.team_id as string,
-      teamName: team.name as string,
-      from: "Fungo",
-      post: {
-        body: post.body as string,
-        photos: post.photos as unknown[],
-        kind: post.kind as string,
-      },
-    });
     sent += await sendPush(
       (readers ?? []).map((r) => r.user_id as string).filter((u) => onTeam.has(u)),
       { id: post.team_id as string, category: "parents" },
-      {
-        ...base,
-        url: `${base.url}&channel=parents`,
-        tag: `${base.tag}-parents`,
-      },
+      channelPush({
+        teamId: post.team_id as string,
+        teamName: team.name as string,
+        channel: "parents",
+        from: "Fungo",
+        post: {
+          body: post.body as string,
+          photos: post.photos as unknown[],
+          kind: post.kind as string,
+        },
+      }),
     );
   }
   return sent;

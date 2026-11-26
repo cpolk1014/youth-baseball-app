@@ -575,3 +575,62 @@ export function PitchLogScreen() {
     </PhoneScreen>
   );
 }
+
+/** Chatter's Parents channel, with Save me from myself catching a post before it goes out. */
+export function ParentsChannelScreen() {
+  return (
+    <PhoneScreen title="Chatter">
+      <div
+        className="grid grid-cols-3 gap-1 rounded-xl border-2 bg-white p-1"
+        style={{ borderColor: TEAM }}
+      >
+        {["Team", "Club", "Parents"].map((t) => (
+          <span
+            key={t}
+            className="flex h-7 items-center justify-center rounded-lg text-[11px] font-bold"
+            style={t === "Parents" ? { background: TEAM, color: "white" } : { color: TEAM }}
+          >
+            {t}
+          </span>
+        ))}
+      </div>
+      <p className="rounded-lg bg-slate-50 p-2 text-[10px] text-slate-600">
+        🤫 Just the families. Coaches and managers can&apos;t see this channel.
+      </p>
+      <div className="flex flex-col gap-1.5">
+        <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-white p-2 shadow-sm">
+          <p className="text-[10px] font-bold text-slate-500">Dana · Mason&apos;s family</p>
+          <p>Who has the snack cooler Saturday? 🧃</p>
+        </div>
+        <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-white p-2 shadow-sm">
+          <p className="text-[10px] font-bold text-slate-500">Luis · Ella&apos;s family</p>
+          <p>Us! Also carpool from the school at 7:30?</p>
+          <p className="mt-1 text-[11px]">👍 4 &nbsp;🙌 2</p>
+        </div>
+      </div>
+      <div className="mt-auto rounded-2xl bg-white p-3 shadow-xl ring-1 ring-slate-200">
+        <p className="text-[14px] font-black">Timeout, Blue! 🧢</p>
+        <p className="mt-1 text-[11px] text-slate-600">
+          Would you say this out loud at the snack table, with Coach standing right there?
+        </p>
+        <div className="mt-2 rounded-lg border-2 p-1.5" style={{ borderColor: TEAM }}>
+          <p className="text-[9px] font-bold tracking-wide uppercase" style={{ color: TEAM }}>
+            Posting to the 🤫 Parents channel
+          </p>
+          <p className="text-[10px] font-semibold">
+            Just the families. But screenshots exist, and so does the carpool.
+          </p>
+        </div>
+        <p className="mt-2 rounded-lg bg-slate-100 p-1.5 text-[11px]">
+          Why is my kid in right field AGAIN
+        </p>
+        <div className="mt-2">
+          <Btn>Send it ⚾</Btn>
+        </div>
+        <p className="mt-1.5 text-center text-[11px] font-bold text-slate-600">
+          On second thought… back to the dugout
+        </p>
+      </div>
+    </PhoneScreen>
+  );
+}

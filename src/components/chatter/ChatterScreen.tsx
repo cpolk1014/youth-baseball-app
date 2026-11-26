@@ -1,7 +1,8 @@
 "use client";
 
 // Chatter: the team's own chat feed. Adults only (team members; kids have no accounts), no
-// private messages, coaches and managers moderate. The database enforces all of it.
+// private messages, coaches and managers moderate (except the Parents channel, which has no
+// coaches in it). The database enforces all of it.
 import {
   Fragment,
   useCallback,
@@ -43,6 +44,10 @@ import {
   timeLabel,
   type Author,
   authorFromPerson,
+  CHANNEL_LABEL,
+  channelFrom,
+  chatterChannels,
+  inParentsChannel,
   type ChatterChannel,
   type ChatterPerson,
   type ChatterPhoto,
@@ -80,6 +85,7 @@ import { GifPicker, GifView } from "./Gif";
 import { picturesFrom, preparePhoto } from "./photo";
 import { announce } from "@/lib/push/client";
 import { NotifyBar } from "./NotifyBar";
+import { SaveMeSwitch, usePostCheck, useSaveMe, type PostCheck } from "./SaveMe";
 
 const backend = () => import("@/lib/data/chatter-backend");
 const primary =
@@ -89,9 +95,10 @@ const secondary =
 
 export function ChatterScreen() {
   const data = useAppData();
-  // Club teams have two channels: Team (stored 'parents': the team only, never the club;
-  // first and the default) and Club (stored 'team': with the club's director and admins).
-  // A team not in a club has just its Team channel. A pick holds for the team it was made on; a link can pick one.
+  // Up to three channels: Team (stored 'parents': the team only, never the club; first and the
+  // default), Club (stored 'team': with the club's director and admins; club teams only) and
+  // Parents (stored 'families': the families only, no coaches; for parents). A pick holds for
+  // the team it was made on; a link can pick one.
   const [picked, setPicked] = useState<{ team: string | null; channel: ChatterChannel } | null>(
     () => {
       const c = channelFromUrl();
@@ -109,9 +116,13 @@ export function ChatterScreen() {
     if (wantTeam !== currentTeam) switchTeam(wantTeam);
   }, [wantTeam, currentTeam]);
   const inClub = !!data?.team.club;
-  const channel: ChatterChannel = !inClub
-    ? "parents"
-    : picked && (picked.team === null || picked.team === data?.team.id)
+  const family =
+    !!data && inParentsChannel(data.me.role, data.me.userId, data.guardians, data.players);
+  const channels = chatterChannels(inClub, family);
+  const channel: ChatterChannel =
+    picked &&
+    (picked.team === null || picked.team === data?.team.id) &&
+    channels.includes(picked.channel)
       ? picked.channel
       : "parents";
   if (!data) {
@@ -136,7 +147,10 @@ export function ChatterScreen() {
       data={data}
       me={data.me.userId}
       channel={channel}
-      onChannel={inClub ? (c) => setPicked({ team: data.team.id, channel: c }) : undefined}
+      channels={channels}
+      onChannel={
+        channels.length > 1 ? (c) => setPicked({ team: data.team.id, channel: c }) : undefined
+      }
     />
   );
 }
@@ -148,8 +162,7 @@ function ClubFrame({ children }: { children: React.ReactNode }) {
 
 const channelFromUrl = (): ChatterChannel | null => {
   if (typeof window === "undefined") return null;
-  const c = new URLSearchParams(window.location.search).get("channel");
-  return c === "parents" || c === "team" ? c : null;
+  return channelFrom(new URLSearchParams(window.location.search).get("channel"));
 };
 
 const teamFromUrl = () =>
@@ -165,21 +178,31 @@ export function Chatter({
   data,
   me,
   channel = "team",
+  channels = ["team"],
   onChannel,
   clubView = false,
 }: {
   data: AppData;
   me: string;
   channel?: ChatterChannel;
+  /** The tabs, in order (one: no tabs). */
+  channels?: ChatterChannel[];
   onChannel?: (c: ChatterChannel) => void;
   clubView?: boolean;
 }) {
   const teamId = data.team.id;
   const role = data.me.role;
-  // Club admins moderate the Club channel, which the club owns.
-  const moderator = clubView || canModerate(role);
+  const families = channel === "families";
+  // Club admins moderate the Club channel, which the club owns. Nobody moderates Parents.
+  const moderator = !families && (clubView || canModerate(role));
+  // Team settings are for the team's coaches and managers, whichever tab is open.
+  const staff = !clubView && canModerate(role);
   const paid = data.plan ? data.plan.paid : true;
-  const cacheKey = channel === "parents" ? `${teamId}:parents` : teamId;
+  const cacheKey = channel === "team" ? teamId : `${teamId}:${channel}`;
+  const saveMe = useSaveMe(me);
+  const postCheck = usePostCheck(me);
+  const checkPost = (c: Omit<PostCheck, "where" | "name">) =>
+    postCheck.confirm({ ...c, where: channel, name: data.team.name });
   const [people, setPeople] = useState<Map<string, ChatterPerson>>(new Map());
   const unreadNow = useUnread();
   // In the club's view the page already has its frame; the feed just fills it.
@@ -406,20 +429,28 @@ export function Chatter({
   const clubAdminsHere = [...people.values()].some(
     (p) => p.role === "director" || p.role === "club_admin",
   );
-  // Who can be tagged: the team's adults (not me), plus @coaches, and @everyone for staff.
+  // Who can be tagged: the team's adults (not me), plus @coaches, and @everyone for staff. In
+  // Parents, only the other families (tagging a coach there would tell them it exists).
   const mentionables: Mentionable[] = [
-    { id: "coaches", label: "coaches", hint: "Every coach and manager" },
+    ...(families ? [] : [{ id: "coaches", label: "coaches", hint: "Every coach and manager" }]),
     ...(moderator ? [{ id: "everyone", label: "everyone", hint: "The whole team" }] : []),
     // Tags are for people on the team (not the club's admins).
     ...(people.size
       ? [...people.values()]
           .filter((x) => x.userId !== me && x.role !== "director" && x.role !== "club_admin")
+          .filter(
+            (x) =>
+              !families || x.role === "parent" || (x.role === "treasurer" && x.kids.length > 0),
+          )
           .map((x) => {
             const a = authorFromPerson(x);
             return { id: x.userId, label: a.name, hint: a.role ?? undefined };
           })
       : data.members
           .filter((x) => x.userId && x.userId !== me)
+          .filter(
+            (x) => !families || inParentsChannel(x.role, x.userId, data.guardians, data.players),
+          )
           .map((x) => {
             const a = authorOf(x.userId, team);
             return { id: x.userId!, label: a.name, hint: a.role ?? undefined };
@@ -509,7 +540,7 @@ export function Chatter({
       subtitle={data.team.name}
       tab="chatter"
       action={
-        moderator && !clubView ? (
+        !clubView ? (
           <button
             onClick={() => setShowSettings(true)}
             className="h-11 rounded-lg px-3 text-base font-bold active:bg-black/10"
@@ -526,30 +557,42 @@ export function Chatter({
             aria-label="Chatter channels"
             className="sticky top-14 z-10 -mx-4 mb-3 bg-slate-100 px-4 py-2 md:mx-0 md:px-0 lg:top-16 lg:bg-slate-50"
           >
-            <div className="grid grid-cols-2 gap-1 rounded-xl border-2 border-[var(--team)] bg-white p-1">
-              {(
-                [
-                  ["parents", "Team", unreadNow.parents],
-                  ["team", "Club", unreadNow.chatter],
-                ] as const
-              ).map(([id, label, n]) => (
-                <button
-                  key={id}
-                  role="tab"
-                  aria-selected={channel === id}
-                  onClick={() => onChannel?.(id)}
-                  className={`flex min-h-11 items-center justify-center gap-2 rounded-lg text-base font-bold ${
-                    channel === id ? "bg-[var(--team)] text-white" : "text-[var(--team)]"
-                  }`}
-                >
-                  {label}
-                  {n > 0 && channel !== id && (
-                    <span className="rounded-full bg-[#DC143C] px-2 py-0.5 text-xs text-white">
-                      {badgeText(n)}
-                    </span>
-                  )}
-                </button>
-              ))}
+            <div
+              className={`grid gap-1 rounded-xl border-2 border-[var(--team)] bg-white p-1 ${
+                channels.length > 2 ? "grid-cols-3" : "grid-cols-2"
+              }`}
+            >
+              {channels
+                .map(
+                  (id) =>
+                    [
+                      id,
+                      CHANNEL_LABEL[id],
+                      id === "parents"
+                        ? unreadNow.parents
+                        : id === "team"
+                          ? unreadNow.chatter
+                          : unreadNow.families,
+                    ] as const,
+                )
+                .map(([id, label, n]) => (
+                  <button
+                    key={id}
+                    role="tab"
+                    aria-selected={channel === id}
+                    onClick={() => onChannel?.(id)}
+                    className={`flex min-h-11 items-center justify-center gap-2 rounded-lg text-base font-bold ${
+                      channel === id ? "bg-[var(--team)] text-white" : "text-[var(--team)]"
+                    }`}
+                  >
+                    {label}
+                    {n > 0 && channel !== id && (
+                      <span className="rounded-full bg-[#DC143C] px-2 py-0.5 text-xs text-white">
+                        {badgeText(n)}
+                      </span>
+                    )}
+                  </button>
+                ))}
             </div>
           </div>
         )}
@@ -561,15 +604,36 @@ export function Chatter({
         )}
         {channel === "parents" && onChannel && (
           <p className="mb-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
-            🔒 Just the team: coaches, managers, the treasurer and families. The club doesn&apos;t
-            see this channel.
+            📣 The whole team: coaches, managers, the treasurer and families.
+            {data.team.club ? " The club doesn't see this channel." : ""}
           </p>
+        )}
+        {families && (
+          <div className="mb-3 flex flex-col gap-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+            <p>
+              🤫 Just the families. Coaches and managers can&apos;t see this channel. Keep it kind
+              anyway: screenshots travel faster than a throw to first.
+            </p>
+            {!saveMe.on && (
+              <button
+                onClick={() =>
+                  void saveMe
+                    .set(true)
+                    .then(() => toast("Saved from yourself. Every post asks first."))
+                    .catch((e: unknown) => toast(message(e)))
+                }
+                className="self-start rounded-lg border-2 border-[var(--team)] bg-white px-3 py-2 text-sm font-bold text-[var(--team)]"
+              >
+                🛟 Turn on Save me from myself
+              </button>
+            )}
+          </div>
         )}
         <NotifyBar
           userId={me}
           scopeId={teamId}
-          scopeName={channel === "team" ? `${data.team.name} (Club)` : data.team.name}
-          category={channel === "parents" ? "parents" : "chatter"}
+          scopeName={`${data.team.name} (${CHANNEL_LABEL[channel]})`}
+          category={channel === "parents" ? "parents" : families ? "families" : "chatter"}
         />
         {moderator && reports.length > 0 && (
           <button
@@ -605,7 +669,9 @@ export function Chatter({
         )}
         {loaded && !loadError && posts.length === 0 && (
           <p className="my-6 rounded-xl border-2 border-dashed border-slate-300 bg-white p-4 text-center text-lg">
-            👋 Nobody&apos;s posted yet. Say hi to the team.
+            {families
+              ? "👋 Nobody's posted yet. This one's just for the families. Say hi."
+              : "👋 Nobody's posted yet. Say hi to the team."}
           </p>
         )}
 
@@ -655,8 +721,14 @@ export function Chatter({
           replyAuthor={replyTo ? authorOf(replyTo.authorId, team).name : ""}
           onCancelReply={() => setReplyTo(null)}
           canPostPhotos={settings.photos === "everyone" || moderator}
-          onNewPoll={settings.polls === "everyone" || moderator ? () => setAskingPoll(true) : null}
+          onNewPoll={
+            settings.polls === "everyone" || moderator || families
+              ? () => setAskingPoll(true)
+              : null
+          }
           mentionables={mentionables}
+          placeholder={families ? "Post to the families…" : undefined}
+          confirmSend={(body, photos, gif) => checkPost({ body, photos, gif })}
           onSend={async (body, files, gif, mentions) => {
             const m = await backend();
             const uploaded: ChatterPhoto[] = [];
@@ -768,6 +840,7 @@ export function Chatter({
         {askingPoll && (
           <PollForm
             onSend={async (question, options, multi, anonymous, closesAt) => {
+              if (!(await checkPost({ body: question, poll: true }))) return;
               const m = await backend();
               const id = await m.createPoll(
                 teamId,
@@ -793,6 +866,7 @@ export function Chatter({
           <EditForm
             post={editing}
             onSave={async (body) => {
+              if (!(await checkPost({ body, edit: true }))) return;
               await (await backend()).editPost(editing.id, body);
               setPosts((prev) =>
                 mergePosts(prev, [{ ...editing, body, editedAt: new Date().toISOString() }]),
@@ -806,6 +880,7 @@ export function Chatter({
       <Sheet open={reporting !== null} title="Report a post" onClose={() => setReporting(null)}>
         {reporting && (
           <ReportForm
+            families={reporting.channel === "families"}
             onSend={async (reason, note) => {
               await (await backend()).reportPost(reporting.id, reason, note);
               setReporting(null);
@@ -816,20 +891,39 @@ export function Chatter({
       </Sheet>
 
       <Sheet open={showSettings} title="Chatter settings" onClose={() => setShowSettings(false)}>
-        <Settings
-          value={settings}
-          onChange={async (key, v) => {
-            await (await backend()).setChatterSetting(teamId, key, v);
-            setSettings((prev) => ({ ...prev, [key]: v }));
-            const what = key === "photos" ? "post photos" : "start polls";
-            toast(v === "staff" ? `Only coaches and managers ${what}` : `Everyone can ${what}`);
-          }}
-        />
-        {/* The automatic game day post goes into this Chatter, from Fungo. */}
-        <div className="mt-6">
-          <GameDayPosts team={data.team} />
+        <div className="mb-6 rounded-xl border-2 border-slate-200 p-4">
+          <p className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">
+            Just for me
+          </p>
+          <SaveMeSwitch userId={me} />
         </div>
+        {staff && (
+          <>
+            <p className="mb-3 text-sm font-bold tracking-wide text-slate-600 uppercase">
+              For the whole team
+            </p>
+            <Settings
+              value={settings}
+              onChange={async (key, v) => {
+                await (await backend()).setChatterSetting(teamId, key, v);
+                setSettings((prev) => ({ ...prev, [key]: v }));
+                const what = key === "photos" ? "post photos" : "start polls";
+                toast(v === "staff" ? `Only coaches and managers ${what}` : `Everyone can ${what}`);
+              }}
+            />
+            {/* The automatic game day post goes into this Chatter, from Fungo. */}
+            <div className="mt-6">
+              <GameDayPosts team={data.team} />
+            </div>
+            <p className="mt-6 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
+              🤫 Families also get a Parents channel of their own. Coaches and managers aren&apos;t
+              in it (that&apos;s the point). If a parent reports a post there, the report and the
+              post come to you here.
+            </p>
+          </>
+        )}
       </Sheet>
+      {postCheck.sheet}
 
       {viewer && (
         <PhotoViewer
@@ -871,12 +965,17 @@ function Agree({ onAgree }: { onAgree: () => Promise<void> }) {
       <h2 className="text-2xl font-black">💬 Welcome to Chatter</h2>
       <p className="text-lg">
         Chatter is your team&apos;s chat, for the coaches and parents. Players don&apos;t have
-        accounts, and there are no private messages: everything you post goes to the whole team.
+        accounts, and there are no private messages: everything you post goes to a whole channel
+        (the team, or for families, the Parents channel the coaches aren&apos;t in).
       </p>
       <ul className="flex list-disc flex-col gap-1 pl-6 text-base text-slate-700">
         <li>Keep it about the team, and keep it kind. Kids may be reading over your shoulder.</li>
         <li>Talk to a coach in person about playing time, not in Chatter.</li>
         <li>Coaches and managers can remove posts and pause posting.</li>
+        <li>
+          Worried about your thumbs? Turn on Save me from myself in Chatter&apos;s Settings and
+          every post asks first.
+        </li>
         <li>See something wrong? Tap ⋯ on the post and Report it.</li>
       </ul>
       {error && <p className="rounded-xl bg-red-50 p-3 text-base text-red-900">{error}</p>}
@@ -1168,8 +1267,11 @@ export function Composer({
   onSend,
   placeholder = "Post to the team…",
   mentionables = [],
+  confirmSend,
 }: {
   placeholder?: string;
+  /** Save me from myself: asked before sending; false keeps the words in the box. */
+  confirmSend?: (body: string, photos: number, gif: boolean) => Promise<boolean>;
   disabledReason: string | null;
   offline: boolean;
   replyTo: ChatterPost | null;
@@ -1240,6 +1342,7 @@ export function Composer({
     setBusy(true);
     setError(null);
     try {
+      if (confirmSend && !(await confirmSend(body, files.length, !!gif))) return;
       await onSend(body, files, gif, mentionsIn(body, picked));
       setText("");
       setFiles([]);
@@ -1629,6 +1732,7 @@ export function EditForm({
           setError(null);
           try {
             await onSave(text.trim());
+            setBusy(false);
           } catch (e) {
             setError(message(e));
             setBusy(false);
@@ -1641,7 +1745,14 @@ export function EditForm({
   );
 }
 
-function ReportForm({ onSend }: { onSend: (reason: ReportReason, note: string) => Promise<void> }) {
+function ReportForm({
+  onSend,
+  families = false,
+}: {
+  onSend: (reason: ReportReason, note: string) => Promise<void>;
+  /** A Parents channel post: the coaches will see it with the report. */
+  families?: boolean;
+}) {
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1650,6 +1761,9 @@ function ReportForm({ onSend }: { onSend: (reason: ReportReason, note: string) =
     <div className="flex flex-col gap-3">
       <p className="text-base text-slate-700">
         Reports go to the team&apos;s coaches and managers.
+        {families
+          ? " They can't read the Parents channel, so this post goes with the report and they can take it down."
+          : ""}
       </p>
       <div className="flex flex-col gap-2" role="radiogroup" aria-label="What's wrong">
         {REPORT_REASONS.map((r) => (
@@ -1730,11 +1844,39 @@ function ReportsList({
   return (
     <ul className="flex flex-col gap-3">
       {reports.map((r) => {
-        const post = findPost(r.postId);
+        // A Parents channel post comes with the report (coaches can't read that channel).
+        const post: ChatterPost | null = r.copy
+          ? {
+              ...(findPost(r.postId) ?? {
+                id: r.postId,
+                teamId: "",
+                quotePostId: null,
+                kind: "post",
+                gif: null,
+                mentions: [],
+                reactions: [],
+                club: null,
+                channel: "families",
+                createdAt: r.createdAt,
+                editedAt: null,
+                pinnedAt: null,
+                removedAt: null,
+              }),
+              authorId: r.copy.authorId,
+              body: r.copy.body,
+              photos: r.copy.photos,
+            }
+          : findPost(r.postId);
         return (
           <li key={r.id} className="flex flex-col gap-2 rounded-xl border-2 border-slate-200 p-3">
             <p className="text-sm font-bold text-red-800">🚩 {reasonLabel(r.reason)}</p>
             {r.note && <p className="text-base">“{r.note}”</p>}
+            {r.copy && (
+              <p className="text-sm text-slate-600">
+                🤫 From the Parents channel, which coaches don&apos;t see. Only this post came with
+                the report.
+              </p>
+            )}
             <p className="rounded-xl bg-slate-50 p-2 text-base">
               {post ? (
                 post.removedAt ? (
@@ -2207,6 +2349,8 @@ function PollForm({
               anonymous,
               ends ? new Date(Date.now() + ends * 3_600_000).toISOString() : null,
             );
+            // Still here: they backed out at Save me from myself.
+            setBusy(false);
           } catch (e) {
             setError(message(e));
             setBusy(false);

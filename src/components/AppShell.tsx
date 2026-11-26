@@ -425,7 +425,7 @@ function MenuLinks({
   const unread = useUnread();
   const countFor = (href: string) =>
     href === "/chatter"
-      ? unread.chatter + unread.parents
+      ? unread.chatter + unread.parents + unread.families
       : href === "/coach-chatter"
         ? unread.coach
         : 0;
@@ -692,7 +692,7 @@ export function Loading() {
 /** A red dot on the menu button when Chatter or Coach Chatter has new posts. */
 function MenuDot() {
   const unread = useUnread();
-  if (unread.chatter + unread.parents + unread.coach === 0) return null;
+  if (unread.chatter + unread.parents + unread.families + unread.coach === 0) return null;
   return (
     <span
       aria-label="New posts"

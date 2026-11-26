@@ -5,6 +5,7 @@ import { demoPhotoUrl } from "@/lib/demo/guest";
 import { databaseErrorMessage } from "@/lib/supabase/auth-errors";
 import {
   photoPaths,
+  photosFrom,
   pollFromRow,
   type ChatterPoll,
   type ChatterPollRow,
@@ -150,13 +151,15 @@ export async function markRead(teamId: string, channel: ChatterChannel = "team")
 }
 
 /** New posts by others in each channel. */
-export async function unreadCounts(teamId: string): Promise<{ team: number; parents: number }> {
+export async function unreadCounts(
+  teamId: string,
+): Promise<{ team: number; parents: number; families: number }> {
   const { data, error } = await getBrowserSupabase().rpc("chatter_unread_channels", {
     p_team: teamId,
   });
   fail(error);
-  const row = (data as { team: number; parents: number }[] | null)?.[0];
-  return { team: row?.team ?? 0, parents: row?.parents ?? 0 };
+  const row = (data as { team: number; parents: number; families?: number }[] | null)?.[0];
+  return { team: row?.team ?? 0, parents: row?.parents ?? 0, families: row?.families ?? 0 };
 }
 
 /** Everyone who can post in the team's Team channel (its members and the club's admins). */
@@ -346,13 +349,15 @@ export interface ChatterReport {
   reason: ReportReason;
   note: string | null;
   createdAt: string;
+  /** A reported Parents channel post, which the coaches can't read otherwise: who and what. */
+  copy: { authorId: string | null; body: string; photos: ChatterPhoto[] } | null;
 }
 
 /** Open reports on the team (coaches and managers). */
 export async function openReports(teamId: string): Promise<ChatterReport[]> {
   const { data, error } = await getBrowserSupabase()
     .from("chatter_report")
-    .select("id, post_id, reason, note, created_at")
+    .select("id, post_id, reason, note, created_at, channel, post_author, post_body, post_photos")
     .eq("team_id", teamId)
     .is("resolved_at", null)
     .order("created_at", { ascending: false });
@@ -364,6 +369,10 @@ export async function openReports(teamId: string): Promise<ChatterReport[]> {
       reason: ReportReason;
       note: string | null;
       created_at: string;
+      channel: string | null;
+      post_author: string | null;
+      post_body: string | null;
+      post_photos: unknown;
     }[]
   ).map((r) => ({
     id: r.id,
@@ -371,6 +380,14 @@ export async function openReports(teamId: string): Promise<ChatterReport[]> {
     reason: r.reason,
     note: r.note,
     createdAt: r.created_at,
+    copy:
+      r.channel === "families"
+        ? {
+            authorId: r.post_author,
+            body: r.post_body ?? "",
+            photos: photosFrom(r.post_photos),
+          }
+        : null,
   }));
 }
 

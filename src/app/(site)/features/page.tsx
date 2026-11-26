@@ -40,11 +40,16 @@ const GROUPS: { icon: string; title: string; items: [string, string][] }[] = [
         "Chatter, your team's own chat:",
         "posts, photos, polls, GIFs, @tags and reactions, with a buzz on every phone.",
       ],
-      ["Adults only, no private messages.", "Coaches can pin, pause and remove."],
       [
-        "Club posts and Coach Chatter",
-        "for directors who'd rather post once than twelve times.",
+        "Team, Club and Parents channels.",
+        "The parents-only group every team makes anyway, built in. Coaches can't see it.",
       ],
+      [
+        "Save me from myself.",
+        "Every post asks “are you sure?” first, and shows who's about to read it.",
+      ],
+      ["Adults only, no private messages.", "Coaches can pin, pause and remove."],
+      ["Club posts and Coach Chatter", "for directors who'd rather post once than twelve times."],
       [
         "Retire the app that rhymes with Droop Me.",
         "No bots to set up. No “Unknown number liked a message.”",

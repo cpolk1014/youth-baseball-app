@@ -9,6 +9,7 @@
 ---
 
 > **Voice, draft 3 (2026-11-05): loose, bleacher humor.** The live pages in `src/app/(site)/` are now the source of truth for the exact copy. Rules:
+>
 > - Say "youth baseball", never "travel ball" (user's call, 2026-11-08). Talk like a youth baseball insider: 7 a.m. games, the group chat, "what time do we play?", napkin math at the hotel breakfast, the dad who counts innings. Wry and affectionate, never mean, and never a joke at a real kid's expense.
 > - Short lines. Fragments are fine. One joke per block, then the real information.
 > - Craig is a software developer as well as a 7U coach: "built an app instead of complaining."
@@ -20,10 +21,11 @@
 **Recommended (updated 2026-11-05):** **Fungo: Youth baseball's AI assistant coach.** (Was: AI-powered youth baseball.)
 
 Alternatives to test:
-- *The AI assistant coach for travel ball.*
-- *AI-powered travel baseball. Built by a coach.*
-- *Your AI dugout assistant.*
-- *Youth baseball, run by AI. Coached by you.*
+
+- _The AI assistant coach for travel ball._
+- _AI-powered travel baseball. Built by a coach._
+- _Your AI dugout assistant._
+- _Youth baseball, run by AI. Coached by you._
 
 The tagline goes under the logo in the top bar, in the hero eyebrow, in Google titles and social previews, and in the footer.
 
@@ -31,10 +33,11 @@ The tagline goes under the logo in the top bar, in the hero eyebrow, in Google t
 
 ## Shared: top bar and footer
 
-**Top bar:** [Fungo logo] *AI-powered youth baseball* · Features · AI · Pricing · Clubs · Parents · Our story · **Sign in** · **[Start your free 14-day trial]**
+**Top bar:** [Fungo logo] _AI-powered youth baseball_ · Features · AI · Pricing · Clubs · Parents · Our story · **Sign in** · **[Start your free 14-day trial]**
 (On phones: logo, **Start free trial**, and a ☰ menu.)
 
 **Footer:**
+
 - **Fungo.** AI-powered youth baseball.
 - Product: Features · AI · Pricing · Clubs · Parents
 - Company: Our story · Contact [support@fungo.team] · Privacy · Terms
@@ -48,29 +51,33 @@ The tagline goes under the logo in the top bar, in the hero eyebrow, in Google t
 **Description (Google):** Snap your schedule and AI adds every game. Get practice plans for your age group and fair lineups in two minutes. Built by a travel ball coach. Free 14-day trial.
 
 ### Section 1: Hero
+
 **Eyebrow:** AI-powered youth baseball · 7U–14U travel & select
 
 # Your AI assistant coach.
 
 **Subhead:** Snap a picture of your schedule and AI adds every game. Tell it what your team needs and it plans every practice. Then get a fair lineup in two minutes. You coach. Fungo handles the rest.
 
-**[Start your free 14-day trial]** &nbsp; *See AI in action ↓*
+**[Start your free 14-day trial]** &nbsp; _See AI in action ↓_
 
 **Under the button:** 14 days of everything for your first team, AI included. No credit card.
 
 [Visual: a phone showing a photo of a tournament schedule turning into a list of games ("AI found 6 games") in front of a laptop with the Home dashboard. Both from the demo team.]
 
 **Alternative headlines to test:**
-- *AI-powered youth baseball. Built by a coach.*
-- *Snap the schedule. AI does the rest.*
-- *Spend your time coaching, not organizing.*
+
+- _AI-powered youth baseball. Built by a coach._
+- _Snap the schedule. AI does the rest._
+- _Spend your time coaching, not organizing._
 
 ### Section 2: The anchor (in place of logos)
+
 **Built by a travel ball dad who coaches, and put AI to work on the parts coaches hate.**
 Seven years in the travel ball grind, three as a head coach, four as the team's GameChanger guy.
-*Craig, founder & 7U head coach* &nbsp; → [Read the story](/story)
+_Craig, founder & 7U head coach_ &nbsp; → [Read the story](/story)
 
 ### Section 3: The problem
+
 ## Coaching takes two hours a week. Running the team takes ten.
 
 - **Typing** a 40-game schedule into a spreadsheet, one game at a time.
@@ -82,6 +89,7 @@ Seven years in the travel ball grind, three as a head coach, four as the team's 
 **What if most of that just... got done for you?**
 
 ### Section 4: AI that does the busywork (the "magic" cards)
+
 ## Point your phone at it. AI handles it.
 
 **📸 Snap the schedule, and AI adds every game**
@@ -110,15 +118,16 @@ Snap the uniform flyer, and AI lists every combo: shirt, pants, hat, belt and so
 **[See everything AI does →](/ai)**
 
 ### Section 5: Smart where it counts
+
 ## AI clears your plate. The smart engine runs your game.
 
 **⚾ Fair lineups in two minutes**
-Tap Auto-fill. Fungo's smart lineup engine builds every inning to your fair-play rules: no one sits twice before everyone's sat, everyone plays the infield, and pitchers and catchers stay in your limits. *Why this lineup?* explains every spot.
+Tap Auto-fill. Fungo's smart lineup engine builds every inning to your fair-play rules: no one sits twice before everyone's sat, everyone plays the infield, and pitchers and catchers stay in your limits. _Why this lineup?_ explains every spot.
 
 **📣 Game day on autopilot**
-The game day post lands in your team's Chatter automatically: opponent, field, time, *arrive by* and uniform.
+The game day post lands in your team's Chatter automatically: opponent, field, time, _arrive by_ and uniform.
 
-**💬 Your team chat, under your own roof.** Chatter has posts, photos, polls, GIFs and @tags, with a buzz on every phone. Adults only, no private messages. Go ahead and delete the group chat that rhymes with Droop Me. We won't tell.
+**💬 Every group chat, under one roof.** Chatter has a Team channel, a Club channel for club teams, and a Parents channel the coaches can't see (the one somebody was going to make at 11 PM anyway). Posts, photos, polls, GIFs and a buzz on every phone. Plus Save me from myself, an "are you sure?" before every post. Delete both group chats that rhyme with Droop Me. We won't tell.
 
 **🏁 "What time do we play tomorrow?"**
 Every way your seed can still land, with the game time for each and what has to happen. Worked out from the real scores and the tournament's tie-breakers.
@@ -127,6 +136,7 @@ Every way your seed can still land, with the game time for each and what has to 
 Fees split across the roster, payments, expenses and receipts. Every family knows what they owe.
 
 ### Section 6: How it works
+
 ## From zero to game ready in one evening.
 
 1. **Add your roster** and invite your coaches and parents with a link.
@@ -136,6 +146,7 @@ Fees split across the roster, payments, expenses and receipts. Every family know
 **[Start your free 14-day trial]**
 
 ### Section 7: The story (deep dive)
+
 ## "I put AI on everything I hated about running a team."
 
 > "My stepson and my nephew started travel ball at 7. They're 14 now. I've been the GameChanger guy, the dad in the bleachers, and for three years the head coach of a 7U team.
@@ -149,23 +160,27 @@ Fees split across the roster, payments, expenses and receipts. Every family know
 **[Read the whole story →](/story)**
 
 ### Section 8: Pricing preview
+
 ## Start free. Turn on the AI when you're ready.
 
-| **Free** | **Team** | **Club** |
-|---|---|---|
-| **$0** forever | **$129** per season | **$99** per team per season |
+| **Free**                                                                                           | **Team**                                                                                                                                                                                                          | **Club**                                                                                                     |
+| -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **$0** forever                                                                                     | **$129** per season                                                                                                                                                                                               | **$99** per team per season                                                                                  |
 | The smart lineup engine, Auto-fill, fair-play rules, lineup cards, playing time, plays and quizzes | **Every AI tool:** schedule import, practice plans, tournament reading, typed rules, walk-up songs and announcer, and the uniform reader. Plus team chat with game day posts, team money and tournament standings | Everything in Team for every team in your club, plus a club dashboard, your club's look and a shared library |
-| [Get started free] | **[Start your free 14-day trial]** | [Start a club] |
+| [Get started free]                                                                                 | **[Start your free 14-day trial]**                                                                                                                                                                                | [Start a club]                                                                                               |
 
 **Under the grid:** Your first team gets 14 days of everything, AI included (one free trial per coach). No credit card. If you don't renew, nothing is deleted.
 **[See full pricing →](/pricing)**
 
 ### Section 9: Final call to action
+
 [Full-width band in Fungo navy with the crimson accent]
+
 ## Let AI run the busywork. You coach the kids.
+
 Snap your schedule tonight. Have a fair lineup before first pitch.
 **[Start your free 14-day trial]**
-*14 days of everything for your first team · No credit card · Works on any phone*
+_14 days of everything for your first team · No credit card · Works on any phone_
 
 ---
 
@@ -175,18 +190,24 @@ Snap your schedule tonight. Have a fair lineup before first pitch.
 **Description:** Fungo's AI reads your schedules, tournament screenshots and box scores, plans age-appropriate practices, turns plain-English rules into lineup rules, and makes walk-up songs.
 
 # AI-powered youth baseball.
+
 The work behind a travel team, from schedules to practice plans to tournament weekends, done by AI and checked by you.
 
-**[Start your free 14-day trial]** &nbsp; *Every AI tool is included in the trial.*
+**[Start your free 14-day trial]** &nbsp; _Every AI tool is included in the trial._
 
 ### 1. AI schedule import
+
 ## Snap it. Don't type it.
+
 Upload a photo, screenshot, PDF, CSV or spreadsheet of any schedule: your season, a league calendar, the practice field rotation. AI pulls out every game and practice (dates, times, opponents, places) and shows you the list to check before anything is added.
 No more typing in 40 games one at a time.
 
 ### 2. AI practice plans
+
 ## A season of practices, planned for your age group.
+
 Tell Fungo what you want this season, in your own words. AI plans **every upcoming practice**:
+
 - drills that fill the exact time you have
 - the situations to work on, from our library of 57 animated plays
 - a focus and a fun theme for each day
@@ -195,35 +216,47 @@ Tell Fungo what you want this season, in your own words. AI plans **every upcomi
 You review each one before saving. AI never gets your players' names.
 
 ### 3. AI tournament reader
+
 ## Tournament weekends, read for you.
+
 Screenshot it and AI reads it:
+
 - **the event page:** dates, fields and every team in your division
 - **the pool schedule and bracket:** every game, and updates show only what changed
 - **the tie-breaker rules:** saved by name ("2D Tiebreak") to reuse at that organization's next event
 - **the results page:** scores for every game, matched to your schedule.
 
-Then Fungo's smart engine runs the standings and answers ***What time do we play tomorrow?***
+Then Fungo's smart engine runs the standings and answers _**What time do we play tomorrow?**_
 
 ### 4. Rules in plain English
+
 ## Just say what you want.
+
 Type a lineup rule the way you'd say it to an assistant coach. AI turns it into a rule Fungo can follow, asks if anything's unclear, and checks it against your roster before you save it.
 
 ### 5. AI walk-up songs & announcer
+
 ## Every kid gets a big-league moment.
+
 - **AI songs** in the style and vibe you pick, chanting the kid's name and number if you want.
 - **AI lyrics:** pick a theme and get three kid-safe, original options to edit.
-- **A stadium announcer** calling *"Now batting… number seven…"*, said exactly the way the family wants.
-Parents set up their own kid's walk-up, and the coach approves it.
+- **A stadium announcer** calling _"Now batting… number seven…"_, said exactly the way the family wants.
+  Parents set up their own kid's walk-up, and the coach approves it.
 
 ### 6. AI uniform reader
+
 ## The flyer becomes your uniform list.
+
 Snap or upload the uniform flyer. AI lists every combo, ready to pick for each game.
 
 ### 7. AI box score reader (for coaches)
+
 ## One upload. Everyone's stats and pitch counts.
-After the game, the coach uploads GameChanger's box score. AI reads **every kid's line**, matched to the roster by jersey number and name. Competitive lineups get game-by-game numbers (and spot who's hot), and each family sees only their own kid's line and pitch count. *(Part of the team's season. Families get their kid's line with the Player pass.)*
+
+After the game, the coach uploads GameChanger's box score. AI reads **every kid's line**, matched to the roster by jersey number and name. Competitive lineups get game-by-game numbers (and spot who's hot), and each family sees only their own kid's line and pitch count. _(Part of the team's season. Families get their kid's line with the Player pass.)_
 
 ### AI you can trust around kids
+
 - **You check everything.** AI shows what it found, and nothing is saved until you confirm.
 - **Only what's needed.** Practice plans never send player names. A box score is read for your own team only, each family sees only their own kid's line, and the file isn't kept.
 - **Your data isn't used to train AI models.** [Confirm against each provider's current terms before publishing.]
@@ -239,11 +272,13 @@ After the game, the coach uploads GameChanger's box score. AI reads **every kid'
 **Description:** AI-powered youth baseball: AI schedule import and practice plans, a smart fair-play lineup engine, team chat with game day posts, team money, tournaments and walk-up songs.
 
 # Everything your season runs on. AI where it saves you time.
+
 From the first practice to the last bracket game. Built for the dugout: big buttons, sunlight-bright, one hand.
 
 **[Start your free 14-day trial]**
 
-### ✨ AI tools *(Team and Club plans, and every trial)*
+### ✨ AI tools _(Team and Club plans, and every trial)_
+
 - **AI schedule import:** photos, PDFs, spreadsheets.
 - **AI practice plans** for your age group.
 - **AI tournament reader:** event pages, schedules, brackets, tie-breakers and results.
@@ -251,22 +286,28 @@ From the first practice to the last bracket game. Built for the dugout: big butt
 - **AI walk-up songs, lyrics and announcer.**
 - **AI uniform flyer reader.**
 - **AI box score reader:** every kid's line and pitch count from one upload.
-[See how each one works →](/ai)
+  [See how each one works →](/ai)
 
 ### Lineups & fair play
+
 ## The smart lineup engine.
+
 - **Auto-fill** builds every inning to your rules, and **Undo** is one tap away.
-- **Fair-play rules:** max innings on the bench, everyone plays the infield, nobody sits twice before everyone's sat once, pitcher and catcher limits. Set each to *Must*, *Warn* or *Off*.
+- **Fair-play rules:** max innings on the bench, everyone plays the infield, nobody sits twice before everyone's sat once, pitcher and catcher limits. Set each to _Must_, _Warn_ or _Off_.
 - **Why this lineup?** The reasons behind every spot.
 - **Season playing time:** innings by player, infield vs. outfield vs. bench, fair to kids who miss games.
 - **Competitive mode:** a batting order and positions built from your GameChanger stats.
 - **The lineup card** printed for the umpire, and the batting order as a picture in team colors.
 
 ### Game day
-- **Game day posts in Chatter,** sent automatically with the field, time, *arrive by* and uniform.
+
+- **Game day posts in Chatter,** sent automatically with the field, time, _arrive by_ and uniform.
 
 ### 💬 Team chat
+
 - **Chatter, your team's own chat:** posts, photos, polls, GIFs, @tags and reactions, with a buzz on every phone.
+- **Team, Club and Parents channels.** The parents-only group every team makes anyway, built in. Coaches can't see it.
+- **Save me from myself.** Every post asks "are you sure?" first, and shows who's about to read it.
 - **Adults only, no private messages.** Coaches can pin, pause and remove.
 - **Club posts and Coach Chatter** for directors who'd rather post once than twelve times.
 - **Retire the app that rhymes with Droop Me.** No bots to set up. No "Unknown number liked a message."
@@ -275,6 +316,7 @@ From the first practice to the last bracket game. Built for the dugout: big butt
 - **Works with no signal** on the back field.
 
 ### Tournaments
+
 - **AI reads the event, schedule, bracket, tie-breakers and results.**
 - **Parents add scores** from the bleachers.
 - **Smart standings** with the real tie-breakers.
@@ -282,18 +324,22 @@ From the first practice to the last bracket game. Built for the dugout: big butt
 - **Lock the seeds,** fill the bracket and post it to the team.
 
 ### Team money
+
 - Fees split across the roster, single charges, expenses with receipts, payments and credits.
 - Installments with due dates, and family balances at a glance.
 
 ### Practice & development
+
 - **AI practice plans,** or build your own from the drill library.
-- **57 animated plays:** *Where do I go?* for every position, with quizzes and homework.
+- **57 animated plays:** _Where do I go?_ for every position, with quizzes and homework.
 
 ### Gameday PA
+
 - **AI walk-ups and announcer,** or upload songs and trim them on your phone.
 - **A soundboard** of organ tunes and effects. Any parent can run the PA.
 
 ### Built right for youth sports
+
 - **Private by design:** coaches see the team, parents see their kids, and families' stats stay with the family.
 - **No private messaging with kids, ever.**
 - **We collect as little about players as we can,** and we never sell data.
@@ -308,15 +354,17 @@ From the first practice to the last bracket game. Built for the dugout: big butt
 **Description:** Fungo's smart lineup engine is free forever. Every AI tool, plus team chat, team money and tournaments, is $129 a season per team, or $99 per team for clubs. 14-day free trial.
 
 # Simple pricing. AI included.
+
 Start free. Try every AI tool for 14 days on your first team. Pay once a season, never automatically.
 
 ### Plans
 
 **Free: $0 forever**
 The smart basics for any team:
+
 - Roster and invites for coaches and parents
 - Games and practices added by hand
-- **The smart lineup engine:** Auto-fill, fair-play rules and *Why this lineup?*
+- **The smart lineup engine:** Auto-fill, fair-play rules and _Why this lineup?_
 - Printable lineup cards and the batting order picture
 - Season playing time and charts
 - 57 animated plays and quizzes
@@ -325,8 +373,9 @@ The smart basics for any team:
 
 **[Get started free]**
 
-**Team: $129 per season** &nbsp; *(most popular)*
+**Team: $129 per season** &nbsp; _(most popular)_
 Everything in Free, plus **every AI tool**:
+
 - ✨ AI schedule import
 - ✨ AI practice plans for your age group
 - ✨ AI tournament reader (event, schedule, bracket, tie-breakers, scores)
@@ -335,16 +384,18 @@ Everything in Free, plus **every AI tool**:
 - ✨ AI uniform reader
 
 And the tools that run your season:
-- Chatter: team chat, polls, photos and automatic game day posts
+
+- Chatter: Team and Parents channels, polls, photos and automatic game day posts
 - Team money: fees, payments, expenses, receipts
 - Tournament standings and "What time do we play tomorrow?"
 - GameChanger stats import and competitive lineups
 - Plays homework for families
 
 **[Start your free 14-day trial]**
-*One team, through July 31. Starting in January? Spring is $89.*
+_One team, through July 31. Starting in January? Spring is $89._
 
 **Club: $99 per team, per season**
+
 - Everything in Team, AI included, for every team that joins
 - **Club dashboard:** every team's record, next game and latest lineup
 - **Your club's look** and club uniforms
@@ -358,12 +409,14 @@ And the tools that run your season:
 [See the Player pass](/parents)
 
 ### Low risk, built in
+
 - **14 days of everything for your first team,** AI included. No credit card.
 - **Nothing renews by itself.** You choose to pay each season.
 - **Nothing is ever deleted.** If you don't renew, everything stays and the paid tools pause.
 - [If adopted: **Not right for your team?** Full refund within 14 days.]
 
 ### FAQ
+
 **What does the AI actually do?**
 It reads things so you don't have to type them (rosters, schedules, tournament pages and brackets, tie-breaker rules, results, uniform flyers and box scores). It turns rules you type into lineup rules, plans age-appropriate practices, and makes walk-up songs and announcer calls. You check everything before it's saved. [See the AI page](/ai).
 
@@ -377,7 +430,7 @@ August 1 to July 31, for teams, clubs and the Player pass alike. Paid features k
 Pay for the season you'll play. Sign up any time from August through December and $129 covers fall and spring. Starting in January? Spring is $89 for a team, January through July. Clubs pay $99 a team and the Player pass is the same price all season. From June 1 you buy next season instead, and the rest of this one is on the house.
 
 **Do parents have to pay?**
-No. Parents use Fungo free with your team. *The Player pass* (highlight reels, pitch count and stats) is an optional add-on for their own child.
+No. Parents use Fungo free with your team. _The Player pass_ (highlight reels, pitch count and stats) is an optional add-on for their own child.
 
 **What happens after the free trial?**
 Free features keep working. AI and other paid tools pause, and everything you made stays. Renew at any time.
@@ -401,13 +454,15 @@ AI only sees what a feature needs. Practice plans get no player names, and each 
 **Description:** Give every coach in your club AI schedule import, AI practice plans, fair lineups, team chat and tournaments, with a club dashboard, club colors and a shared library. $99 per team.
 
 # Give every coach in your club an AI assistant.
+
 One code per team. Every coach gets Fungo's full Team plan, AI included, and you get the whole club at a glance.
 
-**[Start a club]** &nbsp; *Free to set up · Pay when your teams are ready*
+**[Start a club]** &nbsp; _Free to set up · Pay when your teams are ready_
 
 [Visual: the club dashboard with several teams, in club colors]
 
 ### Why clubs choose Fungo
+
 **✨ AI for every coach**
 Schedule import, age-appropriate practice plans and the tournament reader, for your volunteer coaches who don't have time to type schedules or plan drills.
 
@@ -427,12 +482,13 @@ Post once to Coach Chatter and to any or all of your teams' Chatter. Rainout? Do
 Club admins can **view** lineups, playing time, rules and team stats while a team holds your code, and never change them. Team money, parents and families' own stats stay private.
 
 ### How it works
+
 1. **Start your club.** Free, in two minutes.
 2. **Buy codes:** $99 per team, through July 31.
 3. **Send each coach their code.** Their team joins your club, AI and all, and keeps its own data.
 
 **[Start a club]**
-*Have 10 or more teams? [Contact us](mailto:[support@fungo.team]).*
+_Have 10 or more teams? [Contact us](mailto:[support@fungo.team])._
 
 ---
 
@@ -442,35 +498,56 @@ Club admins can **view** lineups, playing time, rules and team stats while a tea
 **Description:** Turn your clips into highlight reels with a stadium announcer, and keep a pitch count that follows your kid to every team, lesson and bullpen, with Pitch Smart rest days. Free with your team; the Player pass is $19 a season.
 
 # Highlight reels that look like TV. A pitch count that follows their arm.
+
 Turn the clip you filmed from the fence into a highlight with your kid's name on screen and a stadium announcer. Count every pitch, at every game, lesson and bullpen, for every team, and know when they can pitch again. The Player pass is $19 a season; everything else for parents is free with your team.
 **[Get the Player pass]** · [How the pitch count works]
 [Visual: the Pine Tar phone behind the live pitch counter phone]
 
 ### ✨ Pine Tar Productions
+
 ## Your kid's highlight reel. Network quality. Bleacher budget.
+
 (As before: AI writes the call, name and number on screen, slow-mo replay, made and saved on your phone.) Part of the Player pass, $19 a season.
 
 ### Pitch count · Player pass
+
 ## Their arm doesn't care which team they pitched for.
+
 Saturday for the travel team, Tuesday for the rec team, a lesson on Thursday. No coach sees all of it. You do. Fungo adds it up and tells you when they can pitch again.
+
 - **Count it as it happens:** big Ball and Strike buttons, one thumb, from the bleachers. Or type the total after.
 - **Every session:** games, practice bullpens, pitching lessons, and the Saturday they subbed for another team.
 - **Rest days, figured out:** MLB and USA Baseball's Pitch Smart limits for their age. "55 pitches Saturday: rest until Wednesday." A bullpen on a rest day gets flagged.
 - **The coach's count lands for you:** when the coach adds the game's box score, the count shows up to approve. Already logged it? You pick which to keep.
 - **Follows them everywhere:** every team, every season. Private to your family.
-*Pitch Smart is a guide; your league's rules may be stricter.*
+  _Pitch Smart is a guide; your league's rules may be stricter._
 
 ### Free with your team: know where to be, what to wear and what you owe
+
 Without asking the group chat. Your coach sends the link.
-- **When and where:** every game and practice, with *arrive by*, the field and one-tap directions.
+
+- **When and where:** every game and practice, with _arrive by_, the field and one-tap directions.
 - **What to wear:** the uniform for each game.
 - **What you owe:** your family's balance and due dates.
-- **Tournament weekends:** live standings and *What time do we play tomorrow?*
+- **Tournament weekends:** live standings and _What time do we play tomorrow?_
 - **Your player's walk-up song** at every game (made with AI if your team's plan includes it, or upload your own), approved by the coach.
 - **Homework:** watch the assigned plays and take the quiz together.
 
+### Free with your team: the Parents channel
+
+## The parents-only group chat. Minus the second app.
+
+Every team ends up with two group chats: the official one, and the one somebody made at 11 PM without the coaches. Chatter has both, one tap apart.
+
+- **A Parents channel:** just the families. Coaches and managers aren't in it and can't see it. Carpools, snack duty, the team gift, and who's bringing the good chairs.
+- **The Team channel** for everyone, coaches included, and a Club channel when your team plays for a club.
+- **Save me from myself:** turn it on and every post asks "are you sure?" first, with who's about to read it. For thumbs that run faster than the brain after a 14–2 loss.
+- **Notifications say which channel,** and tapping one opens the right tab.
+
 ### ✨ Also in the Player pass
+
 ## Their stats, straight from the coach's box score.
+
 - **Nothing to upload:** when the coaches add a game's GameChanger box score, your player's line shows up.
 - **Season totals:** AVG, OBP, SLG, OPS and pitching, plus every game.
 - **Trends** that show how they're improving.
@@ -511,19 +588,19 @@ Youth baseball should be about the kids. AI gives me my time back to coach them.
 Founder, Fungo · 7U head coach
 
 **[Start your free 14-day trial]**
-*Questions or ideas? I read every email: [support@fungo.team]*
+_Questions or ideas? I read every email: [support@fungo.team]_
 
 ---
 
 # Button and microcopy bank
 
-| Where | Copy |
-|---|---|
-| Tagline | **Youth baseball's AI assistant coach** |
-| Main CTA | **Start your free 14-day trial** |
-| Short CTA (phones, top bar) | **Start free trial** |
-| Club CTA | **Start a club** |
-| Free plan | **Get started free** |
-| Parents' add-on | **Get the Player pass** |
-| Under main CTAs | 14 days of everything for your first team, AI included · No credit card |
-| AI labels | ✨ before every AI feature name, everywhere |
+| Where                       | Copy                                                                    |
+| --------------------------- | ----------------------------------------------------------------------- |
+| Tagline                     | **Youth baseball's AI assistant coach**                                 |
+| Main CTA                    | **Start your free 14-day trial**                                        |
+| Short CTA (phones, top bar) | **Start free trial**                                                    |
+| Club CTA                    | **Start a club**                                                        |
+| Free plan                   | **Get started free**                                                    |
+| Parents' add-on             | **Get the Player pass**                                                 |
+| Under main CTAs             | 14 days of everything for your first team, AI included · No credit card |
+| AI labels                   | ✨ before every AI feature name, everywhere                             |

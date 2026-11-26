@@ -3154,4 +3154,106 @@ select pg_temp.expect((select count(*) from public.demo_persona d join auth.user
 select pg_temp.expect(not exists (select 1 from public.athlete_guardian g join public.demo_persona d on d.user_id = g.user_id),
   'and the kid records they were linked to are gone');
 
+-- ── Chatter's Parents channel (families only, no coaches) ──
+reset role;
+insert into auth.users (id, email) values
+  ('f1f1f1f1-0000-4000-8000-000000000001', 'fam-coach@example.test'),
+  ('f1f1f1f1-0000-4000-8000-000000000002', 'fam-parent1@example.test'),
+  ('f1f1f1f1-0000-4000-8000-000000000003', 'fam-parent2@example.test'),
+  ('f1f1f1f1-0000-4000-8000-000000000004', 'fam-treasurer@example.test');
+insert into public.team (id, name, age_group, free_until, free_kind) values
+  ('f1f1f1f1-0000-4000-8000-0000000000aa', 'Parents Test 9U', '9U', current_date + 14, 'trial');
+insert into public.member (team_id, user_id, role) values
+  ('f1f1f1f1-0000-4000-8000-0000000000aa', 'f1f1f1f1-0000-4000-8000-000000000001', 'coach'),
+  ('f1f1f1f1-0000-4000-8000-0000000000aa', 'f1f1f1f1-0000-4000-8000-000000000002', 'parent'),
+  ('f1f1f1f1-0000-4000-8000-0000000000aa', 'f1f1f1f1-0000-4000-8000-000000000003', 'parent'),
+  ('f1f1f1f1-0000-4000-8000-0000000000aa', 'f1f1f1f1-0000-4000-8000-000000000004', 'treasurer');
+insert into public.player (id, team_id, name) values
+  ('f1f1f1f1-0000-4000-8000-0000000000b1', 'f1f1f1f1-0000-4000-8000-0000000000aa', 'Mason Test');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'f1f1f1f1-0000-4000-8000-000000000001', false);
+select public.agree_chatter('f1f1f1f1-0000-4000-8000-0000000000aa');
+select pg_temp.expect(not public.chatter_in('f1f1f1f1-0000-4000-8000-0000000000aa', 'families'), 'coaches aren''t in the Parents channel');
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body, channel)
+  values ('f1f1f1f1-0000-4000-8000-0000000000aa', 'f1f1f1f1-0000-4000-8000-000000000001', 'Sneaking in', 'families');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: coaches can''t post in the Parents channel';
+end $$;
+select set_config('request.jwt.claim.sub', 'f1f1f1f1-0000-4000-8000-000000000003', false);
+select public.agree_chatter('f1f1f1f1-0000-4000-8000-0000000000aa');
+select set_config('request.jwt.claim.sub', 'f1f1f1f1-0000-4000-8000-000000000002', false);
+select public.agree_chatter('f1f1f1f1-0000-4000-8000-0000000000aa');
+insert into public.chatter_post (id, team_id, author_id, body, channel) values
+  ('f1f1f1f1-0000-4000-8000-0000000000c1', 'f1f1f1f1-0000-4000-8000-0000000000aa',
+   'f1f1f1f1-0000-4000-8000-000000000002', 'Who has snacks Saturday?', 'families');
+select pg_temp.expect((select channel from public.chatter_post where id = 'f1f1f1f1-0000-4000-8000-0000000000c1') = 'families', 'a parent posts in the Parents channel');
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body, channel, mentions)
+  values ('f1f1f1f1-0000-4000-8000-0000000000aa', 'f1f1f1f1-0000-4000-8000-000000000002', 'Hey @coaches', 'families', '{coaches}');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: no @coaches in the Parents channel';
+end $$;
+do $$ begin
+  insert into public.chatter_post (team_id, author_id, body, channel, mentions)
+  values ('f1f1f1f1-0000-4000-8000-0000000000aa', 'f1f1f1f1-0000-4000-8000-000000000002', 'Hey coach', 'families', '{f1f1f1f1-0000-4000-8000-000000000001}');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: no tagging a coach in the Parents channel';
+end $$;
+create temp table fam_poll as select public.create_chatter_poll('f1f1f1f1-0000-4000-8000-0000000000aa',
+  'Pizza or tacos?', array['Pizza', 'Tacos'], false, false, null, 'families') as id;
+select pg_temp.expect(exists (select 1 from public.chatter_poll where post_id = (select id from fam_poll)), 'parents start polls in the Parents channel');
+do $$ begin
+  perform public.pin_chatter_post('f1f1f1f1-0000-4000-8000-0000000000c1', true);
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: nobody pins in the Parents channel';
+end $$;
+select set_config('request.jwt.claim.sub', 'f1f1f1f1-0000-4000-8000-000000000003', false);
+select pg_temp.expect((select families from public.chatter_unread_channels('f1f1f1f1-0000-4000-8000-0000000000aa')) = 2, 'the other parent has 2 unread in Parents');
+select public.mark_chatter_channel_read('f1f1f1f1-0000-4000-8000-0000000000aa', 'families');
+select pg_temp.expect((select families from public.chatter_unread_channels('f1f1f1f1-0000-4000-8000-0000000000aa')) = 0, 'reading the Parents channel clears it');
+select public.report_chatter_post('f1f1f1f1-0000-4000-8000-0000000000c1', 'mean', null);
+select set_config('request.jwt.claim.sub', 'f1f1f1f1-0000-4000-8000-000000000004', false);
+select pg_temp.expect(not public.chatter_in('f1f1f1f1-0000-4000-8000-0000000000aa', 'families'), 'a treasurer with no kid on the team isn''t in Parents');
+select pg_temp.expect((select count(*) from public.chatter_post where team_id = 'f1f1f1f1-0000-4000-8000-0000000000aa' and channel = 'families') = 0, 'and doesn''t see its posts');
+reset role;
+insert into public.player_guardian (player_id, user_id) values
+  ('f1f1f1f1-0000-4000-8000-0000000000b1', 'f1f1f1f1-0000-4000-8000-000000000004');
+set role authenticated;
+select pg_temp.expect(public.chatter_in('f1f1f1f1-0000-4000-8000-0000000000aa', 'families'), 'a treasurer linked to a kid is in Parents');
+select set_config('request.jwt.claim.sub', 'f1f1f1f1-0000-4000-8000-000000000001', false);
+select pg_temp.expect((select count(*) from public.chatter_post where team_id = 'f1f1f1f1-0000-4000-8000-0000000000aa' and channel = 'families') = 0, 'coaches don''t see Parents posts');
+select pg_temp.expect((select families from public.chatter_unread_channels('f1f1f1f1-0000-4000-8000-0000000000aa')) = 0, 'coaches have no Parents unread count');
+select pg_temp.expect((select post_body from public.chatter_report where post_id = 'f1f1f1f1-0000-4000-8000-0000000000c1') = 'Who has snacks Saturday?', 'coaches get the words of a reported Parents post');
+select public.remove_chatter_post('f1f1f1f1-0000-4000-8000-0000000000c1');
+reset role;
+select pg_temp.expect((select removed_at is not null from public.chatter_post where id = 'f1f1f1f1-0000-4000-8000-0000000000c1'), 'coaches take down a reported Parents post');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'f1f1f1f1-0000-4000-8000-000000000003', false);
+insert into public.chatter_post (id, team_id, author_id, body, channel) values
+  ('f1f1f1f1-0000-4000-8000-0000000000c2', 'f1f1f1f1-0000-4000-8000-0000000000aa',
+   'f1f1f1f1-0000-4000-8000-000000000003', 'Unreported', 'families');
+select set_config('request.jwt.claim.sub', 'f1f1f1f1-0000-4000-8000-000000000001', false);
+do $$ begin
+  perform public.remove_chatter_post('f1f1f1f1-0000-4000-8000-0000000000c2');
+  raise exception 'should have failed' using errcode = 'T0001';
+exception when insufficient_privilege then raise notice 'ok: coaches can''t remove an unreported Parents post';
+end $$;
+-- Photos in Parents posts stay with the families.
+reset role;
+insert into storage.objects (bucket_id, name) values
+  ('chatter-photos', 'f1f1f1f1-0000-4000-8000-0000000000aa/f1f1f1f1-0000-4000-8000-000000000003/p.jpg');
+update public.chatter_post set photos = '[{"path": "f1f1f1f1-0000-4000-8000-0000000000aa/f1f1f1f1-0000-4000-8000-000000000003/p.jpg", "thumb": "f1f1f1f1-0000-4000-8000-0000000000aa/f1f1f1f1-0000-4000-8000-000000000003/p.jpg", "w": 1, "h": 1}]'
+  where id = 'f1f1f1f1-0000-4000-8000-0000000000c2';
+set role authenticated;
+select pg_temp.expect((select count(*) from storage.objects where name like 'f1f1f1f1-0000-4000-8000-0000000000aa/%') = 0, 'coaches can''t see Parents channel photos');
+select set_config('request.jwt.claim.sub', 'f1f1f1f1-0000-4000-8000-000000000002', false);
+select pg_temp.expect((select count(*) from storage.objects where name like 'f1f1f1f1-0000-4000-8000-0000000000aa/%') = 1, 'parents see them');
+-- Save me from myself is the person's own setting.
+insert into public.profile (user_id, confirm_posts) values ('f1f1f1f1-0000-4000-8000-000000000002', true);
+select pg_temp.expect((select confirm_posts from public.profile where user_id = 'f1f1f1f1-0000-4000-8000-000000000002'), 'a person turns on Save me from myself');
+reset role;
+delete from storage.objects where name like 'f1f1f1f1-0000-4000-8000-0000000000aa/%';
+delete from public.team where id = 'f1f1f1f1-0000-4000-8000-0000000000aa';
+
 \echo ALL RLS TESTS PASSED

@@ -250,8 +250,8 @@ export default function HomePage() {
                   "The game day post drops into your team's Chatter on its own: field, time, arrive by and uniform. Fewer “what time?” texts. Not zero. Never zero.",
                 ],
                 [
-                  "💬 Your team chat, under your own roof",
-                  "Chatter has posts, photos, polls, GIFs and @tags, with a buzz on every phone. Adults only, no private messages. Go ahead and delete the group chat that rhymes with Droop Me. We won't tell.",
+                  "💬 Every group chat, under one roof",
+                  "Chatter has a Team channel, a Club channel for club teams, and a Parents channel the coaches can't see (the one somebody was going to make at 11 PM anyway). Posts, photos, polls, GIFs and a buzz on every phone. Plus Save me from myself, an “are you sure?” before every post. Delete both group chats that rhyme with Droop Me. We won't tell.",
                 ],
                 [
                   "🏁 What time do we play tomorrow?",

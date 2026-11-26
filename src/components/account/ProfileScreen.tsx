@@ -19,6 +19,7 @@ import {
 } from "../kidstats/familyPass";
 import { initials, refreshMe, useMe, useMyTeamClubs } from "./useMe";
 import { NotifySettings } from "./NotifySettings";
+import { SaveMeSwitch } from "../chatter/SaveMe";
 
 const heading = "mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase";
 const card = "rounded-xl border-2 border-slate-200 bg-white p-4";
@@ -391,9 +392,16 @@ export function ProfileScreen() {
       </section>
 
       {mode === "supabase" && data?.me.userId && (
+        <section className="rounded-xl border-2 border-slate-200 bg-white p-4">
+          <h2 className="mb-2 text-sm font-bold tracking-wide text-slate-600 uppercase">Chatter</h2>
+          <SaveMeSwitch userId={data.me.userId} />
+        </section>
+      )}
+
+      {mode === "supabase" && data?.me.userId && (
         <NotifySettings
           userId={data.me.userId}
-          teams={teams.map((t) => ({ id: t.id, name: t.name }))}
+          teams={teams.map((t) => ({ id: t.id, name: t.name, role: t.role }))}
         />
       )}
 

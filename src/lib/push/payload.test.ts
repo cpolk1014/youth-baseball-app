@@ -3,6 +3,7 @@ import {
   boxScoreLine,
   boxScorePush,
   chargesPush,
+  channelPush,
   chatterPush,
   coachPush,
   dayText,
@@ -191,5 +192,38 @@ describe("box score notices", () => {
       { ...ella, unlocked: false },
     ]);
     expect(both.body).toBe("The box score from Sat vs Cubs is in. See how Mason and Ella did.");
+  });
+});
+
+describe("channel posts", () => {
+  const post = { body: "Who's bringing the cooler?" };
+  it("names the channel in the title and opens that tab", () => {
+    const p = channelPush({
+      teamId: "t1",
+      teamName: "10U Canes",
+      channel: "families",
+      from: "Dana",
+      post,
+    });
+    expect(p.title).toBe("10U Canes · Parents");
+    expect(p.body).toBe("Dana: Who's bringing the cooler?");
+    expect(p.url).toBe("/chatter?team=t1&channel=families");
+    expect(p.tag).toBe("chatter-t1-families");
+  });
+  it("calls the stored channels by their names", () => {
+    const at = (channel: string) =>
+      channelPush({ teamId: "t1", teamName: "10U Canes", channel, from: "Fungo", post });
+    expect(at("parents").title).toBe("10U Canes · Team");
+    expect(at("parents").url).toBe("/chatter?team=t1&channel=parents");
+    expect(at("team").title).toBe("10U Canes · Club");
+    expect(at("team").tag).toBe("chatter-t1-team");
+    // Anything else is the team's own channel.
+    expect(at("nope").title).toBe("10U Canes · Team");
+  });
+  it("keeps each channel's notification apart", () => {
+    const tags = ["parents", "team", "families"].map(
+      (channel) => channelPush({ teamId: "t1", teamName: "X", channel, from: "A", post }).tag,
+    );
+    expect(new Set(tags).size).toBe(3);
   });
 });

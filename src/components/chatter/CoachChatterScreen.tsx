@@ -31,6 +31,7 @@ import { Composer, EditForm, PhotoViewer, PostBubble, ReactionPicker } from "./C
 import { preparePhoto } from "./photo";
 import { announce } from "@/lib/push/client";
 import { NotifyBar } from "./NotifyBar";
+import { usePostCheck } from "./SaveMe";
 
 const backend = () => import("@/lib/data/coach-chatter-backend");
 const chatter = () => import("@/lib/data/chatter-backend");
@@ -108,6 +109,7 @@ export function CoachChatterScreen() {
 
 function Feed({ club, me }: { club: CoachClub; me: string }) {
   const clubId = club.id;
+  const postCheck = usePostCheck(me);
   const [posts, setPosts] = useState<ChatterPost[]>([]);
   const [quoted, setQuoted] = useState<Record<string, ChatterPost>>({});
   const [pinned, setPinned] = useState<ChatterPost | null>(null);
@@ -353,6 +355,9 @@ function Feed({ club, me }: { club: CoachClub; me: string }) {
         onCancelReply={() => setReplyTo(null)}
         canPostPhotos
         onNewPoll={null}
+        confirmSend={(body, photos, gif) =>
+          postCheck.confirm({ where: "coach", name: club.name, body, photos, gif })
+        }
         onSend={async (body, files, gif) => {
           const m = await backend();
           const c = await chatter();
@@ -420,6 +425,13 @@ function Feed({ club, me }: { club: CoachClub; me: string }) {
           <EditForm
             post={editing}
             onSave={async (body) => {
+              const ok = await postCheck.confirm({
+                where: "coach",
+                name: club.name,
+                body,
+                edit: true,
+              });
+              if (!ok) return;
               await (await backend()).editPost(editing.id, body);
               setPosts((prev) =>
                 prev.map((p) =>
@@ -440,6 +452,7 @@ function Feed({ club, me }: { club: CoachClub; me: string }) {
           onClose={() => setViewer(null)}
         />
       )}
+      {postCheck.sheet}
     </div>
   );
 }

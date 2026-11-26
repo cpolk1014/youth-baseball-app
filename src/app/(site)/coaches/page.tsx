@@ -67,7 +67,9 @@ export default function CoachesPage() {
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Cta />
-          <span className="text-white/75">14 days of everything for your first team, AI included. No credit card.</span>
+          <span className="text-white/75">
+            14 days of everything for your first team, AI included. No credit card.
+          </span>
         </div>
       </PageHero>
 
@@ -151,6 +153,10 @@ export default function CoachesPage() {
               <Check>
                 <b className={b}>The game day post lands in your team&apos;s Chatter on its own:</b>{" "}
                 field, time, arrive by and uniform. No bot. No Droop Me. Just the post.
+              </Check>
+              <Check>
+                <b className={b}>Parents get a channel of their own</b> in Chatter, without the
+                coaches. Yes, they were going to make one anyway. Now it&apos;s not your problem.
               </Check>
               <Check>
                 <b className={b}>One-tap directions</b> for every family. Yes, even to Field 7.

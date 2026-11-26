@@ -134,6 +134,26 @@ export async function saveMyPhone(userId: string, phone: string | null): Promise
   );
 }
 
+/** Whether I asked to confirm every Chatter post ("Save me from myself"). */
+export async function mySaveMe(userId: string): Promise<boolean> {
+  const r = check<{ confirm_posts: boolean | null } | null>(
+    await getBrowserSupabase()
+      .from("profile")
+      .select("confirm_posts")
+      .eq("user_id", userId)
+      .maybeSingle(),
+  );
+  return r?.confirm_posts === true;
+}
+
+export async function saveMySaveMe(userId: string, on: boolean): Promise<void> {
+  check(
+    await getBrowserSupabase()
+      .from("profile")
+      .upsert({ user_id: userId, confirm_posts: on, updated_at: new Date().toISOString() }),
+  );
+}
+
 /** Save (or, with null, clear) my Venmo handle. */
 export async function saveMyVenmo(userId: string, venmo: string | null): Promise<void> {
   check(

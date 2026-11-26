@@ -973,9 +973,11 @@ export async function signOut(to = "/login"): Promise<void> {
     window.localStorage.removeItem(SNAPSHOT_KEY);
     window.localStorage.removeItem(OUTBOX_KEY);
     window.localStorage.removeItem("rallycap:weather");
-    // Chatter's device copy of each team's feed.
+    // Chatter's device copy of each team's feed, and Save me from myself (the profile keeps it).
     for (const key of Object.keys(window.localStorage)) {
-      if (key.startsWith("rallycap:chatter:")) window.localStorage.removeItem(key);
+      if (key.startsWith("rallycap:chatter:") || key.startsWith("rallycap:save-me:")) {
+        window.localStorage.removeItem(key);
+      }
     }
     for (const key of await caches.keys()) await caches.delete(key);
   } catch {

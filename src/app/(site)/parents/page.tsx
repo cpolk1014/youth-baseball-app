@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import {
   ParentGameDayScreen,
+  ParentsChannelScreen,
   PineTarScreen,
   PitchCounterScreen,
   PitchLogScreen,
@@ -208,6 +209,44 @@ export default function ParentsPage() {
                 White pants or gray?
               </span>
             </div>
+          </div>
+        </div>
+      </Section>
+
+      <Section tone="mist">
+        <div className="grid items-center gap-12 md:grid-cols-2">
+          <div className="md:order-2">
+            <Eyebrow>Free with your team</Eyebrow>
+            <h2 className="mt-3 text-3xl leading-tight font-black tracking-tight text-balance text-[#1B2A4A] md:text-5xl">
+              The parents-only group chat. Minus the second app.
+            </h2>
+            <p className="mt-4 text-lg text-slate-600">
+              Every team ends up with two group chats: the official one, and the one somebody made
+              at 11 PM without the coaches. Chatter has both, one tap apart.
+            </p>
+            <ul className="mt-6 flex flex-col gap-3 text-lg text-slate-700">
+              <Check>
+                <b className="text-[#1B2A4A]">A Parents channel:</b> just the families. Coaches and
+                managers aren&apos;t in it and can&apos;t see it. Carpools, snack duty, the team
+                gift, and who&apos;s bringing the good chairs.
+              </Check>
+              <Check>
+                <b className="text-[#1B2A4A]">The Team channel</b> for everyone, coaches included,
+                and a Club channel when your team plays for a club.
+              </Check>
+              <Check>
+                <b className="text-[#1B2A4A]">Save me from myself:</b> turn it on and every post
+                asks “are you sure?” first, with who&apos;s about to read it. For thumbs that run
+                faster than the brain after a 14–2 loss.
+              </Check>
+              <Check>
+                <b className="text-[#1B2A4A]">Notifications say which channel,</b> and tapping one
+                opens the right tab. No more posting in the wrong chat. Probably.
+              </Check>
+            </ul>
+          </div>
+          <div className="md:order-1">
+            <ParentsChannelScreen />
           </div>
         </div>
       </Section>

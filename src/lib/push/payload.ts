@@ -46,6 +46,26 @@ export function chatterPush(input: {
   };
 }
 
+/** Stored channel names and what people call them (stored names are old). */
+const CHANNEL_NAME: Record<string, string> = { parents: "Team", team: "Club", families: "Parents" };
+
+/**
+ * A post in one channel of a team's Chatter: the title says which ("10U Canes · Parents"),
+ * tapping opens that tab, and each channel keeps its own notification (tag).
+ */
+export function channelPush(input: {
+  teamId: string;
+  teamName: string;
+  /** Stored name: 'parents' (Team), 'team' (Club) or 'families' (Parents). */
+  channel: string;
+  from: string;
+  post: { body: string; photos?: unknown[]; kind?: string; gif?: unknown };
+}): PushPayload {
+  const channel = CHANNEL_NAME[input.channel] ? input.channel : "parents";
+  const base = chatterPush({ ...input, teamName: `${input.teamName} · ${CHANNEL_NAME[channel]}` });
+  return { ...base, url: `${base.url}&channel=${channel}`, tag: `${base.tag}-${channel}` };
+}
+
 /** A new post in a club's Coach Chatter. */
 export function coachPush(input: {
   clubId: string;

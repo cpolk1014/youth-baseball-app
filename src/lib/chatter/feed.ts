@@ -20,7 +20,47 @@ export interface ChatterPhoto {
   h: number;
 }
 
-export type ChatterChannel = "team" | "parents";
+/** Stored names (they're old): 'parents' is the Team channel, 'team' the Club channel and
+ * 'families' the Parents channel. */
+export type ChatterChannel = "team" | "parents" | "families";
+
+/** What each channel is called on screen. */
+export const CHANNEL_LABEL: Record<ChatterChannel, string> = {
+  parents: "Team",
+  team: "Club",
+  families: "Parents",
+};
+
+/**
+ * Whether someone is in a team's Parents channel (the database's `is_chatter_family`): a
+ * parent, or a treasurer linked to a kid on the team. Never the owner, coaches or managers,
+ * even ones with a kid on the team.
+ */
+export function inParentsChannel(
+  role: string | null | undefined,
+  userId: string | null | undefined,
+  guardians: { userId: string; playerId: string }[],
+  players: { id: string }[],
+): boolean {
+  if (role === "parent") return true;
+  if (role !== "treasurer" || !userId) return false;
+  const kids = new Set(players.map((p) => p.id));
+  return guardians.some((g) => g.userId === userId && kids.has(g.playerId));
+}
+
+/** The tabs someone sees, in order: Team, then Club (club teams), then Parents (families). */
+export function chatterChannels(inClub: boolean, family: boolean): ChatterChannel[] {
+  return [
+    "parents",
+    ...(inClub ? (["team"] as const) : []),
+    ...(family ? (["families"] as const) : []),
+  ];
+}
+
+/** A channel named in a link (?channel=), if it's one. */
+export function channelFrom(value: string | null | undefined): ChatterChannel | null {
+  return value === "parents" || value === "team" || value === "families" ? value : null;
+}
 
 /** Someone who can post in a team's Chatter, as `chatter_people` returns them. */
 export interface ChatterPerson {
@@ -66,8 +106,9 @@ export interface ChatterPost {
   club: ClubTag | null;
   /** Posted by Fungo itself (the automatic game day post). */
   fromFungo?: boolean;
-  /** Stored names: 'parents' is shown as Team (the team only, never the club; a team not in a
-   * club has only this one) and 'team' as Club (with the club's director and admins). */
+  /** Stored names: 'parents' is shown as Team (the team only, never the club), 'team' as Club
+   * (with the club's director and admins) and 'families' as Parents (families only, no
+   * coaches). */
   channel: ChatterChannel;
   createdAt: string;
   editedAt: string | null;
@@ -111,7 +152,7 @@ export function postFromRow(r: ChatterPostRow): ChatterPost {
     reactions: reactionsFrom(r.reactions),
     club: clubFrom(r.club),
     ...(r.from_fungo ? { fromFungo: true } : {}),
-    channel: r.channel === "parents" ? "parents" : "team",
+    channel: channelFrom(r.channel) ?? "team",
     createdAt: r.created_at,
     editedAt: r.edited_at,
     pinnedAt: r.pinned_at,
@@ -119,7 +160,7 @@ export function postFromRow(r: ChatterPostRow): ChatterPost {
   };
 }
 
-function photosFrom(value: unknown): ChatterPhoto[] {
+export function photosFrom(value: unknown): ChatterPhoto[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((p): ChatterPhoto[] => {
     if (!p || typeof p !== "object") return [];

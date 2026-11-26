@@ -22,7 +22,8 @@ export function NotifySettings({
   teams,
 }: {
   userId: string;
-  teams: { id: string; name: string }[];
+  /** With my role there: the Parents channel is for families (parents and treasurers). */
+  teams: { id: string; name: string; role?: string }[];
 }) {
   const [state, setState] = useState<PushState | null>(null);
   const [clubs, setClubs] = useState<CoachClub[]>([]);
@@ -96,15 +97,23 @@ export function NotifySettings({
                     <Toggle
                       userId={userId}
                       scopeId={t.id}
-                      category="chatter"
-                      label="Chatter: Club channel (club teams)"
+                      category="parents"
+                      label="Chatter: Team channel"
                     />
                     <Toggle
                       userId={userId}
                       scopeId={t.id}
-                      category="parents"
-                      label="Chatter: Team channel"
+                      category="chatter"
+                      label="Chatter: Club channel (club teams)"
                     />
+                    {(t.role === "parent" || t.role === "treasurer") && (
+                      <Toggle
+                        userId={userId}
+                        scopeId={t.id}
+                        category="families"
+                        label="Chatter: Parents channel"
+                      />
+                    )}
                     <Toggle userId={userId} scopeId={t.id} category="games" label="Game changes" />
                     <Toggle
                       userId={userId}

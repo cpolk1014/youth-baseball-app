@@ -83,7 +83,10 @@ The demo club lets anyone click around a made-up club (8 teams, a season of game
 
 ## Chatter (team chat, replaces GroupMe)
 - Each team's own chat for adults only (coaches and parents; kids have no accounts and there are no private messages).
-- Posts, photos, PDF flyers, polls, GIFs, reactions, replies, @tags, a pinned post, and push notifications. Club teams also get a Club channel with the club's director.
+- Channels: Team (everyone on the team, coaches included), Parents (just the families; coaches and managers aren't in it and can't see it, which replaces the "parents only" group chat teams used to make), and for club teams a Club channel with the club's director and admins. The club never sees Team or Parents.
+- Posts, photos, PDF flyers, polls, GIFs, reactions, replies, @tags, a pinned post, and push notifications that say which channel a post is in and open that tab.
+- "Save me from myself": a setting (in Chatter's Settings or My profile) that asks "are you sure?" before every post and shows who's about to read it.
+- If a parent reports a post in the Parents channel, that one post goes to the coaches with the report so they can take it down.
 - Fungo posts the game day info (opponent, place, time, arrival, uniform) automatically.
 - Reading is free; posting needs the team's paid plan.
 

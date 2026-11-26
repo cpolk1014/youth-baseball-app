@@ -19,7 +19,7 @@ const AI = [
   "AI uniform reader",
 ];
 const TEAM = [
-  "Chatter: team chat, polls, photos and automatic game day posts",
+  "Chatter: Team and Parents channels, polls, photos and automatic game day posts",
   "Team money: fees, payments, expenses, receipts",
   "Tournament standings and What time do we play tomorrow?",
   "GameChanger stats import and competitive lineups",
